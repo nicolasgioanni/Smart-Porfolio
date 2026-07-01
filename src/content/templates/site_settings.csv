@@ -1,7 +1,7 @@
 ﻿key,value
 site_title,Demo Portfolio
 site_description,"A professional portfolio with experience, projects, research, and resume highlights."
-default_theme,dark
+default_theme,navy
 enable_skeletons,true
 enable_scroll_motion,false
 enable_glass_effects,true

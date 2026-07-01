@@ -1,19 +1,31 @@
 # Maintenance
 
-## Adding sections safely
+## Product Hierarchy
 
-Future maintenance work should preserve the product hierarchy:
+Future maintenance should preserve the portfolio hierarchy:
 
 - Home is the complete high-level overview.
 - Detail pages are deeper evidence.
 - Generated static content is the performance strategy.
-- Skeletons are polish only.
+- Skeletons and motion are polish only.
+
+Home order should remain hero, skills, experience, research, projects, recommendations when available, education, and resume/contact.
+
+## Adding Sections
 
 Add new sections by creating a focused component, mapping generated content into it, and keeping Home concise.
 
-Recommendations are a first-class static section. Keep recommendation text in `recommendations.csv` or its remote CSV source, not in React components. LinkedIn URLs are verification/navigation links only.
+Use existing primitives first:
 
-## Adding sheet fields
+- `PageIntro`
+- `SectionHeader`
+- `PortfolioCard`
+- `FeaturedGrid`
+- Glass primitives
+
+Prefer server components unless interactivity is required.
+
+## Adding Sheet Fields
 
 When adding a spreadsheet field:
 
@@ -27,19 +39,33 @@ When adding a spreadsheet field:
 
 When adding footer/legal fields, prefer `site_settings` or `links` rows. Do not hard-code repository URLs or license choices in components.
 
-## Updating validators
+## Theme Maintenance
+
+Supported theme names are `navy`, `light`, and `dark`. Add new theme values only by updating:
+
+1. `src/lib/theme/resolveThemeName.ts`
+2. Theme tokens in `src/styles/tokens.css`
+3. The footer theme switcher labels
+4. Tests for accepted and rejected theme names
+5. Relevant docs
+
+Keep component styles on semantic tokens so new themes do not require component CSS rewrites.
+
+## Updating Validators
 
 Validators should fail on malformed production-critical content and stay tolerant of optional blank fields. Keep error messages specific enough to identify the sheet and row problem.
 
-## Updating templates
+## Updating Templates
 
-Template rows should remain generic demo content unless the user explicitly asks for real personal content. Templates should prove the UI works without accidentally publishing private or inaccurate data.
+Template rows should remain generic demo content unless a real content update is intentionally requested. Templates should prove the UI works without accidentally publishing private or inaccurate data.
 
-## Updating generated content
+## Updating Generated Content
 
-Run `npm run generate:content`. The generated JSON is a build artifact consumed by static pages.
+Run `npm run generate:content`. Generated content is the build artifact consumed by static pages.
 
-## Testing content changes
+Do not change generated content by hand. Change the source CSV or remote sheet, then regenerate.
+
+## Testing Changes
 
 Run:
 
@@ -51,19 +77,8 @@ Run:
 
 Use `npm run verify` before shipping.
 
-## Adding UI sections
-
-When adding UI:
-
-- Keep components small and focused.
-- Prefer server components unless interactivity is required.
-- Use existing glass primitives and design tokens.
-- Avoid client fetching for initial content.
-- Keep Home summary-level and detail pages evidence-level.
-- Add skeleton shapes only if the route or Suspense boundary can actually load.
-
-## Security maintenance
+## Security Maintenance
 
 - Keep the app static-first unless a future product decision explicitly adds endpoints.
 - If endpoints are ever added, document authentication, validation, and rate limiting before implementation.
-- Run `npm audit` as part of dependency reviews, but do not force major upgrades without checking Next.js and test-tooling compatibility.
+- Run dependency reviews deliberately; do not force major upgrades without checking Next.js and test-tooling compatibility.

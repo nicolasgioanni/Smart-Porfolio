@@ -5,11 +5,11 @@ import { EmptyState } from "@/components/portfolio/EmptyState";
 
 export function HomeFeaturedResearch({ items }: { items: ResearchItem[] }) {
   if (items.length === 0) {
-    return <EmptyState message="Research highlights will appear here when spreadsheet rows are available." />;
+    return <EmptyState message="Research highlights will appear here when content is available." />;
   }
 
   return (
-    <FeaturedGrid columns="two">
+    <FeaturedGrid columns="two" itemCount={items.length}>
       {items.map((item) => (
         <ResearchCard item={item} key={item.id} />
       ))}

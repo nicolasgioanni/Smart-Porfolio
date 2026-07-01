@@ -13,7 +13,7 @@ import {
 import { sortGeneric } from "@/lib/content/sortPortfolioContent";
 
 export function generateMetadata(): Metadata {
-  return createPageMetadata(getPortfolioContent(), "Resume", "Structured web resume with experience, research, projects, education, and skills.");
+  return createPageMetadata(getPortfolioContent(), "Resume", "Resume with experience, research, projects, education, and skills.");
 }
 
 export default function ResumePage() {
@@ -22,8 +22,8 @@ export default function ResumePage() {
   return (
     <PageContainer
       eyebrow="Resume"
-      title="Structured resume"
-      description="A static resume-style view generated from the same spreadsheet-driven portfolio content."
+      title="Resume"
+      description="Experience, research, projects, education, skills, and resume file access in one place."
       motionEnabled={content.siteSettings.enableScrollMotion}
     >
       <ResumeSummary

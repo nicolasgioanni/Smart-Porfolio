@@ -1,7 +1,7 @@
 import type { ProjectItem } from "@/content/types";
-import { GlassCard } from "@/components/glass/GlassCard";
 import { GlassChip } from "@/components/glass/GlassChip";
 import { GlassIconLink } from "@/components/glass/GlassIconLink";
+import { PortfolioCard } from "@/components/portfolio/PortfolioCard";
 import { getSummary, limitItems } from "@/lib/content/displayHelpers";
 
 type ProjectCardProps = {
@@ -15,7 +15,7 @@ export function ProjectCard({ item, variant = "summary" }: ProjectCardProps) {
   const showImage = variant === "detail" && item.image;
 
   return (
-    <GlassCard className="project-card">
+    <PortfolioCard className="project-card" variant={showImage ? "media" : variant}>
       {showImage ? <img alt="" className="project-card__image" height="320" loading="lazy" src={item.image} width="640" /> : null}
       <header className="content-card__header">
         <div className="content-card__meta-row">
@@ -46,6 +46,6 @@ export function ProjectCard({ item, variant = "summary" }: ProjectCardProps) {
           ))}
         </div>
       ) : null}
-    </GlassCard>
+    </PortfolioCard>
   );
 }

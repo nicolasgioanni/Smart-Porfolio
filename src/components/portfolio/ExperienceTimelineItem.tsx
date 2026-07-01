@@ -1,6 +1,6 @@
 import type { ExperienceItem } from "@/content/types";
-import { GlassCard } from "@/components/glass/GlassCard";
 import { GlassChip } from "@/components/glass/GlassChip";
+import { PortfolioCard } from "@/components/portfolio/PortfolioCard";
 import { getSummary, limitItems } from "@/lib/content/displayHelpers";
 import { formatDateRange } from "@/lib/formatting/formatDateRange";
 
@@ -16,7 +16,7 @@ export function ExperienceTimelineItem({ item, variant = "detail" }: ExperienceT
   return (
     <div className="timeline-item">
       <div aria-hidden="true" className="timeline-item__marker" />
-      <GlassCard className="timeline-item__card">
+      <PortfolioCard className="timeline-item__card" variant="timeline">
         <header className="content-card__header">
           <div className="content-card__meta-row">
             {item.type ? <GlassChip tone="accent">{item.type}</GlassChip> : null}
@@ -24,7 +24,7 @@ export function ExperienceTimelineItem({ item, variant = "detail" }: ExperienceT
           </div>
           <h3 className="content-card__title">{item.title}</h3>
           <p className="content-card__meta">
-            {[item.organization, formatDateRange(item.startDate, item.endDate), item.location].filter(Boolean).join(" | ")}
+            {[item.organization, formatDateRange(item.startDate, item.endDate), item.location].filter(Boolean).join(" / ")}
           </p>
         </header>
         {summary ? <p className="content-card__summary">{summary}</p> : null}
@@ -42,7 +42,7 @@ export function ExperienceTimelineItem({ item, variant = "detail" }: ExperienceT
             ))}
           </div>
         ) : null}
-      </GlassCard>
+      </PortfolioCard>
     </div>
   );
 }

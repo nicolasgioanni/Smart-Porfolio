@@ -16,7 +16,39 @@ type ResumeSummaryProps = {
   projects?: ProjectItem[];
 };
 
+function joinResumeMeta(values: Array<string | undefined>): string {
+  return values.filter(Boolean).join(" / ");
+}
+
+function formatResumeLabel(value: string): string {
+  return value
+    .replaceAll("_", " ")
+    .split(" ")
+    .filter(Boolean)
+    .map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1)}`)
+    .join(" ");
+}
+
+function isNoopResumeEntry(entry: ResumeEntry): boolean {
+  return entry.key === "heading" && entry.value.trim().toLowerCase() === formatResumeLabel(entry.section).toLowerCase();
+}
+
+function groupResumeNotes(resume: ResumeEntry[]): Array<[string, ResumeEntry[]]> {
+  const grouped = resume
+    .filter((entry) => !isNoopResumeEntry(entry))
+    .reduce<Map<string, ResumeEntry[]>>((groups, entry) => {
+      const entries = groups.get(entry.section) ?? [];
+      entries.push(entry);
+      groups.set(entry.section, entries);
+      return groups;
+    }, new Map<string, ResumeEntry[]>());
+
+  return Array.from(grouped.entries());
+}
+
 export function ResumeSummary({ education, experience, profile, projects = [], research = [], resume, skillGroups }: ResumeSummaryProps) {
+  const resumeNoteGroups = groupResumeNotes(resume);
+
   return (
     <div className="resume-summary">
       <ResumePanel>
@@ -24,7 +56,7 @@ export function ResumeSummary({ education, experience, profile, projects = [], r
           <p className="eyebrow">Resume</p>
           <h2>{profile.fullName}</h2>
           <p>{profile.headline}</p>
-          <p>{[profile.location, profile.email].filter(Boolean).join(" | ")}</p>
+          <p>{joinResumeMeta([profile.location, profile.email])}</p>
         </div>
         {profile.resumeUrl ? (
           <GlassButton href={profile.resumeUrl} variant="primary">
@@ -35,12 +67,20 @@ export function ResumeSummary({ education, experience, profile, projects = [], r
 
       <ResumeSection title="Profile summary">
         <p className="resume-line">{profile.shortBio}</p>
-        {resume.length > 0 ? (
+        {resumeNoteGroups.length > 0 ? (
           <div className="resume-note-list">
-            {resume.map((entry) => (
-              <p className="resume-line" key={`${entry.section}-${entry.key}`}>
-                <strong>{entry.section.replaceAll("_", " ")}</strong>: {entry.value}
-              </p>
+            {resumeNoteGroups.map(([section, entries]) => (
+              <section className="resume-note-group" key={section}>
+                <h3 className="resume-note-group__title">{formatResumeLabel(section)}</h3>
+                <div className="resume-note-group__items">
+                  {entries.map((entry) => (
+                    <p className="resume-note" key={`${entry.section}-${entry.key}`}>
+                      <span>{formatResumeLabel(entry.key)}</span>
+                      <span>{entry.value}</span>
+                    </p>
+                  ))}
+                </div>
+              </section>
             ))}
           </div>
         ) : null}
@@ -52,7 +92,7 @@ export function ResumeSummary({ education, experience, profile, projects = [], r
             {experience.map((item) => (
               <article className="resume-item" key={item.id}>
                 <h3>{item.title}</h3>
-                <p>{[item.organization, item.type, formatDateRange(item.startDate, item.endDate)].filter(Boolean).join(" | ")}</p>
+                <p>{joinResumeMeta([item.organization, item.type, formatDateRange(item.startDate, item.endDate)])}</p>
                 {item.homeSummary || item.detailSummary ? <p>{item.homeSummary ?? item.detailSummary}</p> : null}
               </article>
             ))}
@@ -68,7 +108,7 @@ export function ResumeSummary({ education, experience, profile, projects = [], r
             {research.map((item) => (
               <article className="resume-item" key={item.id}>
                 <h3>{item.title}</h3>
-                <p>{[item.role, item.organization, formatDateRange(item.startDate, item.endDate)].filter(Boolean).join(" | ")}</p>
+                <p>{joinResumeMeta([item.role, item.organization, formatDateRange(item.startDate, item.endDate)])}</p>
                 {item.homeSummary || item.detailSummary ? <p>{item.homeSummary ?? item.detailSummary}</p> : null}
               </article>
             ))}
@@ -100,7 +140,7 @@ export function ResumeSummary({ education, experience, profile, projects = [], r
             {education.map((item) => (
               <article className="resume-item" key={item.id}>
                 <h3>{item.institution}</h3>
-                <p>{[item.degree, item.field, formatDateRange(item.startDate, item.endDate)].filter(Boolean).join(" | ")}</p>
+                <p>{joinResumeMeta([item.degree, item.field, formatDateRange(item.startDate, item.endDate)])}</p>
               </article>
             ))}
           </div>

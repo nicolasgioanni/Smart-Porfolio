@@ -2,9 +2,9 @@
   display: block;
   width: 100%;
   min-height: 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.11);
-  border-radius: var(--radius-small);
-  background: linear-gradient(110deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.19), rgba(255, 255, 255, 0.07));
+  border: 1px solid var(--color-skeleton-border);
+  border-radius: var(--radius-card);
+  background: var(--gradient-skeleton);
   background-size: 220% 100%;
   animation: skeleton-shimmer 1.9s ease-in-out infinite;
 }
@@ -17,13 +17,13 @@
 .skeleton-avatar {
   width: 84px;
   height: 84px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
 }
 
 .skeleton-button {
   width: 136px;
   height: 42px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
 }
 
 .skeleton-card {
@@ -32,7 +32,7 @@
   min-height: 192px;
   padding: var(--space-6);
   border: 1px solid var(--color-line);
-  border-radius: var(--radius-medium);
+  border-radius: var(--radius-card);
   background: var(--color-surface);
   box-shadow: var(--shadow-card);
   backdrop-filter: blur(var(--glass-blur-mobile));
@@ -40,30 +40,30 @@
 
 .skeleton-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.18fr) minmax(280px, 0.82fr);
-  gap: var(--space-6);
+  grid-template-columns: minmax(0, 1.12fr) minmax(280px, 0.88fr);
+  gap: var(--space-5);
 }
 
 .skeleton-hero__main,
 .skeleton-hero__aside,
 .skeleton-page__section {
   border: 1px solid var(--color-line);
-  border-radius: var(--radius-large);
+  border-radius: var(--radius-panel);
   background: var(--color-surface);
   box-shadow: var(--shadow-card);
   backdrop-filter: blur(var(--glass-blur-mobile));
 }
 
 .skeleton-hero__main {
-  min-height: 590px;
+  min-height: 520px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: clamp(2rem, 5vw, 4rem);
+  padding: var(--space-10);
 }
 
 .skeleton-hero__aside {
-  min-height: 590px;
+  min-height: 520px;
   display: grid;
   align-content: space-between;
   padding: var(--space-5);
@@ -88,7 +88,7 @@
 .skeleton-page {
   width: min(var(--container-width), calc(100% - 32px));
   margin: 0 auto;
-  padding: 120px 0 0;
+  padding: var(--space-8) 0 0;
 }
 
 .skeleton-page__header {
@@ -132,5 +132,9 @@
   .skeleton-hero__main,
   .skeleton-hero__aside {
     min-height: 320px;
+  }
+
+  .skeleton-hero__main {
+    padding: var(--space-6);
   }
 }

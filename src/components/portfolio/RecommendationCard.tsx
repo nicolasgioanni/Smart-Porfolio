@@ -1,7 +1,7 @@
 import type { RecommendationItem } from "@/content/types";
-import { GlassCard } from "@/components/glass/GlassCard";
 import { GlassChip } from "@/components/glass/GlassChip";
 import { GlassIconLink } from "@/components/glass/GlassIconLink";
+import { PortfolioCard } from "@/components/portfolio/PortfolioCard";
 import { createRecommendationExcerpt } from "@/lib/content/selectHomeContent";
 import { formatSingleDate } from "@/lib/formatting/formatDateRange";
 
@@ -11,7 +11,7 @@ type RecommendationCardProps = {
 };
 
 function getRecommenderMeta(item: RecommendationItem): string {
-  return [item.recommenderTitle, item.recommenderOrganization].filter(Boolean).join(" | ");
+  return [item.recommenderTitle, item.recommenderOrganization].filter(Boolean).join(" / ");
 }
 
 export function RecommendationCard({ item, variant = "detail" }: RecommendationCardProps) {
@@ -21,7 +21,7 @@ export function RecommendationCard({ item, variant = "detail" }: RecommendationC
   const sourceUrl = item.sourceUrl && item.sourceUrl !== item.linkedinUrl ? item.sourceUrl : undefined;
 
   return (
-    <GlassCard className={["recommendation-card", `recommendation-card--${variant}`].join(" ")}>
+    <PortfolioCard className={["recommendation-card", `recommendation-card--${variant}`].join(" ")} variant={variant}>
       <header className="content-card__header">
         <div className="content-card__meta-row">
           {item.featured ? <GlassChip tone="accent">Featured</GlassChip> : null}
@@ -53,6 +53,6 @@ export function RecommendationCard({ item, variant = "detail" }: RecommendationC
           {sourceUrl ? <GlassIconLink label={`View ${sourceLabel}`} url={sourceUrl} /> : null}
         </div>
       ) : null}
-    </GlassCard>
+    </PortfolioCard>
   );
 }

@@ -1,7 +1,7 @@
 import type { ResearchItem } from "@/content/types";
-import { GlassCard } from "@/components/glass/GlassCard";
 import { GlassChip } from "@/components/glass/GlassChip";
 import { GlassIconLink } from "@/components/glass/GlassIconLink";
+import { PortfolioCard } from "@/components/portfolio/PortfolioCard";
 import { getSummary, limitItems } from "@/lib/content/displayHelpers";
 import { formatDateRange } from "@/lib/formatting/formatDateRange";
 
@@ -15,7 +15,7 @@ export function ResearchCard({ item, variant = "summary" }: ResearchCardProps) {
   const visibleSkills = variant === "detail" ? item.skills : limitItems(item.skills, 4);
 
   return (
-    <GlassCard className="research-card">
+    <PortfolioCard className="research-card" variant={variant}>
       <header className="content-card__header">
         <div className="content-card__meta-row">
           {item.featured ? <GlassChip tone="accent">Featured</GlassChip> : null}
@@ -23,7 +23,7 @@ export function ResearchCard({ item, variant = "summary" }: ResearchCardProps) {
         </div>
         <h3 className="content-card__title">{item.title}</h3>
         <p className="content-card__meta">
-          {[item.organization, formatDateRange(item.startDate, item.endDate), item.location].filter(Boolean).join(" | ")}
+          {[item.organization, formatDateRange(item.startDate, item.endDate), item.location].filter(Boolean).join(" / ")}
         </p>
       </header>
       {summary ? <p className="content-card__summary">{summary}</p> : null}
@@ -49,6 +49,6 @@ export function ResearchCard({ item, variant = "summary" }: ResearchCardProps) {
           ))}
         </div>
       ) : null}
-    </GlassCard>
+    </PortfolioCard>
   );
 }

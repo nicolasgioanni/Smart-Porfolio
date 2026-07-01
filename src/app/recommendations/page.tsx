@@ -6,11 +6,7 @@ import { getPortfolioContent } from "@/lib/content/getPortfolioContent";
 import { selectRecommendationDetailContent } from "@/lib/content/selectHomeContent";
 
 export function generateMetadata(): Metadata {
-  return createPageMetadata(
-    getPortfolioContent(),
-    "Recommendations",
-    "Professional recommendations and social proof generated from spreadsheet-driven portfolio content."
-  );
+  return createPageMetadata(getPortfolioContent(), "Recommendations", "Professional recommendations and social proof with source links when available.");
 }
 
 export default function RecommendationsPage() {
@@ -21,7 +17,7 @@ export default function RecommendationsPage() {
     <PageContainer
       eyebrow="Recommendations"
       title="Professional recommendations"
-      description="Professional recommendations and verification links maintained from the portfolio content pipeline."
+      description="Professional social proof with source links and context when available."
       className="page-container--recommendations"
       motionEnabled={content.siteSettings.enableScrollMotion}
     >

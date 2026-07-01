@@ -419,7 +419,7 @@ function normalizeSiteSettings(rows: CsvRow[]): SiteSettings {
   const settings: SiteSettings = {
     siteTitle: "Portfolio",
     siteDescription: "A professional portfolio with experience, projects, research, and resume highlights.",
-    defaultTheme: "dark",
+    defaultTheme: "navy",
     enableSkeletons: true,
     enableScrollMotion: false,
     enableGlassEffects: true,

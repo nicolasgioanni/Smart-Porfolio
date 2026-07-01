@@ -1,11 +1,12 @@
 import type { ReactNode } from "react";
-import { GlassSurface } from "@/components/glass/GlassSurface";
+import { SectionHeader } from "@/components/layout/SectionHeader";
+import { PortfolioCard } from "@/components/portfolio/PortfolioCard";
 
 export function ResumeSection({ children, title }: { children: ReactNode; title: string }) {
   return (
-    <GlassSurface as="section" className="resume-section" variant="default">
-      <h2 className="section-heading">{title}</h2>
+    <PortfolioCard as="section" className="resume-section" variant="detail">
+      <SectionHeader headingLevel="h2" title={title} variant="compact" />
       {children}
-    </GlassSurface>
+    </PortfolioCard>
   );
 }

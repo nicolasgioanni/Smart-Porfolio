@@ -1,37 +1,60 @@
-﻿# Performance Budget
+# Performance Budget
 
-## Runtime strategy
+## Runtime Strategy
 
-The core performance strategy is static rendering, small JavaScript, optimized assets, and no backend. The site should render real content from static HTML whenever possible.
+The portfolio is a static export app. The site should render real content from static HTML and generated data without backend/API/runtime sheet requests.
 
-## Avoid runtime content fetching
+Keep `output: "export"` unless the hosting and product requirements change.
 
-Do not fetch Google Sheets content from the browser or from serverless functions at request time. Fetch content during the build and render from generated JSON.
+## Content Fetching
 
-## Keep first-load JavaScript small
+Do not fetch portfolio content from the browser or from route handlers at request time. Fetch content during generation/build and render from generated files.
 
-Prefer Server Components for static content. Avoid large client-only components unless they add clear value.
+Security tests should continue proving there are no API routes, route handlers, server actions, or runtime content fetches.
 
-## Animation budget
+## JavaScript Budget
 
-Keep animation CSS-first. Do not add animation-heavy libraries in v1. Avoid Framer Motion, Lottie, Three.js, particles, video backgrounds, and AI chatbot widgets.
+Prefer Server Components for static content. Client components should be isolated and purposeful.
 
-## Icon and visual dependencies
+Current intentional client features:
 
-Avoid large icon packs. Use text labels, small inline SVGs, or a tiny local icon strategy if icons are needed later.
+- Mobile navigation state.
+- Scroll reveal/compress motion.
+- Footer theme switcher with localStorage persistence.
 
-## Images
+Avoid large client-only components unless they provide clear portfolio value.
 
-Optimize images manually before placing them in `public`. Prefer appropriately sized PNG, JPG, WebP, or AVIF assets. Avoid huge source images.
+## Animation Budget
 
-## Layout stability
+Keep animation CSS-first. Do not add animation-heavy libraries in the core portfolio experience.
 
-Reserve space for images and cards to avoid layout shift. Skeletons should match final layout dimensions when used.
+Motion rules:
 
-## Glass effects
+- Animate opacity and transform only.
+- Do not blur text.
+- Do not animate layout properties.
+- Respect reduced motion.
 
-Limit large `backdrop-filter` surfaces. Use glass styling on bounded cards or navigation surfaces, not full-screen layers.
+## Assets
 
-## Skeleton loading
+Optimize images before placing them in `public`. Prefer appropriately sized PNG, JPG, WebP, or AVIF assets. Avoid oversized source images.
 
-Skeletons support route transitions and deferred UI. They do not replace the static content strategy. Real static content should render without waiting for client-side fetches.
+Reserve dimensions for images, skeletons, grids, cards, and controls to avoid layout shift.
+
+## Glass Effects
+
+Limit large `backdrop-filter` surfaces. Glass should be bounded to cards, navigation, footer, and section panels. The `enable_glass_effects` setting must keep the interface readable when disabled.
+
+## Skeleton Loading
+
+Skeletons support route transitions and deferred UI. They do not replace the static content strategy.
+
+Skeletons should:
+
+- Match final layout dimensions.
+- Contain no real content text.
+- Disable shimmer under reduced motion.
+
+## Build Metrics
+
+After major visual-system changes, record the Next build route table and first-load JavaScript values from `npm run build`. Watch for unexpected growth from client components, fonts, images, or libraries.

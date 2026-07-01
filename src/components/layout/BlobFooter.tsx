@@ -3,7 +3,9 @@ import { GlassBlob } from "@/components/glass/GlassBlob";
 import { GlassIconLink } from "@/components/glass/GlassIconLink";
 import { GlassLink } from "@/components/glass/GlassLink";
 import { SocialLinkGroup } from "@/components/navigation/SocialLinkGroup";
+import { ThemeSwitcher } from "@/components/theme/ThemeSwitcher";
 import { sortGeneric } from "@/lib/content/sortPortfolioContent";
+import type { ThemeName } from "@/lib/theme/resolveThemeName";
 
 const conciseFooterKinds = new Set(["github", "linkedin", "email", "resume"]);
 const repositoryKinds = new Set(["repository", "source", "github_repository"]);
@@ -57,7 +59,7 @@ function createLicenseText(content: GeneratedPortfolioContent): { label: string;
   return { label: `Licensed under ${licenseName}.`, url: licenseUrl };
 }
 
-export function BlobFooter({ content }: { content: GeneratedPortfolioContent }) {
+export function BlobFooter({ content, initialTheme }: { content: GeneratedPortfolioContent; initialTheme: ThemeName }) {
   const currentYear = new Date().getFullYear();
   const owner = stringSetting(content.siteSettings.copyrightOwner) ?? content.profile.fullName;
   const repositoryLink = findRepositoryLink(content);
@@ -78,6 +80,7 @@ export function BlobFooter({ content }: { content: GeneratedPortfolioContent }) 
         </div>
 
         <div className="blob-footer__secondary">
+          <ThemeSwitcher initialTheme={initialTheme} />
           {footerLinks.length > 0 ? <SocialLinkGroup compact label="Footer links" links={footerLinks} /> : null}
         </div>
       </GlassBlob>

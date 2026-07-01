@@ -1,38 +1,44 @@
 # Content Mapping
 
-## Source of truth
+## Source Of Truth
 
-All portfolio UI content comes from generated JSON built from spreadsheet-compatible CSV sheets. Components should not hard-code Nicolas-specific portfolio facts.
+All portfolio UI content comes from generated JSON built from spreadsheet-compatible CSV sheets. React components should not hard-code personal portfolio facts.
 
-## Profile mapping
+The app remains static export friendly: content is generated before build, then read from generated files by static pages.
+
+## Profile Mapping
 
 Profile fields drive:
 
 - Header and footer identity.
-- Home hero name, headline, current title, location, university, degree, field of study, bio, portrait, email, CTAs, and resume link.
+- Home hero name, headline, current title, location, education facts, bio, portrait, email, CTAs, and resume link.
 - Resume page profile panel.
 - Route metadata defaults.
 
-## Links mapping
+Portrait assets are referenced by the profile data. If a real image exists but the profile still points to a placeholder, update the content source intentionally in a separate content pass.
+
+## Links Mapping
 
 The links sheet drives:
 
-- Social links in the Home hero.
+- Home hero links.
 - Header compact icon links.
 - Mobile navigation social links.
 - Footer links and optional repository/source links.
 - Resume CTA when a resume link is present.
 
-## Skills mapping
+Footer repository/source can also come from `site_settings.repository_url`.
+
+## Skills Mapping
 
 Skills drive:
 
 - Home skills snapshot.
 - Resume skills groups.
 
-Skills are grouped by category and sorted by priority, order, category, and name.
+Skills are grouped by category and sorted by priority, order, category, and name. Home skills respect `max_home_skill_items`.
 
-## Experience mapping
+## Experience Mapping
 
 Experience drives:
 
@@ -40,20 +46,9 @@ Experience drives:
 - Experience page timeline details.
 - Resume experience highlights.
 
-Home uses `home_summary`; detail pages prefer `detail_summary` and full bullets.
+Home uses `home_summary`. Detail pages prefer `detail_summary` and full bullets.
 
-## Recommendations mapping
-
-Recommendations drive:
-
-- Home professional recommendations after Experience and before later evidence sections.
-- The Recommendations page at `/recommendations`.
-- The Recommendations navigation item when recommendations exist, unless empty display is explicitly enabled.
-- LinkedIn/source verification links when valid HTTPS URLs are provided.
-
-Home uses `home_quote` when available and otherwise derives a short plain-text excerpt from `full_quote`. The Recommendations page uses `full_quote`, recommender context, skills, dates, and verification links.
-
-## Research mapping
+## Research Mapping
 
 Research drives:
 
@@ -63,40 +58,85 @@ Research drives:
 
 Home uses short summaries and concise skills. The Research page includes impact, bullets, skills, and links.
 
-## Projects mapping
+## Projects Mapping
 
 Projects drive:
 
 - Home featured project cards.
-- Projects page deep-dive cards.
+- Projects page detail cards.
 - Resume project highlights.
 
 Home uses `home_summary`, stack, and key links. The Projects page adds problem, solution, impact, image, and full links.
 
-## Education mapping
+## Recommendations Mapping
+
+Recommendations drive:
+
+- Home professional recommendations after Projects.
+- The Recommendations page at `/recommendations`.
+- The Recommendations navigation item when recommendations exist, unless empty display is explicitly enabled.
+- LinkedIn/source verification links when valid HTTPS URLs are provided.
+
+Home uses `home_quote` when available and otherwise derives a short excerpt from `full_quote`. The detail page uses `full_quote`, recommender context, skills, dates, and verification links.
+
+## Education Mapping
 
 Education drives:
 
 - Home education summary.
 - Resume education section.
 
-Home shows concise institution, degree, field, dates, summary, and short bullets only.
+Home shows concise institution, degree, field, dates, summary, and short bullets.
 
-## Resume mapping
+## Resume Mapping
 
-The resume sheet provides custom resume notes or section text. It supplements but does not replace experience, research, projects, education, and skills data.
+The resume sheet provides custom resume notes or section text. It supplements experience, research, projects, education, and skills data.
 
-## Home summary behavior
+## Site Settings Mapping
 
-Home is the complete high-level overview. It includes every major category, including recommendations when available, but keeps each section concise and scannable.
+`site_settings` controls presentation and selection behavior:
 
-## Detail page behavior
+- `default_theme`: `navy`, `light`, or `dark`.
+- `enable_skeletons`
+- `enable_scroll_motion`
+- `enable_glass_effects`
+- `enable_recommendations`
+- `show_empty_recommendations`
+- `max_home_research_items`
+- `max_home_project_items`
+- `max_home_experience_items`
+- `max_home_recommendation_items`
+- `max_home_skill_items`
+- `recommendations_nav_label`
+- `license_name`
+- `license_url`
+- `copyright_owner`
+- `repository_url`
+
+Unsupported theme values resolve to `navy` at render time.
+
+## Home Summary Behavior
+
+Home is the complete high-level overview. It includes every major category, with recommendations only when available, while keeping each section concise and scannable.
+
+Home order:
+
+1. Hero
+2. Skills
+3. Experience
+4. Research
+5. Projects
+6. Recommendations when available
+7. Education
+8. Resume/contact
+
+## Detail Page Behavior
 
 Detail pages show all relevant entries for their route with longer summaries, bullets, impact details, technical context, and links.
 
 The Recommendations page shows all recommendations, featured first, then ordered rows. It shows a clean empty state when the recommendations sheet has no rows. Navigation hides that route while empty unless `show_empty_recommendations=true`.
 
-## Featured, show_on_home, and ordering
+## Selection And Ordering
 
 Home selection uses this priority:
 
@@ -108,22 +148,6 @@ Within the chosen set, featured items sort first, then `home_order`, then date, 
 
 Detail pages use all relevant items. Featured items sort first, then `detail_order`, then date, then title or ID.
 
-## Max item settings
+## Missing Content
 
-`site_settings` values control Home section counts:
-
-- `max_home_research_items`
-- `max_home_project_items`
-- `max_home_experience_items`
-- `max_home_recommendation_items`
-- `max_home_skill_items`
-
-Recommendation route visibility is controlled by `enable_recommendations`, `show_empty_recommendations`, and whether the recommendations sheet contains rows.
-
-Footer data can come from `site_settings` keys such as `license_name`, `license_url`, `copyright_owner`, and `repository_url`, or repository/source link kinds in `links`.
-
-Missing or invalid settings fall back to safe defaults during normalization.
-
-## Missing content and empty states
-
-Sections never crash on missing arrays or optional fields. Empty states are shown when helpful and are written as real accessible content, not skeletons.
+Sections should not crash on missing arrays or optional fields. Empty states are accessible content and should not mention internal source mechanics.

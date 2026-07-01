@@ -6,7 +6,7 @@ import { getPortfolioContent } from "@/lib/content/getPortfolioContent";
 import { selectProjectDetailContent } from "@/lib/content/selectHomeContent";
 
 export function generateMetadata(): Metadata {
-  return createPageMetadata(getPortfolioContent(), "Projects", "Engineering projects with problem framing, implementation choices, stack, links, and impact.");
+  return createPageMetadata(getPortfolioContent(), "Projects", "Engineering projects with problem framing, decisions, stack, links, and impact.");
 }
 
 export default function ProjectsPage() {
@@ -16,8 +16,8 @@ export default function ProjectsPage() {
   return (
     <PageContainer
       eyebrow="Projects"
-      title="Project evidence"
-      description="Detailed project writeups with problem framing, implementation choices, impact, stack, and links."
+      title="Engineering projects"
+      description="Selected builds with problem framing, decisions, impact, stack, and links."
       motionEnabled={content.siteSettings.enableScrollMotion}
     >
       <ProjectList items={projectItems} variant="detail" />

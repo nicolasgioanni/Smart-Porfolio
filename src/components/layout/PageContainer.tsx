@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { ScrollReveal } from "@/components/motion/ScrollReveal";
+import { PageIntro } from "@/components/layout/PageIntro";
 
 type PageContainerProps = {
   eyebrow: string;
@@ -13,11 +13,7 @@ type PageContainerProps = {
 export function PageContainer({ eyebrow, title, description, children, className, motionEnabled = true }: PageContainerProps) {
   return (
     <div className={["page-container", className].filter(Boolean).join(" ")}>
-      <ScrollReveal as="header" className="page-container__header" enabled={motionEnabled}>
-        <p className="eyebrow">{eyebrow}</p>
-        <h1 className="page-title">{title}</h1>
-        {description ? <p className="page-description">{description}</p> : null}
-      </ScrollReveal>
+      <PageIntro description={description} eyebrow={eyebrow} motionEnabled={motionEnabled} title={title} />
       {children}
     </div>
   );

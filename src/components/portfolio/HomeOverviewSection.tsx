@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { GlassSurface } from "@/components/glass/GlassSurface";
-import { GlassLink } from "@/components/glass/GlassLink";
+import { SectionHeader } from "@/components/layout/SectionHeader";
 import { CompressOnScrollSection } from "@/components/motion/CompressOnScrollSection";
 
 type HomeOverviewSectionProps = {
@@ -29,14 +29,7 @@ export function HomeOverviewSection({
   return (
     <CompressOnScrollSection className={["home-section", wide ? "home-section--wide" : "", className].filter(Boolean).join(" ")} enabled={motionEnabled}>
       <GlassSurface className="home-section__surface" variant="default">
-        <header className="home-section__header">
-          <div>
-            {eyebrow ? <p className="eyebrow">{eyebrow}</p> : null}
-            <h2 className="section-heading">{title}</h2>
-            {description ? <p className="section-description">{description}</p> : null}
-          </div>
-          {href && linkLabel ? <GlassLink href={href}>{linkLabel}</GlassLink> : null}
-        </header>
+        <SectionHeader actionHref={href} actionLabel={linkLabel} className="home-section__header" description={description} eyebrow={eyebrow} title={title} />
         {children}
       </GlassSurface>
     </CompressOnScrollSection>

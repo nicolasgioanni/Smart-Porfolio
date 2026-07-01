@@ -16,7 +16,7 @@ function getInitials(profile: ProfileContent): string {
 
 export function PortfolioHero({ links, motionEnabled = true, profile }: { profile: ProfileContent; links: PortfolioLink[]; motionEnabled?: boolean }) {
   const currentLine = [profile.currentTitle, profile.currentCompany].filter(Boolean).join(" at ");
-  const educationLine = [profile.university, profile.degree, profile.fieldOfStudy].filter(Boolean).join(" | ");
+  const educationLine = [profile.university, profile.degree, profile.fieldOfStudy].filter(Boolean).join(" / ");
 
   return (
     <section className="portfolio-hero" aria-labelledby="portfolio-hero-title">
@@ -70,8 +70,8 @@ export function PortfolioHero({ links, motionEnabled = true, profile }: { profil
             )}
           </div>
           <div className="portfolio-hero__mini-card">
-            <span>Portfolio focus</span>
-            <strong>{profile.headline}</strong>
+            <span>Currently</span>
+            <strong>{currentLine || profile.headline}</strong>
           </div>
         </GlassSurface>
       </ScrollReveal>

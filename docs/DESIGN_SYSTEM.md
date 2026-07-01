@@ -2,76 +2,94 @@
 
 ## Direction
 
-The portfolio uses a refined liquid glass visual language. The goal is premium and readable, not decorative noise. Glass effects are limited to cards, blobs, navigation, and panels.
+The portfolio uses a restrained glass visual language for navigation, section surfaces, cards, and resume panels. The design should feel polished and evidence-focused: clear hierarchy, compact controls, readable content, and no decorative UI that competes with the work.
 
-## Color tokens
+## Typography
 
-Core tokens live in `src/styles/tokens.css`.
+Type is centralized in `src/styles/tokens.css`.
 
-- Background: very dark navy through `--color-background`, `--color-navy-950`, and `--color-navy-900`.
-- Elevated surfaces: `--color-background-elevated`, `--color-glass-surface`, and `--color-glass-surface-strong`.
-- Text: `--color-text-primary`, `--color-text-secondary`, `--color-ink`, `--color-muted`, and `--color-subtle`.
-- Accent: restrained light navy/cool blue through `--color-navy-accent-soft`, `--color-accent`, and `--color-accent-strong`.
-- Lines and surfaces: `--color-glass-border`, `--color-glass-border-strong`, `--color-line`, and related glass aliases.
+- `--font-sans` is the Inter stack from `next/font`.
+- `--font-display` aliases the same family for consistent rendering.
+- Font sizes use rem-based tokens with media-query adjustments.
+- Do not scale font size with viewport units.
+- Letter spacing is `0`; rely on weight, size, and spacing for hierarchy.
 
-The page background should remain one consistent very dark navy. Lighter navy accent glows are allowed only behind the hero, major section transitions, recommendations, or footer, and should stay subtle enough that text remains the dominant visual signal.
+Use `hero-title` only for the Home hero. Use `page-title` for route intros, `section-heading` for section titles, and card title classes inside compact surfaces.
 
-## Spacing tokens
+## Color And Themes
 
-Spacing uses `--space-1` through `--space-16`. Components should compose these tokens instead of hard-coded one-off spacing.
+Theme tokens live in `src/styles/tokens.css`. Component styles should use semantic tokens, not hard-coded colors.
 
-## Typography tokens
+Supported themes:
 
-- Body font: `--font-sans`.
-- Display font: `--font-display`.
-- Headings use tight letter spacing and strong weight.
-- Body content prioritizes readable line height and muted contrast.
+- `navy`: default portfolio theme.
+- `light`: light neutral theme with teal and warm accents.
+- `dark`: neutral dark theme with teal and warm accents.
 
-## Glass surfaces
+Theme selection is applied through `data-theme` on the document element. `default_theme` from `site_settings` is resolved to a supported value, with `navy` as the fallback.
 
-Use `GlassSurface` for page sections and panels. Use `GlassCard` for content cards. Use `GlassBlob` for navigation and footer islands.
+## Spacing And Radius
+
+Spacing uses `--space-1` through `--space-16`. Reuse these tokens before adding new spacing.
+
+Cards use a compact radius token. Larger radii are reserved for navigation, footer docks, and larger panel surfaces where the existing glass language requires them.
+
+## Layout Primitives
+
+Use the shared layout components for page and section hierarchy:
+
+- `PageIntro` for route headers.
+- `SectionHeader` for section eyebrow, title, description, and optional action link.
+- `PageContainer` for detail routes.
+- `FeaturedGrid` for project, research, and recommendation grids, including single-item layouts.
+
+Home order should remain: hero, skills, experience, research, projects, recommendations when available, education, resume/contact.
+
+## Portfolio Cards
+
+Use `PortfolioCard` for content cards and resume blocks. Variants are semantic:
+
+- `summary`: normal overview card.
+- `detail`: full evidence card.
+- `compact`: dense cards such as skill groups.
+- `cta`: call-to-action panels.
+- `media`: cards with primary media.
+- `timeline`: experience timeline entries.
+
+Avoid one-off card spacing when an existing variant can express the layout.
+
+## Glass Surfaces
+
+Use `GlassSurface` for large section surfaces, `GlassCard` through `PortfolioCard` for content cards, and `GlassBlob` for header and footer docks.
 
 Glass rules:
 
-- Keep blur bounded.
+- Keep blur bounded to surfaces.
 - Use borders and highlights for shape definition.
-- Do not put low-contrast text over busy backgrounds.
-- Reduce blur on mobile through CSS tokens.
-- Do not make every card blue; color should come from the shared surface and text tokens.
+- Keep text over quiet backgrounds.
+- Reduce blur on mobile through tokens.
+- Keep detail pages readable if motion or glass effects are disabled.
 
-## Blob components
+## Buttons, Links, And Chips
 
-`BlobHeader` and `BlobFooter` use floating glass islands instead of full-width bars. They should remain compact and readable on mobile.
+- `GlassButton` is for clear commands and CTAs.
+- `GlassLink` is for section-level text links.
+- `GlassIconLink` is for external or social links.
+- `GlassChip` is for metadata, skills, roles, and short facts.
 
-## Buttons, links, and chips
+External links must keep safe `target` and `rel` attributes.
 
-- `GlassButton` is for primary and secondary calls to action.
-- `GlassLink` is for inline section links.
-- `GlassIconLink` is for social or external link groups.
-- `GlassChip` is for skills, types, roles, and compact metadata.
+## Motion
 
-## Cards and timeline styles
+Motion uses opacity and transform only. Do not animate layout properties or blur text. Respect `prefers-reduced-motion` by disabling reveal motion, compress animation, smooth scroll, and skeleton shimmer.
 
-- `ResearchCard` highlights role, organization, summary, impact, skills, and links.
-- `ProjectCard` separates summary from problem, solution, impact, and stack.
-- `ExperienceTimeline` uses a vertical line and item markers for professional chronology.
-- `ResumeSection` and `ResumePanel` provide structured resume blocks.
+## Responsive Behavior
 
-## Skeleton styles
+- Header remains compact and sticky with safe scroll margins.
+- Desktop navigation collapses to accessible mobile navigation.
+- Home and feature grids collapse cleanly to one column.
+- Buttons and labeled icon links become full-width where tap targets need more room.
 
-Skeletons use the same glass surfaces, radius tokens, and grid shapes as final content. They contain no real content text and use subtle shimmer only when reduced motion is not requested.
+## Skeletons
 
-## Motion rules
-
-Motion is powered by IntersectionObserver plus CSS classes when `enable_scroll_motion=true`. It animates opacity and transform only. Scroll motion must not blur text or content. Layout properties are not animated.
-
-## Responsive behavior
-
-- Header collapses to accessible mobile navigation below desktop width.
-- Home grid collapses to a single column on smaller screens.
-- Glass blur is reduced on mobile.
-- Buttons and link groups become full-width where that improves tap targets.
-
-## Reduced motion behavior
-
-`prefers-reduced-motion: reduce` disables reveal motion, compress animation, smooth scroll, and skeleton shimmer.
+Skeletons should match the final layout shapes and contain no real content text. They are loading polish only; static content should still render from generated data.

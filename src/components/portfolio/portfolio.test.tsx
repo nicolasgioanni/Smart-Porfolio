@@ -1,10 +1,14 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import type { GeneratedPortfolioContent, RecommendationItem } from "@/content/types";
+import type { GeneratedPortfolioContent, HomePortfolioContent, RecommendationItem } from "@/content/types";
 import { GlassIconLink } from "@/components/glass/GlassIconLink";
 import { BlobFooter } from "@/components/layout/BlobFooter";
+import { PageIntro } from "@/components/layout/PageIntro";
+import { SectionHeader } from "@/components/layout/SectionHeader";
 import { EmptyState } from "@/components/portfolio/EmptyState";
+import { FeaturedGrid } from "@/components/portfolio/FeaturedGrid";
 import { HomeEducationSummary } from "@/components/portfolio/HomeEducationSummary";
+import { HomeOverview } from "@/components/portfolio/HomeOverview";
 import { HomeRecommendations } from "@/components/portfolio/HomeRecommendations";
 import { PortfolioHero } from "@/components/portfolio/PortfolioHero";
 import { RecommendationsList } from "@/components/portfolio/RecommendationsList";
@@ -77,7 +81,7 @@ function createFooterContent(repositoryUrl?: string): GeneratedPortfolioContent 
     siteSettings: {
       siteTitle: "Portfolio",
       siteDescription: "Description",
-      defaultTheme: "dark",
+      defaultTheme: "navy",
       enableSkeletons: true,
       enableScrollMotion: false,
       enableGlassEffects: true,
@@ -94,7 +98,38 @@ function createFooterContent(repositoryUrl?: string): GeneratedPortfolioContent 
   };
 }
 
+function createHomeContent(recommendations: RecommendationItem[] = []): HomePortfolioContent {
+  const content = createFooterContent();
+
+  return {
+    profile: content.profile,
+    links: content.links,
+    research: [],
+    projects: [],
+    experience: [],
+    recommendations,
+    education: [],
+    skillGroups: [],
+    resume: [],
+    siteSettings: content.siteSettings
+  };
+}
+
 describe("portfolio UI helpers", () => {
+  it("renders reusable page and section headers", () => {
+    render(
+      <>
+        <SectionHeader actionHref="/projects" actionLabel="View projects" description="Selected work." eyebrow="Projects" title="Engineering projects" />
+        <PageIntro description="Resume details." eyebrow="Resume" motionEnabled={false} title="Resume" />
+      </>
+    );
+
+    expect(screen.getByRole("heading", { name: "Engineering projects" })).toBeInTheDocument();
+    expect(screen.getByText("Selected work.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /view projects/i })).toHaveAttribute("href", "/projects");
+    expect(screen.getByRole("heading", { level: 1, name: "Resume" })).toBeInTheDocument();
+  });
+
   it("renders accessible empty states", () => {
     render(<EmptyState message="No rows yet." title="Missing content" />);
 
@@ -130,6 +165,16 @@ describe("portfolio UI helpers", () => {
     expect(screen.getByText(/Focused on systems/)).toBeInTheDocument();
   });
 
+  it("marks single item grids for intentional layouts", () => {
+    const { container } = render(
+      <FeaturedGrid itemCount={1}>
+        <article>Only item</article>
+      </FeaturedGrid>
+    );
+
+    expect(container.firstElementChild).toHaveClass("featured-grid--single");
+  });
+
   it("renders recommendation empty and populated states", () => {
     const { rerender } = render(<RecommendationsList items={[]} />);
 
@@ -146,6 +191,18 @@ describe("portfolio UI helpers", () => {
 
     expect(screen.getByText("A thoughtful engineer who communicates clearly.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /see all recommendations/i })).toHaveAttribute("href", "/recommendations");
+  });
+
+  it("renders Home major sections and omits empty recommendations", () => {
+    render(<HomeOverview content={createHomeContent()} />);
+
+    expect(screen.getByRole("heading", { name: "Skills snapshot" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Featured experience" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Featured research" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Featured projects" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Education summary" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Resume and contact" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Professional recommendations" })).not.toBeInTheDocument();
   });
 
   it("renders portfolio-first hero copy without implementation labels", () => {
@@ -165,15 +222,16 @@ describe("portfolio UI helpers", () => {
   });
 
   it("renders generated footer owner and hides missing repository link gracefully", () => {
-    render(<BlobFooter content={createFooterContent()} />);
+    render(<BlobFooter content={createFooterContent()} initialTheme="navy" />);
 
     expect(screen.getByText(/Nicolas Gioanni/)).toBeInTheDocument();
+    expect(screen.getAllByText(/All rights reserved/).length).toBeGreaterThan(0);
     expect(screen.queryByRole("link", { name: /source available on github/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/built as a static/i)).not.toBeInTheDocument();
   });
 
   it("renders repository link when provided by site settings", () => {
-    render(<BlobFooter content={createFooterContent("https://github.com/example/portfolio")} />);
+    render(<BlobFooter content={createFooterContent("https://github.com/example/portfolio")} initialTheme="navy" />);
 
     expect(screen.getByRole("link", { name: /source available on github/i })).toHaveAttribute("href", "https://github.com/example/portfolio");
   });

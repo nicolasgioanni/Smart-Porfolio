@@ -6,7 +6,7 @@ import { getPortfolioContent } from "@/lib/content/getPortfolioContent";
 import { selectExperienceDetailContent } from "@/lib/content/selectHomeContent";
 
 export function generateMetadata(): Metadata {
-  return createPageMetadata(getPortfolioContent(), "Experience", "Professional, research, teaching, and internship experience with detailed evidence.");
+  return createPageMetadata(getPortfolioContent(), "Experience", "Professional, research, teaching, and leadership experience with detailed context.");
 }
 
 export default function ExperiencePage() {
@@ -16,8 +16,8 @@ export default function ExperiencePage() {
   return (
     <PageContainer
       eyebrow="Experience"
-      title="Experience timeline"
-      description="Professional, research, teaching, and leadership experience with full bullets and supporting context."
+      title="Experience"
+      description="Professional, research, teaching, and leadership work with concise context and supporting details."
       motionEnabled={content.siteSettings.enableScrollMotion}
     >
       <ExperienceTimeline items={experienceItems} variant="detail" />

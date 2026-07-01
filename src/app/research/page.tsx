@@ -6,7 +6,7 @@ import { getPortfolioContent } from "@/lib/content/getPortfolioContent";
 import { selectResearchDetailContent } from "@/lib/content/selectHomeContent";
 
 export function generateMetadata(): Metadata {
-  return createPageMetadata(getPortfolioContent(), "Research", "Detailed research context, impact, methods, supporting links, and technical evidence.");
+  return createPageMetadata(getPortfolioContent(), "Research", "Research work, methods, impact, supporting links, and technical context.");
 }
 
 export default function ResearchPage() {
@@ -16,8 +16,8 @@ export default function ResearchPage() {
   return (
     <PageContainer
       eyebrow="Research"
-      title="Research evidence"
-      description="Detailed research work, impact, methods, supporting links, and technical context."
+      title="Research work"
+      description="Selected research with methods, impact, supporting links, and technical context."
       motionEnabled={content.siteSettings.enableScrollMotion}
     >
       <ResearchList items={researchItems} variant="detail" />

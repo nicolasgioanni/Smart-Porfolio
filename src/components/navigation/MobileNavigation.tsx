@@ -7,10 +7,21 @@ import type { PortfolioLink } from "@/content/types";
 import { GlassIconLink } from "@/components/glass/GlassIconLink";
 import { isNavigationItemActive, type NavigationItem } from "@/components/navigation/navigationItems";
 
-export function MobileNavigation({ items, links }: { items: NavigationItem[]; links: PortfolioLink[] }) {
+type MobileNavigationProps = {
+  items: NavigationItem[];
+  links: PortfolioLink[];
+  onOpenChange?: (open: boolean) => void;
+};
+
+export function MobileNavigation({ items, links, onOpenChange }: MobileNavigationProps) {
   const [open, setOpen] = useState(false);
   const menuId = useId();
   const pathname = usePathname();
+
+  function updateOpen(nextOpen: boolean) {
+    setOpen(nextOpen);
+    onOpenChange?.(nextOpen);
+  }
 
   return (
     <div className="mobile-navigation">
@@ -18,7 +29,7 @@ export function MobileNavigation({ items, links }: { items: NavigationItem[]; li
         aria-controls={menuId}
         aria-expanded={open}
         className="mobile-navigation__button"
-        onClick={() => setOpen((currentOpen) => !currentOpen)}
+        onClick={() => updateOpen(!open)}
         type="button"
       >
         <span className="mobile-navigation__button-text">Menu</span>
@@ -35,7 +46,7 @@ export function MobileNavigation({ items, links }: { items: NavigationItem[]; li
                 className="mobile-navigation__link"
                 href={item.href}
                 key={item.href}
-                onClick={() => setOpen(false)}
+                onClick={() => updateOpen(false)}
               >
                 {item.label}
               </Link>

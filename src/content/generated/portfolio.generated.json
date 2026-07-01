@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "generatedAt": "2026-07-01T02:32:35.021Z",
+    "generatedAt": "2026-07-01T06:22:05.896Z",
     "sourceMode": "templates",
     "sources": {
       "profile": "template",
@@ -335,7 +335,7 @@
   "siteSettings": {
     "siteTitle": "Demo Portfolio",
     "siteDescription": "A professional portfolio with experience, projects, research, and resume highlights.",
-    "defaultTheme": "dark",
+    "defaultTheme": "navy",
     "enableSkeletons": true,
     "enableScrollMotion": false,
     "enableGlassEffects": true,

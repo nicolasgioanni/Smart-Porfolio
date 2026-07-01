@@ -1,6 +1,10 @@
 import type { ReactNode } from "react";
-import { GlassSurface } from "@/components/glass/GlassSurface";
+import { PortfolioCard } from "@/components/portfolio/PortfolioCard";
 
 export function ResumePanel({ children }: { children: ReactNode }) {
-  return <GlassSurface className="resume-panel" variant="strong">{children}</GlassSurface>;
+  return (
+    <PortfolioCard as="section" className="resume-panel" variant="cta">
+      {children}
+    </PortfolioCard>
+  );
 }

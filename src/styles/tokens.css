@@ -1,48 +1,32 @@
 :root {
-  --font-sans: "Aptos", "Avenir Next", "Segoe UI", sans-serif;
-  --font-display: "Aptos Display", "Avenir Next", "Segoe UI", sans-serif;
+  --font-sans: var(--font-inter, "Inter", "Segoe UI", Arial, sans-serif);
+  --font-display: var(--font-sans);
 
-  --color-navy-950: #030813;
-  --color-navy-925: #06101f;
-  --color-navy-900: #09182b;
-  --color-navy-850: #0d223a;
-  --color-navy-accent-soft: rgba(55, 99, 155, 0.28);
+  --font-weight-regular: 400;
+  --font-weight-medium: 520;
+  --font-weight-semibold: 650;
+  --font-weight-bold: 760;
+  --font-weight-heavy: 840;
 
-  --color-background: var(--color-navy-950);
-  --color-background-elevated: var(--color-navy-900);
-  --color-glass-surface: rgba(8, 22, 40, 0.68);
-  --color-glass-surface-strong: rgba(12, 30, 52, 0.76);
-  --color-glass-surface-soft: rgba(11, 27, 48, 0.5);
-  --color-glass-border: rgba(151, 177, 213, 0.18);
-  --color-glass-border-strong: rgba(174, 197, 226, 0.28);
-  --color-text-primary: #f7f9ff;
-  --color-text-secondary: #b9c6d8;
-  --color-text-tertiary: #8090a7;
-  --color-accent: #9fc6ff;
-  --color-accent-strong: #d1e4ff;
-  --color-accent-warm: #bfc9d8;
-  --color-danger: #ffb3a7;
+  --font-size-eyebrow: 0.76rem;
+  --font-size-caption: 0.83rem;
+  --font-size-small: 0.9rem;
+  --font-size-body: 1rem;
+  --font-size-body-large: 1.08rem;
+  --font-size-card-title: 1.14rem;
+  --font-size-section-title: 1.55rem;
+  --font-size-page-title: 3.2rem;
+  --font-size-hero-title: 4.35rem;
+  --font-size-resume-title: 2.7rem;
+  --font-size-placeholder: 6.5rem;
+  --font-size-quote: 1.14rem;
 
-  --color-canvas: var(--color-background);
-  --color-canvas-soft: var(--color-background-elevated);
-  --color-ink: var(--color-text-primary);
-  --color-ink-strong: #ffffff;
-  --color-muted: var(--color-text-secondary);
-  --color-subtle: var(--color-text-tertiary);
-  --color-line: var(--color-glass-border);
-  --color-line-strong: var(--color-glass-border-strong);
-  --color-surface: var(--color-glass-surface);
-  --color-surface-strong: var(--color-glass-surface-strong);
-  --color-surface-soft: var(--color-glass-surface-soft);
-  --color-surface-tint: rgba(87, 129, 184, 0.12);
+  --line-height-tight: 1.05;
+  --line-height-heading: 1.15;
+  --line-height-normal: 1.55;
+  --line-height-relaxed: 1.7;
+  --letter-spacing-normal: 0;
 
-  --shadow-soft: 0 28px 90px rgba(0, 0, 0, 0.36);
-  --shadow-card: 0 18px 48px rgba(0, 0, 0, 0.28);
-  --shadow-glow: 0 0 72px rgba(78, 121, 178, 0.16);
-  --radius-blob: 42px;
-  --radius-large: 30px;
-  --radius-medium: 22px;
-  --radius-small: 14px;
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -53,8 +37,240 @@
   --space-10: 2.5rem;
   --space-12: 3rem;
   --space-16: 4rem;
+
   --container-width: 1160px;
-  --focus-ring: 0 0 0 3px rgba(159, 198, 255, 0.42);
+  --header-full-width: 966.667px;
+  --header-compact-width: 866.667px;
+  --header-offset: 6.75rem;
+  --scroll-margin-top: 7.75rem;
+
+  --radius-card: 0.5rem;
+  --radius-panel: 0.875rem;
+  --radius-dock: 1.125rem;
+  --radius-pill: 999px;
+  --radius-blob: var(--radius-dock);
+  --radius-large: var(--radius-panel);
+  --radius-medium: var(--radius-card);
+  --radius-small: var(--radius-card);
+
   --glass-blur: 18px;
   --glass-blur-mobile: 10px;
+  --transition-header: 420ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  --color-canvas: var(--color-background);
+  --color-canvas-soft: var(--color-background-elevated);
+  --color-ink: var(--color-text-primary);
+  --color-ink-strong: var(--color-text-strong);
+  --color-muted: var(--color-text-secondary);
+  --color-subtle: var(--color-text-tertiary);
+  --color-line: var(--color-glass-border);
+  --color-line-strong: var(--color-glass-border-strong);
+  --color-surface: var(--color-glass-surface);
+  --color-surface-strong: var(--color-glass-surface-strong);
+  --color-surface-soft: var(--color-glass-surface-soft);
+  --color-profile-preview-backdrop: rgba(3, 8, 19, 0.58);
+
+  --focus-ring: 0 0 0 3px var(--color-focus-ring);
+}
+
+:root,
+[data-theme="navy"] {
+  color-scheme: dark;
+
+  --color-navy-950: #030813;
+  --color-background: #06101e;
+  --color-background-elevated: #0a1a2e;
+  --color-glass-surface: rgba(8, 22, 40, 0.74);
+  --color-glass-surface-strong: rgba(11, 31, 54, 0.84);
+  --color-glass-surface-soft: rgba(12, 28, 48, 0.56);
+  --color-glass-blob: rgba(7, 19, 35, 0.78);
+  --color-header-surface: rgba(7, 19, 35, 0.94);
+  --color-glass-border: rgba(157, 183, 214, 0.2);
+  --color-glass-border-strong: rgba(190, 208, 230, 0.3);
+  --color-text-strong: #ffffff;
+  --color-text-primary: #f7f9ff;
+  --color-text-secondary: #bac8db;
+  --color-text-tertiary: #8393aa;
+  --color-accent: #9fc6ff;
+  --color-accent-strong: #d7e8ff;
+  --color-accent-warm: #f0ca7a;
+  --color-danger: #ffb3a7;
+  --color-focus-ring: rgba(159, 198, 255, 0.42);
+  --color-selection-text: #030813;
+  --color-selection-bg: #9fc6ff;
+  --color-surface-tint: rgba(98, 141, 190, 0.13);
+  --color-control-surface: rgba(255, 255, 255, 0.075);
+  --color-control-surface-soft: rgba(255, 255, 255, 0.045);
+  --color-control-surface-strong: rgba(255, 255, 255, 0.11);
+  --color-menu-surface: rgba(5, 13, 26, 0.94);
+  --color-profile-preview-backdrop: rgba(3, 8, 19, 0.58);
+  --color-active-surface: rgba(90, 135, 190, 0.15);
+  --color-chip-surface: rgba(255, 255, 255, 0.07);
+  --color-chip-accent-surface: rgba(91, 135, 189, 0.15);
+  --color-chip-accent-border: rgba(159, 198, 255, 0.35);
+  --color-primary-button-text: #030813;
+  --color-primary-button-border: rgba(159, 198, 255, 0.5);
+  --color-brand-mark-text: #030813;
+  --color-brand-mark-border: rgba(159, 198, 255, 0.35);
+  --color-mini-card-surface: rgba(0, 0, 0, 0.16);
+  --color-impact-border: rgba(159, 198, 255, 0.22);
+  --color-impact-surface: rgba(90, 135, 190, 0.12);
+  --color-portrait-placeholder-border: rgba(159, 198, 255, 0.3);
+  --color-empty-surface: rgba(255, 255, 255, 0.045);
+  --color-skeleton-border: rgba(255, 255, 255, 0.12);
+  --shadow-soft: 0 24px 72px rgba(0, 0, 0, 0.34);
+  --shadow-card: 0 16px 40px rgba(0, 0, 0, 0.26);
+  --shadow-glow: 0 0 60px rgba(78, 121, 178, 0.15);
+  --shadow-timeline-marker: 0 0 0 6px rgba(90, 135, 190, 0.12);
+  --opacity-header-highlight: 0.42;
+  --image-page-background: url("/images/backgrounds/navy.png");
+  --overlay-page-background: linear-gradient(rgba(6, 16, 30, 0.46), rgba(6, 16, 30, 0.62));
+  --gradient-glass-highlight: linear-gradient(135deg, rgba(255, 255, 255, 0.12), transparent 44%), radial-gradient(circle at 18% 0%, rgba(91, 138, 197, 0.12), transparent 32rem);
+  --gradient-primary-button: linear-gradient(135deg, rgba(159, 198, 255, 0.96), rgba(240, 202, 122, 0.88));
+  --gradient-brand-mark: linear-gradient(135deg, #9fc6ff, #f0ca7a);
+  --gradient-hero-accent: radial-gradient(circle, rgba(60, 105, 166, 0.18), transparent 70%);
+  --gradient-portrait-surface: radial-gradient(circle at 50% 24%, rgba(88, 132, 190, 0.22), transparent 20rem), rgba(255, 255, 255, 0.055);
+  --gradient-timeline-line: linear-gradient(var(--color-line), rgba(159, 198, 255, 0.42), transparent);
+  --gradient-divider: linear-gradient(90deg, transparent, var(--color-line-strong), transparent);
+  --gradient-skeleton: linear-gradient(110deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.19), rgba(255, 255, 255, 0.07));
+  --gradient-footer-accent: radial-gradient(circle, rgba(66, 101, 151, 0.13), transparent 70%);
+  --gradient-recommendation-accent: radial-gradient(circle, rgba(55, 99, 155, 0.24), transparent 70%);
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+
+  --color-navy-950: #08111f;
+  --color-background: #f7f8fb;
+  --color-background-elevated: #edf2f7;
+  --color-glass-surface: rgba(255, 255, 255, 0.78);
+  --color-glass-surface-strong: rgba(255, 255, 255, 0.9);
+  --color-glass-surface-soft: rgba(255, 255, 255, 0.62);
+  --color-glass-blob: rgba(255, 255, 255, 0.86);
+  --color-header-surface: rgba(255, 255, 255, 0.96);
+  --color-glass-border: rgba(39, 58, 83, 0.16);
+  --color-glass-border-strong: rgba(39, 58, 83, 0.26);
+  --color-text-strong: #101722;
+  --color-text-primary: #172233;
+  --color-text-secondary: #526173;
+  --color-text-tertiary: #758395;
+  --color-accent: #0d6b83;
+  --color-accent-strong: #073f57;
+  --color-accent-warm: #8a6411;
+  --color-danger: #9d2b1f;
+  --color-focus-ring: rgba(13, 107, 131, 0.32);
+  --color-selection-text: #ffffff;
+  --color-selection-bg: #0d6b83;
+  --color-surface-tint: rgba(13, 107, 131, 0.08);
+  --color-control-surface: rgba(16, 23, 34, 0.06);
+  --color-control-surface-soft: rgba(16, 23, 34, 0.035);
+  --color-control-surface-strong: rgba(16, 23, 34, 0.1);
+  --color-menu-surface: rgba(255, 255, 255, 0.96);
+  --color-profile-preview-backdrop: rgba(8, 17, 31, 0.36);
+  --color-active-surface: rgba(13, 107, 131, 0.11);
+  --color-chip-surface: rgba(16, 23, 34, 0.055);
+  --color-chip-accent-surface: rgba(13, 107, 131, 0.1);
+  --color-chip-accent-border: rgba(13, 107, 131, 0.28);
+  --color-primary-button-text: #ffffff;
+  --color-primary-button-border: rgba(13, 107, 131, 0.36);
+  --color-brand-mark-text: #ffffff;
+  --color-brand-mark-border: rgba(13, 107, 131, 0.28);
+  --color-mini-card-surface: rgba(16, 23, 34, 0.055);
+  --color-impact-border: rgba(13, 107, 131, 0.2);
+  --color-impact-surface: rgba(13, 107, 131, 0.08);
+  --color-portrait-placeholder-border: rgba(13, 107, 131, 0.28);
+  --color-empty-surface: rgba(16, 23, 34, 0.04);
+  --color-skeleton-border: rgba(16, 23, 34, 0.1);
+  --shadow-soft: 0 24px 72px rgba(21, 32, 45, 0.14);
+  --shadow-card: 0 14px 36px rgba(21, 32, 45, 0.1);
+  --shadow-glow: 0 0 56px rgba(13, 107, 131, 0.1);
+  --shadow-timeline-marker: 0 0 0 6px rgba(13, 107, 131, 0.1);
+  --opacity-header-highlight: 0.36;
+  --image-page-background: url("/images/backgrounds/light.png");
+  --overlay-page-background: linear-gradient(rgba(247, 248, 251, 0.64), rgba(247, 248, 251, 0.78));
+  --gradient-glass-highlight: linear-gradient(135deg, rgba(255, 255, 255, 0.64), transparent 44%), radial-gradient(circle at 18% 0%, rgba(13, 107, 131, 0.08), transparent 32rem);
+  --gradient-primary-button: linear-gradient(135deg, rgba(13, 107, 131, 0.96), rgba(138, 100, 17, 0.9));
+  --gradient-brand-mark: linear-gradient(135deg, #0d6b83, #8a6411);
+  --gradient-hero-accent: radial-gradient(circle, rgba(13, 107, 131, 0.13), transparent 70%);
+  --gradient-portrait-surface: radial-gradient(circle at 50% 24%, rgba(13, 107, 131, 0.12), transparent 20rem), rgba(16, 23, 34, 0.035);
+  --gradient-timeline-line: linear-gradient(var(--color-line), rgba(13, 107, 131, 0.32), transparent);
+  --gradient-divider: linear-gradient(90deg, transparent, var(--color-line-strong), transparent);
+  --gradient-skeleton: linear-gradient(110deg, rgba(16, 23, 34, 0.04), rgba(16, 23, 34, 0.12), rgba(16, 23, 34, 0.04));
+  --gradient-footer-accent: radial-gradient(circle, rgba(13, 107, 131, 0.08), transparent 70%);
+  --gradient-recommendation-accent: radial-gradient(circle, rgba(13, 107, 131, 0.12), transparent 70%);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --color-navy-950: #07090d;
+  --color-background: #090b0f;
+  --color-background-elevated: #15191f;
+  --color-glass-surface: rgba(20, 24, 31, 0.78);
+  --color-glass-surface-strong: rgba(25, 30, 38, 0.88);
+  --color-glass-surface-soft: rgba(22, 26, 34, 0.58);
+  --color-glass-blob: rgba(18, 22, 29, 0.82);
+  --color-header-surface: rgba(18, 22, 29, 0.92);
+  --color-glass-border: rgba(202, 218, 228, 0.16);
+  --color-glass-border-strong: rgba(221, 230, 236, 0.24);
+  --color-text-strong: #ffffff;
+  --color-text-primary: #f5f7f9;
+  --color-text-secondary: #bcc8ce;
+  --color-text-tertiary: #828f98;
+  --color-accent: #8fd9d0;
+  --color-accent-strong: #caf3ee;
+  --color-accent-warm: #ffca78;
+  --color-danger: #ffb3a7;
+  --color-focus-ring: rgba(143, 217, 208, 0.34);
+  --color-selection-text: #07090d;
+  --color-selection-bg: #8fd9d0;
+  --color-surface-tint: rgba(143, 217, 208, 0.1);
+  --color-control-surface: rgba(255, 255, 255, 0.075);
+  --color-control-surface-soft: rgba(255, 255, 255, 0.045);
+  --color-control-surface-strong: rgba(255, 255, 255, 0.11);
+  --color-menu-surface: rgba(11, 13, 18, 0.95);
+  --color-profile-preview-backdrop: rgba(3, 5, 9, 0.62);
+  --color-active-surface: rgba(143, 217, 208, 0.12);
+  --color-chip-surface: rgba(255, 255, 255, 0.07);
+  --color-chip-accent-surface: rgba(143, 217, 208, 0.12);
+  --color-chip-accent-border: rgba(143, 217, 208, 0.3);
+  --color-primary-button-text: #07090d;
+  --color-primary-button-border: rgba(143, 217, 208, 0.44);
+  --color-brand-mark-text: #07090d;
+  --color-brand-mark-border: rgba(143, 217, 208, 0.32);
+  --color-mini-card-surface: rgba(0, 0, 0, 0.18);
+  --color-impact-border: rgba(143, 217, 208, 0.2);
+  --color-impact-surface: rgba(143, 217, 208, 0.09);
+  --color-portrait-placeholder-border: rgba(143, 217, 208, 0.28);
+  --color-empty-surface: rgba(255, 255, 255, 0.045);
+  --color-skeleton-border: rgba(255, 255, 255, 0.11);
+  --shadow-soft: 0 24px 72px rgba(0, 0, 0, 0.36);
+  --shadow-card: 0 16px 40px rgba(0, 0, 0, 0.28);
+  --shadow-glow: 0 0 56px rgba(143, 217, 208, 0.1);
+  --shadow-timeline-marker: 0 0 0 6px rgba(143, 217, 208, 0.1);
+  --opacity-header-highlight: 0.38;
+  --image-page-background: url("/images/backgrounds/dark.png");
+  --overlay-page-background: linear-gradient(rgba(9, 11, 15, 0.5), rgba(9, 11, 15, 0.68));
+  --gradient-glass-highlight: linear-gradient(135deg, rgba(255, 255, 255, 0.1), transparent 44%), radial-gradient(circle at 18% 0%, rgba(143, 217, 208, 0.08), transparent 32rem);
+  --gradient-primary-button: linear-gradient(135deg, rgba(143, 217, 208, 0.96), rgba(255, 202, 120, 0.88));
+  --gradient-brand-mark: linear-gradient(135deg, #8fd9d0, #ffca78);
+  --gradient-hero-accent: radial-gradient(circle, rgba(143, 217, 208, 0.1), transparent 70%);
+  --gradient-portrait-surface: radial-gradient(circle at 50% 24%, rgba(143, 217, 208, 0.12), transparent 20rem), rgba(255, 255, 255, 0.045);
+  --gradient-timeline-line: linear-gradient(var(--color-line), rgba(143, 217, 208, 0.34), transparent);
+  --gradient-divider: linear-gradient(90deg, transparent, var(--color-line-strong), transparent);
+  --gradient-skeleton: linear-gradient(110deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.06));
+  --gradient-footer-accent: radial-gradient(circle, rgba(143, 217, 208, 0.08), transparent 70%);
+  --gradient-recommendation-accent: radial-gradient(circle, rgba(143, 217, 208, 0.11), transparent 70%);
+}
+
+@media (max-width: 860px) {
+  :root {
+    --font-size-section-title: 1.38rem;
+    --font-size-page-title: 2.45rem;
+    --font-size-hero-title: 3rem;
+    --font-size-resume-title: 2.15rem;
+    --font-size-placeholder: 5rem;
+    --header-offset: 5.75rem;
+    --scroll-margin-top: 6.75rem;
+  }
 }

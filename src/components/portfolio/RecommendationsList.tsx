@@ -5,11 +5,11 @@ import { RecommendationCard } from "@/components/portfolio/RecommendationCard";
 
 export function RecommendationsList({ items }: { items: RecommendationItem[] }) {
   if (items.length === 0) {
-    return <EmptyState message="Professional recommendations will appear here when spreadsheet rows are available." title="No recommendations yet" />;
+    return <EmptyState message="Professional recommendations will appear here when content is available." title="No recommendations yet" />;
   }
 
   return (
-    <FeaturedGrid columns="two">
+    <FeaturedGrid columns="two" itemCount={items.length}>
       {items.map((item) => (
         <RecommendationCard item={item} key={item.id} />
       ))}

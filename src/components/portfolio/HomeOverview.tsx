@@ -23,8 +23,8 @@ export function HomeOverview({ content }: HomeOverviewProps) {
 
       <div className="home-overview-grid" aria-label="Portfolio overview">
         <HomeOverviewSection
-          description="A concise snapshot of the tools, languages, and domains most relevant to current work."
-          eyebrow="Capabilities"
+          description="A compact snapshot of the tools, languages, and domains most relevant to current work."
+          eyebrow="Skills"
           href="/resume"
           linkLabel="See resume"
           motionEnabled={motionEnabled}
@@ -35,7 +35,7 @@ export function HomeOverview({ content }: HomeOverviewProps) {
         </HomeOverviewSection>
 
         <HomeOverviewSection
-          description="Selected roles that show professional, research, teaching, or leadership context."
+          description="Selected roles showing engineering, research, teaching, and leadership context."
           eyebrow="Experience"
           href="/experience"
           linkLabel="View all experience"
@@ -44,21 +44,6 @@ export function HomeOverview({ content }: HomeOverviewProps) {
         >
           <HomeFeaturedExperience items={content.experience} />
         </HomeOverviewSection>
-
-        {content.recommendations.length > 0 ? (
-          <HomeOverviewSection
-            description="Concise professional social proof, with source links when available."
-            eyebrow="Recommendations"
-            href="/recommendations"
-            linkLabel="View all recommendations"
-            motionEnabled={motionEnabled}
-            title="Professional recommendations"
-            className="home-section--recommendations"
-            wide
-          >
-            <HomeRecommendations items={content.recommendations} />
-          </HomeOverviewSection>
-        ) : null}
 
         <HomeOverviewSection
           description="Research highlights summarized for quick scanning, with deeper technical context one click away."
@@ -83,8 +68,23 @@ export function HomeOverview({ content }: HomeOverviewProps) {
           <HomeFeaturedProjects items={content.projects} />
         </HomeOverviewSection>
 
+        {content.recommendations.length > 0 ? (
+          <HomeOverviewSection
+            description="Concise professional social proof, with source links when available."
+            eyebrow="Recommendations"
+            href="/recommendations"
+            linkLabel="View recommendations"
+            motionEnabled={motionEnabled}
+            title="Professional recommendations"
+            className="home-section--recommendations"
+            wide
+          >
+            <HomeRecommendations items={content.recommendations} showAction={false} />
+          </HomeOverviewSection>
+        ) : null}
+
         <HomeOverviewSection
-          description="Academic context and concise supporting details from the education sheet."
+          description="Academic context and concise supporting details."
           eyebrow="Education"
           motionEnabled={motionEnabled}
           title="Education summary"
@@ -93,12 +93,13 @@ export function HomeOverview({ content }: HomeOverviewProps) {
         </HomeOverviewSection>
 
         <HomeOverviewSection
-          description="A structured resume preview generated from the same content pipeline."
+          description="Download the resume file or scan the resume page."
           eyebrow="Resume"
           href="/resume"
-          linkLabel="Open structured resume"
+          linkLabel="Open resume page"
           motionEnabled={motionEnabled}
-          title="Resume profile"
+          title="Resume and contact"
+          wide
         >
           <div className="home-resume-preview">
             <p>{content.profile.shortBio}</p>

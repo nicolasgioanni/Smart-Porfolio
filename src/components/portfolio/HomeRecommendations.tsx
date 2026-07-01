@@ -2,7 +2,7 @@ import type { RecommendationItem } from "@/content/types";
 import { GlassButton } from "@/components/glass/GlassButton";
 import { RecommendationCard } from "@/components/portfolio/RecommendationCard";
 
-export function HomeRecommendations({ items }: { items: RecommendationItem[] }) {
+export function HomeRecommendations({ items, showAction = true }: { items: RecommendationItem[]; showAction?: boolean }) {
   if (items.length === 0) return null;
 
   return (
@@ -12,11 +12,13 @@ export function HomeRecommendations({ items }: { items: RecommendationItem[] }) 
           <RecommendationCard item={item} key={item.id} variant="summary" />
         ))}
       </div>
-      <div className="home-recommendations__actions">
-        <GlassButton href="/recommendations" variant="secondary">
-          See all recommendations
-        </GlassButton>
-      </div>
+      {showAction ? (
+        <div className="home-recommendations__actions">
+          <GlassButton href="/recommendations" variant="secondary">
+            See all recommendations
+          </GlassButton>
+        </div>
+      ) : null}
     </div>
   );
 }

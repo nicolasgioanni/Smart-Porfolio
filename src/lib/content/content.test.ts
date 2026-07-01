@@ -261,6 +261,7 @@ describe("portfolio normalization", () => {
     expect(content.recommendations[0]?.skills).toEqual(["Communication", "TypeScript"]);
     expect(content.siteSettings.enableRecommendations).toBe(true);
     expect(content.siteSettings.showEmptyRecommendations).toBe(false);
+    expect(content.siteSettings.defaultTheme).toBe("navy");
     expect(content.siteSettings.maxHomeRecommendationItems).toBe(1);
     expect(content.siteSettings.recommendationsNavLabel).toBe("Recommendations");
   });

@@ -14,7 +14,7 @@ export function ResearchList({ items, variant = "summary" }: ResearchListProps) 
   }
 
   return (
-    <FeaturedGrid columns="two">
+    <FeaturedGrid columns="two" itemCount={items.length}>
       {items.map((item) => (
         <ResearchCard item={item} key={item.id} variant={variant} />
       ))}
