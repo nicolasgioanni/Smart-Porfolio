@@ -1,0 +1,60 @@
+:root {
+  --font-sans: "Aptos", "Avenir Next", "Segoe UI", sans-serif;
+  --font-display: "Aptos Display", "Avenir Next", "Segoe UI", sans-serif;
+
+  --color-navy-950: #030813;
+  --color-navy-925: #06101f;
+  --color-navy-900: #09182b;
+  --color-navy-850: #0d223a;
+  --color-navy-accent-soft: rgba(55, 99, 155, 0.28);
+
+  --color-background: var(--color-navy-950);
+  --color-background-elevated: var(--color-navy-900);
+  --color-glass-surface: rgba(8, 22, 40, 0.68);
+  --color-glass-surface-strong: rgba(12, 30, 52, 0.76);
+  --color-glass-surface-soft: rgba(11, 27, 48, 0.5);
+  --color-glass-border: rgba(151, 177, 213, 0.18);
+  --color-glass-border-strong: rgba(174, 197, 226, 0.28);
+  --color-text-primary: #f7f9ff;
+  --color-text-secondary: #b9c6d8;
+  --color-text-tertiary: #8090a7;
+  --color-accent: #9fc6ff;
+  --color-accent-strong: #d1e4ff;
+  --color-accent-warm: #bfc9d8;
+  --color-danger: #ffb3a7;
+
+  --color-canvas: var(--color-background);
+  --color-canvas-soft: var(--color-background-elevated);
+  --color-ink: var(--color-text-primary);
+  --color-ink-strong: #ffffff;
+  --color-muted: var(--color-text-secondary);
+  --color-subtle: var(--color-text-tertiary);
+  --color-line: var(--color-glass-border);
+  --color-line-strong: var(--color-glass-border-strong);
+  --color-surface: var(--color-glass-surface);
+  --color-surface-strong: var(--color-glass-surface-strong);
+  --color-surface-soft: var(--color-glass-surface-soft);
+  --color-surface-tint: rgba(87, 129, 184, 0.12);
+
+  --shadow-soft: 0 28px 90px rgba(0, 0, 0, 0.36);
+  --shadow-card: 0 18px 48px rgba(0, 0, 0, 0.28);
+  --shadow-glow: 0 0 72px rgba(78, 121, 178, 0.16);
+  --radius-blob: 42px;
+  --radius-large: 30px;
+  --radius-medium: 22px;
+  --radius-small: 14px;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --container-width: 1160px;
+  --focus-ring: 0 0 0 3px rgba(159, 198, 255, 0.42);
+  --glass-blur: 18px;
+  --glass-blur-mobile: 10px;
+}

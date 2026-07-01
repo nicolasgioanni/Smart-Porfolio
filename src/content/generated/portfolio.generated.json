@@ -1,0 +1,351 @@
+{
+  "metadata": {
+    "generatedAt": "2026-07-01T02:32:35.021Z",
+    "sourceMode": "templates",
+    "sources": {
+      "profile": "template",
+      "links": "template",
+      "research": "template",
+      "projects": "template",
+      "experience": "template",
+      "recommendations": "template",
+      "education": "template",
+      "skills": "template",
+      "resume": "template",
+      "site_settings": "template"
+    }
+  },
+  "profile": {
+    "fullName": "Demo Portfolio Owner",
+    "preferredName": "Demo",
+    "headline": "Software engineer focused on reliable product systems",
+    "currentTitle": "Software Engineering Student",
+    "currentCompany": "Example University",
+    "location": "City State",
+    "email": "demo@example.com",
+    "university": "Example University",
+    "degree": "Bachelor of Science",
+    "fieldOfStudy": "Computer Science",
+    "graduation": "2026",
+    "shortBio": "Builder of practical software systems with interests in full stack engineering, security, and applied research.",
+    "longBio": "This demo biography shows how a longer profile can be managed from a spreadsheet and rendered into detail views without hard-coding personal content.",
+    "portraitImage": "/images/profile/portrait-placeholder.png",
+    "faviconImage": "/favicon/favicon.png",
+    "resumeUrl": "/resume/demo-resume.pdf",
+    "resumeDownloadLabel": "Open resume",
+    "primaryCtaLabel": "View projects",
+    "secondaryCtaLabel": "Read research"
+  },
+  "links": [
+    {
+      "id": "github",
+      "label": "GitHub",
+      "url": "https://github.com/example",
+      "icon": "github",
+      "kind": "github",
+      "isPrimary": true,
+      "showOnHome": true,
+      "showInHeader": true,
+      "showInFooter": true,
+      "order": 1
+    },
+    {
+      "id": "email",
+      "label": "Email",
+      "url": "mailto:demo@example.com",
+      "icon": "email",
+      "kind": "email",
+      "isPrimary": true,
+      "showOnHome": true,
+      "showInHeader": true,
+      "showInFooter": true,
+      "order": 2
+    },
+    {
+      "id": "resume",
+      "label": "Resume",
+      "url": "/resume/demo-resume.pdf",
+      "icon": "file",
+      "kind": "resume",
+      "isPrimary": false,
+      "showOnHome": true,
+      "showInHeader": false,
+      "showInFooter": true,
+      "order": 3
+    }
+  ],
+  "research": [
+    {
+      "id": "research-demo",
+      "title": "Human centered security research",
+      "role": "Research Assistant",
+      "organization": "Example Lab",
+      "location": "Remote",
+      "startDate": "2025-01",
+      "endDate": "Present",
+      "homeSummary": "Studied practical security workflows and summarized findings for technical audiences.",
+      "detailSummary": "Explored how teams reason about security tradeoffs and how tooling can reduce avoidable mistakes.",
+      "impact": "Produced reusable notes and a lightweight evaluation rubric.",
+      "bullets": [
+        "Reviewed related work",
+        "Synthesized findings into a research brief",
+        "Presented recommendations to peers"
+      ],
+      "skills": [
+        "Security",
+        "Research Methods",
+        "Technical Writing"
+      ],
+      "links": [
+        {
+          "label": "Paper",
+          "url": "https://example.com/research"
+        },
+        {
+          "label": "Repository",
+          "url": "https://github.com/example/research"
+        }
+      ],
+      "image": "/images/research/research-placeholder.png",
+      "featured": true,
+      "showOnHome": true,
+      "homeOrder": 1,
+      "detailOrder": 1
+    }
+  ],
+  "projects": [
+    {
+      "id": "project-demo",
+      "title": "Static portfolio content pipeline",
+      "subtitle": "Typed build-time content system",
+      "homeSummary": "Generated typed portfolio content from spreadsheet-compatible CSV files.",
+      "detailSummary": "A static-first content pipeline that normalizes CSV rows into typed JSON for a portfolio site.",
+      "problem": "Portfolio content often becomes hard-coded and difficult to update.",
+      "solution": "Use public CSV exports at build time and render static pages from generated JSON.",
+      "impact": "Keeps deployment simple while making content updates spreadsheet-driven.",
+      "stack": [
+        "TypeScript",
+        "Next.js",
+        "CSV",
+        "Vitest"
+      ],
+      "links": [
+        {
+          "label": "GitHub",
+          "url": "https://github.com/example/portfolio"
+        },
+        {
+          "label": "Demo",
+          "url": "https://example.com"
+        }
+      ],
+      "image": "/images/projects/project-placeholder.png",
+      "featured": true,
+      "showOnHome": true,
+      "homeOrder": 1,
+      "detailOrder": 1
+    }
+  ],
+  "experience": [
+    {
+      "id": "experience-demo",
+      "title": "Software Engineering Intern",
+      "organization": "Example Company",
+      "type": "internship",
+      "location": "Remote",
+      "startDate": "2025-06",
+      "endDate": "2025-08",
+      "homeSummary": "Built internal tools that improved team workflow visibility.",
+      "detailSummary": "Worked on a small engineering team to ship maintainable features with tests and documentation.",
+      "bullets": [
+        "Implemented typed UI components",
+        "Improved data validation paths",
+        "Documented handoff notes"
+      ],
+      "skills": [
+        "TypeScript",
+        "React",
+        "Testing"
+      ],
+      "featured": true,
+      "showOnHome": true,
+      "homeOrder": 1,
+      "detailOrder": 1
+    },
+    {
+      "id": "teaching-demo",
+      "title": "Peer Tutor",
+      "organization": "Example University",
+      "type": "teaching",
+      "location": "Campus",
+      "startDate": "2024-09",
+      "endDate": "2025-05",
+      "homeSummary": "Helped students reason through programming fundamentals.",
+      "detailSummary": "Supported lab sessions and reviewed common debugging patterns.",
+      "bullets": [
+        "Explained core programming concepts",
+        "Created short practice examples",
+        "Encouraged clear problem decomposition"
+      ],
+      "skills": [
+        "Python",
+        "Teaching",
+        "Communication"
+      ],
+      "featured": false,
+      "showOnHome": true,
+      "homeOrder": 2,
+      "detailOrder": 2
+    }
+  ],
+  "recommendations": [],
+  "education": [
+    {
+      "id": "education-demo",
+      "institution": "Example University",
+      "degree": "Bachelor of Science",
+      "field": "Computer Science",
+      "location": "City State",
+      "startDate": "2022-09",
+      "endDate": "2026-05",
+      "homeSummary": "Coursework focused on software engineering systems and applied computing.",
+      "detailSummary": "Studied software engineering fundamentals with additional interests in security and data-driven systems.",
+      "bullets": [
+        "Relevant coursework includes algorithms and systems design",
+        "Completed collaborative engineering projects"
+      ],
+      "featured": true,
+      "showOnHome": true,
+      "homeOrder": 1,
+      "detailOrder": 1
+    }
+  ],
+  "skills": [
+    {
+      "id": "skill-typescript",
+      "category": "languages",
+      "name": "TypeScript",
+      "priority": 1,
+      "featured": true,
+      "showOnHome": true,
+      "order": 1
+    },
+    {
+      "id": "skill-python",
+      "category": "languages",
+      "name": "Python",
+      "priority": 1,
+      "featured": true,
+      "showOnHome": true,
+      "order": 2
+    },
+    {
+      "id": "skill-nextjs",
+      "category": "frameworks",
+      "name": "Next.js",
+      "priority": 1,
+      "featured": true,
+      "showOnHome": true,
+      "order": 3
+    },
+    {
+      "id": "skill-react",
+      "category": "libraries",
+      "name": "React",
+      "priority": 1,
+      "featured": true,
+      "showOnHome": true,
+      "order": 4
+    },
+    {
+      "id": "skill-testing",
+      "category": "tools",
+      "name": "Vitest",
+      "priority": 2,
+      "featured": false,
+      "showOnHome": true,
+      "order": 5
+    },
+    {
+      "id": "skill-security",
+      "category": "cybersecurity",
+      "name": "Security fundamentals",
+      "priority": 2,
+      "featured": true,
+      "showOnHome": true,
+      "order": 6
+    },
+    {
+      "id": "skill-research",
+      "category": "research",
+      "name": "Research synthesis",
+      "priority": 2,
+      "featured": true,
+      "showOnHome": true,
+      "order": 7
+    },
+    {
+      "id": "skill-cloud",
+      "category": "cloud",
+      "name": "Vercel",
+      "priority": 3,
+      "featured": false,
+      "showOnHome": true,
+      "order": 8
+    }
+  ],
+  "resume": [
+    {
+      "section": "summary",
+      "key": "headline",
+      "value": "Software engineer focused on practical product systems and clear technical communication.",
+      "order": 1
+    },
+    {
+      "section": "summary",
+      "key": "focus",
+      "value": "Full stack engineering security-aware development and applied research.",
+      "order": 2
+    },
+    {
+      "section": "experience",
+      "key": "heading",
+      "value": "Experience",
+      "order": 3
+    },
+    {
+      "section": "projects",
+      "key": "heading",
+      "value": "Projects",
+      "order": 4
+    },
+    {
+      "section": "education",
+      "key": "heading",
+      "value": "Education",
+      "order": 5
+    },
+    {
+      "section": "skills",
+      "key": "heading",
+      "value": "Skills",
+      "order": 6
+    }
+  ],
+  "siteSettings": {
+    "siteTitle": "Demo Portfolio",
+    "siteDescription": "A professional portfolio with experience, projects, research, and resume highlights.",
+    "defaultTheme": "dark",
+    "enableSkeletons": true,
+    "enableScrollMotion": false,
+    "enableGlassEffects": true,
+    "enableRecommendations": true,
+    "showEmptyRecommendations": false,
+    "maxHomeResearchItems": 2,
+    "maxHomeProjectItems": 3,
+    "maxHomeExperienceItems": 3,
+    "maxHomeRecommendationItems": 1,
+    "recommendationsNavLabel": "Recommendations",
+    "maxHomeSkillItems": 8
+  }
+}

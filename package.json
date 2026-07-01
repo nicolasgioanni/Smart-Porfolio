@@ -1,0 +1,47 @@
+{
+  "name": "static-first-smart-portfolio",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "generate:content": "tsx scripts/fetchPortfolioContent.ts",
+    "prebuild": "npm run generate:content",
+    "build": "next build",
+    "lint": "eslint . --max-warnings=0",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "verify": "npm run lint && npm run typecheck && npm run test && npm run build",
+    "setup:local": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup-local.ps1",
+    "dev:smart": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-dev.ps1",
+    "verify:local": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-local.ps1",
+    "clean:local": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/clean-local.ps1",
+    "setup:local:node": "node scripts/setup-local.mjs",
+    "dev:smart:node": "node scripts/start-dev.mjs",
+    "verify:local:node": "node scripts/verify-local.mjs",
+    "clean:local:node": "node scripts/clean-local.mjs"
+  },
+  "dependencies": {
+    "csv-parse": "^5.6.0",
+    "next": "^14.2.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "@next/eslint-plugin-next": "^14.2.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.1.0",
+    "@types/node": "^22.10.7",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "eslint": "^9.18.0",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "globals": "^15.14.0",
+    "jsdom": "^25.0.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.20.0",
+    "vitest": "^2.1.8"
+  }
+}

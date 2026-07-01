@@ -1,0 +1,214 @@
+﻿export type ContentSourceMode = "templates" | "remote" | "mixed";
+
+export type PortfolioContentLink = {
+  label: string;
+  url: string;
+};
+
+export type ProfileContent = {
+  fullName: string;
+  headline: string;
+  location: string;
+  email: string;
+  shortBio: string;
+  preferredName?: string;
+  currentTitle?: string;
+  currentCompany?: string;
+  pronouns?: string;
+  university?: string;
+  degree?: string;
+  fieldOfStudy?: string;
+  graduation?: string;
+  longBio?: string;
+  portraitImage?: string;
+  faviconImage?: string;
+  resumeUrl?: string;
+  resumeDownloadLabel?: string;
+  primaryCtaLabel?: string;
+  secondaryCtaLabel?: string;
+  [key: string]: string | undefined;
+};
+
+export type PortfolioLink = {
+  id: string;
+  label: string;
+  url: string;
+  icon?: string;
+  kind: string;
+  isPrimary: boolean;
+  showOnHome: boolean;
+  showInHeader: boolean;
+  showInFooter: boolean;
+  order?: number;
+};
+
+export type ResearchItem = {
+  id: string;
+  title: string;
+  role?: string;
+  organization?: string;
+  location?: string;
+  startDate?: string;
+  endDate?: string;
+  homeSummary?: string;
+  detailSummary?: string;
+  impact?: string;
+  bullets: string[];
+  skills: string[];
+  links: PortfolioContentLink[];
+  image?: string;
+  featured: boolean;
+  showOnHome: boolean;
+  homeOrder?: number;
+  detailOrder?: number;
+};
+
+export type ProjectItem = {
+  id: string;
+  title: string;
+  subtitle?: string;
+  homeSummary?: string;
+  detailSummary?: string;
+  problem?: string;
+  solution?: string;
+  impact?: string;
+  stack: string[];
+  links: PortfolioContentLink[];
+  image?: string;
+  featured: boolean;
+  showOnHome: boolean;
+  homeOrder?: number;
+  detailOrder?: number;
+};
+
+export type ExperienceItem = {
+  id: string;
+  title: string;
+  organization: string;
+  type?: string;
+  location?: string;
+  startDate?: string;
+  endDate?: string;
+  homeSummary?: string;
+  detailSummary?: string;
+  bullets: string[];
+  skills: string[];
+  featured: boolean;
+  showOnHome: boolean;
+  homeOrder?: number;
+  detailOrder?: number;
+};
+
+export type RecommendationItem = {
+  id: string;
+  recommenderName: string;
+  recommenderTitle?: string;
+  recommenderOrganization?: string;
+  relationship?: string;
+  recommendationDate?: string;
+  source?: string;
+  sourceUrl?: string;
+  linkedinUrl?: string;
+  homeQuote?: string;
+  fullQuote: string;
+  context?: string;
+  skills: string[];
+  featured: boolean;
+  showOnHome: boolean;
+  homeOrder?: number;
+  detailOrder?: number;
+};
+
+export type EducationItem = {
+  id: string;
+  institution: string;
+  degree: string;
+  field?: string;
+  location?: string;
+  startDate?: string;
+  endDate?: string;
+  homeSummary?: string;
+  detailSummary?: string;
+  bullets: string[];
+  featured: boolean;
+  showOnHome: boolean;
+  homeOrder?: number;
+  detailOrder?: number;
+};
+
+export type SkillItem = {
+  id: string;
+  category: string;
+  name: string;
+  priority?: number;
+  featured: boolean;
+  showOnHome: boolean;
+  order?: number;
+};
+
+export type ResumeEntry = {
+  section: string;
+  key: string;
+  value: string;
+  order?: number;
+};
+
+export type SiteSettings = {
+  siteTitle: string;
+  siteDescription: string;
+  defaultTheme: string;
+  enableSkeletons: boolean;
+  enableScrollMotion: boolean;
+  enableGlassEffects: boolean;
+  enableRecommendations: boolean;
+  showEmptyRecommendations: boolean;
+  maxHomeResearchItems: number;
+  maxHomeProjectItems: number;
+  maxHomeExperienceItems: number;
+  maxHomeRecommendationItems: number;
+  maxHomeSkillItems: number;
+  recommendationsNavLabel: string;
+  licenseName?: string;
+  licenseUrl?: string;
+  copyrightOwner?: string;
+  repositoryUrl?: string;
+  [key: string]: string | number | boolean | undefined;
+};
+
+export type GeneratedContentMetadata = {
+  generatedAt: string;
+  sourceMode: ContentSourceMode;
+  sources: Record<string, "template" | "remote">;
+};
+
+export type GeneratedPortfolioContent = {
+  metadata: GeneratedContentMetadata;
+  profile: ProfileContent;
+  links: PortfolioLink[];
+  research: ResearchItem[];
+  projects: ProjectItem[];
+  experience: ExperienceItem[];
+  recommendations: RecommendationItem[];
+  education: EducationItem[];
+  skills: SkillItem[];
+  resume: ResumeEntry[];
+  siteSettings: SiteSettings;
+};
+
+export type SkillGroup = {
+  category: string;
+  skills: SkillItem[];
+};
+
+export type HomePortfolioContent = {
+  profile: ProfileContent;
+  links: PortfolioLink[];
+  research: ResearchItem[];
+  projects: ProjectItem[];
+  experience: ExperienceItem[];
+  recommendations: RecommendationItem[];
+  education: EducationItem[];
+  skillGroups: SkillGroup[];
+  resume: ResumeEntry[];
+  siteSettings: SiteSettings;
+};

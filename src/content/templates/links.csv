@@ -1,0 +1,4 @@
+﻿id,label,url,icon,kind,is_primary,show_on_home,show_in_header,show_in_footer,order
+github,GitHub,https://github.com/example,github,github,true,true,true,true,1
+email,Email,mailto:demo@example.com,email,email,true,true,true,true,2
+resume,Resume,/resume/demo-resume.pdf,file,resume,false,true,false,true,3

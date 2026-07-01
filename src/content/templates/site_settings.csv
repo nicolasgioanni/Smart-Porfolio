@@ -1,0 +1,19 @@
+﻿key,value
+site_title,Demo Portfolio
+site_description,"A professional portfolio with experience, projects, research, and resume highlights."
+default_theme,dark
+enable_skeletons,true
+enable_scroll_motion,false
+enable_glass_effects,true
+enable_recommendations,true
+show_empty_recommendations,false
+max_home_research_items,2
+max_home_project_items,3
+max_home_experience_items,3
+max_home_recommendation_items,1
+max_home_skill_items,8
+recommendations_nav_label,Recommendations
+license_name,
+license_url,
+copyright_owner,
+repository_url,

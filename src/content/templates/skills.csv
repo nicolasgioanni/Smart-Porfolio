@@ -1,0 +1,9 @@
+﻿id,category,name,priority,featured,show_on_home,order
+skill-typescript,languages,TypeScript,1,true,true,1
+skill-python,languages,Python,1,true,true,2
+skill-nextjs,frameworks,Next.js,1,true,true,3
+skill-react,libraries,React,1,true,true,4
+skill-testing,tools,Vitest,2,false,true,5
+skill-security,cybersecurity,Security fundamentals,2,true,true,6
+skill-research,research,Research synthesis,2,true,true,7
+skill-cloud,cloud,Vercel,3,false,true,8

@@ -1,0 +1,2 @@
+﻿id,institution,degree,field,location,start_date,end_date,home_summary,detail_summary,bullets,featured,show_on_home,home_order,detail_order
+education-demo,Example University,Bachelor of Science,Computer Science,City State,2022-09,2026-05,Coursework focused on software engineering systems and applied computing.,Studied software engineering fundamentals with additional interests in security and data-driven systems.,Relevant coursework includes algorithms and systems design|Completed collaborative engineering projects,true,true,1,1

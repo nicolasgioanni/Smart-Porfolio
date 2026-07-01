@@ -1,0 +1,38 @@
+.motion-reveal,
+.motion-compress {
+  opacity: 0;
+  transform: translateY(24px) scale(0.985);
+  transition:
+    opacity 680ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 680ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.motion-reveal.is-visible,
+.motion-compress.is-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.motion-reveal--delay-short {
+  transition-delay: 90ms;
+}
+
+.motion-reveal--delay-medium {
+  transition-delay: 160ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .motion-reveal,
+  .motion-compress,
+  .motion-reveal.is-visible,
+  .motion-compress.is-visible {
+    opacity: 1;
+    transform: none;
+    transition: none;
+    animation: none;
+  }
+}

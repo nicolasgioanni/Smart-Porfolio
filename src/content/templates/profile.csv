@@ -1,0 +1,21 @@
+﻿key,value
+full_name,Demo Portfolio Owner
+preferred_name,Demo
+headline,Software engineer focused on reliable product systems
+current_title,Software Engineering Student
+current_company,Example University
+location,City State
+email,demo@example.com
+pronouns,
+university,Example University
+degree,Bachelor of Science
+field_of_study,Computer Science
+graduation,2026
+short_bio,"Builder of practical software systems with interests in full stack engineering, security, and applied research."
+long_bio,"This demo biography shows how a longer profile can be managed from a spreadsheet and rendered into detail views without hard-coding personal content."
+portrait_image,/images/profile/portrait-placeholder.png
+favicon_image,/favicon/favicon.png
+resume_url,/resume/demo-resume.pdf
+resume_download_label,Open resume
+primary_cta_label,View projects
+secondary_cta_label,Read research
