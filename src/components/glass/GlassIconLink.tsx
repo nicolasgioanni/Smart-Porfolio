@@ -1,6 +1,7 @@
 import type { AnchorHTMLAttributes } from "react";
 import { LinkIcon } from "@/components/icons/LinkIcon";
-import { getExternalLinkProps, getLinkKind } from "@/lib/content/displayHelpers";
+import { SmartLink } from "@/components/navigation/SmartLink";
+import { getLinkKind } from "@/lib/content/displayHelpers";
 
 type GlassIconLinkProps = AnchorHTMLAttributes<HTMLAnchorElement> & {
   label: string;
@@ -13,15 +14,16 @@ export function GlassIconLink({ className, kind, label, showLabel = true, url, .
   const resolvedKind = kind ?? getLinkKind({ label, url });
 
   return (
-    <a
+    <SmartLink
       aria-label={showLabel ? undefined : label}
-      className={["glass-icon-link", showLabel ? "glass-icon-link--labeled" : "", className].filter(Boolean).join(" ")}
+      className={["glass-icon-link", showLabel ? "glass-icon-link--labeled" : "", "hover-base-1", "hover-base-1--compact", className]
+        .filter(Boolean)
+        .join(" ")}
       href={url}
-      {...getExternalLinkProps(url)}
       {...props}
     >
       <LinkIcon kind={resolvedKind} />
       {showLabel ? <span>{label}</span> : null}
-    </a>
+    </SmartLink>
   );
 }

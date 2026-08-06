@@ -41,7 +41,34 @@ export function LinkIcon({ kind = "external", ...props }: IconProps) {
     );
   }
 
+  if (normalizedKind === "location") {
+    return (
+      <BaseIcon {...props}>
+        <path d="M12 21s6-5.3 6-11a6 6 0 1 0-12 0c0 5.7 6 11 6 11Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.8" />
+        <path d="M12 12.2a2.2 2.2 0 1 0 0-4.4 2.2 2.2 0 0 0 0 4.4Z" stroke="currentColor" strokeWidth="1.8" />
+      </BaseIcon>
+    );
+  }
+
+  if (normalizedKind === "timezone" || normalizedKind === "time") {
+    return (
+      <BaseIcon {...props}>
+        <path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z" stroke="currentColor" strokeWidth="1.8" />
+        <path d="M12 7.5V12l3 2" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+      </BaseIcon>
+    );
+  }
+
   if (normalizedKind === "resume" || normalizedKind === "file") {
+    return (
+      <BaseIcon {...props}>
+        <path d="M7 3.5h7l3 3v14H7v-17Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.8" />
+        <path d="M14 3.8V7h3.2M9.5 11h5M9.5 14h5M9.5 17h3" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+      </BaseIcon>
+    );
+  }
+
+  if (normalizedKind === "publication" || normalizedKind === "paper" || normalizedKind === "manuscript") {
     return (
       <BaseIcon {...props}>
         <path d="M7 3.5h7l3 3v14H7v-17Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.8" />

@@ -27,8 +27,7 @@ body::before {
   z-index: -1;
   pointer-events: none;
   content: "";
-  background-image: var(--overlay-page-background), var(--image-page-background);
-  background-position: center;
+  background: var(--overlay-page-background);
   background-repeat: no-repeat;
   background-size: cover;
 }

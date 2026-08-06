@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "generatedAt": "2026-07-01T06:22:05.896Z",
+    "generatedAt": "2026-08-06T09:36:16.839Z",
     "sourceMode": "templates",
     "sources": {
       "profile": "template",
@@ -16,22 +16,27 @@
     }
   },
   "profile": {
-    "fullName": "Demo Portfolio Owner",
-    "preferredName": "Demo",
-    "headline": "Software engineer focused on reliable product systems",
-    "currentTitle": "Software Engineering Student",
-    "currentCompany": "Example University",
-    "location": "City State",
-    "email": "demo@example.com",
-    "university": "Example University",
+    "fullName": "Nicolas Gioanni",
+    "preferredName": "Nicolas",
+    "headline": "Software engineer building AI/ML, vision, and secure systems.",
+    "currentTitle": "Research Assistant (Software Engineering)",
+    "currentCompany": "UW Bothell School of STEM",
+    "currentExperienceId": "research-assistant-software-engineering",
+    "previousExperienceId": "research-assistant-software-engineering",
+    "featuredResearchId": "cytocv-miller-lab",
+    "primaryEducationId": "uw-bscsse",
+    "location": "Greater Seattle Area",
+    "timezone": "Pacific Time (UTC-07:00)",
+    "email": "ngioanni@uw.edu",
+    "university": "University of Washington",
     "degree": "Bachelor of Science",
-    "fieldOfStudy": "Computer Science",
-    "graduation": "2026",
-    "shortBio": "Builder of practical software systems with interests in full stack engineering, security, and applied research.",
-    "longBio": "This demo biography shows how a longer profile can be managed from a spreadsheet and rendered into detail views without hard-coding personal content.",
-    "portraitImage": "/images/profile/portrait-placeholder.png",
+    "fieldOfStudy": "Computer Science & Software Engineering",
+    "graduation": "Jun 2025",
+    "shortBio": "University of Washington CSSE graduate focused on full-stack engineering, AI/ML tooling, computer vision, and secure software systems.",
+    "longBio": "I build practical software systems at the intersection of full-stack engineering, AI/ML, computer vision, and security. My work includes research software for microscopy analysis, adversarial machine learning pipelines, teaching support for core CS courses, and production-style projects using Next.js, Flask, Django, Firebase, and cloud deployment tooling.",
+    "portraitImage": "/favicon/favicon.png",
     "faviconImage": "/favicon/favicon.png",
-    "resumeUrl": "/resume/demo-resume.pdf",
+    "resumeUrl": "/resume/Nicolas-Gioanni-Resume.pdf",
     "resumeDownloadLabel": "Open resume",
     "primaryCtaLabel": "View projects",
     "secondaryCtaLabel": "Read research"
@@ -40,7 +45,7 @@
     {
       "id": "github",
       "label": "GitHub",
-      "url": "https://github.com/example",
+      "url": "https://github.com/nicolasgioanni",
       "icon": "github",
       "kind": "github",
       "isPrimary": true,
@@ -50,11 +55,11 @@
       "order": 1
     },
     {
-      "id": "email",
-      "label": "Email",
-      "url": "mailto:demo@example.com",
-      "icon": "email",
-      "kind": "email",
+      "id": "linkedin",
+      "label": "LinkedIn",
+      "url": "https://www.linkedin.com/in/nicolas-gioanni",
+      "icon": "linkedin",
+      "kind": "linkedin",
       "isPrimary": true,
       "showOnHome": true,
       "showInHeader": true,
@@ -62,110 +67,75 @@
       "order": 2
     },
     {
+      "id": "email",
+      "label": "Email",
+      "url": "mailto:ngioanni@uw.edu",
+      "icon": "email",
+      "kind": "email",
+      "isPrimary": true,
+      "showOnHome": true,
+      "showInHeader": true,
+      "showInFooter": true,
+      "order": 3
+    },
+    {
       "id": "resume",
       "label": "Resume",
-      "url": "/resume/demo-resume.pdf",
+      "url": "/resume/Nicolas-Gioanni-Resume.pdf",
       "icon": "file",
       "kind": "resume",
       "isPrimary": false,
       "showOnHome": true,
       "showInHeader": false,
       "showInFooter": true,
-      "order": 3
+      "order": 5
     }
   ],
   "research": [
     {
-      "id": "research-demo",
-      "title": "Human centered security research",
-      "role": "Research Assistant",
-      "organization": "Example Lab",
-      "location": "Remote",
-      "startDate": "2025-01",
+      "id": "cytocv-miller-lab",
+      "title": "CytoCV",
+      "role": "Graduate Research",
+      "organization": "UW Bothell School of STEM",
+      "location": "Bothell, WA",
+      "startDate": "2024-08",
       "endDate": "Present",
-      "homeSummary": "Studied practical security workflows and summarized findings for technical audiences.",
-      "detailSummary": "Explored how teams reason about security tradeoffs and how tooling can reduce avoidable mistakes.",
-      "impact": "Produced reusable notes and a lightweight evaluation rubric.",
+      "homeSummary": "Web-based platform for reproducible yeast microscopy image analysis.",
+      "detailSummary": "Built a Django and JavaScript platform for the University of Utah Miller Lab with REST APIs, deterministic batch ML processing, PostgreSQL data storage, and Linux VM deployment for 15+ scientists.",
+      "impact": "Reduced manual analysis by 97%, cut processing time by 73%, and reduced file storage by 56.6%.",
       "bullets": [
-        "Reviewed related work",
-        "Synthesized findings into a research brief",
-        "Presented recommendations to peers"
+        "Architected Python Django REST APIs and a JavaScript Fetch API frontend",
+        "Built TensorFlow/Keras Mask R-CNN segmentation workflows with OpenCV scikit-image and NumPy",
+        "Extracted 30+ cell-level metrics from microscopy data",
+        "Migrated SQLite to PostgreSQL and optimized storage by converting TIFF caches to PNG",
+        "Led a 6-person Agile team and maintained CI/CD deployment on a UW-IT Linux VM"
       ],
       "skills": [
-        "Security",
-        "Research Methods",
-        "Technical Writing"
+        "Python",
+        "Django",
+        "REST APIs",
+        "JavaScript",
+        "TensorFlow/Keras",
+        "OpenCV",
+        "scikit-image",
+        "NumPy",
+        "PostgreSQL",
+        "Linux",
+        "Nginx",
+        "Gunicorn"
       ],
       "links": [
         {
-          "label": "Paper",
-          "url": "https://example.com/research"
+          "label": "Live site",
+          "url": "https://cytocv2.uwb.edu"
         },
         {
-          "label": "Repository",
-          "url": "https://github.com/example/research"
+          "label": "Source code",
+          "url": "https://github.com/BrentLagesse/CytoCV"
         }
       ],
-      "image": "/images/research/research-placeholder.png",
-      "featured": true,
-      "showOnHome": true,
-      "homeOrder": 1,
-      "detailOrder": 1
-    }
-  ],
-  "projects": [
-    {
-      "id": "project-demo",
-      "title": "Static portfolio content pipeline",
-      "subtitle": "Typed build-time content system",
-      "homeSummary": "Generated typed portfolio content from spreadsheet-compatible CSV files.",
-      "detailSummary": "A static-first content pipeline that normalizes CSV rows into typed JSON for a portfolio site.",
-      "problem": "Portfolio content often becomes hard-coded and difficult to update.",
-      "solution": "Use public CSV exports at build time and render static pages from generated JSON.",
-      "impact": "Keeps deployment simple while making content updates spreadsheet-driven.",
-      "stack": [
-        "TypeScript",
-        "Next.js",
-        "CSV",
-        "Vitest"
-      ],
-      "links": [
-        {
-          "label": "GitHub",
-          "url": "https://github.com/example/portfolio"
-        },
-        {
-          "label": "Demo",
-          "url": "https://example.com"
-        }
-      ],
-      "image": "/images/projects/project-placeholder.png",
-      "featured": true,
-      "showOnHome": true,
-      "homeOrder": 1,
-      "detailOrder": 1
-    }
-  ],
-  "experience": [
-    {
-      "id": "experience-demo",
-      "title": "Software Engineering Intern",
-      "organization": "Example Company",
-      "type": "internship",
-      "location": "Remote",
-      "startDate": "2025-06",
-      "endDate": "2025-08",
-      "homeSummary": "Built internal tools that improved team workflow visibility.",
-      "detailSummary": "Worked on a small engineering team to ship maintainable features with tests and documentation.",
-      "bullets": [
-        "Implemented typed UI components",
-        "Improved data validation paths",
-        "Documented handoff notes"
-      ],
-      "skills": [
-        "TypeScript",
-        "React",
-        "Testing"
+      "pendingLinks": [
+        "Manuscript"
       ],
       "featured": true,
       "showOnHome": true,
@@ -173,24 +143,117 @@
       "detailOrder": 1
     },
     {
-      "id": "teaching-demo",
-      "title": "Peer Tutor",
-      "organization": "Example University",
-      "type": "teaching",
-      "location": "Campus",
+      "id": "adversarial-machine-learning",
+      "title": "Adversarial machine learning pipelines",
+      "role": "Undergraduate Researcher (Adversarial Machine Learning)",
+      "organization": "University of Washington",
+      "location": "Bothell, WA",
       "startDate": "2024-09",
-      "endDate": "2025-05",
-      "homeSummary": "Helped students reason through programming fundamentals.",
-      "detailSummary": "Supported lab sessions and reviewed common debugging patterns.",
+      "endDate": "2024-12",
+      "homeSummary": "Implemented adversarial attack and defense pipelines for image classification models.",
+      "detailSummary": "Used Python, TensorFlow/Keras, NumPy, and Matplotlib to automate attack and defense testing while tracking success rates, latency, and accuracy.",
+      "impact": "Optimized batched Keras defense execution to under 5 seconds while preserving 94% clean-data accuracy.",
       "bullets": [
-        "Explained core programming concepts",
-        "Created short practice examples",
-        "Encouraged clear problem decomposition"
+        "Implemented attack and defense workflows for image classification models",
+        "Automated experiment reporting for success rates latency and accuracy",
+        "Improved defense execution with batched Keras evaluation"
       ],
       "skills": [
         "Python",
-        "Teaching",
-        "Communication"
+        "TensorFlow/Keras",
+        "NumPy",
+        "Matplotlib",
+        "Adversarial ML"
+      ],
+      "links": [],
+      "pendingLinks": [],
+      "featured": false,
+      "showOnHome": true,
+      "homeOrder": 2,
+      "detailOrder": 2
+    },
+    {
+      "id": "yeast-dna-target-selection",
+      "title": "Yeast DNA target selection automation",
+      "role": "Research Assistant (AI/ML)",
+      "organization": "UW Bothell School of STEM",
+      "location": "Bothell, WA",
+      "startDate": "2024-03",
+      "endDate": "2024-08",
+      "homeSummary": "Developed an automated target selection system for yeast DNA research workflows.",
+      "detailSummary": "Used Python, pandas, Biopython, and regex to analyze 18,000+ FASTA files and export validated sequences to Excel.",
+      "impact": "Reduced manual research workflows by 99%.",
+      "bullets": [
+        "Built automated target selection workflows for yeast DNA research",
+        "Analyzed 18,000+ FASTA files with Python pandas Biopython and regex",
+        "Exported validated sequence results for researchers"
+      ],
+      "skills": [
+        "Python",
+        "pandas",
+        "Biopython",
+        "Regex",
+        "Excel"
+      ],
+      "links": [],
+      "pendingLinks": [],
+      "featured": false,
+      "showOnHome": true,
+      "homeOrder": 3,
+      "detailOrder": 3
+    }
+  ],
+  "projects": [
+    {
+      "id": "notepal",
+      "title": "NotePal",
+      "subtitle": "Note-taking and study app",
+      "homeSummary": "Built and deployed a full-stack study app with AI note generation, flashcards, quizzes, and RAG chat.",
+      "detailSummary": "Created a Next.js and TypeScript frontend with a Notion-style editor and a Flask REST API that orchestrates OCR, ASR, and LLM pipelines using Whisper, YOLO, LLM APIs, Firebase Auth, Firestore, and Pinecone.",
+      "problem": "Students need to turn mixed study material into usable notes and practice materials without losing time to manual formatting.",
+      "solution": "Automated note, flashcard, quiz, and chat workflows from multimodal input with per-user data isolation.",
+      "impact": "Cut study time by 67% and shipped on Vercel with CI/CD.",
+      "stack": [
+        "Next.js",
+        "TypeScript",
+        "LLM API",
+        "Flask",
+        "Whisper",
+        "YOLO",
+        "Firebase Auth",
+        "Firestore",
+        "Pinecone",
+        "Vercel"
+      ],
+      "links": [
+        {
+          "label": "GitHub",
+          "url": "https://github.com/nicolasgioanni/NotePal"
+        }
+      ],
+      "featured": true,
+      "showOnHome": true,
+      "homeOrder": 1,
+      "detailOrder": 1
+    },
+    {
+      "id": "clair",
+      "title": "Clair",
+      "subtitle": "Automotive file organizer",
+      "homeSummary": "Built a Python and Bash desktop app to automate file cleanup for automotive workflows.",
+      "detailSummary": "Created a local file organization utility that automates folder cleanup and reduces repeated manual sorting.",
+      "problem": "Manual file cleanup is repetitive and error-prone when folders accumulate inconsistent names and structures.",
+      "solution": "Used Python and Bash automation to organize files into repeatable folder structures.",
+      "impact": "Reduced manual sorting time by 80%.",
+      "stack": [
+        "Python",
+        "Bash"
+      ],
+      "links": [
+        {
+          "label": "GitHub",
+          "url": "https://github.com/nicolasgioanni/Clair"
+        }
       ],
       "featured": false,
       "showOnHome": true,
@@ -198,21 +261,169 @@
       "detailOrder": 2
     }
   ],
+  "experience": [
+    {
+      "id": "research-assistant-software-engineering",
+      "title": "Research Assistant (Software Engineering)",
+      "organization": "UW Bothell School of STEM",
+      "type": "research",
+      "location": "Bothell, WA",
+      "startDate": "2024-08",
+      "endDate": "Present",
+      "homeSummary": "Built and deployed full-stack computer-vision tools for scientific microscopy analysis.",
+      "detailSummary": "Architected a Django REST API and JavaScript frontend for the University of Utah Miller Lab, paired with deterministic ML processing and Linux VM deployment for 15+ scientists.",
+      "bullets": [
+        "Reduced manual microscopy analysis by 97%",
+        "Cut ML processing time by 73% with TensorFlow/Keras OpenCV scikit-image and NumPy",
+        "Reduced file storage by 56.6% by migrating previews and preprocessing caches",
+        "Migrated SQLite to PostgreSQL and deployed with Nginx Gunicorn and Let's Encrypt TLS",
+        "Led a 6-person Agile development team and maintained CI/CD pipelines"
+      ],
+      "skills": [
+        "Python",
+        "Django",
+        "JavaScript",
+        "REST APIs",
+        "TensorFlow/Keras",
+        "OpenCV",
+        "PostgreSQL",
+        "Linux",
+        "Nginx",
+        "Gunicorn",
+        "Docker"
+      ],
+      "featured": true,
+      "showOnHome": true,
+      "homeOrder": 1,
+      "detailOrder": 1
+    },
+    {
+      "id": "teaching-assistant",
+      "title": "Teaching Assistant",
+      "organization": "University of Washington",
+      "type": "teaching",
+      "location": "Bothell, WA",
+      "startDate": "2025-01",
+      "endDate": "2025-06",
+      "homeSummary": "Supported core CS courses through office hours, quiz sections, tutoring, grading, and project review.",
+      "detailSummary": "Led weekly office hours and quiz sections, provided 1:1 tutoring, and managed grading across Data Structures & Algorithms, Discrete Mathematics, Operating Systems, and Software Engineering.",
+      "bullets": [
+        "Supported 600+ students across C/C++ JavaScript OOP Git and Docker coursework",
+        "Evaluated coding projects for 400+ students through code review",
+        "Achieved an average student rating of 4.91/5"
+      ],
+      "skills": [
+        "C/C++",
+        "JavaScript",
+        "OOP",
+        "Git",
+        "Docker",
+        "Teaching",
+        "Code Review"
+      ],
+      "featured": true,
+      "showOnHome": true,
+      "homeOrder": 2,
+      "detailOrder": 2
+    },
+    {
+      "id": "undergraduate-researcher-adversarial-ml",
+      "title": "Undergraduate Researcher (Adversarial Machine Learning)",
+      "organization": "University of Washington",
+      "type": "research",
+      "location": "Bothell, WA",
+      "startDate": "2024-09",
+      "endDate": "2024-12",
+      "homeSummary": "Implemented adversarial attack and defense pipelines for image classification models.",
+      "detailSummary": "Automated adversarial machine learning tests with Python, TensorFlow/Keras, NumPy, and Matplotlib while tracking model accuracy, latency, and attack success rates.",
+      "bullets": [
+        "Implemented adversarial attack and defense pipelines for image classification models",
+        "Optimized batched Keras defense execution to under 5 seconds",
+        "Preserved 94% clean-data accuracy during defense evaluation"
+      ],
+      "skills": [
+        "Python",
+        "TensorFlow/Keras",
+        "NumPy",
+        "Matplotlib",
+        "Machine Learning"
+      ],
+      "featured": false,
+      "showOnHome": true,
+      "homeOrder": 3,
+      "detailOrder": 3
+    },
+    {
+      "id": "research-assistant-ai-ml",
+      "title": "Research Assistant (AI/ML)",
+      "organization": "UW Bothell School of STEM",
+      "type": "research",
+      "location": "Bothell, WA",
+      "startDate": "2024-03",
+      "endDate": "2024-08",
+      "homeSummary": "Automated yeast DNA target selection workflows for researchers.",
+      "detailSummary": "Developed a Python system that analyzed 18,000+ FASTA files with pandas, Biopython, and regex, then exported validated sequences to Excel.",
+      "bullets": [
+        "Reduced manual workflows by 99%",
+        "Parsed and analyzed 18,000+ FASTA files",
+        "Produced validated Excel exports for research use"
+      ],
+      "skills": [
+        "Python",
+        "pandas",
+        "Biopython",
+        "Regex",
+        "Excel"
+      ],
+      "featured": false,
+      "showOnHome": true,
+      "homeOrder": 4,
+      "detailOrder": 4
+    },
+    {
+      "id": "gdg-officer",
+      "title": "Officer",
+      "organization": "Google Developer Groups on Campus",
+      "type": "leadership",
+      "location": "Bothell, WA",
+      "startDate": "2024-09",
+      "endDate": "2025-06",
+      "homeSummary": "Mentored students through workshops on courses, coding practices, and developer tools.",
+      "detailSummary": "Supported 100+ students through workshops and mentoring on courses, coding practices, Git, Docker, and VS Code.",
+      "bullets": [
+        "Mentored 100+ students",
+        "Led practical workshops on coding practices and tools",
+        "Helped students navigate courses and project workflows"
+      ],
+      "skills": [
+        "Mentorship",
+        "Git",
+        "Docker",
+        "VS Code",
+        "Communication"
+      ],
+      "featured": false,
+      "showOnHome": true,
+      "homeOrder": 5,
+      "detailOrder": 5
+    }
+  ],
   "recommendations": [],
   "education": [
     {
-      "id": "education-demo",
-      "institution": "Example University",
+      "id": "uw-bscsse",
+      "institution": "University of Washington",
       "degree": "Bachelor of Science",
-      "field": "Computer Science",
-      "location": "City State",
+      "field": "Computer Science & Software Engineering",
+      "concentration": "Information Assurance & Cybersecurity",
       "startDate": "2022-09",
-      "endDate": "2026-05",
-      "homeSummary": "Coursework focused on software engineering systems and applied computing.",
-      "detailSummary": "Studied software engineering fundamentals with additional interests in security and data-driven systems.",
+      "endDate": "2025-06",
+      "homeSummary": "Completed a CSSE degree with a concentration in Information Assurance & Cybersecurity and a 3.75/4.0 GPA.",
+      "detailSummary": "Studied software engineering, systems, algorithms, databases, networks, secure systems, and technical writing while maintaining Dean's List standing from Fall 2022 through Spring 2025.",
       "bullets": [
-        "Relevant coursework includes algorithms and systems design",
-        "Completed collaborative engineering projects"
+        "GPA: 3.75/4.0",
+        "Dean's List: Fall 2022-Spring 2025",
+        "Relevant coursework: Data Structures & Algorithms; Advanced Algorithms; Operating Systems; Secure Systems; Database Systems; Software Engineering; Network Design & Programming; Technical Writing"
       ],
       "featured": true,
       "showOnHome": true,
@@ -222,22 +433,94 @@
   ],
   "skills": [
     {
-      "id": "skill-typescript",
-      "category": "languages",
-      "name": "TypeScript",
-      "priority": 1,
-      "featured": true,
-      "showOnHome": true,
-      "order": 1
-    },
-    {
       "id": "skill-python",
       "category": "languages",
       "name": "Python",
       "priority": 1,
       "featured": true,
       "showOnHome": true,
+      "order": 1
+    },
+    {
+      "id": "skill-typescript",
+      "category": "languages",
+      "name": "TypeScript",
+      "priority": 1,
+      "featured": true,
+      "showOnHome": true,
       "order": 2
+    },
+    {
+      "id": "skill-javascript",
+      "category": "languages",
+      "name": "JavaScript",
+      "priority": 1,
+      "featured": true,
+      "showOnHome": true,
+      "order": 3
+    },
+    {
+      "id": "skill-sql",
+      "category": "languages",
+      "name": "SQL",
+      "priority": 2,
+      "featured": true,
+      "showOnHome": true,
+      "order": 4
+    },
+    {
+      "id": "skill-bash",
+      "category": "languages",
+      "name": "Bash",
+      "priority": 2,
+      "featured": false,
+      "showOnHome": true,
+      "order": 5
+    },
+    {
+      "id": "skill-c-cpp",
+      "category": "languages",
+      "name": "C/C++",
+      "priority": 2,
+      "featured": false,
+      "showOnHome": true,
+      "order": 6
+    },
+    {
+      "id": "skill-html-css",
+      "category": "languages",
+      "name": "HTML/CSS",
+      "priority": 2,
+      "featured": false,
+      "showOnHome": true,
+      "order": 7
+    },
+    {
+      "id": "skill-assembly",
+      "category": "languages",
+      "name": "Assembly",
+      "priority": 3,
+      "featured": false,
+      "showOnHome": false,
+      "order": 8
+    },
+    {
+      "id": "skill-django",
+      "category": "frameworks",
+      "name": "Django",
+      "priority": 1,
+      "featured": true,
+      "showOnHome": true,
+      "order": 9
+    },
+    {
+      "id": "skill-flask",
+      "category": "frameworks",
+      "name": "Flask",
+      "priority": 1,
+      "featured": true,
+      "showOnHome": true,
+      "order": 10
     },
     {
       "id": "skill-nextjs",
@@ -246,106 +529,254 @@
       "priority": 1,
       "featured": true,
       "showOnHome": true,
-      "order": 3
+      "order": 11
     },
     {
       "id": "skill-react",
-      "category": "libraries",
+      "category": "frameworks",
       "name": "React",
       "priority": 1,
       "featured": true,
       "showOnHome": true,
-      "order": 4
+      "order": 12
     },
     {
-      "id": "skill-testing",
-      "category": "tools",
-      "name": "Vitest",
+      "id": "skill-nodejs",
+      "category": "frameworks",
+      "name": "Node.js",
       "priority": 2,
       "featured": false,
       "showOnHome": true,
-      "order": 5
+      "order": 13
     },
     {
-      "id": "skill-security",
-      "category": "cybersecurity",
-      "name": "Security fundamentals",
+      "id": "skill-tensorflow-keras",
+      "category": "machine_learning",
+      "name": "TensorFlow/Keras",
+      "priority": 1,
+      "featured": true,
+      "showOnHome": true,
+      "order": 14
+    },
+    {
+      "id": "skill-opencv",
+      "category": "machine_learning",
+      "name": "OpenCV",
+      "priority": 1,
+      "featured": true,
+      "showOnHome": true,
+      "order": 15
+    },
+    {
+      "id": "skill-scikit-image",
+      "category": "machine_learning",
+      "name": "scikit-image",
+      "priority": 2,
+      "featured": false,
+      "showOnHome": true,
+      "order": 16
+    },
+    {
+      "id": "skill-numpy",
+      "category": "machine_learning",
+      "name": "NumPy",
+      "priority": 1,
+      "featured": true,
+      "showOnHome": true,
+      "order": 17
+    },
+    {
+      "id": "skill-pandas",
+      "category": "machine_learning",
+      "name": "pandas",
+      "priority": 1,
+      "featured": true,
+      "showOnHome": true,
+      "order": 18
+    },
+    {
+      "id": "skill-matplotlib",
+      "category": "machine_learning",
+      "name": "Matplotlib",
+      "priority": 2,
+      "featured": false,
+      "showOnHome": true,
+      "order": 19
+    },
+    {
+      "id": "skill-pillow",
+      "category": "machine_learning",
+      "name": "Pillow",
+      "priority": 3,
+      "featured": false,
+      "showOnHome": false,
+      "order": 20
+    },
+    {
+      "id": "skill-llm-api",
+      "category": "machine_learning",
+      "name": "LLM API",
       "priority": 2,
       "featured": true,
       "showOnHome": true,
-      "order": 6
+      "order": 21
     },
     {
-      "id": "skill-research",
-      "category": "research",
-      "name": "Research synthesis",
-      "priority": 2,
+      "id": "skill-git",
+      "category": "cloud_dev_tools",
+      "name": "Git",
+      "priority": 1,
       "featured": true,
       "showOnHome": true,
-      "order": 7
+      "order": 22
     },
     {
-      "id": "skill-cloud",
-      "category": "cloud",
-      "name": "Vercel",
+      "id": "skill-docker",
+      "category": "cloud_dev_tools",
+      "name": "Docker",
+      "priority": 1,
+      "featured": true,
+      "showOnHome": true,
+      "order": 23
+    },
+    {
+      "id": "skill-linux",
+      "category": "cloud_dev_tools",
+      "name": "Linux",
+      "priority": 1,
+      "featured": true,
+      "showOnHome": true,
+      "order": 24
+    },
+    {
+      "id": "skill-ssh",
+      "category": "cloud_dev_tools",
+      "name": "SSH",
+      "priority": 2,
+      "featured": false,
+      "showOnHome": true,
+      "order": 25
+    },
+    {
+      "id": "skill-nginx",
+      "category": "cloud_dev_tools",
+      "name": "Nginx",
+      "priority": 2,
+      "featured": false,
+      "showOnHome": true,
+      "order": 26
+    },
+    {
+      "id": "skill-gunicorn",
+      "category": "cloud_dev_tools",
+      "name": "Gunicorn",
+      "priority": 2,
+      "featured": false,
+      "showOnHome": true,
+      "order": 27
+    },
+    {
+      "id": "skill-lets-encrypt",
+      "category": "cloud_dev_tools",
+      "name": "Let's Encrypt",
       "priority": 3,
       "featured": false,
       "showOnHome": true,
-      "order": 8
+      "order": 28
+    },
+    {
+      "id": "skill-google-cloud",
+      "category": "cloud_dev_tools",
+      "name": "Google Cloud",
+      "priority": 2,
+      "featured": false,
+      "showOnHome": true,
+      "order": 29
+    },
+    {
+      "id": "skill-azure",
+      "category": "cloud_dev_tools",
+      "name": "Azure",
+      "priority": 2,
+      "featured": false,
+      "showOnHome": true,
+      "order": 30
+    },
+    {
+      "id": "skill-postgresql",
+      "category": "databases",
+      "name": "PostgreSQL",
+      "priority": 1,
+      "featured": true,
+      "showOnHome": true,
+      "order": 31
+    },
+    {
+      "id": "skill-firestore",
+      "category": "databases",
+      "name": "Firestore",
+      "priority": 2,
+      "featured": false,
+      "showOnHome": true,
+      "order": 32
+    },
+    {
+      "id": "skill-firebase",
+      "category": "databases",
+      "name": "Firebase",
+      "priority": 2,
+      "featured": false,
+      "showOnHome": true,
+      "order": 33
     }
   ],
   "resume": [
     {
       "section": "summary",
       "key": "headline",
-      "value": "Software engineer focused on practical product systems and clear technical communication.",
+      "value": "Full-stack software engineer focused on AI/ML, computer vision, and secure software systems.",
       "order": 1
     },
     {
       "section": "summary",
       "key": "focus",
-      "value": "Full stack engineering security-aware development and applied research.",
+      "value": "Python, TypeScript, Django, Flask, Next.js, TensorFlow/Keras, PostgreSQL, Docker, and cloud deployment.",
       "order": 2
     },
     {
-      "section": "experience",
-      "key": "heading",
-      "value": "Experience",
+      "section": "summary",
+      "key": "impact",
+      "value": "Delivered research software that reduced microscopy analysis by 97%, reduced ML processing time by 73%, reduced storage by 56.6%, and supported 15+ scientists.",
       "order": 3
     },
     {
-      "section": "projects",
-      "key": "heading",
-      "value": "Projects",
+      "section": "education",
+      "key": "note",
+      "value": "B.S. in Computer Science & Software Engineering, University of Washington, Jun 2025; GPA 3.75/4.0.",
       "order": 4
     },
     {
-      "section": "education",
-      "key": "heading",
-      "value": "Education",
+      "section": "manuscripts",
+      "key": "in_preparation",
+      "value": "First-author SoftwareX manuscript in preparation on CytoCV with the University of Utah Miller Lab.",
       "order": 5
-    },
-    {
-      "section": "skills",
-      "key": "heading",
-      "value": "Skills",
-      "order": 6
     }
   ],
   "siteSettings": {
-    "siteTitle": "Demo Portfolio",
-    "siteDescription": "A professional portfolio with experience, projects, research, and resume highlights.",
+    "siteTitle": "Nicolas Gioanni Portfolio",
+    "siteDescription": "Software engineering portfolio for Nicolas Gioanni, featuring full-stack AI/ML projects, research software, teaching, and cybersecurity-focused coursework.",
     "defaultTheme": "navy",
     "enableSkeletons": true,
     "enableScrollMotion": false,
     "enableGlassEffects": true,
-    "enableRecommendations": true,
+    "enableRecommendations": false,
     "showEmptyRecommendations": false,
-    "maxHomeResearchItems": 2,
-    "maxHomeProjectItems": 3,
-    "maxHomeExperienceItems": 3,
-    "maxHomeRecommendationItems": 1,
+    "maxHomeResearchItems": 3,
+    "maxHomeProjectItems": 2,
+    "maxHomeExperienceItems": 4,
+    "maxHomeRecommendationItems": 0,
     "recommendationsNavLabel": "Recommendations",
-    "maxHomeSkillItems": 8
+    "maxHomeSkillItems": 12,
+    "copyrightOwner": "Nicolas Gioanni"
   }
 }

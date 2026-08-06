@@ -4,7 +4,8 @@ Use this checklist when replacing demo content with Nicolas-specific public cont
 
 ## Profile
 
-- Replace `full_name`, `preferred_name`, `headline`, `current_title`, `current_company`, `location`, `email`, `university`, `degree`, `field_of_study`, `graduation`, `short_bio`, and `long_bio`.
+- Replace `full_name`, `preferred_name`, `headline`, `current_title`, `current_company`, `location`, `timezone`, `email`, `university`, `degree`, `field_of_study`, `graduation`, `short_bio`, and `long_bio`.
+- Keep `current_experience_id`, `featured_research_id`, and `primary_education_id` aligned with real rows where those references remain in use. Current Work and Education have deterministic fallbacks when their selectors are blank; `featured_research_id` is the Selected Research fallback when no row is marked `show_on_home`. `previous_experience_id` may remain as compatible source metadata, but it does not create a Previous Work block on Home; previous roles belong in `experience.csv` and on the Experience page. Never leave a populated stale ID because generation will fail.
 - Update `portrait_image` to a file under `public/images/profile/` or another validated public URL.
 - Update `favicon_image` to a file under `public/favicon/`.
 - Update `resume_url` to the final PDF path under `public/resume/`.
@@ -20,6 +21,10 @@ Use this checklist when replacing demo content with Nicolas-specific public cont
 - Replace demo `research`, `projects`, `experience`, `education`, and `skills` rows with accurate public-safe rows.
 - Keep Home summaries concise.
 - Put deeper proof, bullets, impact, stack, and links on detail rows.
+- Keep the Home profile-overview details ordered as Headline, About, Current Work, the Education/Selected Research row, then the supporting Experience and Research links. On mobile, Selected Research stacks before Education.
+- Use `organization_logo`/`organization_logo_alt` on experience and research rows and `institution_logo`/`institution_logo_alt` on education rows. Store new local marks under `public/images/organizations/`; blank logo fields intentionally render without a fake mark.
+- Keep education `field` and `concentration` separate. Leave education `location` blank when it should remain hidden.
+- Give research links descriptive labels such as `Live site`, `Source code`, and `Manuscript`. Add only verified public destinations. An unpublished label in `pending_links` must not create a disabled Home-card action; move it into `links` only when its public URL is ready.
 
 ## Recommendations
 

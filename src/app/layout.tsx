@@ -8,6 +8,7 @@ import "@/styles/navigation.css";
 import "@/styles/portfolio.css";
 import "@/styles/motion.css";
 import "@/styles/skeletons.css";
+import "@/styles/interactions.css";
 import "@/styles/utilities.css";
 import { SiteShell } from "@/components/layout/SiteShell";
 import { ThemePreferenceScript } from "@/components/theme/ThemePreferenceScript";

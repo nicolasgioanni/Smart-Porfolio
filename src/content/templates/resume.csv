@@ -1,7 +1,6 @@
-﻿section,key,value,order
-summary,headline,Software engineer focused on practical product systems and clear technical communication.,1
-summary,focus,Full stack engineering security-aware development and applied research.,2
-experience,heading,Experience,3
-projects,heading,Projects,4
-education,heading,Education,5
-skills,heading,Skills,6
+section,key,value,order
+summary,headline,"Full-stack software engineer focused on AI/ML, computer vision, and secure software systems.",1
+summary,focus,"Python, TypeScript, Django, Flask, Next.js, TensorFlow/Keras, PostgreSQL, Docker, and cloud deployment.",2
+summary,impact,"Delivered research software that reduced microscopy analysis by 97%, reduced ML processing time by 73%, reduced storage by 56.6%, and supported 15+ scientists.",3
+education,note,"B.S. in Computer Science & Software Engineering, University of Washington, Jun 2025; GPA 3.75/4.0.",4
+manuscripts,in_preparation,"First-author SoftwareX manuscript in preparation on CytoCV with the University of Utah Miller Lab.",5

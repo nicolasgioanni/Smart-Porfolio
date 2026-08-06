@@ -12,13 +12,7 @@ const generatedContentPath = path.join(
   "portfolio.generated.json",
 );
 
-const requiredDemoAssets = [
-  "/images/profile/portrait-placeholder.png",
-  "/images/projects/project-placeholder.png",
-  "/images/research/research-placeholder.png",
-  "/favicon/favicon.png",
-  "/resume/demo-resume.pdf",
-];
+const requiredLocalAssets = ["/favicon/favicon.png"];
 
 function readTemplateText() {
   const templateFiles = [
@@ -39,27 +33,22 @@ function readTemplateText() {
     .join("\n");
 }
 
-function collectDemoAssetReferences(text) {
+function collectLocalAssetReferences(text) {
   const rootRelativePathPattern = /\/(?:images|favicon|resume)\/[^\s,"|]+/g;
   const matches = text.match(rootRelativePathPattern) ?? [];
 
-  return [...new Set(matches)].filter(
-    (assetPath) =>
-      assetPath.includes("placeholder") ||
-      assetPath === "/favicon/favicon.png" ||
-      assetPath === "/resume/demo-resume.pdf",
-  );
+  return [...new Set(matches)];
 }
 
 describe("demo asset references", () => {
-  it("keeps local placeholder assets available for template and generated demo content", () => {
-    const templateReferences = collectDemoAssetReferences(readTemplateText());
+  it("keeps local assets available for template and generated content", () => {
+    const templateReferences = collectLocalAssetReferences(readTemplateText());
     const generatedReferences = existsSync(generatedContentPath)
-      ? collectDemoAssetReferences(readFileSync(generatedContentPath, "utf8"))
+      ? collectLocalAssetReferences(readFileSync(generatedContentPath, "utf8"))
       : [];
     const references = [...new Set([...templateReferences, ...generatedReferences])];
 
-    expect(references).toEqual(expect.arrayContaining(requiredDemoAssets));
+    expect(references).toEqual(expect.arrayContaining(requiredLocalAssets));
 
     for (const assetPath of references) {
       const publicPath = path.join(projectRoot, "public", assetPath.slice(1));

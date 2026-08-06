@@ -6,6 +6,7 @@
   background: var(--color-surface);
   box-shadow: var(--shadow-card);
   backdrop-filter: blur(var(--glass-blur)) saturate(128%);
+  isolation: isolate;
   overflow: hidden;
 }
 
@@ -17,13 +18,15 @@
   pointer-events: none;
   content: "";
   background: var(--gradient-glass-highlight);
-  opacity: 0.72;
+  opacity: 0.52;
+  z-index: 0;
 }
 
 .glass-surface > *,
 .glass-card > *,
 .glass-blob > * {
   position: relative;
+  z-index: 1;
 }
 
 .site-shell[data-glass-effects="false"] .glass-surface,
@@ -74,10 +77,12 @@
 
 .glass-blob--nav {
   background: var(--color-header-surface);
+  overflow: visible;
 }
 
 .glass-blob--nav::before {
-  opacity: var(--opacity-header-highlight);
+  border-radius: inherit;
+  opacity: calc(var(--opacity-header-highlight) * 0.72);
 }
 
 .glass-blob--footer {
@@ -86,7 +91,8 @@
 
 .glass-button,
 .glass-link,
-.glass-icon-link {
+.glass-icon-link,
+.glass-icon-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -105,25 +111,16 @@
   border: 1px solid var(--color-line);
 }
 
-.glass-button:hover,
-.glass-link:hover,
-.glass-icon-link:hover {
-  transform: translateY(-1px);
-}
-
 .glass-button--primary {
   border-color: var(--color-primary-button-border);
   background: var(--gradient-primary-button);
   color: var(--color-primary-button-text);
 }
 
-.glass-button--primary:hover {
-  color: var(--color-primary-button-text);
-}
-
 .glass-button--secondary,
 .glass-button--ghost,
-.glass-icon-link {
+.glass-icon-link,
+.glass-icon-button {
   color: var(--color-ink);
   background: var(--color-control-surface);
 }
@@ -135,11 +132,6 @@
 .glass-link {
   color: var(--color-accent-strong);
   font-size: var(--font-size-small);
-}
-
-.glass-link::after {
-  content: ">";
-  font-size: var(--font-size-caption);
 }
 
 .glass-chip {
@@ -178,16 +170,22 @@
   background: var(--gradient-divider);
 }
 
-.glass-icon-link {
+.glass-icon-link,
+.glass-icon-button {
   min-height: 38px;
   padding: 0 var(--space-3);
   border: 1px solid var(--color-line);
   color: var(--color-muted);
 }
 
-.glass-icon-link:not(.glass-icon-link--labeled) {
+.glass-icon-link:not(.glass-icon-link--labeled),
+.glass-icon-button {
   width: 38px;
   padding: 0;
+}
+
+.glass-icon-button {
+  cursor: pointer;
 }
 
 @media (max-width: 860px) {

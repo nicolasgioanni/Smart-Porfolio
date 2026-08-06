@@ -1,7 +1,8 @@
 import type { SiteSettings } from "@/content/types";
+import { siteRoutes, type SiteRoutePath } from "@/components/navigation/siteRoutes";
 
 export type NavigationItem = {
-  href: string;
+  href: SiteRoutePath;
   label: string;
 };
 
@@ -16,24 +17,24 @@ export function createNavigationItems(siteSettings?: NavigationSettings): Naviga
   const shouldShowRecommendations = recommendationsEnabled && (hasRecommendationData || siteSettings?.showEmptyRecommendations === true);
   const recommendationsLabel = siteSettings?.recommendationsNavLabel || "Recommendations";
   const items: NavigationItem[] = [
-    { href: "/", label: "Home" },
-    { href: "/research", label: "Research" },
-    { href: "/projects", label: "Projects" },
-    { href: "/experience", label: "Experience" }
+    { href: siteRoutes.home, label: "Home" },
+    { href: siteRoutes.experience, label: "Experience" },
+    { href: siteRoutes.research, label: "Research" },
+    { href: siteRoutes.projects, label: "Projects" }
   ];
 
   if (shouldShowRecommendations) {
-    items.push({ href: "/recommendations", label: recommendationsLabel });
+    items.push({ href: siteRoutes.recommendations, label: recommendationsLabel });
   }
 
-  items.push({ href: "/resume", label: "Resume" });
+  items.push({ href: siteRoutes.resume, label: "Resume" });
 
   return items;
 }
 
 export const navigationItems: NavigationItem[] = createNavigationItems();
 
-export function isNavigationItemActive(pathname: string, href: string): boolean {
-  if (href === "/") return pathname === "/";
+export function isNavigationItemActive(pathname: string, href: SiteRoutePath): boolean {
+  if (href === siteRoutes.home) return pathname === siteRoutes.home;
   return pathname === href || pathname.startsWith(`${href}/`);
 }

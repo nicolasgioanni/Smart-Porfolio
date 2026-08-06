@@ -1,0 +1,287 @@
+/*
+ * Hover Base 1
+ *
+ * A layout-neutral interaction layer for semantic links and buttons. Component
+ * styles retain ownership of sizing and idle backgrounds; these pseudo-elements
+ * add state surfaces without changing the control's box geometry.
+ */
+.hover-base-1 {
+  --hover-base-1-layer-inset: 0px;
+  --hover-base-1-hover-layer-opacity: 1;
+  --hover-base-1-selected-layer-opacity: 1;
+  --hover-base-1-control-hover-shadow: var(--hover-base-1-hover-shadow);
+  --hover-base-1-control-selected-shadow: var(--hover-base-1-selected-shadow);
+
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  transition: var(
+    --hover-base-1-control-transition,
+    box-shadow var(--hover-base-1-transition-duration) var(--hover-base-1-easing),
+    color var(--hover-base-1-transition-duration) var(--hover-base-1-easing),
+    transform var(--hover-base-1-transition-duration) var(--hover-base-1-easing)
+  );
+}
+
+.hover-base-1::before,
+.hover-base-1::after {
+  position: absolute;
+  border-radius: inherit;
+  content: "";
+  pointer-events: none;
+}
+
+.hover-base-1::before {
+  inset: var(--hover-base-1-layer-inset);
+  z-index: -1;
+  background: var(--hover-base-1-hover-surface);
+  box-shadow: inset 0 0 0 1px var(--hover-base-1-hover-border);
+  opacity: 0;
+  transition:
+    box-shadow var(--hover-base-1-transition-duration) var(--hover-base-1-easing),
+    opacity var(--hover-base-1-transition-duration) var(--hover-base-1-easing);
+}
+
+.hover-base-1::after {
+  top: var(--hover-base-1-layer-inset);
+  bottom: var(--hover-base-1-layer-inset);
+  left: 0;
+  z-index: 2;
+  width: 38%;
+  background: linear-gradient(
+    105deg,
+    transparent 12%,
+    var(--hover-base-1-highlight) 50%,
+    transparent 88%
+  );
+  opacity: 0;
+  transform: translate3d(-260%, 0, 0) skewX(-16deg);
+}
+
+.hover-base-1 > * {
+  position: relative;
+  z-index: 1;
+}
+
+.hover-base-1:is(
+    [aria-current="page"],
+    [aria-pressed="true"],
+    [aria-expanded="true"],
+    [data-selected="true"]
+  ) {
+  box-shadow: var(--hover-base-1-control-selected-shadow);
+  color: var(--hover-base-1-selected-text);
+}
+
+.hover-base-1:is(
+    [aria-current="page"],
+    [aria-pressed="true"],
+    [aria-expanded="true"],
+    [data-selected="true"]
+  )::before {
+  background: var(--hover-base-1-selected-surface);
+  box-shadow: inset 0 0 0 1px var(--hover-base-1-selected-border);
+  opacity: var(--hover-base-1-selected-layer-opacity);
+}
+
+.hover-base-1:not(:disabled):not([aria-disabled="true"]):focus-visible {
+  box-shadow: var(--focus-ring), var(--hover-base-1-control-hover-shadow);
+  color: var(--hover-base-1-hover-text);
+  transform: translateY(-1px);
+}
+
+.hover-base-1:not(:disabled):not([aria-disabled="true"]):focus-visible::before {
+  background: var(--hover-base-1-hover-surface);
+  box-shadow: inset 0 0 0 1px var(--hover-base-1-hover-border);
+  opacity: var(--hover-base-1-hover-layer-opacity);
+}
+
+.hover-base-1:not(:disabled):not([aria-disabled="true"]):active {
+  transition-duration: 0ms;
+  transform: translateY(0);
+}
+
+.hover-base-1:is(:disabled, [aria-disabled="true"]) {
+  box-shadow: none;
+  transform: none;
+}
+
+.hover-base-1:is(:disabled, [aria-disabled="true"])::before {
+  box-shadow: none;
+}
+
+.hover-base-1:is(:disabled, [aria-disabled="true"])::after {
+  animation: none;
+  opacity: 0;
+}
+
+.hover-base-1--inset {
+  --hover-base-1-layer-inset: 4px;
+}
+
+.hover-base-1--compact {
+  --hover-base-1-layer-inset: 1px;
+  --hover-base-1-control-hover-shadow: var(--hover-base-1-compact-hover-shadow);
+  --hover-base-1-control-selected-shadow: var(--hover-base-1-compact-selected-shadow);
+}
+
+.hover-base-1--inline {
+  border-radius: var(--radius-card);
+}
+
+.hover-base-1--inline::before,
+.hover-base-1--inline::after {
+  border-radius: var(--radius-card);
+}
+
+.hover-base-1--solid {
+  --hover-base-1-hover-layer-opacity: 0.84;
+  --hover-base-1-selected-layer-opacity: 0.64;
+}
+
+.hover-base-1--no-wave::after {
+  animation: none;
+  opacity: 0;
+}
+
+.hover-base-1--route::before,
+.hover-base-1--route::after {
+  border-radius: var(--radius-pill);
+}
+
+/*
+ * The route link supplies the server-rendered/no-script selected treatment.
+ * Once the shared indicator is measured, only that duplicate idle layer is
+ * hidden. Hover and keyboard focus intentionally continue to take precedence.
+ */
+[data-route-indicator-ready="true"]
+  .hover-base-1--route[aria-current="page"]:not(:hover):not(:focus-visible)::before {
+  opacity: 0;
+}
+
+[data-route-indicator-ready="true"]
+  .hover-base-1--route[aria-current="page"]:not(:hover):not(:focus-visible) {
+  box-shadow: none;
+}
+
+.main-navigation {
+  position: relative;
+  isolation: isolate;
+}
+
+.main-navigation .hover-base-1--route {
+  z-index: 1;
+}
+
+.active-route-indicator {
+  position: absolute;
+  inset: auto;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  width: 0;
+  height: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--hover-base-1-selected-surface);
+  box-shadow:
+    inset 0 0 0 1px var(--hover-base-1-selected-border),
+    var(--hover-base-1-selected-shadow);
+  opacity: 0;
+  pointer-events: none;
+  transform-origin: top left;
+  will-change: transform, opacity;
+}
+
+.active-route-indicator[data-visible="true"] {
+  opacity: 1;
+}
+
+.glass-link__arrow {
+  display: inline-block;
+  flex: 0 0 auto;
+  font-size: var(--font-size-caption);
+  line-height: 1;
+  transition: transform var(--hover-base-1-transition-duration) var(--hover-base-1-easing);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .hover-base-1:not(:disabled):not([aria-disabled="true"]):hover {
+    box-shadow: var(--hover-base-1-control-hover-shadow);
+    color: var(--hover-base-1-hover-text);
+    transform: translateY(-1px);
+  }
+
+  .hover-base-1:not(:disabled):not([aria-disabled="true"]):hover::before {
+    background: var(--hover-base-1-hover-surface);
+    box-shadow: inset 0 0 0 1px var(--hover-base-1-hover-border);
+    opacity: var(--hover-base-1-hover-layer-opacity);
+  }
+
+  .hover-base-1:where(:not(:disabled):not([aria-disabled="true"]):not(.hover-base-1--no-wave):hover)::after {
+    animation: hover-base-1-wave var(--hover-base-1-wave-duration) linear infinite;
+  }
+
+  .hover-base-1:not(:disabled):not([aria-disabled="true"]):hover .glass-link__arrow {
+    transform: translateX(2px);
+  }
+
+  .hover-base-1:not(:disabled):not([aria-disabled="true"]):hover:focus-visible {
+    box-shadow: var(--focus-ring), var(--hover-base-1-control-hover-shadow);
+  }
+
+  .hover-base-1:not(:disabled):not([aria-disabled="true"]):active {
+    transform: translateY(0);
+  }
+}
+
+@keyframes hover-base-1-wave {
+  0% {
+    opacity: 0;
+    transform: translate3d(-260%, 0, 0) skewX(-16deg);
+  }
+
+  28% {
+    opacity: 0.12;
+  }
+
+  50% {
+    opacity: 0.24;
+  }
+
+  72% {
+    opacity: 0.1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate3d(360%, 0, 0) skewX(-16deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hover-base-1,
+  .hover-base-1::before,
+  .glass-link__arrow {
+    transition: none;
+  }
+
+  .hover-base-1,
+  .hover-base-1:not(:disabled):not([aria-disabled="true"]):hover,
+  .hover-base-1:not(:disabled):not([aria-disabled="true"]):focus-visible,
+  .hover-base-1:not(:disabled):not([aria-disabled="true"]):active {
+    transform: none;
+  }
+
+  .hover-base-1::after,
+  .hover-base-1:not(:disabled):not([aria-disabled="true"]):hover::after {
+    animation: none;
+    opacity: 0;
+  }
+
+  .active-route-indicator {
+    transition: none;
+    animation: none;
+    will-change: auto;
+  }
+}

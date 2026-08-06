@@ -1,9 +1,10 @@
-import type { PortfolioLink, ProfileContent } from "@/content/types";
-import { GlassButton } from "@/components/glass/GlassButton";
-import { GlassChip } from "@/components/glass/GlassChip";
+import type { PortfolioLink, ProfileContent, ProfileOverviewContent } from "@/content/types";
 import { GlassSurface } from "@/components/glass/GlassSurface";
-import { SocialLinkGroup } from "@/components/navigation/SocialLinkGroup";
+import { LinkIcon } from "@/components/icons/LinkIcon";
 import { ScrollReveal } from "@/components/motion/ScrollReveal";
+import { SmartLink } from "@/components/navigation/SmartLink";
+import { ProfileOverviewDetails } from "@/components/portfolio/ProfileOverviewDetails";
+import { getProfileIdentityItems } from "@/lib/content/profileOverview";
 
 function getInitials(profile: ProfileContent): string {
   return profile.fullName
@@ -11,68 +12,75 @@ function getInitials(profile: ProfileContent): string {
     .filter(Boolean)
     .slice(0, 2)
     .map((part) => part[0])
-    .join("");
+    .join("")
+    .toUpperCase();
 }
 
-export function PortfolioHero({ links, motionEnabled = true, profile }: { profile: ProfileContent; links: PortfolioLink[]; motionEnabled?: boolean }) {
-  const currentLine = [profile.currentTitle, profile.currentCompany].filter(Boolean).join(" at ");
-  const educationLine = [profile.university, profile.degree, profile.fieldOfStudy].filter(Boolean).join(" / ");
+type PortfolioHeroProps = {
+  links: PortfolioLink[];
+  motionEnabled?: boolean;
+  overview: ProfileOverviewContent;
+  profile: ProfileContent;
+};
+
+export function PortfolioHero({ links, motionEnabled = true, overview, profile }: PortfolioHeroProps) {
+  const identityItems = getProfileIdentityItems(profile, links);
 
   return (
-    <section className="portfolio-hero" aria-labelledby="portfolio-hero-title">
-      <ScrollReveal className="portfolio-hero__main" enabled={motionEnabled}>
-        <GlassSurface className="portfolio-hero__surface" variant="strong">
-          <p className="eyebrow">{profile.currentTitle ?? "Portfolio"}</p>
-          <h1 className="hero-title" id="portfolio-hero-title">
-            {profile.fullName}
-          </h1>
-          <p className="hero-summary">{profile.headline}</p>
-          {currentLine ? <p className="portfolio-hero__current">{currentLine}</p> : null}
-          <div className="portfolio-hero__facts" aria-label="Profile facts">
-            <GlassChip tone="accent">{profile.location}</GlassChip>
-            {educationLine ? <GlassChip>{educationLine}</GlassChip> : null}
-            {profile.graduation ? <GlassChip>Graduation {profile.graduation}</GlassChip> : null}
-          </div>
-          <p className="portfolio-hero__bio">{profile.shortBio}</p>
-          <div className="portfolio-hero__actions">
-            {profile.resumeUrl ? (
-              <GlassButton href={profile.resumeUrl} variant="primary">
-                {profile.resumeDownloadLabel ?? "Open resume"}
-              </GlassButton>
-            ) : null}
-            <GlassButton href="/projects" variant="secondary">
-              {profile.primaryCtaLabel ?? "View projects"}
-            </GlassButton>
-            <GlassButton href="/research" variant="ghost">
-              {profile.secondaryCtaLabel ?? "Read research"}
-            </GlassButton>
-          </div>
-          <SocialLinkGroup links={links} />
-        </GlassSurface>
-      </ScrollReveal>
-
-      <ScrollReveal className="portfolio-hero__portrait-wrap" delay="short" enabled={motionEnabled}>
-        <GlassSurface className="portfolio-hero__portrait-card" variant="default">
-          <div className="portrait-frame">
-            {profile.portraitImage ? (
-              <img
-                alt={`${profile.fullName} portrait`}
-                className="portrait-image"
-                height="520"
-                loading="eager"
-                src={profile.portraitImage}
-                width="420"
-              />
-            ) : (
-              <div aria-label={`${profile.fullName} portrait placeholder`} className="portrait-placeholder" role="img">
-                {getInitials(profile)}
+    <section className="portfolio-hero profile-overview" aria-labelledby="portfolio-hero-title">
+      <ScrollReveal className="portfolio-hero__reveal" enabled={motionEnabled}>
+        <GlassSurface className="profile-overview__shell" variant="strong">
+          <div className="profile-overview__photo-column">
+            <div className="profile-overview__portrait">
+              <div className="portrait-frame" data-has-image={profile.portraitImage ? "true" : "false"}>
+                {profile.portraitImage ? (
+                  <img
+                    alt={profile.fullName}
+                    className="portrait-image"
+                    decoding="async"
+                    height="420"
+                    loading="eager"
+                    src={profile.portraitImage}
+                    width="420"
+                  />
+                ) : (
+                  <div aria-label={`${profile.fullName} portrait placeholder`} className="portrait-placeholder" role="img">
+                    <span>{getInitials(profile)}</span>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
+            <div className="profile-overview__identity">
+              <h1 className="profile-overview__identity-name" id="portfolio-hero-title">
+                {profile.fullName}
+              </h1>
+              {profile.pronouns ? <p className="profile-overview__identity-subtitle">{profile.pronouns}</p> : null}
+              {identityItems.length > 0 ? (
+                <ul className="profile-overview__identity-list" aria-label="Profile contact details">
+                  {identityItems.map((item) => (
+                    <li className="profile-overview__identity-item" key={item.id}>
+                      {item.href ? (
+                        <SmartLink
+                          className="profile-overview__identity-link hover-base-1 hover-base-1--compact hover-base-1--inline"
+                          href={item.href}
+                        >
+                          <LinkIcon kind={item.kind} />
+                          <span>{item.label}</span>
+                        </SmartLink>
+                      ) : (
+                        <span className="profile-overview__identity-static">
+                          <LinkIcon kind={item.kind} />
+                          <span>{item.label}</span>
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
           </div>
-          <div className="portfolio-hero__mini-card">
-            <span>Currently</span>
-            <strong>{currentLine || profile.headline}</strong>
-          </div>
+
+          <ProfileOverviewDetails overview={overview} />
         </GlassSurface>
       </ScrollReveal>
     </section>

@@ -1,19 +1,19 @@
-﻿key,value
-site_title,Demo Portfolio
-site_description,"A professional portfolio with experience, projects, research, and resume highlights."
+key,value
+site_title,Nicolas Gioanni Portfolio
+site_description,"Software engineering portfolio for Nicolas Gioanni, featuring full-stack AI/ML projects, research software, teaching, and cybersecurity-focused coursework."
 default_theme,navy
 enable_skeletons,true
 enable_scroll_motion,false
 enable_glass_effects,true
-enable_recommendations,true
+enable_recommendations,false
 show_empty_recommendations,false
-max_home_research_items,2
-max_home_project_items,3
-max_home_experience_items,3
-max_home_recommendation_items,1
-max_home_skill_items,8
+max_home_research_items,3
+max_home_project_items,2
+max_home_experience_items,4
+max_home_recommendation_items,0
+max_home_skill_items,12
 recommendations_nav_label,Recommendations
 license_name,
 license_url,
-copyright_owner,
+copyright_owner,Nicolas Gioanni
 repository_url,

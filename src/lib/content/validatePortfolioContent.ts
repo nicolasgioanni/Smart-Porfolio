@@ -92,6 +92,21 @@ function validateUniqueIds(items: Array<{ id: string }>, collectionName: string,
   }
 }
 
+function validateProfileReference(referenceId: string | undefined, items: Array<{ id: string }>, fieldName: string, errors: string[]): void {
+  if (!referenceId) return;
+
+  if (!items.some((item) => item.id === referenceId)) {
+    errors.push(`profile.${fieldName} references an unknown id: ${referenceId}`);
+  }
+}
+
+function validateProfileReferences(content: GeneratedPortfolioContent, errors: string[]): void {
+  validateProfileReference(content.profile.currentExperienceId, content.experience, "currentExperienceId", errors);
+  validateProfileReference(content.profile.previousExperienceId, content.experience, "previousExperienceId", errors);
+  validateProfileReference(content.profile.featuredResearchId, content.research, "featuredResearchId", errors);
+  validateProfileReference(content.profile.primaryEducationId, content.education, "primaryEducationId", errors);
+}
+
 function validateTopLevelLinks(links: PortfolioLink[], errors: string[]): void {
   for (const link of links) {
     if (!link.label) {
@@ -112,6 +127,10 @@ function validateResearch(items: ResearchItem[], errors: string[]): void {
 
     if (item.image && !isSupportedUrl(item.image)) {
       errors.push(`research.${item.id} has an invalid image URL: ${item.image}`);
+    }
+
+    if (item.organizationLogo && !isSupportedUrl(item.organizationLogo, { allowMailto: false })) {
+      errors.push(`research.${item.id} has an invalid organizationLogo URL: ${item.organizationLogo}`);
     }
 
     collectContentLinks(item.links, `research.${item.id}`, errors);
@@ -140,6 +159,10 @@ function validateExperience(items: ExperienceItem[], errors: string[]): void {
 
     if (!item.organization) {
       errors.push(`experience.${item.id} is missing organization`);
+    }
+
+    if (item.organizationLogo && !isSupportedUrl(item.organizationLogo, { allowMailto: false })) {
+      errors.push(`experience.${item.id} has an invalid organizationLogo URL: ${item.organizationLogo}`);
     }
   }
 }
@@ -172,6 +195,10 @@ function validateEducation(items: EducationItem[], errors: string[]): void {
 
     if (!item.degree) {
       errors.push(`education.${item.id} is missing degree`);
+    }
+
+    if (item.institutionLogo && !isSupportedUrl(item.institutionLogo, { allowMailto: false })) {
+      errors.push(`education.${item.id} has an invalid institutionLogo URL: ${item.institutionLogo}`);
     }
   }
 }
@@ -212,6 +239,7 @@ export function validatePortfolioContent(content: GeneratedPortfolioContent): Ge
   validateUniqueIds(content.recommendations, "recommendations", errors);
   validateUniqueIds(content.education, "education", errors);
   validateUniqueIds(content.skills, "skills", errors);
+  validateProfileReferences(content, errors);
   validateTopLevelLinks(content.links, errors);
   validateResearch(content.research, errors);
   validateProjects(content.projects, errors);

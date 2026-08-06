@@ -13,9 +13,9 @@ type SiteShellProps = {
 export function SiteShell({ children, content, initialTheme }: SiteShellProps) {
   return (
     <div className="site-shell" data-glass-effects={content.siteSettings.enableGlassEffects ? "true" : "false"}>
-      <SiteHeader content={content} />
+      <SiteHeader content={content} initialTheme={initialTheme} />
       <main className="site-main">{children}</main>
-      <SiteFooter content={content} initialTheme={initialTheme} />
+      <SiteFooter content={content} />
     </div>
   );
 }

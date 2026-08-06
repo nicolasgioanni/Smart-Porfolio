@@ -53,7 +53,7 @@ Blank list fields become empty arrays.
 List-style link fields support simple URLs or label and URL pairs:
 
 ```text
-https://example.com|GitHub=https://github.com/example|Demo=https://example.com
+https://example.com|GitHub=https://github.com/example|Live site=https://cytocv2.uwb.edu
 ```
 
 Simple URLs receive a generic label. Label and URL pairs preserve the label.
@@ -67,7 +67,16 @@ Fields:
 - `key`: required profile key.
 - `value`: profile value.
 
-Example keys include `full_name`, `preferred_name`, `headline`, `current_title`, `current_company`, `location`, `email`, `pronouns`, `university`, `degree`, `field_of_study`, `graduation`, `short_bio`, `long_bio`, `portrait_image`, `favicon_image`, `resume_url`, `resume_download_label`, `primary_cta_label`, and `secondary_cta_label`.
+Example keys include `full_name`, `preferred_name`, `headline`, `current_title`, `current_company`, `current_experience_id`, `previous_experience_id`, `featured_research_id`, `primary_education_id`, `location`, `timezone`, `email`, `pronouns`, `university`, `degree`, `field_of_study`, `graduation`, `short_bio`, `long_bio`, `portrait_image`, `favicon_image`, `resume_url`, `resume_download_label`, `primary_cta_label`, and `secondary_cta_label`.
+
+The four Home profile-overview reference keys point to exact IDs in their matching sheets:
+
+- `current_experience_id`: an `experience.id`.
+- `previous_experience_id`: an `experience.id`.
+- `featured_research_id`: a `research.id`.
+- `primary_education_id`: an `education.id`.
+
+Blank or omitted `current_experience_id`, `featured_research_id`, and `primary_education_id` values use the deterministic current/featured/first fallback. Previous Work is intentionally explicit-only: a blank or omitted `previous_experience_id` hides that section. Any populated reference that does not match a row is a content error and must fail generation rather than silently choosing different content.
 
 ### links
 
@@ -91,15 +100,20 @@ Fields:
 - `id`: required unique ID.
 - `title`: required title.
 - `role`, `organization`, `location`, `start_date`, `end_date`: optional context.
+- `organization_logo`: optional static path or URL for the organization mark.
+- `organization_logo_alt`: optional alt text. If blank, the UI derives text from `organization`.
 - `home_summary`: short Home page summary.
 - `detail_summary`: longer Research page summary.
 - `impact`: optional impact statement.
 - `bullets`: pipe-delimited detail bullets.
 - `skills`: pipe-delimited skills.
 - `links`: pipe-delimited links.
+- `pending_links`: pipe-delimited display labels for resources that are not published yet. These render as disabled controls and do not accept URLs.
 - `image`: optional static path or URL.
 - `featured`, `show_on_home`: booleans.
 - `home_order`, `detail_order`: numeric ordering fields.
+
+The selected Home profile-overview research row owns its title, role, organization, summary, logo, verified links, and pending resource labels. Its profile summary uses `home_summary`, with `detail_summary` as a fallback. Research dates remain available to the Research detail page but are not shown in the Home profile overview. Use descriptive verified-link labels such as `Live site`, `Source code`, or `Manuscript`. Put an unpublished resource label such as `Manuscript` in `pending_links` so it renders as disabled rather than pointing to a placeholder URL.
 
 ### projects
 
@@ -121,6 +135,8 @@ Fields:
 - `id`: required unique ID.
 - `title`: required title.
 - `organization`: required organization.
+- `organization_logo`: optional static path or URL for the organization mark.
+- `organization_logo_alt`: optional alt text. If blank, the UI derives text from `organization`.
 - `type`: optional type such as `professional`, `research`, `teaching`, `internship`, `leadership`, or `volunteer`.
 - `location`, `start_date`, `end_date`: optional context.
 - `home_summary`: Home page summary.
@@ -129,6 +145,8 @@ Fields:
 - `skills`: pipe-delimited skills.
 - `featured`, `show_on_home`: booleans.
 - `home_order`, `detail_order`: numeric ordering fields.
+
+The Home Experience section renders every row with `show_on_home=true`, grouped by the exact `organization` text. It displays only `title`, `organization`, `organization_logo`, `start_date`, `end_date`, and `location`. Keep organization spelling consistent across rows that should share one company group. Blank logo fields use derived initials.
 
 ### recommendations
 
@@ -158,12 +176,18 @@ Fields:
 
 - `id`: required unique ID.
 - `institution`: required institution.
+- `institution_logo`: optional static path or URL for an institution mark.
+- `institution_logo_alt`: optional alt text for the institution logo. If blank, the UI may derive safe alt text from the institution name.
 - `degree`: required degree.
-- `field`, `location`, `start_date`, `end_date`: optional context.
+- `field`, `concentration`, `location`, `start_date`, `end_date`: optional context.
 - `home_summary`, `detail_summary`: optional summaries.
 - `bullets`: pipe-delimited bullets.
 - `featured`, `show_on_home`: booleans.
 - `home_order`, `detail_order`: numeric ordering fields.
+
+Use `concentration` for a formal concentration or specialization instead of appending it to `field`. A non-blank `location` remains an optional rendered line; leave it blank to hide location from the profile overview.
+
+Place organization and institution marks in the shared `public/images/organizations/` directory and reference them with root-relative paths such as `/images/organizations/uw-logo.svg`. Leave logo fields blank when no approved asset is available; the Hero renders compact organization initials instead. The older `public/images/education/` path remains valid for existing assets.
 
 ### skills
 
@@ -196,6 +220,8 @@ Fields:
 
 Supported defaults include `site_title`, `site_description`, `default_theme`, `enable_skeletons`, `enable_scroll_motion`, `enable_glass_effects`, `enable_recommendations`, `show_empty_recommendations`, `max_home_research_items`, `max_home_project_items`, `max_home_experience_items`, `max_home_recommendation_items`, `max_home_skill_items`, `recommendations_nav_label`, `license_name`, `license_url`, `copyright_owner`, and `repository_url`.
 
+`max_home_experience_items` remains accepted for compatibility with existing sheets, but the Home work-history list intentionally displays every experience row enabled with `show_on_home`.
+
 Recommendation visibility settings:
 
 - `enable_recommendations=false` hides recommendation selections and removes the navigation item.
@@ -212,7 +238,7 @@ Recommendation visibility settings:
 
 ## Home page versus detail pages
 
-The Home page is the complete high-level overview. It includes profile, links, skills, experience, research, projects, education, and a resume call to action in summarized form.
+The Home page is the complete high-level overview. After the profile overview, it presents full-width skills, experience, education, research, and projects sections before the global footer.
 
 Detail pages contain longer explanations, full bullets, technical context, impact details, and supporting links.
 

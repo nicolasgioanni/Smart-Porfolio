@@ -9,7 +9,7 @@ Future maintenance should preserve the portfolio hierarchy:
 - Generated static content is the performance strategy.
 - Skeletons and motion are polish only.
 
-Home order should remain hero, skills, experience, research, projects, recommendations when available, education, and resume/contact.
+Home order should remain profile overview, skills, experience, education, research, projects, then the global footer. Each top-level Home section should keep its own full-width row.
 
 ## Adding Sections
 
@@ -45,7 +45,7 @@ Supported theme names are `navy`, `light`, and `dark`. Add new theme values only
 
 1. `src/lib/theme/resolveThemeName.ts`
 2. Theme tokens in `src/styles/tokens.css`
-3. The footer theme switcher labels
+3. The header theme disclosure labels and presentation order
 4. Tests for accepted and rejected theme names
 5. Relevant docs
 

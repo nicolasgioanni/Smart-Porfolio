@@ -1,5 +1,5 @@
 import type { AnchorHTMLAttributes, ReactNode } from "react";
-import { getExternalLinkProps } from "@/lib/content/displayHelpers";
+import { SmartLink } from "@/components/navigation/SmartLink";
 
 type GlassLinkProps = AnchorHTMLAttributes<HTMLAnchorElement> & {
   children: ReactNode;
@@ -8,8 +8,11 @@ type GlassLinkProps = AnchorHTMLAttributes<HTMLAnchorElement> & {
 
 export function GlassLink({ children, className, href, ...props }: GlassLinkProps) {
   return (
-    <a className={["glass-link", className].filter(Boolean).join(" ")} href={href} {...getExternalLinkProps(href)} {...props}>
+    <SmartLink className={["glass-link", "hover-base-1", "hover-base-1--compact", className].filter(Boolean).join(" ")} href={href} {...props}>
       {children}
-    </a>
+      <span aria-hidden="true" className="glass-link__arrow">
+        &gt;
+      </span>
+    </SmartLink>
   );
 }

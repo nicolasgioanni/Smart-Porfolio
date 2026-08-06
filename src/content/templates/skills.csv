@@ -1,9 +1,35 @@
-﻿id,category,name,priority,featured,show_on_home,order
-skill-typescript,languages,TypeScript,1,true,true,1
-skill-python,languages,Python,1,true,true,2
-skill-nextjs,frameworks,Next.js,1,true,true,3
-skill-react,libraries,React,1,true,true,4
-skill-testing,tools,Vitest,2,false,true,5
-skill-security,cybersecurity,Security fundamentals,2,true,true,6
-skill-research,research,Research synthesis,2,true,true,7
-skill-cloud,cloud,Vercel,3,false,true,8
+id,category,name,priority,featured,show_on_home,order
+skill-python,languages,Python,1,true,true,1
+skill-typescript,languages,TypeScript,1,true,true,2
+skill-javascript,languages,JavaScript,1,true,true,3
+skill-sql,languages,SQL,2,true,true,4
+skill-bash,languages,Bash,2,false,true,5
+skill-c-cpp,languages,C/C++,2,false,true,6
+skill-html-css,languages,HTML/CSS,2,false,true,7
+skill-assembly,languages,Assembly,3,false,false,8
+skill-django,frameworks,Django,1,true,true,9
+skill-flask,frameworks,Flask,1,true,true,10
+skill-nextjs,frameworks,Next.js,1,true,true,11
+skill-react,frameworks,React,1,true,true,12
+skill-nodejs,frameworks,Node.js,2,false,true,13
+skill-tensorflow-keras,machine_learning,TensorFlow/Keras,1,true,true,14
+skill-opencv,machine_learning,OpenCV,1,true,true,15
+skill-scikit-image,machine_learning,scikit-image,2,false,true,16
+skill-numpy,machine_learning,NumPy,1,true,true,17
+skill-pandas,machine_learning,pandas,1,true,true,18
+skill-matplotlib,machine_learning,Matplotlib,2,false,true,19
+skill-pillow,machine_learning,Pillow,3,false,false,20
+skill-llm-api,machine_learning,LLM API,2,true,true,21
+skill-git,cloud_dev_tools,Git,1,true,true,22
+skill-docker,cloud_dev_tools,Docker,1,true,true,23
+skill-linux,cloud_dev_tools,Linux,1,true,true,24
+skill-ssh,cloud_dev_tools,SSH,2,false,true,25
+skill-nginx,cloud_dev_tools,Nginx,2,false,true,26
+skill-gunicorn,cloud_dev_tools,Gunicorn,2,false,true,27
+skill-lets-encrypt,cloud_dev_tools,Let's Encrypt,3,false,true,28
+skill-google-cloud,cloud_dev_tools,Google Cloud,2,false,true,29
+skill-azure,cloud_dev_tools,Azure,2,false,true,30
+skill-postgresql,databases,PostgreSQL,1,true,true,31
+skill-firestore,databases,Firestore,2,false,true,32
+skill-firebase,databases,Firebase,2,false,true,33
+

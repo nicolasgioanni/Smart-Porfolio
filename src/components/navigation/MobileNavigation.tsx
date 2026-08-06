@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { PortfolioLink } from "@/content/types";
@@ -10,16 +10,15 @@ import { isNavigationItemActive, type NavigationItem } from "@/components/naviga
 type MobileNavigationProps = {
   items: NavigationItem[];
   links: PortfolioLink[];
+  open: boolean;
   onOpenChange?: (open: boolean) => void;
 };
 
-export function MobileNavigation({ items, links, onOpenChange }: MobileNavigationProps) {
-  const [open, setOpen] = useState(false);
+export function MobileNavigation({ items, links, onOpenChange, open }: MobileNavigationProps) {
   const menuId = useId();
   const pathname = usePathname();
 
   function updateOpen(nextOpen: boolean) {
-    setOpen(nextOpen);
     onOpenChange?.(nextOpen);
   }
 
@@ -28,7 +27,7 @@ export function MobileNavigation({ items, links, onOpenChange }: MobileNavigatio
       <button
         aria-controls={menuId}
         aria-expanded={open}
-        className="mobile-navigation__button"
+        className="mobile-navigation__button hover-base-1 hover-base-1--compact"
         onClick={() => updateOpen(!open)}
         type="button"
       >
@@ -43,7 +42,7 @@ export function MobileNavigation({ items, links, onOpenChange }: MobileNavigatio
             return (
               <Link
                 aria-current={active ? "page" : undefined}
-                className="mobile-navigation__link"
+                className="mobile-navigation__link hover-base-1 hover-base-1--compact"
                 href={item.href}
                 key={item.href}
                 onClick={() => updateOpen(false)}

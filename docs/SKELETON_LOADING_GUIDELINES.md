@@ -30,7 +30,7 @@ Reusable skeleton components:
 
 ## Page skeleton behavior
 
-- Home skeleton mirrors the hero, skills, and featured section grid.
+- Home skeleton mirrors the profile overview, skills panel, and four remaining single-row sections.
 - Research and Projects skeletons mirror card grids.
 - Experience skeleton mirrors the timeline.
 - Resume skeleton mirrors the profile panel and resume sections.

@@ -10,6 +10,7 @@ import type {
   SkillGroup,
   SkillItem
 } from "@/content/types";
+import { createProfileOverviewContent } from "@/lib/content/profileOverview";
 import { sortForDetail, sortForHome, sortGeneric, sortRecommendationsForDetail, sortRecommendationsForHome } from "@/lib/content/sortPortfolioContent";
 
 type HomeSelectableItem = ResearchItem | ProjectItem | ExperienceItem | EducationItem;
@@ -47,6 +48,10 @@ export function selectPrimaryLinks(links: PortfolioLink[]): PortfolioLink[] {
   const fallbackLinks = selectedLinks.length > 0 ? selectedLinks : links;
 
   return sortGeneric(fallbackLinks).slice(0, 6);
+}
+
+export function selectHeaderLinks(links: PortfolioLink[]): PortfolioLink[] {
+  return sortGeneric(links.filter((link) => link.showInHeader)).slice(0, 4);
 }
 
 export function selectHomeSkills(skills: SkillItem[], maxItems?: number): SkillItem[] {
@@ -97,15 +102,17 @@ export function shouldShowRecommendationsRoute(content: Pick<GeneratedPortfolioC
 }
 
 export function selectHomeContent(content: GeneratedPortfolioContent): HomePortfolioContent {
+  const profileOverview = createProfileOverviewContent(content);
   const homeSkills = selectHomeSkills(content.skills, content.siteSettings.maxHomeSkillItems);
   const recommendationsEnabled = content.siteSettings.enableRecommendations !== false;
 
   return {
     profile: content.profile,
+    profileOverview,
     links: selectPrimaryLinks(content.links),
     research: selectHomeItems(content.research, content.siteSettings.maxHomeResearchItems),
     projects: selectHomeItems(content.projects, content.siteSettings.maxHomeProjectItems),
-    experience: selectHomeItems(content.experience, content.siteSettings.maxHomeExperienceItems),
+    experience: selectHomeItems(content.experience),
     recommendations: recommendationsEnabled ? selectHomeRecommendations(content.recommendations, content.siteSettings.maxHomeRecommendationItems) : [],
     education: selectHomeItems(content.education),
     skillGroups: groupSkillsByCategory(homeSkills),

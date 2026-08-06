@@ -59,7 +59,12 @@ export function ProfileImagePreview({ alt, imageSrc, onClose, open }: ProfileIma
       <div aria-label={alt} aria-modal="true" className="profile-image-preview__frame" onClick={(event) => event.stopPropagation()} role="dialog">
         <img alt={alt} className="profile-image-preview__image" src={imageSrc} />
         <div className="profile-image-preview__actions">
-          <button aria-label="Close profile photo preview" className="profile-image-preview__close" onClick={onClose} type="button">
+          <button
+            aria-label="Close profile photo preview"
+            className="profile-image-preview__close hover-base-1 hover-base-1--compact"
+            onClick={onClose}
+            type="button"
+          >
             Close
           </button>
         </div>

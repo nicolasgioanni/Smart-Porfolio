@@ -1,21 +1,29 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { InteractiveBlobHeader } from "@/components/layout/InteractiveBlobHeader";
+import { MainNavigation } from "@/components/navigation/MainNavigation";
 import { SocialLinkGroup } from "@/components/navigation/SocialLinkGroup";
-import { createNavigationItems, isNavigationItemActive, navigationItems } from "@/components/navigation/navigationItems";
+import {
+  createNavigationItems,
+  isNavigationItemActive,
+  navigationItems,
+  type NavigationItem
+} from "@/components/navigation/navigationItems";
 
+const navigationMock = vi.hoisted(() => ({ pathname: "/" }));
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/"
+  usePathname: () => navigationMock.pathname
 }));
 
+const originalAnimateDescriptor = Object.getOwnPropertyDescriptor(Element.prototype, "animate");
+
 const headerBrand = {
-  headline: "Software engineer",
   initial: "D",
   markImageSrc: "/favicon/favicon.png",
   name: "Demo Owner"
 };
 
-const headerNavigationItems = [
+const headerNavigationItems: NavigationItem[] = [
   { href: "/", label: "Home" },
   { href: "/research", label: "Research" },
   { href: "/projects", label: "Projects" }
@@ -48,7 +56,7 @@ function setFinePointer(matches: boolean) {
     value: vi.fn().mockImplementation((query: string) => ({
       addEventListener: vi.fn(),
       addListener: vi.fn(),
-      matches,
+      matches: query === "(prefers-reduced-motion: reduce)" ? false : matches,
       media: query,
       removeEventListener: vi.fn(),
       removeListener: vi.fn()
@@ -57,7 +65,9 @@ function setFinePointer(matches: boolean) {
 }
 
 function renderHeader() {
-  return render(<InteractiveBlobHeader brand={headerBrand} navigationItems={headerNavigationItems} primaryLinks={headerLinks} />);
+  return render(
+    <InteractiveBlobHeader brand={headerBrand} initialTheme="navy" navigationItems={headerNavigationItems} primaryLinks={headerLinks} />
+  );
 }
 
 function scrollToPosition(value: number) {
@@ -73,8 +83,60 @@ function movePointerTo(clientY: number) {
   });
 }
 
+function createRect(left: number, top: number, width: number, height: number): DOMRect {
+  return {
+    bottom: top + height,
+    height,
+    left,
+    right: left + width,
+    top,
+    width,
+    x: left,
+    y: top,
+    toJSON: () => ({})
+  };
+}
+
+function installNavigationGeometryMock(indicatorRect: { current: DOMRect }) {
+  const routeRects = new Map([
+    ["/", createRect(108, 25, 80, 38)],
+    ["/experience", createRect(192, 25, 112, 38)],
+    ["/research", createRect(308, 25, 96, 38)],
+    ["/projects", createRect(408, 25, 100, 38)],
+    ["/resume", createRect(512, 25, 88, 38)]
+  ]);
+
+  return vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function getBoundingClientRect(this: Element) {
+    if (this.classList.contains("main-navigation")) return createRect(100, 20, 508, 48);
+    if (this.classList.contains("active-route-indicator")) return indicatorRect.current;
+
+    const href = this.getAttribute("href");
+    return (href && routeRects.get(href)) || createRect(0, 0, 0, 0);
+  });
+}
+
+function createAnimationMock() {
+  return {
+    cancel: vi.fn(),
+    oncancel: null,
+    onfinish: null
+  } as unknown as Animation;
+}
+
+function installAnimateMock(...animations: Animation[]) {
+  const animate = vi.fn();
+  animations.forEach((animation) => animate.mockReturnValueOnce(animation));
+  Object.defineProperty(Element.prototype, "animate", {
+    configurable: true,
+    value: animate,
+    writable: true
+  });
+  return animate;
+}
+
 describe("navigation helpers", () => {
   beforeEach(() => {
+    navigationMock.pathname = "/";
     setFinePointer(true);
     setScrollY(0);
   });
@@ -82,25 +144,31 @@ describe("navigation helpers", () => {
   afterEach(() => {
     setScrollY(0);
     vi.restoreAllMocks();
+
+    if (originalAnimateDescriptor) {
+      Object.defineProperty(Element.prototype, "animate", originalAnimateDescriptor);
+    } else {
+      Reflect.deleteProperty(Element.prototype, "animate");
+    }
   });
 
   it("generates the required route links", () => {
-    expect(navigationItems.map((item) => item.href)).toEqual(["/", "/research", "/projects", "/experience", "/recommendations", "/resume"]);
+    expect(navigationItems.map((item) => item.href)).toEqual(["/", "/experience", "/research", "/projects", "/recommendations", "/resume"]);
   });
 
   it("supports content-driven recommendations navigation settings", () => {
     expect(createNavigationItems({ enableRecommendations: false, recommendationsNavLabel: "Recommendations" }).map((item) => item.href)).toEqual([
       "/",
+      "/experience",
       "/research",
       "/projects",
-      "/experience",
       "/resume"
     ]);
     expect(createNavigationItems({ enableRecommendations: true, recommendationCount: 0 }).map((item) => item.href)).toEqual([
       "/",
+      "/experience",
       "/research",
       "/projects",
-      "/experience",
       "/resume"
     ]);
     expect(createNavigationItems({ enableRecommendations: true, recommendationCount: 0, showEmptyRecommendations: true }).map((item) => item.href)).toContain(
@@ -113,6 +181,105 @@ describe("navigation helpers", () => {
     expect(isNavigationItemActive("/projects", "/projects")).toBe(true);
     expect(isNavigationItemActive("/projects/demo", "/projects")).toBe(true);
     expect(isNavigationItemActive("/research", "/")).toBe(false);
+  });
+
+  it("renders one shared desktop indicator and snaps to a direct nested route", () => {
+    navigationMock.pathname = "/projects/demo";
+    const indicatorRect = { current: createRect(112, 29, 72, 30) };
+    installNavigationGeometryMock(indicatorRect);
+    const animate = installAnimateMock(createAnimationMock());
+
+    const { container } = render(<MainNavigation items={headerNavigationItems} />);
+    const navigation = screen.getByRole("navigation", { name: /main navigation/i });
+    const activeLink = screen.getByRole("link", { name: "Projects" });
+    const indicator = container.querySelector<HTMLElement>(".active-route-indicator");
+
+    expect(container.querySelectorAll(".active-route-indicator")).toHaveLength(1);
+    expect(activeLink).toHaveAttribute("aria-current", "page");
+    expect(activeLink).toHaveClass("hover-base-1", "hover-base-1--route");
+    expect(activeLink).not.toHaveClass("hover-base-1--inset");
+    expect(navigation).toHaveAttribute("data-route-indicator-ready", "true");
+    expect(indicator).toHaveAttribute("aria-hidden", "true");
+    expect(indicator).toHaveAttribute("data-visible", "true");
+    expect(indicator?.style.transform).toBe("translate3d(308px, 5px, 0)");
+    expect(indicator?.style.width).toBe("100px");
+    expect(indicator?.style.height).toBe("38px");
+    expect(animate).not.toHaveBeenCalled();
+  });
+
+  it("animates committed route changes and retargets rapid navigation from the current visual rectangle", () => {
+    const indicatorRect = { current: createRect(112, 29, 72, 30) };
+    installNavigationGeometryMock(indicatorRect);
+    const firstAnimation = createAnimationMock();
+    const secondAnimation = createAnimationMock();
+    const animate = installAnimateMock(firstAnimation, secondAnimation);
+    const view = render(<MainNavigation items={headerNavigationItems} />);
+
+    expect(animate).not.toHaveBeenCalled();
+
+    navigationMock.pathname = "/projects";
+    view.rerender(<MainNavigation items={headerNavigationItems} />);
+
+    expect(animate).toHaveBeenCalledTimes(1);
+    expect(animate.mock.calls[0][1]).toEqual({
+      duration: 420,
+      easing: "cubic-bezier(0.65, 0, 0.35, 1)",
+      fill: "none"
+    });
+
+    indicatorRect.current = createRect(250, 29, 82, 30);
+    navigationMock.pathname = "/research";
+    view.rerender(<MainNavigation items={headerNavigationItems} />);
+
+    const secondKeyframes = animate.mock.calls[1][0] as Keyframe[];
+    expect(firstAnimation.cancel).toHaveBeenCalledTimes(1);
+    expect(animate).toHaveBeenCalledTimes(2);
+    expect(secondKeyframes[0]).toMatchObject({
+      opacity: 0.82,
+      transform: "translate3d(150px, 9px, 0) scale(0.8541666666666666, 0.7894736842105263)"
+    });
+    expect(secondKeyframes[1]).toMatchObject({ opacity: 1, transform: "translate3d(208px, 5px, 0)" });
+  });
+
+  it("snaps committed route changes when reduced motion is requested", () => {
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        addEventListener: vi.fn(),
+        matches: query === "(prefers-reduced-motion: reduce)",
+        media: query,
+        removeEventListener: vi.fn()
+      }))
+    });
+    const indicatorRect = { current: createRect(112, 29, 72, 30) };
+    installNavigationGeometryMock(indicatorRect);
+    const animate = installAnimateMock(createAnimationMock());
+    const view = render(<MainNavigation items={headerNavigationItems} />);
+
+    navigationMock.pathname = "/projects";
+    view.rerender(<MainNavigation items={headerNavigationItems} />);
+
+    const indicator = view.container.querySelector<HTMLElement>(".active-route-indicator");
+    expect(indicator?.style.transform).toBe("translate3d(308px, 5px, 0)");
+    expect(animate).not.toHaveBeenCalled();
+  });
+
+  it("hides the shared indicator for an unknown route and snaps when a known target appears", () => {
+    navigationMock.pathname = "/not-a-navigation-route";
+    const indicatorRect = { current: createRect(0, 0, 0, 0) };
+    installNavigationGeometryMock(indicatorRect);
+    const animate = installAnimateMock(createAnimationMock());
+    const view = render(<MainNavigation items={headerNavigationItems} />);
+
+    expect(screen.queryByRole("link", { current: "page" })).not.toBeInTheDocument();
+    expect(view.container.querySelector(".active-route-indicator")).toHaveAttribute("data-visible", "false");
+
+    navigationMock.pathname = "/research";
+    view.rerender(<MainNavigation items={headerNavigationItems} />);
+
+    expect(screen.getByRole("link", { name: "Research" })).toHaveAttribute("aria-current", "page");
+    expect(view.container.querySelector(".active-route-indicator")).toHaveAttribute("data-visible", "true");
+    expect(animate).not.toHaveBeenCalled();
   });
 
   it("renders descriptive social links", () => {
@@ -143,7 +310,27 @@ describe("navigation helpers", () => {
     expect(container.querySelector(".blob-header")).toHaveAttribute("data-header-state", "expanded");
     expect(container.querySelector(".site-brand__mark")).toHaveClass("site-brand__mark--image");
     expect(container.querySelector(".site-brand__mark-image")).toHaveAttribute("src", "/favicon/favicon.png");
-    expect(screen.getByRole("button", { name: /view demo owner profile photo/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /view demo owner profile photo/i })).toHaveClass(
+      "hover-base-1",
+      "hover-base-1--compact",
+      "hover-base-1--solid",
+      "hover-base-1--no-wave"
+    );
+    const brandText = container.querySelector(".site-brand__text");
+    expect(brandText?.tagName).toBe("SPAN");
+    expect(brandText).toHaveTextContent("Demo Owner");
+    expect(brandText).not.toHaveClass("hover-base-1");
+    expect(screen.queryByRole("link", { name: /demo owner home/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /menu/i })).toHaveClass("hover-base-1", "hover-base-1--compact");
+    expect(screen.getByRole("button", { name: /choose color theme/i })).toHaveClass(
+      "glass-icon-button",
+      "hover-base-1",
+      "hover-base-1--compact"
+    );
+    expect(container.querySelector(".blob-header__actions > .social-link-group + .theme-switcher + .mobile-navigation")).not.toBeNull();
+    screen.getAllByRole("link", { name: /github/i }).forEach((link) => {
+      expect(link).toHaveClass("hover-base-1", "hover-base-1--compact");
+    });
   });
 
   it("opens the profile photo preview and closes when clicking outside the frame", async () => {
@@ -152,6 +339,10 @@ describe("navigation helpers", () => {
     fireEvent.click(screen.getByRole("button", { name: /view demo owner profile photo/i }));
     expect(screen.getByRole("dialog", { name: /demo owner profile photo/i })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /demo owner profile photo/i })).toHaveAttribute("src", "/favicon/favicon.png");
+    expect(screen.getByRole("button", { name: /close profile photo preview/i })).toHaveClass(
+      "hover-base-1",
+      "hover-base-1--compact"
+    );
 
     fireEvent.click(screen.getByRole("img", { name: /demo owner profile photo/i }));
     expect(screen.getByRole("dialog", { name: /demo owner profile photo/i })).toBeInTheDocument();
@@ -209,7 +400,7 @@ describe("navigation helpers", () => {
     scrollToPosition(140);
     expect(header).toHaveAttribute("data-header-state", "compact");
 
-    fireEvent.focus(screen.getByRole("link", { name: /demo owner home/i }));
+    fireEvent.focus(screen.getByRole("link", { name: "Home" }));
     expect(header).toHaveAttribute("data-header-state", "expanded");
   });
 
@@ -223,9 +414,45 @@ describe("navigation helpers", () => {
     fireEvent.click(screen.getByRole("button", { name: /menu/i }));
     expect(screen.getByRole("button", { name: /menu/i })).toHaveAttribute("aria-expanded", "true");
     expect(header).toHaveAttribute("data-header-state", "expanded");
+    container.querySelectorAll(".mobile-navigation__link").forEach((link) => {
+      expect(link).toHaveClass("hover-base-1", "hover-base-1--compact");
+    });
 
     scrollToPosition(190);
     expect(header).toHaveAttribute("data-header-state", "expanded");
+  });
+
+  it("keeps the header geometry stable while the theme menu is open and coordinates it with mobile navigation", () => {
+    const { container } = renderHeader();
+    const header = container.querySelector(".blob-header");
+    const themeTrigger = screen.getByRole("button", { name: /choose color theme/i });
+    const mobileTrigger = screen.getByRole("button", { name: /menu/i });
+
+    scrollToPosition(140);
+    expect(header).toHaveAttribute("data-header-state", "compact");
+
+    fireEvent.click(themeTrigger);
+    expect(themeTrigger).toHaveAttribute("aria-expanded", "true");
+    expect(header).toHaveAttribute("data-header-state", "compact");
+
+    scrollToPosition(190);
+    expect(header).toHaveAttribute("data-header-state", "compact");
+
+    fireEvent.pointerDown(document.body);
+    expect(themeTrigger).toHaveAttribute("aria-expanded", "false");
+    expect(header).toHaveAttribute("data-header-state", "compact");
+
+    fireEvent.click(themeTrigger);
+    fireEvent.click(mobileTrigger);
+    expect(mobileTrigger).toHaveAttribute("aria-expanded", "true");
+    expect(themeTrigger).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(themeTrigger);
+    expect(themeTrigger).toHaveAttribute("aria-expanded", "true");
+    expect(mobileTrigger).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.keyDown(themeTrigger, { key: "Escape" });
+    expect(themeTrigger).toHaveAttribute("aria-expanded", "false");
   });
 
   it("uses scroll direction instead of pointer proximity on coarse pointer devices", () => {

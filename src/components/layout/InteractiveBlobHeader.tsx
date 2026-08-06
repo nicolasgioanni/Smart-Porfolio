@@ -8,6 +8,8 @@ import { MobileNavigation } from "@/components/navigation/MobileNavigation";
 import type { NavigationItem } from "@/components/navigation/navigationItems";
 import { SocialLinkGroup } from "@/components/navigation/SocialLinkGroup";
 import { ProfileImagePreview } from "@/components/layout/ProfileImagePreview";
+import { ThemeSwitcher } from "@/components/theme/ThemeSwitcher";
+import type { ThemeName } from "@/lib/theme/resolveThemeName";
 
 const compactScrollThreshold = 72;
 const topProximityPixels = 128;
@@ -16,7 +18,6 @@ const scrollDirectionThreshold = 4;
 type HeaderScrollIntent = "expanded" | "compact";
 
 export type HeaderBrand = {
-  headline: string;
   initial: string;
   markImageSrc?: string;
   name: string;
@@ -24,15 +25,18 @@ export type HeaderBrand = {
 
 type InteractiveBlobHeaderProps = {
   brand: HeaderBrand;
+  initialTheme: ThemeName;
   navigationItems: NavigationItem[];
   primaryLinks: PortfolioLink[];
 };
 
-export function InteractiveBlobHeader({ brand, navigationItems, primaryLinks }: InteractiveBlobHeaderProps) {
+export function InteractiveBlobHeader({ brand, initialTheme, navigationItems, primaryLinks }: InteractiveBlobHeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [pointerNearHeader, setPointerNearHeaderState] = useState(false);
   const [profilePreviewOpen, setProfilePreviewOpen] = useState(false);
   const [scrollIntent, setScrollIntentState] = useState<HeaderScrollIntent>("expanded");
+  const [themeMenuHeaderState, setThemeMenuHeaderState] = useState<HeaderScrollIntent>();
+  const [themeMenuOpen, setThemeMenuOpen] = useState(false);
   const markClassName = ["site-brand__mark", brand.markImageSrc ? "site-brand__mark--image" : null].filter(Boolean).join(" ");
   const profileImageAlt = `${brand.name} profile photo`;
   const finePointerRef = useRef(true);
@@ -40,7 +44,11 @@ export function InteractiveBlobHeader({ brand, navigationItems, primaryLinks }: 
   const mobileMenuOpenRef = useRef(false);
   const pointerNearHeaderRef = useRef(false);
   const scrollIntentRef = useRef<HeaderScrollIntent>("expanded");
-  const compactHeader = scrollIntent === "compact" && !pointerNearHeader && !mobileMenuOpen;
+  const themeMenuOpenRef = useRef(false);
+  const headerVisualStateRef = useRef<HeaderScrollIntent>("expanded");
+  const naturallyCompactHeader = scrollIntent === "compact" && !pointerNearHeader && !mobileMenuOpen;
+  const compactHeader = themeMenuOpen && themeMenuHeaderState ? themeMenuHeaderState === "compact" : naturallyCompactHeader;
+  headerVisualStateRef.current = compactHeader ? "compact" : "expanded";
 
   const setScrollIntent = useCallback((nextIntent: HeaderScrollIntent) => {
     if (scrollIntentRef.current === nextIntent) return;
@@ -79,6 +87,11 @@ export function InteractiveBlobHeader({ brand, navigationItems, primaryLinks }: 
     function handleScroll() {
       const nextScrollY = window.scrollY;
       const scrollDelta = nextScrollY - lastScrollYRef.current;
+
+      if (themeMenuOpenRef.current) {
+        lastScrollYRef.current = nextScrollY;
+        return;
+      }
 
       if (mobileMenuOpenRef.current || nextScrollY <= compactScrollThreshold) {
         setScrollIntent("expanded");
@@ -126,14 +139,28 @@ export function InteractiveBlobHeader({ brand, navigationItems, primaryLinks }: 
     setPointerNearHeader(pointerStillNearHeader);
   }
 
-  function handleMobileMenuOpenChange(open: boolean) {
+  const handleMobileMenuOpenChange = useCallback((open: boolean) => {
     mobileMenuOpenRef.current = open;
     setMobileMenuOpen(open);
 
     if (open) {
+      themeMenuOpenRef.current = false;
+      setThemeMenuHeaderState(undefined);
+      setThemeMenuOpen(false);
       setScrollIntent("expanded");
     }
-  }
+  }, [setScrollIntent]);
+
+  const handleThemeMenuOpenChange = useCallback((open: boolean) => {
+    themeMenuOpenRef.current = open;
+    setThemeMenuHeaderState(open ? headerVisualStateRef.current : undefined);
+    setThemeMenuOpen(open);
+
+    if (open) {
+      mobileMenuOpenRef.current = false;
+      setMobileMenuOpen(false);
+    }
+  }, []);
 
   function openProfilePreview() {
     if (brand.markImageSrc) {
@@ -157,7 +184,12 @@ export function InteractiveBlobHeader({ brand, navigationItems, primaryLinks }: 
         <div className="glass-blob glass-blob--nav blob-header__island">
           <div className="site-brand">
             {brand.markImageSrc ? (
-              <button aria-label={`View ${profileImageAlt}`} className={markClassName} onClick={openProfilePreview} type="button">
+              <button
+                aria-label={`View ${profileImageAlt}`}
+                className={`${markClassName} hover-base-1 hover-base-1--compact hover-base-1--solid hover-base-1--no-wave`}
+                onClick={openProfilePreview}
+                type="button"
+              >
                 <img alt="" className="site-brand__mark-image" src={brand.markImageSrc} />
               </button>
             ) : (
@@ -165,14 +197,21 @@ export function InteractiveBlobHeader({ brand, navigationItems, primaryLinks }: 
                 {brand.initial}
               </span>
             )}
-            <a className="site-brand__text" href="/" aria-label={`${brand.name} home`}>
+            <span className="site-brand__text">
               <span className="site-brand__name">{brand.name}</span>
-              <span className="site-brand__headline">{brand.headline}</span>
-            </a>
+            </span>
           </div>
           <MainNavigation items={navigationItems} />
-          <SocialLinkGroup compact links={primaryLinks.slice(0, 4)} />
-          <MobileNavigation items={navigationItems} links={primaryLinks} onOpenChange={handleMobileMenuOpenChange} />
+          <div className="blob-header__actions">
+            <SocialLinkGroup compact links={primaryLinks.slice(0, 4)} />
+            <ThemeSwitcher initialTheme={initialTheme} onOpenChange={handleThemeMenuOpenChange} open={themeMenuOpen} />
+            <MobileNavigation
+              items={navigationItems}
+              links={primaryLinks}
+              onOpenChange={handleMobileMenuOpenChange}
+              open={mobileMenuOpen}
+            />
+          </div>
         </div>
       </header>
       {brand.markImageSrc ? <ProfileImagePreview alt={profileImageAlt} imageSrc={brand.markImageSrc} onClose={closeProfilePreview} open={profilePreviewOpen} /> : null}

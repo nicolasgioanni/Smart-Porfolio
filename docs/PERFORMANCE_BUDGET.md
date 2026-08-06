@@ -41,6 +41,8 @@ Optimize images before placing them in `public`. Prefer appropriately sized PNG,
 
 Reserve dimensions for images, skeletons, grids, cards, and controls to avoid layout shift.
 
+Avoid full-page wallpaper backgrounds. The shared page background should remain CSS/token-driven so Home visual polish does not add a large render-blocking image request.
+
 ## Glass Effects
 
 Limit large `backdrop-filter` surfaces. Glass should be bounded to cards, navigation, footer, and section panels. The `enable_glass_effects` setting must keep the interface readable when disabled.

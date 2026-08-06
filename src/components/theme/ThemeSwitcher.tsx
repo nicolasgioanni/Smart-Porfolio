@@ -1,10 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { resolveThemeName, themeNames, type ThemeName } from "@/lib/theme/resolveThemeName";
+import type {
+  FocusEvent as ReactFocusEvent,
+  KeyboardEvent as ReactKeyboardEvent,
+  MouseEvent as ReactMouseEvent,
+  PointerEvent as ReactPointerEvent
+} from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { GlassIconButton } from "@/components/glass/GlassIconButton";
+import { ThemeIcon } from "@/components/icons/ThemeIcon";
+import { useThemePreference } from "@/components/theme/useThemePreference";
+import type { ThemeName } from "@/lib/theme/resolveThemeName";
 
-const storageKey = "portfolio-theme";
+export const themeMenuCloseDelayMs = 240;
 
+const themeMenuOrder: ThemeName[] = ["light", "navy", "dark"];
 const themeLabels: Record<ThemeName, string> = {
   navy: "Navy",
   light: "Light",
@@ -13,36 +23,177 @@ const themeLabels: Record<ThemeName, string> = {
 
 type ThemeSwitcherProps = {
   initialTheme: ThemeName;
+  onOpenChange?: (open: boolean) => void;
+  open?: boolean;
 };
 
-export function ThemeSwitcher({ initialTheme }: ThemeSwitcherProps) {
-  const [selectedTheme, setSelectedTheme] = useState<ThemeName>(initialTheme);
+export function ThemeSwitcher({ initialTheme, onOpenChange, open: controlledOpen }: ThemeSwitcherProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const finePointerRef = useRef(true);
+  const open = controlledOpen ?? internalOpen;
+  const openRef = useRef(open);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelId = useId();
+  const { selectedTheme, updateTheme } = useThemePreference(initialTheme);
+  openRef.current = open;
+
+  const cancelScheduledClose = useCallback(() => {
+    if (closeTimerRef.current === undefined) return;
+
+    clearTimeout(closeTimerRef.current);
+    closeTimerRef.current = undefined;
+  }, []);
+
+  const requestOpenChange = useCallback(
+    (nextOpen: boolean) => {
+      cancelScheduledClose();
+      if (openRef.current === nextOpen) return;
+
+      openRef.current = nextOpen;
+      if (controlledOpen === undefined) {
+        setInternalOpen(nextOpen);
+      }
+      onOpenChange?.(nextOpen);
+    },
+    [cancelScheduledClose, controlledOpen, onOpenChange]
+  );
+
+  const scheduleClose = useCallback(() => {
+    cancelScheduledClose();
+    closeTimerRef.current = setTimeout(() => {
+      closeTimerRef.current = undefined;
+      requestOpenChange(false);
+    }, themeMenuCloseDelayMs);
+  }, [cancelScheduledClose, requestOpenChange]);
 
   useEffect(() => {
-    const storedTheme = resolveThemeName(window.localStorage.getItem(storageKey), initialTheme);
-    setSelectedTheme(storedTheme);
-    document.documentElement.dataset.theme = storedTheme;
-  }, [initialTheme]);
+    const mediaQuery = window.matchMedia?.("(hover: hover) and (pointer: fine)");
 
-  function updateTheme(theme: ThemeName) {
-    setSelectedTheme(theme);
-    document.documentElement.dataset.theme = theme;
-    window.localStorage.setItem(storageKey, theme);
+    function updatePointerMode() {
+      finePointerRef.current = mediaQuery ? mediaQuery.matches : true;
+    }
+
+    updatePointerMode();
+    mediaQuery?.addEventListener?.("change", updatePointerMode);
+    mediaQuery?.addListener?.(updatePointerMode);
+
+    return () => {
+      mediaQuery?.removeEventListener?.("change", updatePointerMode);
+      mediaQuery?.removeListener?.(updatePointerMode);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+
+    function handleOutsidePointerDown(event: PointerEvent) {
+      if (event.target instanceof Node && rootRef.current?.contains(event.target)) return;
+      requestOpenChange(false);
+    }
+
+    document.addEventListener("pointerdown", handleOutsidePointerDown, true);
+    return () => document.removeEventListener("pointerdown", handleOutsidePointerDown, true);
+  }, [open, requestOpenChange]);
+
+  useEffect(
+    () => () => {
+      cancelScheduledClose();
+    },
+    [cancelScheduledClose]
+  );
+
+  function handlePointerEnter() {
+    cancelScheduledClose();
+    if (finePointerRef.current) {
+      requestOpenChange(true);
+    }
+  }
+
+  function handlePointerLeave() {
+    if (finePointerRef.current) {
+      scheduleClose();
+    }
+  }
+
+  function handleFocusCapture() {
+    cancelScheduledClose();
+    requestOpenChange(true);
+  }
+
+  function handleBlurCapture(event: ReactFocusEvent<HTMLDivElement>) {
+    if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return;
+    scheduleClose();
+  }
+
+  function handleTriggerClick(event: ReactMouseEvent<HTMLButtonElement>) {
+    if (finePointerRef.current && event.detail > 0) {
+      requestOpenChange(true);
+      return;
+    }
+
+    requestOpenChange(!openRef.current);
+  }
+
+  function handleKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
+    if (event.key !== "Escape" || !openRef.current) return;
+
+    event.preventDefault();
+    triggerRef.current?.focus();
+    requestOpenChange(false);
+  }
+
+  function preservePointerFocus(event: ReactPointerEvent<HTMLButtonElement>) {
+    if (finePointerRef.current) {
+      event.preventDefault();
+    }
   }
 
   return (
-    <div className="theme-switcher" role="group" aria-label="Theme">
-      {themeNames.map((theme) => (
-        <button
-          aria-pressed={selectedTheme === theme}
-          className="theme-switcher__button"
-          key={theme}
-          onClick={() => updateTheme(theme)}
-          type="button"
-        >
-          {themeLabels[theme]}
-        </button>
-      ))}
+    <div
+      className="theme-switcher"
+      data-open={open ? "true" : "false"}
+      onBlurCapture={handleBlurCapture}
+      onFocusCapture={handleFocusCapture}
+      onKeyDown={handleKeyDown}
+      onPointerEnter={handlePointerEnter}
+      onPointerLeave={handlePointerLeave}
+      ref={rootRef}
+    >
+      <GlassIconButton
+        aria-controls={panelId}
+        aria-expanded={open}
+        className="theme-switcher__trigger"
+        label={`Choose color theme. Current theme: ${themeLabels[selectedTheme]}`}
+        onClick={handleTriggerClick}
+        ref={triggerRef}
+      >
+        <ThemeIcon />
+      </GlassIconButton>
+
+      <div
+        aria-hidden={!open}
+        className="theme-switcher__popover"
+        data-state={open ? "open" : "closed"}
+        id={panelId}
+      >
+        <div aria-label="Color theme" className="theme-switcher__panel" role="group">
+          {themeMenuOrder.map((theme) => (
+            <button
+              aria-pressed={selectedTheme === theme}
+              className="theme-switcher__option hover-base-1 hover-base-1--compact hover-base-1--inline"
+              key={theme}
+              onClick={() => updateTheme(theme)}
+              onPointerDown={preservePointerFocus}
+              tabIndex={open ? 0 : -1}
+              type="button"
+            >
+              <span>{themeLabels[theme]}</span>
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

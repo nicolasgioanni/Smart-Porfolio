@@ -1,4 +1,5 @@
-﻿id,label,url,icon,kind,is_primary,show_on_home,show_in_header,show_in_footer,order
-github,GitHub,https://github.com/example,github,github,true,true,true,true,1
-email,Email,mailto:demo@example.com,email,email,true,true,true,true,2
-resume,Resume,/resume/demo-resume.pdf,file,resume,false,true,false,true,3
+id,label,url,icon,kind,is_primary,show_on_home,show_in_header,show_in_footer,order
+github,GitHub,https://github.com/nicolasgioanni,github,github,true,true,true,true,1
+linkedin,LinkedIn,https://www.linkedin.com/in/nicolas-gioanni,linkedin,linkedin,true,true,true,true,2
+email,Email,mailto:ngioanni@uw.edu,email,email,true,true,true,true,3
+resume,Resume,/resume/Nicolas-Gioanni-Resume.pdf,file,resume,false,true,false,true,5

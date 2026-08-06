@@ -27,6 +27,7 @@
 - Use appropriately sized images.
 - Reserve image dimensions to avoid layout shift.
 - Replace placeholder assets before production launch.
+- Keep shared page backgrounds CSS/token-driven instead of full-page wallpaper images.
 
 ## Verification
 

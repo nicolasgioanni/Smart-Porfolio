@@ -14,7 +14,12 @@ export type ProfileContent = {
   preferredName?: string;
   currentTitle?: string;
   currentCompany?: string;
+  currentExperienceId?: string;
+  previousExperienceId?: string;
+  featuredResearchId?: string;
+  primaryEducationId?: string;
   pronouns?: string;
+  timezone?: string;
   university?: string;
   degree?: string;
   fieldOfStudy?: string;
@@ -47,6 +52,8 @@ export type ResearchItem = {
   title: string;
   role?: string;
   organization?: string;
+  organizationLogo?: string;
+  organizationLogoAlt?: string;
   location?: string;
   startDate?: string;
   endDate?: string;
@@ -56,6 +63,7 @@ export type ResearchItem = {
   bullets: string[];
   skills: string[];
   links: PortfolioContentLink[];
+  pendingLinks?: string[];
   image?: string;
   featured: boolean;
   showOnHome: boolean;
@@ -85,6 +93,8 @@ export type ExperienceItem = {
   id: string;
   title: string;
   organization: string;
+  organizationLogo?: string;
+  organizationLogoAlt?: string;
   type?: string;
   location?: string;
   startDate?: string;
@@ -122,8 +132,11 @@ export type RecommendationItem = {
 export type EducationItem = {
   id: string;
   institution: string;
+  institutionLogo?: string;
+  institutionLogoAlt?: string;
   degree: string;
   field?: string;
+  concentration?: string;
   location?: string;
   startDate?: string;
   endDate?: string;
@@ -200,8 +213,53 @@ export type SkillGroup = {
   skills: SkillItem[];
 };
 
+export type ProfileOverviewLogo = {
+  alt: string;
+  src: string;
+};
+
+export type ProfileOverviewWork = {
+  id?: string;
+  title?: string;
+  organization?: string;
+  startDate?: string;
+  endDate?: string;
+  dateLabel?: string;
+  summary?: string;
+  logo?: ProfileOverviewLogo;
+};
+
+export type ProfileOverviewResearch = {
+  id: string;
+  title: string;
+  summary?: string;
+  links: PortfolioContentLink[];
+};
+
+export type ProfileOverviewEducation = {
+  id?: string;
+  institution?: string;
+  degree?: string;
+  field?: string;
+  concentration?: string;
+  location?: string;
+  startDate?: string;
+  endDate?: string;
+  graduationLabel?: string;
+  logo?: ProfileOverviewLogo;
+};
+
+export type ProfileOverviewContent = {
+  headline: string;
+  about?: string;
+  currentWork?: ProfileOverviewWork;
+  education?: ProfileOverviewEducation;
+  research?: ProfileOverviewResearch;
+};
+
 export type HomePortfolioContent = {
   profile: ProfileContent;
+  profileOverview: ProfileOverviewContent;
   links: PortfolioLink[];
   research: ResearchItem[];
   projects: ProjectItem[];

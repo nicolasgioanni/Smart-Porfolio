@@ -42,6 +42,6 @@ The build runs once per deployment. The deployed output is static and does not n
 
 ## Home and detail layers
 
-The Home page is the summary layer. It includes the strongest scannable overview of profile, links, skills, experience, recommendations when available, research, projects, education, and resume CTA.
+The Home page is the summary layer. It includes the strongest scannable overview of profile, links, skills, experience, education, research, and projects. Recommendations and resume content remain available on their focused routes instead of adding more Home sections.
 
 The detail pages are evidence layers. Research, projects, experience, recommendations, and resume pages show longer explanations, bullets, context, impact details, recommendation quotes, and supporting links.

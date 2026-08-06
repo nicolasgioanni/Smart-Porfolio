@@ -15,6 +15,7 @@ export function useIntersectionMotion<TElement extends HTMLElement>({
   threshold = 0.14
 }: IntersectionMotionOptions = {}) {
   const ref = useRef<TElement | null>(null);
+  const hasRevealedRef = useRef(false);
   const [visible, setVisible] = useState(false);
   const prefersReducedMotion = useReducedMotionPreference();
 
@@ -23,13 +24,19 @@ export function useIntersectionMotion<TElement extends HTMLElement>({
     if (!element) return;
 
     if (!enabled || prefersReducedMotion) {
+      hasRevealedRef.current = true;
       setVisible(true);
       return;
     }
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        setVisible(entry.isIntersecting || entry.intersectionRatio > 0);
+        if (hasRevealedRef.current) return;
+
+        if (entry.isIntersecting || entry.intersectionRatio > 0) {
+          hasRevealedRef.current = true;
+          setVisible(true);
+        }
       },
       { rootMargin, threshold }
     );

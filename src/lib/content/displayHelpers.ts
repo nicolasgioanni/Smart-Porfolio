@@ -17,8 +17,8 @@ export function getLinkKind(link: Pick<PortfolioLink | PortfolioContentLink, "la
   if (["repository", "source", "github_repository"].some((kind) => label.includes(kind) || url.includes(kind))) return "github";
   if (url.startsWith("mailto:")) return "email";
   if (label.includes("resume") || url.includes("resume")) return "resume";
-  if (label.includes("demo")) return "website";
-  if (label.includes("paper") || label.includes("publication")) return "publication";
+  if (["demo", "live site", "website"].some((kind) => label.includes(kind))) return "website";
+  if (["paper", "manuscript", "publication"].some((kind) => label.includes(kind))) return "publication";
 
   return "external";
 }
