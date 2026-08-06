@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { ExperienceItem, GeneratedPortfolioContent, HomePortfolioContent, ProfileOverviewContent, RecommendationItem } from "@/content/types";
 import { GlassIconLink } from "@/components/glass/GlassIconLink";
@@ -11,10 +11,8 @@ import { HomeEducationSummary } from "@/components/portfolio/HomeEducationSummar
 import { HomeFeaturedExperience } from "@/components/portfolio/HomeFeaturedExperience";
 import { HomeOverview } from "@/components/portfolio/HomeOverview";
 import { HomeRecommendations } from "@/components/portfolio/HomeRecommendations";
-import { HomeSkillsSnapshot } from "@/components/portfolio/HomeSkillsSnapshot";
 import { PortfolioHero } from "@/components/portfolio/PortfolioHero";
 import { RecommendationsList } from "@/components/portfolio/RecommendationsList";
-import type { HomeSkillStory } from "@/components/portfolio/homeSkillStories";
 import { createProfileOverviewContent } from "@/lib/content/profileOverview";
 
 const recommendation: RecommendationItem = {
@@ -183,32 +181,67 @@ describe("portfolio UI helpers", () => {
     expect(screen.getByRole("status")).toHaveTextContent("No rows yet.");
   });
 
-  it("renders education summary content", () => {
-    render(
+  it("renders Home education as a simple spreadsheet-backed academic history", () => {
+    const { container } = render(
       <HomeEducationSummary
         items={[
           {
             id: "education-a",
             institution: "Example University",
+            institutionLogo: "/images/organizations/example-university.svg",
+            institutionLogoAlt: "Example University mark",
             degree: "BS",
             field: "Computer Science",
+            concentration: "Information Assurance",
             location: "City State",
             startDate: "2022-09",
             endDate: "2026-05",
             homeSummary: "Focused on systems.",
             detailSummary: "Focused on systems and engineering.",
-            bullets: ["Algorithms"],
+            bullets: ["GPA: 3.9/4.0", "Dean's List: 2022–2026"],
             featured: true,
             showOnHome: true,
             homeOrder: 1,
             detailOrder: 1
+          },
+          {
+            id: "education-b",
+            institution: "Cascadia College",
+            degree: "Running Start",
+            field: "Computer Science",
+            startDate: "2020-09",
+            endDate: "2022-06",
+            bullets: [],
+            featured: false,
+            showOnHome: true,
+            homeOrder: 2,
+            detailOrder: 2
           }
         ]}
       />
     );
 
-    expect(screen.getByText("Example University")).toBeInTheDocument();
-    expect(screen.getByText(/Focused on systems/)).toBeInTheDocument();
+    expect(container.querySelectorAll(".home-education-item")).toHaveLength(2);
+    expect(screen.getAllByRole("heading", { level: 3 }).map((heading) => heading.textContent)).toEqual([
+      "Example University",
+      "Cascadia College"
+    ]);
+    expect(screen.getByRole("img", { name: "Example University mark" })).toHaveAttribute(
+      "src",
+      "/images/organizations/example-university.svg"
+    );
+    expect(container.querySelector(".home-education-item__initials")).toHaveTextContent("CC");
+    expect(screen.getByText("BS — Computer Science")).toBeInTheDocument();
+    expect(screen.getByText("Sep 2022 – May 2026")).toBeInTheDocument();
+    expect(screen.getByText("City State")).toBeInTheDocument();
+    expect(screen.getByText("Concentration: Information Assurance")).toBeInTheDocument();
+    expect(screen.getByText("Focused on systems.")).toBeInTheDocument();
+
+    const educationDetails = screen.getByRole("list", { name: "Example University education details" });
+    expect(within(educationDetails).getByText("GPA: 3.9/4.0")).toBeInTheDocument();
+    expect(within(educationDetails).getByText("Dean's List: 2022–2026")).toBeInTheDocument();
+    expect(container.querySelector(".portfolio-card")).not.toBeInTheDocument();
+    expect(container.querySelector(".glass-chip")).not.toBeInTheDocument();
   });
 
   it("renders Home experience as a concise spreadsheet-backed work history", () => {
@@ -312,83 +345,35 @@ describe("portfolio UI helpers", () => {
 
   it("renders Home major sections without repetitive card eyebrows", () => {
     const { container } = render(<HomeOverview content={createHomeContent()} />);
+    const overviewGrid = container.querySelector<HTMLElement>(".home-overview-grid");
+    const skillsSection = container.querySelector<HTMLElement>(".home-section--skills");
 
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
-    expect(screen.getByRole("heading", { name: "Skills snapshot" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Skills" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Experience" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Featured research" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Featured projects" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Education summary" })).toBeInTheDocument();
+    expect(within(overviewGrid!).getByRole("heading", { name: "Education" })).toBeInTheDocument();
     expect(container.querySelector(".home-overview-grid .eyebrow")).not.toBeInTheDocument();
     expect(screen.queryByText("Selected roles showing engineering, research, teaching, and leadership context.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Academic context and concise supporting details.")).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "View all experience" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Resume and contact" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Professional recommendations" })).not.toBeInTheDocument();
+    expect(skillsSection).toHaveTextContent(/^Skills$/);
+    expect(skillsSection?.querySelector("a, button, p")).not.toBeInTheDocument();
   });
 
   it("renders each Home section in the requested order even when recommendations exist", () => {
     const { container } = render(<HomeOverview content={createHomeContent([recommendation])} />);
 
     expect(Array.from(container.querySelectorAll(".home-overview-grid h2")).map((heading) => heading.textContent)).toEqual([
-      "Skills snapshot",
       "Experience",
-      "Education summary",
+      "Education",
       "Featured research",
-      "Featured projects"
+      "Featured projects",
+      "Skills"
     ]);
-  });
-
-  it("lets visitors select a capability and inspect where it was demonstrated", () => {
-    const stories: HomeSkillStory[] = [
-      {
-        id: "applied-ai",
-        label: "Applied AI",
-        summary: "Built measured AI workflows.",
-        tools: ["Python", "TensorFlow/Keras"],
-        evidence: [
-          {
-            id: "research-cytocv",
-            kind: "Research",
-            title: "CytoCV",
-            context: "Example Lab",
-            proof: "Built an image analysis pipeline.",
-            outcome: "Reduced processing time by 73%.",
-            tools: ["Python"],
-            href: "/research"
-          }
-        ]
-      },
-      {
-        id: "automation",
-        label: "Automation",
-        summary: "Replaced repetitive work with reliable pipelines.",
-        tools: ["Python", "Bash"],
-        evidence: [
-          {
-            id: "project-clair",
-            kind: "Project",
-            title: "Clair",
-            proof: "Automated local file organization.",
-            outcome: "Reduced manual sorting time by 80%.",
-            tools: ["Python", "Bash"],
-            href: "/projects"
-          }
-        ]
-      }
-    ];
-
-    render(<HomeSkillsSnapshot skillGroups={[]} stories={stories} toolkit={["Python", "TypeScript"]} />);
-
-    expect(screen.getByRole("button", { name: /applied ai/i })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("heading", { name: "CytoCV" })).toBeInTheDocument();
-    expect(screen.getByText("Reduced processing time by 73%.")).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: /automation/i }));
-
-    expect(screen.getByRole("button", { name: /automation/i })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("heading", { name: "Clair" })).toBeInTheDocument();
-    expect(screen.getByText("Reduced manual sorting time by 80%.")).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "CytoCV" })).not.toBeInTheDocument();
   });
 
   it("renders portfolio-first hero copy without implementation labels", () => {

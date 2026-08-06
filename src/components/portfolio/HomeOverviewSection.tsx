@@ -9,7 +9,7 @@ type HomeOverviewSectionProps = {
   description?: string;
   href?: string;
   linkLabel?: string;
-  children: ReactNode;
+  children?: ReactNode;
   wide?: boolean;
   className?: string;
   motionEnabled?: boolean;

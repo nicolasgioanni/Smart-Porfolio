@@ -4,10 +4,8 @@ import { HomeFeaturedExperience } from "@/components/portfolio/HomeFeaturedExper
 import { HomeFeaturedProjects } from "@/components/portfolio/HomeFeaturedProjects";
 import { HomeFeaturedResearch } from "@/components/portfolio/HomeFeaturedResearch";
 import { HomeOverviewSection } from "@/components/portfolio/HomeOverviewSection";
-import { HomeSkillsSnapshot } from "@/components/portfolio/HomeSkillsSnapshot";
 import { PortfolioHero } from "@/components/portfolio/PortfolioHero";
 import { ResumeSummary } from "@/components/portfolio/ResumeSummary";
-import { createHomeSkillStories, selectHomeCoreToolkit } from "@/components/portfolio/homeSkillStories";
 
 type HomeOverviewProps = {
   content: HomePortfolioContent;
@@ -15,8 +13,6 @@ type HomeOverviewProps = {
 
 export function HomeOverview({ content }: HomeOverviewProps) {
   const motionEnabled = content.siteSettings.enableScrollMotion;
-  const skillStories = createHomeSkillStories(content);
-  const coreToolkit = selectHomeCoreToolkit(content);
 
   return (
     <div className="page-container page-container--home">
@@ -29,18 +25,6 @@ export function HomeOverview({ content }: HomeOverviewProps) {
 
       <div className="home-overview-grid" aria-label="Portfolio overview">
         <HomeOverviewSection
-          description="Choose a broad capability to see the projects, research, and roles where I put it into practice."
-          href="/resume"
-          linkLabel="See full toolkit"
-          motionEnabled={motionEnabled}
-          className="home-section--skills"
-          title="Skills snapshot"
-          wide
-        >
-          <HomeSkillsSnapshot skillGroups={content.skillGroups} stories={skillStories} toolkit={coreToolkit} />
-        </HomeOverviewSection>
-
-        <HomeOverviewSection
           motionEnabled={motionEnabled}
           title="Experience"
         >
@@ -48,9 +32,8 @@ export function HomeOverview({ content }: HomeOverviewProps) {
         </HomeOverviewSection>
 
         <HomeOverviewSection
-          description="Academic context and concise supporting details."
           motionEnabled={motionEnabled}
-          title="Education summary"
+          title="Education"
         >
           <HomeEducationSummary items={content.education} />
         </HomeOverviewSection>
@@ -75,6 +58,12 @@ export function HomeOverview({ content }: HomeOverviewProps) {
         >
           <HomeFeaturedProjects items={content.projects} />
         </HomeOverviewSection>
+
+        <HomeOverviewSection
+          className="home-section--empty home-section--skills"
+          motionEnabled={motionEnabled}
+          title="Skills"
+        />
       </div>
     </div>
   );

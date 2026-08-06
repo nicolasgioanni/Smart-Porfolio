@@ -101,10 +101,10 @@ Recommendation summaries may use `home_quote` when available and otherwise deriv
 Education drives:
 
 - Home profile overview education row.
-- Home education summary.
+- Home education list.
 - Resume education section.
 
-Home summaries use concise institution, degree, field, dates, summary, and short bullets. The profile-overview Education panel is intentionally tighter and shows only the identity-level academic facts and compact graduation label.
+The Home Education card renders every Home-selected row as a clean academic-history list. Each row uses the spreadsheet's institution mark when supplied, with compact institution initials as the visual fallback, then shows institution, degree and field, dates, optional location and concentration, `home_summary`, and every `bullets` entry as plain text. It does not wrap entries in nested cards or skill-style chips. Grade, activities, honors, and similar details remain spreadsheet-owned content in `home_summary` or `bullets`; the UI does not invent them. The profile-overview Education panel is intentionally tighter and shows only the identity-level academic facts and compact graduation label.
 
 The Home profile overview prefers the row named by `profile.primary_education_id`, then uses the deterministic education fallback when that ID is blank. If no education row is available, it falls back to profile fields: `university`, `degree`, `field_of_study`, and `graduation`.
 

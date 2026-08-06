@@ -187,6 +187,8 @@ Fields:
 
 Use `concentration` for a formal concentration or specialization instead of appending it to `field`. A non-blank `location` remains an optional rendered line; leave it blank to hide location from the profile overview.
 
+On Home, every Education row selected by `show_on_home` and the standard Home ordering is rendered in the Education list. The list shows the institution logo or initials fallback, institution, degree and field, dates, optional location and concentration, `home_summary`, and each `bullets` entry as plain text. Put grade, activities, honors, Dean's List, or other concise supporting facts in `home_summary` or `bullets`; those facts are never hard-coded by the component.
+
 Place organization and institution marks in the shared `public/images/organizations/` directory and reference them with root-relative paths such as `/images/organizations/uw-logo.svg`. Leave logo fields blank when no approved asset is available; the Hero renders compact organization initials instead. The older `public/images/education/` path remains valid for existing assets.
 
 ### skills
