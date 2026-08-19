@@ -7,6 +7,7 @@
   PortfolioLink,
   ProfileContent,
   ProjectItem,
+  ProjectSkill,
   RecommendationItem,
   ResearchItem,
   ResumeEntry,
@@ -34,6 +35,9 @@ const profileKeyMap: Record<string, keyof ProfileContent> = {
   full_name: "fullName",
   preferred_name: "preferredName",
   headline: "headline",
+  role_engineer_prefixes: "roleEngineerPrefixes",
+  role_engineer_suffix: "roleEngineerSuffix",
+  role_alternate: "roleAlternate",
   current_title: "currentTitle",
   current_company: "currentCompany",
   current_experience_id: "currentExperienceId",
@@ -77,7 +81,11 @@ const settingKeyMap: Record<string, keyof SiteSettings> = {
   license_name: "licenseName",
   license_url: "licenseUrl",
   copyright_owner: "copyrightOwner",
-  repository_url: "repositoryUrl"
+  repository_url: "repositoryUrl",
+  legal_contact_email: "legalContactEmail",
+  legal_effective_date: "legalEffectiveDate",
+  hosting_provider_name: "hostingProviderName",
+  hosting_privacy_url: "hostingPrivacyUrl"
 };
 
 const booleanSettingKeys = new Set<keyof SiteSettings>([
@@ -125,6 +133,58 @@ export function normalizePipeDelimitedList(value: string | undefined): string[] 
     .split("|")
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+const iconKeyPattern = /^[a-z0-9][a-z0-9-]*$/;
+
+function normalizeIconKey(value: string | undefined, fieldName: string): string | undefined {
+  const normalizedValue = value?.trim().toLowerCase();
+
+  if (!normalizedValue) return undefined;
+
+  if (!iconKeyPattern.test(normalizedValue)) {
+    throw new Error(`${fieldName} must be a lowercase icon key containing only letters, numbers, and hyphens`);
+  }
+
+  return normalizedValue;
+}
+
+function normalizeProjectSkills(value: string | undefined, row: CsvRow, fieldName: string): ProjectSkill[] {
+  const entries = normalizePipeDelimitedList(value);
+
+  if (entries.length > 3) {
+    throw new Error(`${fieldName} must contain at most 3 skills`);
+  }
+
+  for (let index = entries.length; index < 3; index += 1) {
+    const fieldPosition = index + 1;
+    const hasSummary = Boolean(text(row, `home_skill_${fieldPosition}_summary`));
+    const hasDetails = Boolean(text(row, `home_skill_${fieldPosition}_details`));
+
+    if (hasSummary || hasDetails) {
+      throw new Error(`${fieldName} has popup copy for missing skill position ${fieldPosition}`);
+    }
+  }
+
+  return entries.map((entry, index) => {
+    const separatorIndex = entry.indexOf("=");
+    const name = (separatorIndex >= 0 ? entry.slice(0, separatorIndex) : entry).trim();
+    const icon = separatorIndex >= 0 ? entry.slice(separatorIndex + 1).trim() : undefined;
+    const fieldPosition = index + 1;
+    const summary = text(row, `home_skill_${fieldPosition}_summary`);
+    const details = text(row, `home_skill_${fieldPosition}_details`);
+
+    if (!name) {
+      throw new Error(`${fieldName}[${index}] is missing a skill name`);
+    }
+
+    return {
+      name,
+      icon: normalizeIconKey(icon, `${fieldName}[${index}].icon`),
+      ...(summary ? { summary } : {}),
+      ...(details ? { details } : {})
+    };
+  });
 }
 
 function inferLinkLabel(url: string): string {
@@ -239,6 +299,7 @@ function normalizeResearch(rows: CsvRow[]): ResearchItem[] {
     return {
       id,
       title: requiredText(row, "title", location),
+      homeTitle: text(row, "home_title"),
       role: text(row, "role"),
       organization: text(row, "organization"),
       organizationLogo: text(row, "organization_logo"),
@@ -247,6 +308,7 @@ function normalizeResearch(rows: CsvRow[]): ResearchItem[] {
       startDate: text(row, "start_date"),
       endDate: text(row, "end_date"),
       homeSummary: text(row, "home_summary"),
+      profileSummary: text(row, "profile_summary"),
       detailSummary: text(row, "detail_summary"),
       impact: text(row, "impact"),
       bullets: normalizePipeDelimitedList(row.bullets),
@@ -276,6 +338,7 @@ function normalizeProjects(rows: CsvRow[]): ProjectItem[] {
       title: requiredText(row, "title", location),
       subtitle: text(row, "subtitle"),
       homeSummary: text(row, "home_summary"),
+      homeSkills: normalizeProjectSkills(row.home_skills, row, `${location}.home_skills`),
       detailSummary: text(row, "detail_summary"),
       problem: text(row, "problem"),
       solution: text(row, "solution"),
@@ -407,7 +470,9 @@ function normalizeSkills(rows: CsvRow[]): SkillItem[] {
     return {
       id,
       category: requiredText(row, "category", location),
+      categoryOrder: normalizeNumber(row.category_order, `${location}.category_order`),
       name: requiredText(row, "name", location),
+      icon: normalizeIconKey(row.icon, `${location}.icon`),
       priority: normalizeNumber(row.priority, `${location}.priority`),
       featured: normalizeBoolean(row.featured, `${location}.featured`),
       showOnHome: normalizeBoolean(row.show_on_home, `${location}.show_on_home`),
@@ -442,9 +507,9 @@ function normalizeSiteSettings(rows: CsvRow[]): SiteSettings {
     maxHomeResearchItems: 2,
     maxHomeProjectItems: 3,
     maxHomeExperienceItems: 3,
-    maxHomeRecommendationItems: 1,
+    maxHomeRecommendationItems: 3,
     recommendationsNavLabel: "Recommendations",
-    maxHomeSkillItems: 8
+    maxHomeSkillItems: 36
   };
 
   for (const row of rows) {

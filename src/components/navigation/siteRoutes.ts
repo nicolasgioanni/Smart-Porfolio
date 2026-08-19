@@ -4,7 +4,10 @@ export const siteRoutes = {
   research: "/research",
   projects: "/projects",
   recommendations: "/recommendations",
-  resume: "/resume"
+  resume: "/resume",
+  terms: "/terms",
+  privacy: "/privacy",
+  security: "/security"
 } as const;
 
 export type SiteRoutePath = (typeof siteRoutes)[keyof typeof siteRoutes];

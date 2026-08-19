@@ -68,7 +68,14 @@ export function HomeFeaturedExperience({ items }: { items: ExperienceItem[] }) {
     <div className="home-experience-list">
       {organizationGroups.map((group) => (
         <section className="home-experience-group" key={group.organization.toLowerCase()}>
-          <div className="home-experience-group__mark">
+          <div
+            className={[
+              "home-experience-group__mark",
+              group.organizationLogo ? "home-experience-group__mark--image" : null
+            ]
+              .filter(Boolean)
+              .join(" ")}
+          >
             {group.organizationLogo ? (
               <img
                 alt={group.organizationLogoAlt ?? `${group.organization} logo`}

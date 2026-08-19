@@ -1,14 +1,11 @@
 import type { ProfileOverviewContent, ProfileOverviewLogo } from "@/content/types";
-import { GlassLink } from "@/components/glass/GlassLink";
-import { LinkIcon } from "@/components/icons/LinkIcon";
 import { SmartLink } from "@/components/navigation/SmartLink";
 import { siteRoutes } from "@/components/navigation/siteRoutes";
-import { getLinkKind } from "@/lib/content/displayHelpers";
+import { AnimatedRole } from "@/components/portfolio/AnimatedRole";
+import { formatEducationProgram } from "@/lib/content/profileOverview";
 
-function getEducationProgram(degree?: string, field?: string): string | undefined {
-  if (degree && field) return `${degree} \u2014 ${field}`;
-  return degree ?? field;
-}
+const profileResearchResourceClassName =
+  "profile-overview__research-link hover-base-1 hover-base-1--compact hover-base-1--inline";
 
 function AffiliationLogo({ logo }: { logo?: ProfileOverviewLogo }) {
   if (!logo) return null;
@@ -42,6 +39,33 @@ function ProfileSectionHeading({ children, id }: ProfileSectionHeadingProps) {
   );
 }
 
+type ProfilePanelHeaderProps = ProfileSectionHeadingProps & {
+  actionHref?: string;
+  actionLabel?: string;
+};
+
+function ProfilePanelHeader({ actionHref, actionLabel, children, id }: ProfilePanelHeaderProps) {
+  const hasAction = Boolean(actionHref && actionLabel);
+
+  return (
+    <header
+      className={`profile-overview__panel-header${hasAction ? " profile-overview__panel-header--with-action" : ""}`}
+    >
+      <ProfileSectionHeading id={id}>{children}</ProfileSectionHeading>
+      {actionHref && actionLabel ? (
+        <span className="profile-overview__panel-action-slot">
+          <SmartLink
+            className="profile-overview__panel-action hover-base-1 hover-base-1--compact hover-base-1--inline"
+            href={actionHref}
+          >
+            {actionLabel}
+          </SmartLink>
+        </span>
+      ) : null}
+    </header>
+  );
+}
+
 type ProfileOverviewDetailsProps = {
   overview: ProfileOverviewContent;
 };
@@ -49,30 +73,38 @@ type ProfileOverviewDetailsProps = {
 export function ProfileOverviewDetails({ overview }: ProfileOverviewDetailsProps) {
   const currentWorkTitle = overview.currentWork?.organization ?? overview.currentWork?.title;
   const currentWorkRole = overview.currentWork?.organization ? overview.currentWork.title : undefined;
-  const educationProgram = getEducationProgram(overview.education?.degree, overview.education?.field);
+  const educationProgram = formatEducationProgram(overview.education?.degree, overview.education?.field);
   const educationTitle = overview.education?.institution ?? educationProgram;
-  const hasIntroduction = Boolean(overview.headline || overview.about);
 
   return (
     <div className="profile-overview__details">
-      {hasIntroduction ? (
-        <header className="profile-overview__introduction">
-          {overview.headline ? <p className="profile-overview__headline">{overview.headline}</p> : null}
-          {overview.about ? (
-            <section aria-labelledby="profile-overview-about-heading" className="profile-overview__about">
-              <ProfileSectionHeading id="profile-overview-about-heading">About</ProfileSectionHeading>
-              <p className="profile-overview__about-copy">{overview.about}</p>
-            </section>
-          ) : null}
-        </header>
-      ) : null}
+      <header className="profile-overview__introduction">
+        <div className="profile-overview__greeting-group">
+          <h1 className="profile-overview__greeting" id="portfolio-hero-title">
+            Hi, I’m {overview.greetingName}
+          </h1>
+          <AnimatedRole role={overview.role} />
+        </div>
+        {overview.about ? (
+          <section aria-labelledby="profile-overview-about-heading" className="profile-overview__about">
+            <ProfileSectionHeading id="profile-overview-about-heading">About</ProfileSectionHeading>
+            <p className="profile-overview__about-copy">{overview.about}</p>
+          </section>
+        ) : null}
+      </header>
 
       {overview.currentWork ? (
         <section
           aria-labelledby="profile-overview-current-work-heading"
           className="profile-overview__panel profile-overview__current-work"
         >
-          <ProfileSectionHeading id="profile-overview-current-work-heading">Current Work</ProfileSectionHeading>
+          <ProfilePanelHeader
+            actionHref={siteRoutes.experience}
+            actionLabel="View experience"
+            id="profile-overview-current-work-heading"
+          >
+            Current Work
+          </ProfilePanelHeader>
           <div className="profile-overview__entity">
             <AffiliationLogo logo={overview.currentWork.logo} />
             <div className="profile-overview__entity-copy">
@@ -96,21 +128,31 @@ export function ProfileOverviewDetails({ overview }: ProfileOverviewDetailsProps
               aria-labelledby="profile-overview-education-heading"
               className="profile-overview__panel profile-overview__education"
             >
-              <ProfileSectionHeading id="profile-overview-education-heading">Education</ProfileSectionHeading>
+              <ProfilePanelHeader id="profile-overview-education-heading">Education</ProfilePanelHeader>
               <div className="profile-overview__entity">
                 <AffiliationLogo logo={overview.education.logo} />
                 <div className="profile-overview__entity-copy">
                   {educationTitle ? <h3 className="profile-overview__entity-title">{educationTitle}</h3> : null}
-                  {overview.education.institution && educationProgram ? (
-                    <p className="profile-overview__entity-subtitle">{educationProgram}</p>
-                  ) : null}
-                  {overview.education.concentration ? (
-                    <p className="profile-overview__education-concentration">
-                      <span>Concentration:</span> {overview.education.concentration}
-                    </p>
+                  {overview.education.institution && (educationProgram || overview.education.concentration) ? (
+                    <dl className="profile-overview__academic-details">
+                      {educationProgram ? (
+                        <div className="profile-overview__academic-detail">
+                          <dt>Degree</dt>
+                          <dd>{educationProgram}</dd>
+                        </div>
+                      ) : null}
+                      {overview.education.concentration ? (
+                        <div className="profile-overview__academic-detail">
+                          <dt>Concentration</dt>
+                          <dd>{overview.education.concentration}</dd>
+                        </div>
+                      ) : null}
+                    </dl>
                   ) : null}
                   {overview.education.graduationLabel ? (
-                    <p className="profile-overview__metadata">{overview.education.graduationLabel}</p>
+                    <p className="profile-overview__metadata profile-overview__academic-footer">
+                      {overview.education.graduationLabel}
+                    </p>
                   ) : null}
                 </div>
               </div>
@@ -122,41 +164,54 @@ export function ProfileOverviewDetails({ overview }: ProfileOverviewDetailsProps
               aria-labelledby="profile-overview-research-heading"
               className="profile-overview__panel profile-overview__research"
             >
-              <ProfileSectionHeading id="profile-overview-research-heading">Selected Research</ProfileSectionHeading>
-              <div className="profile-overview__research-copy">
-                <h3 className="profile-overview__entity-title">{overview.research.title}</h3>
-                {overview.research.summary ? (
-                  <p className="profile-overview__summary">{overview.research.summary}</p>
-                ) : null}
-                {overview.research.links.length > 0 ? (
-                  <ul aria-label={`${overview.research.title} resources`} className="profile-overview__research-links">
-                    {overview.research.links.map((link) => (
-                      <li key={`${link.label}-${link.url}`}>
-                        <SmartLink
-                          className="profile-overview__research-link hover-base-1 hover-base-1--compact hover-base-1--inline"
-                          href={link.url}
-                        >
-                          <LinkIcon kind={getLinkKind(link)} />
-                          <span>{link.label}</span>
-                        </SmartLink>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
+              <ProfilePanelHeader
+                actionHref={siteRoutes.research}
+                actionLabel="View research"
+                id="profile-overview-research-heading"
+              >
+                Research
+              </ProfilePanelHeader>
+              <div className="profile-overview__entity">
+                <AffiliationLogo logo={overview.research.logo} />
+                <div className="profile-overview__entity-copy profile-overview__research-copy">
+                  <h3 className="profile-overview__entity-title">{overview.research.title}</h3>
+                  {overview.research.summary ? (
+                    <p className="profile-overview__summary">{overview.research.summary}</p>
+                  ) : null}
+                </div>
               </div>
+              {overview.research.links.length > 0 || overview.research.pendingLinks.length > 0 ? (
+                <ul
+                  aria-label={`${overview.research.title} resources`}
+                  className="profile-overview__research-links profile-overview__academic-footer"
+                >
+                  {overview.research.links.map((link) => (
+                    <li key={`${link.label}-${link.url}`}>
+                      <SmartLink className={profileResearchResourceClassName} href={link.url}>
+                        {link.label}
+                      </SmartLink>
+                    </li>
+                  ))}
+                  {overview.research.pendingLinks.map((label) => (
+                    <li key={`pending-${label}`}>
+                      <button
+                        aria-label={`${label} — not yet published`}
+                        className={`${profileResearchResourceClassName} profile-overview__research-link--pending`}
+                        disabled
+                        title="Not yet published"
+                        type="button"
+                      >
+                        {label}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </section>
           ) : null}
         </div>
       ) : null}
 
-      <nav aria-label="Related profile pages" className="profile-overview__supporting-links">
-        <GlassLink className="profile-overview__supporting-link" href={siteRoutes.experience}>
-          View full experience
-        </GlassLink>
-        <GlassLink className="profile-overview__supporting-link" href={siteRoutes.research}>
-          Explore research
-        </GlassLink>
-      </nav>
     </div>
   );
 }

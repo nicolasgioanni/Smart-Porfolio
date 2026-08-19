@@ -4,8 +4,10 @@ Use this checklist when replacing demo content with Nicolas-specific public cont
 
 ## Profile
 
-- Replace `full_name`, `preferred_name`, `headline`, `current_title`, `current_company`, `location`, `timezone`, `email`, `university`, `degree`, `field_of_study`, `graduation`, `short_bio`, and `long_bio`.
-- Keep `current_experience_id`, `featured_research_id`, and `primary_education_id` aligned with real rows where those references remain in use. Current Work and Education have deterministic fallbacks when their selectors are blank; `featured_research_id` is the Selected Research fallback when no row is marked `show_on_home`. `previous_experience_id` may remain as compatible source metadata, but it does not create a Previous Work block on Home; previous roles belong in `experience.csv` and on the Experience page. Never leave a populated stale ID because generation will fail.
+- Replace `full_name`, `preferred_name`, `headline`, `role_engineer_prefixes`, `role_engineer_suffix`, `role_alternate`, `current_title`, `current_company`, `location`, `timezone`, `email`, `university`, `degree`, `field_of_study`, `graduation`, `short_bio`, and `long_bio`.
+- Keep the three role-animation fields either all non-empty or all blank/omitted. Use pipe-delimited prefixes, and keep `headline` accurate for the static fallback and résumé even when the rotating set is present.
+- Confirm the sole Home H1 reads `Hi, I’m {preferred name}` with no trailing period; when `preferred_name` is blank, the first word of `full_name` is used. The full name beneath the portrait remains non-heading text.
+- Keep `current_experience_id`, `featured_research_id`, and `primary_education_id` aligned with real rows where those references remain in use. Current Work and Education have deterministic fallbacks when their selectors are blank; `featured_research_id` is the Research fallback when no row is marked `show_on_home`. `previous_experience_id` may remain as compatible source metadata, but it does not create a Previous Work block on Home; previous roles belong in `experience.csv` and on the Experience page. Never leave a populated stale ID because generation will fail.
 - Update `portrait_image` to a file under `public/images/profile/` or another validated public URL.
 - Update `favicon_image` to a file under `public/favicon/`.
 - Update `resume_url` to the final PDF path under `public/resume/`.
@@ -21,28 +23,35 @@ Use this checklist when replacing demo content with Nicolas-specific public cont
 - Replace demo `research`, `projects`, `experience`, `education`, and `skills` rows with accurate public-safe rows.
 - Keep Home summaries concise.
 - Put deeper proof, bullets, impact, stack, and links on detail rows.
-- Keep the Home profile-overview details ordered as Headline, About, Current Work, the Education/Selected Research row, then the supporting Experience and Research links. On mobile, Selected Research stacks before Education.
+- Keep the Home profile-overview details ordered as greeting H1, role, About, Current Work, then the equal-width Education/Research row. Put `View experience` and `View research` in their relevant panel-header action slots so their larger hit areas do not change header spacing; do not restore a detached bottom navigation row. Keep the Education graduation row and Research resource row bottom-aligned. On mobile, Education stacks before Research.
 - Use `organization_logo`/`organization_logo_alt` on experience and research rows and `institution_logo`/`institution_logo_alt` on education rows. Store new local marks under `public/images/organizations/`; blank logo fields intentionally render without a fake mark.
-- Keep education `field` and `concentration` separate. Leave education `location` blank when it should remain hidden.
-- Give research links descriptive labels such as `Live site`, `Source code`, and `Manuscript`. Add only verified public destinations. An unpublished label in `pending_links` must not create a disabled Home-card action; move it into `links` only when its public URL is ready.
+- Keep education `degree`, `field`, and `concentration` separate. The shared formatter combines `Bachelor of Science` and `Computer Science` as `Bachelor of Science in Computer Science` on both Home Education surfaces, while the selected row supplies the `Information Assurance & Cybersecurity` concentration. Leave education `location` blank when it should remain hidden.
+- Give research links descriptive labels such as `Live site`, `Source code`, and `Manuscript`. Add only verified public destinations. Keep the compact profile Research resources centered and button-like: published links have a transparent idle state, reveal their surface and border on hover/focus, and do not underline their labels. The panel may show an unpublished label from `pending_links` only as a native disabled, non-interactive button; the separate Home Research cards must omit it. Move the label into `links` and remove it from `pending_links` when its public URL is ready.
+- Use `home_title` when a research row needs a concise title on both Home research surfaces. Keep `title` as the formal Research-page and résumé title.
+- Use optional `profile_summary` only for extra-compact Research copy in the Home profile panel. When blank, that panel must fall back to `home_summary`, then `detail_summary`; the larger Home Research card continues to use `home_summary` rather than `profile_summary`.
+
+- Give every Home project a plain `subtitle`, product-focused `home_summary`, three verified `home_skills` label/icon pairs, and matching `home_skill_N_summary`/`home_skill_N_details` explanation pairs. Keep each summary factual and brief, and use its details paragraph to explain the tool's concrete role in that repository. A `Source code` link is required; include `Live demo` only when one exists. Do not restore Featured or subtitle chips.
+- Keep six Skills categories with six exact public-safe skills each. Set `category_order`, skill `order`, and a supported `icon` key for every row; keep a Computer Vision/ML category and a Cybersecurity/Systems category.
 
 ## Recommendations
 
 - Add recommendations only when the text is public-safe and approved for display.
 - Required fields are `id`, `recommender_name`, and `full_quote`.
-- Use `home_quote` for a short Home version when needed.
+- Keep the complete approved recommendation in `full_quote`; both Home and the detail route use it with four-line expansion.
+- Mark the intended first three rows `show_on_home=true` and order them with `home_order`; remaining rows stay available on the Recommendations route.
 - Use HTTPS verification links only.
 - Keep `show_empty_recommendations=false` until at least one recommendation row is ready, unless the empty page should be visible.
 
 ## Footer and legal
 
 - Set `copyright_owner` if it should differ from `profile.full_name`.
-- Set `repository_url` only when the source should be public.
-- Set `license_name` and `license_url` only after the license choice is confirmed.
-- Leave license fields blank to show an all-rights-reserved statement.
+- Set and verify `legal_contact_email`, `legal_effective_date`, `hosting_provider_name`, and the provider's HTTPS `hosting_privacy_url`.
+- Confirm the software license separately from the rights reserved in portfolio content.
+- Audit tracked files and reachable Git history before making the repository public; stop on any unapproved credential, contact detail, asset, or configuration.
+- Set `repository_url` and `license_url` only after anonymous access to both destinations succeeds. Leave them blank to omit unavailable footer resources.
 
 ## Production strict mode
 
 - Configure remote CSV URLs for every required sheet.
 - Set `PORTFOLIO_REQUIRE_REMOTE_CONTENT=true` when demo fallback content should never deploy.
-- Run `npm run generate:content` and `npm run verify`.
+- Run `npm run generate:content`, review and commit `src/content/generated/portfolio.generated.json` with the source changes, then run `npm run verify`. Do not edit generated JSON directly.

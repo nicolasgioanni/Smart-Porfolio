@@ -8,6 +8,7 @@ import type {
   ProfileOverviewEducation,
   ProfileOverviewLogo,
   ProfileOverviewResearch,
+  ProfileOverviewRole,
   ProfileOverviewWork,
   ResearchItem
 } from "@/content/types";
@@ -54,6 +55,43 @@ const identityLinkTargets: Array<{ id: string; kinds: string[] }> = [
 function clean(value: string | undefined): string | undefined {
   const trimmedValue = value?.trim();
   return trimmedValue ? trimmedValue : undefined;
+}
+
+function createProfileOverviewRole(profile: ProfileContent): ProfileOverviewRole {
+  const engineerPrefixes = clean(profile.roleEngineerPrefixes);
+  const engineerSuffix = clean(profile.roleEngineerSuffix);
+  const alternate = clean(profile.roleAlternate);
+  const configuredValueCount = [engineerPrefixes, engineerSuffix, alternate].filter(Boolean).length;
+
+  if (configuredValueCount === 0) {
+    return { kind: "static", label: profile.headline.trim() };
+  }
+
+  if (configuredValueCount !== 3) {
+    throw new Error(
+      "Profile role rotation requires roleEngineerPrefixes, roleEngineerSuffix, and roleAlternate together"
+    );
+  }
+
+  const parsedPrefixes = engineerPrefixes!
+    .split("|")
+    .map((prefix) => prefix.trim())
+    .filter(Boolean);
+
+  if (parsedPrefixes.length === 0) {
+    throw new Error("Profile role rotation requires at least one pipe-delimited engineer prefix");
+  }
+
+  return {
+    kind: "rotating",
+    engineerPrefixes: parsedPrefixes,
+    engineerSuffix: engineerSuffix!,
+    alternate: alternate!
+  };
+}
+
+function getProfileGreetingName(profile: ProfileContent): string {
+  return clean(profile.preferredName) ?? clean(profile.fullName)?.split(/\s+/)[0] ?? "";
 }
 
 function createSyntheticLink(id: string, label: string, url: string, kind: string): PortfolioLink {
@@ -168,6 +206,14 @@ export function formatCompactGraduationDate(endDate: string | undefined): string
   return formattedEndDate ? `Graduated ${formattedEndDate}` : undefined;
 }
 
+export function formatEducationProgram(degree: string | undefined, field: string | undefined): string | undefined {
+  const cleanDegree = clean(degree);
+  const cleanField = clean(field);
+
+  if (cleanDegree && cleanField) return `${cleanDegree} in ${cleanField}`;
+  return cleanDegree ?? cleanField;
+}
+
 type ProfileOverviewWorkOverrides = {
   title?: string;
   organization?: string;
@@ -227,11 +273,31 @@ function createResearchOverview(profile: ProfileContent, research: ResearchItem[
 
   if (!selectedResearch) return undefined;
 
+  const links = selectedResearch.links.filter((link) => Boolean(clean(link.label)) && isSupportedUrl(link.url));
+  const publishedLabels = new Set(links.map((link) => link.label.trim().toLowerCase()));
+  const pendingLinks = (selectedResearch.pendingLinks ?? [])
+    .map((label) => label.trim())
+    .filter(
+      (label, index, labels) =>
+        Boolean(label) &&
+        !publishedLabels.has(label.toLowerCase()) &&
+        labels.findIndex((candidate) => candidate.toLowerCase() === label.toLowerCase()) === index
+    );
+
   return {
     id: selectedResearch.id,
-    title: selectedResearch.title,
-    summary: clean(selectedResearch.homeSummary) ?? clean(selectedResearch.detailSummary),
-    links: selectedResearch.links.filter((link) => Boolean(clean(link.label)) && isSupportedUrl(link.url))
+    title: clean(selectedResearch.homeTitle) ?? selectedResearch.title,
+    summary:
+      clean(selectedResearch.profileSummary) ??
+      clean(selectedResearch.homeSummary) ??
+      clean(selectedResearch.detailSummary),
+    links,
+    pendingLinks,
+    logo: createOverviewLogo(
+      selectedResearch.organizationLogo,
+      selectedResearch.organizationLogoAlt,
+      selectedResearch.organization
+    )
   };
 }
 
@@ -262,7 +328,8 @@ export function createProfileOverviewContent(
   content: Pick<GeneratedPortfolioContent, "profile" | "experience" | "research" | "education">
 ): ProfileOverviewContent {
   return {
-    headline: content.profile.headline.trim(),
+    greetingName: getProfileGreetingName(content.profile),
+    role: createProfileOverviewRole(content.profile),
     about: createShortAboutText(content.profile),
     currentWork: createCurrentWorkOverview(content.profile, content.experience),
     education: createEducationOverview(content.profile, content.education),
@@ -319,9 +386,7 @@ export function getPrimaryEducation(education: EducationItem[] = [], profile?: P
 }
 
 export function getEducationDisplayLabel(education: ProfileEducationDisplay): string | undefined {
-  const degree = clean(education.degree);
-  const field = clean(education.field);
-  const degreeLabel = degree && field ? `${degree} in ${field}` : degree ?? field;
+  const degreeLabel = formatEducationProgram(education.degree, education.field);
   const dateLabel = formatSingleDate(clean(education.endDate));
   const displayParts = [degreeLabel, clean(education.location), dateLabel].filter(Boolean);
 

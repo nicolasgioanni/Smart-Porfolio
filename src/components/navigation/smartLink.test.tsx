@@ -19,7 +19,17 @@ vi.mock("next/link", () => ({
 
 describe("site route registry", () => {
   it("keeps the declared routes in navigation order", () => {
-    expect(siteRoutePaths).toEqual(["/", "/experience", "/research", "/projects", "/recommendations", "/resume"]);
+    expect(siteRoutePaths).toEqual([
+      "/",
+      "/experience",
+      "/research",
+      "/projects",
+      "/recommendations",
+      "/resume",
+      "/terms",
+      "/privacy",
+      "/security"
+    ]);
     expect(createNavigationItems({ enableRecommendations: false }).map((item) => item.href)).toEqual([
       "/",
       "/experience",
@@ -43,6 +53,9 @@ describe("site route registry", () => {
     expect(isSiteRouteHref("/projects#featured")).toBe(true);
     expect(isSiteRouteHref("/projects?source=home#featured")).toBe(true);
     expect(isSiteRouteHref("/?source=brand")).toBe(true);
+    expect(isSiteRouteHref("/terms")).toBe(true);
+    expect(isSiteRouteHref("/privacy#email-communications")).toBe(true);
+    expect(isSiteRouteHref("/security?source=footer")).toBe(true);
 
     expect(isSiteRouteHref("/projects/example")).toBe(false);
     expect(isSiteRouteHref("/resume/demo.pdf")).toBe(false);
@@ -141,7 +154,11 @@ describe("Hover Base 1 link integrations", () => {
       <PortfolioHero
         links={[]}
         motionEnabled={false}
-        overview={{ about: "Builds dependable products.", headline: "Software engineer" }}
+        overview={{
+          about: "Builds dependable products.",
+          greetingName: "Demo",
+          role: { kind: "static", label: "Software engineer" }
+        }}
         profile={{
           email: "hello@example.com",
           fullName: "Demo Owner",

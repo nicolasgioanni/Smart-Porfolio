@@ -63,6 +63,17 @@ export function isHttpsUrl(value: string): boolean {
   }
 }
 
+export function isIsoDate(value: string): boolean {
+  const trimmedValue = value.trim();
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmedValue)) {
+    return false;
+  }
+
+  const parsedDate = new Date(`${trimmedValue}T00:00:00.000Z`);
+  return !Number.isNaN(parsedDate.getTime()) && parsedDate.toISOString().slice(0, 10) === trimmedValue;
+}
+
 function collectContentLinks(links: PortfolioContentLink[], location: string, errors: string[]): void {
   for (const link of links) {
     if (!link.label) {
@@ -107,6 +118,31 @@ function validateProfileReferences(content: GeneratedPortfolioContent, errors: s
   validateProfileReference(content.profile.primaryEducationId, content.education, "primaryEducationId", errors);
 }
 
+function validateProfileRoleConfiguration(content: GeneratedPortfolioContent, errors: string[]): void {
+  const { roleAlternate, roleEngineerPrefixes, roleEngineerSuffix } = content.profile;
+  const configuredValues = [roleEngineerPrefixes, roleEngineerSuffix, roleAlternate].filter(
+    (value) => Boolean(value?.trim())
+  );
+
+  if (configuredValues.length === 0) return;
+
+  if (configuredValues.length !== 3) {
+    errors.push(
+      "profile role rotation requires roleEngineerPrefixes, roleEngineerSuffix, and roleAlternate together"
+    );
+    return;
+  }
+
+  const prefixes = roleEngineerPrefixes!
+    .split("|")
+    .map((prefix) => prefix.trim())
+    .filter(Boolean);
+
+  if (prefixes.length === 0) {
+    errors.push("profile.roleEngineerPrefixes must contain at least one pipe-delimited role prefix");
+  }
+}
+
 function validateTopLevelLinks(links: PortfolioLink[], errors: string[]): void {
   for (const link of links) {
     if (!link.label) {
@@ -145,6 +181,15 @@ function validateProjects(items: ProjectItem[], errors: string[]): void {
 
     if (item.image && !isSupportedUrl(item.image)) {
       errors.push(`projects.${item.id} has an invalid image URL: ${item.image}`);
+    }
+
+    for (const [index, skill] of item.homeSkills.entries()) {
+      const hasSummary = Boolean(skill.summary?.trim());
+      const hasDetails = Boolean(skill.details?.trim());
+
+      if (hasSummary !== hasDetails) {
+        errors.push(`projects.${item.id}.homeSkills[${index}] must provide summary and details together`);
+      }
     }
 
     collectContentLinks(item.links, `projects.${item.id}`, errors);
@@ -228,8 +273,32 @@ export function validatePortfolioContent(content: GeneratedPortfolioContent): Ge
     errors.push(`siteSettings.licenseUrl has an invalid URL: ${content.siteSettings.licenseUrl}`);
   }
 
-  if (typeof content.siteSettings.repositoryUrl === "string" && content.siteSettings.repositoryUrl && !isSupportedUrl(content.siteSettings.repositoryUrl)) {
+  if (typeof content.siteSettings.repositoryUrl === "string" && content.siteSettings.repositoryUrl && !isHttpsUrl(content.siteSettings.repositoryUrl)) {
     errors.push(`siteSettings.repositoryUrl has an invalid URL: ${content.siteSettings.repositoryUrl}`);
+  }
+
+  if (
+    typeof content.siteSettings.legalContactEmail === "string" &&
+    content.siteSettings.legalContactEmail &&
+    !isSupportedUrl(`mailto:${content.siteSettings.legalContactEmail}`, { allowRootRelative: false })
+  ) {
+    errors.push(`siteSettings.legalContactEmail has an invalid email address: ${content.siteSettings.legalContactEmail}`);
+  }
+
+  if (
+    typeof content.siteSettings.legalEffectiveDate === "string" &&
+    content.siteSettings.legalEffectiveDate &&
+    !isIsoDate(content.siteSettings.legalEffectiveDate)
+  ) {
+    errors.push(`siteSettings.legalEffectiveDate has an invalid ISO date: ${content.siteSettings.legalEffectiveDate}`);
+  }
+
+  if (
+    typeof content.siteSettings.hostingPrivacyUrl === "string" &&
+    content.siteSettings.hostingPrivacyUrl &&
+    !isHttpsUrl(content.siteSettings.hostingPrivacyUrl)
+  ) {
+    errors.push(`siteSettings.hostingPrivacyUrl has an invalid URL: ${content.siteSettings.hostingPrivacyUrl}`);
   }
 
   validateUniqueIds(content.links, "links", errors);
@@ -240,6 +309,7 @@ export function validatePortfolioContent(content: GeneratedPortfolioContent): Ge
   validateUniqueIds(content.education, "education", errors);
   validateUniqueIds(content.skills, "skills", errors);
   validateProfileReferences(content, errors);
+  validateProfileRoleConfiguration(content, errors);
   validateTopLevelLinks(content.links, errors);
   validateResearch(content.research, errors);
   validateProjects(content.projects, errors);

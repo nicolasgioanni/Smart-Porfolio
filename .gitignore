@@ -3,6 +3,7 @@ node_modules
 out
 coverage
 .env
+.env.*
 .env*.local
 !.env.local.example
 *.tsbuildinfo

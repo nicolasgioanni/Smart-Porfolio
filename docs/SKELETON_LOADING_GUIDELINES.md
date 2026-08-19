@@ -30,7 +30,7 @@ Reusable skeleton components:
 
 ## Page skeleton behavior
 
-- Home skeleton mirrors the profile overview, skills panel, and four remaining single-row sections.
+- Home skeleton mirrors the profile overview, the four core content sections, six Skills cards, and the three-card Recommendations section, including its enabled empty-state footprint.
 - Research and Projects skeletons mirror card grids.
 - Experience skeleton mirrors the timeline.
 - Resume skeleton mirrors the profile panel and resume sections.

@@ -1,7 +1,7 @@
 import type { ResearchItem } from "@/content/types";
-import { FeaturedGrid } from "@/components/portfolio/FeaturedGrid";
-import { ResearchCard } from "@/components/portfolio/ResearchCard";
 import { EmptyState } from "@/components/portfolio/EmptyState";
+import { FeaturedGrid } from "@/components/portfolio/FeaturedGrid";
+import { HomeResearchCard } from "@/components/portfolio/HomeResearchCard";
 
 export function HomeFeaturedResearch({ items }: { items: ResearchItem[] }) {
   if (items.length === 0) {
@@ -9,9 +9,9 @@ export function HomeFeaturedResearch({ items }: { items: ResearchItem[] }) {
   }
 
   return (
-    <FeaturedGrid columns="two" itemCount={items.length}>
+    <FeaturedGrid columns="three" itemCount={items.length}>
       {items.map((item) => (
-        <ResearchCard item={item} key={item.id} />
+        <HomeResearchCard item={item} key={item.id} />
       ))}
     </FeaturedGrid>
   );

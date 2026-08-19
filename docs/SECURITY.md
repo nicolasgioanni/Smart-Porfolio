@@ -50,6 +50,10 @@ CSV URL environment variables are public content locations, not secrets. `.env.l
 
 Do not expose private values through `NEXT_PUBLIC_` variables. The current app does not require private environment variables.
 
+## Repository publication
+
+Before changing repository visibility, scan tracked files and every reachable Git object for credentials, private contact information, unpublished assets, oversized artifacts, and unsafe configuration. Commit author and committer metadata is part of the public history and must use only approved addresses. Do not expose repository or license links in production until the audit passes and both anonymous HTTPS destinations resolve successfully. Rewriting published history and force-pushing are separate destructive operations that require explicit authorization.
+
 ## Dependency audit workflow
 
 Run:

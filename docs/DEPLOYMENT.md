@@ -2,11 +2,12 @@
 
 ## Vercel deployment
 
-1. Push the repository to GitHub.
-2. Import the repository in Vercel.
-3. Use the default npm install and build flow.
-4. Build command: `npm run build`.
-5. Output is static export through Next.js `output: export`.
+1. Audit the tracked tree and reachable Git history for secrets, private metadata, unpublished assets, and unsafe configuration; resolve every blocker before changing visibility.
+2. Push the repository to GitHub only after the exposure audit passes.
+3. Import the repository in Vercel.
+4. Use the default npm install and build flow.
+5. Build command: `npm run build`.
+6. Output is static export through Next.js `output: export`.
 
 ## Environment variables
 

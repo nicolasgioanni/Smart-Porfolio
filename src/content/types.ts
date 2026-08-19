@@ -12,6 +12,9 @@ export type ProfileContent = {
   email: string;
   shortBio: string;
   preferredName?: string;
+  roleEngineerPrefixes?: string;
+  roleEngineerSuffix?: string;
+  roleAlternate?: string;
   currentTitle?: string;
   currentCompany?: string;
   currentExperienceId?: string;
@@ -50,6 +53,7 @@ export type PortfolioLink = {
 export type ResearchItem = {
   id: string;
   title: string;
+  homeTitle?: string;
   role?: string;
   organization?: string;
   organizationLogo?: string;
@@ -58,6 +62,7 @@ export type ResearchItem = {
   startDate?: string;
   endDate?: string;
   homeSummary?: string;
+  profileSummary?: string;
   detailSummary?: string;
   impact?: string;
   bullets: string[];
@@ -76,6 +81,7 @@ export type ProjectItem = {
   title: string;
   subtitle?: string;
   homeSummary?: string;
+  homeSkills: ProjectSkill[];
   detailSummary?: string;
   problem?: string;
   solution?: string;
@@ -87,6 +93,13 @@ export type ProjectItem = {
   showOnHome: boolean;
   homeOrder?: number;
   detailOrder?: number;
+};
+
+export type ProjectSkill = {
+  name: string;
+  icon?: string;
+  summary?: string;
+  details?: string;
 };
 
 export type ExperienceItem = {
@@ -152,7 +165,9 @@ export type EducationItem = {
 export type SkillItem = {
   id: string;
   category: string;
+  categoryOrder?: number;
   name: string;
+  icon?: string;
   priority?: number;
   featured: boolean;
   showOnHome: boolean;
@@ -185,6 +200,10 @@ export type SiteSettings = {
   licenseUrl?: string;
   copyrightOwner?: string;
   repositoryUrl?: string;
+  legalContactEmail?: string;
+  legalEffectiveDate?: string;
+  hostingProviderName?: string;
+  hostingPrivacyUrl?: string;
   [key: string]: string | number | boolean | undefined;
 };
 
@@ -210,6 +229,7 @@ export type GeneratedPortfolioContent = {
 
 export type SkillGroup = {
   category: string;
+  order?: number;
   skills: SkillItem[];
 };
 
@@ -234,6 +254,8 @@ export type ProfileOverviewResearch = {
   title: string;
   summary?: string;
   links: PortfolioContentLink[];
+  pendingLinks: string[];
+  logo?: ProfileOverviewLogo;
 };
 
 export type ProfileOverviewEducation = {
@@ -249,8 +271,21 @@ export type ProfileOverviewEducation = {
   logo?: ProfileOverviewLogo;
 };
 
+export type ProfileOverviewRole =
+  | {
+      kind: "rotating";
+      engineerPrefixes: string[];
+      engineerSuffix: string;
+      alternate: string;
+    }
+  | {
+      kind: "static";
+      label: string;
+    };
+
 export type ProfileOverviewContent = {
-  headline: string;
+  greetingName: string;
+  role: ProfileOverviewRole;
   about?: string;
   currentWork?: ProfileOverviewWork;
   education?: ProfileOverviewEducation;

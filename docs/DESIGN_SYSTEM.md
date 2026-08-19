@@ -43,19 +43,23 @@ Cards use a compact radius token. Larger radii are reserved for navigation, foot
 Use the shared layout components for page and section hierarchy:
 
 - `PageIntro` for route headers.
-- `SectionHeader` for section eyebrow, title, description, and optional action link.
+- `SectionHeader` for section eyebrow, title, description, and an optional action link or compact button.
 - `PageContainer` for detail routes.
 - `FeaturedGrid` for project, research, and recommendation grids, including single-item layouts.
 
-The Home header island should align to the page max-width and remain visually connected to the content grid. The Home profile overview uses one coordinated glass shell with an unchanged photo-and-identity rail and a recruiter-focused detail column. That column is ordered Headline, About, full-width Current Work, a paired Education and Selected Research row, then supporting links to the complete Experience and Research routes.
+The Home header island should align to the page max-width and remain visually connected to the content grid. The Home profile overview uses one coordinated glass shell with a photo-and-identity rail and a recruiter-focused detail column. Center the photo-and-identity rail vertically against the taller detail column on desktop. That column is ordered greeting H1, animated role, About, full-width Current Work, then a paired Education and Research row.
 
-Headline and About remain open typography inside the outer surface. Current Work, Education, and Selected Research may use quiet internal panels with modest padding, a smaller radius than the shell, a restrained border, and slight tokenized surface contrast. Do not add timeline dots, vertical rails, repeated horizontal dividers, independent glass blur, strong shadows, or animated effects inside these panels.
+The greeting and About remain open typography inside the outer surface. On desktop, use approximately 42–52px for the greeting and 28–34px for the role. Keep the greeting-to-role gap near 8px, role-to-About near 28px, About-to-Current Work near 32px, and Current Work-to-paired-cards near 28px. The role stays on one line and reserves space for its widest configured value.
 
-On desktop, Current Work spans the detail column. Education and Selected Research share the following grid row at approximately 40/60 using `minmax(230px, 0.8fr) minmax(0, 1.2fr)` or an equivalent responsive proportion. Education communicates foundation; Selected Research communicates applied proof. Their content stays independently semantic and top-aligned without forcing visually wasteful equal heights. Supporting route links are text-style actions subordinate to the summaries.
+Current Work, Education, and Research may use quiet internal panels with identical padding and header alignment, a smaller shared radius than the shell, a restrained border, and slight tokenized surface contrast. Current Work and Research place their route actions in overlaid header slots so the controls retain generous hit areas without increasing header height or creating extra apparent top padding. Do not add timeline dots, vertical rails, repeated horizontal dividers, independent glass blur, strong shadows, or animated panel effects.
 
-Keep one strong `h1` for the profile name. The right-side headline is not another heading at the same level; About and panel labels use a logical subordinate heading structure. Generated organization, role, date, summary, education, research, URL, and logo values remain outside component code. Real marks are selected through existing CSV logo paths, and a missing mark leaves a clean text layout rather than producing a fake logo or initials badge. Selected Research shows only valid available links and never represents a missing URL with a disabled-looking action.
+On desktop, Current Work spans the detail column. Education and Research use `repeat(2, minmax(0, 1fr))` with stretched items, equal outer heights, and column-flex interiors. Apply `height: 100%` only to panels inside this paired grid so Current Work retains its intrinsic height and cannot overlap the row below. Pin Education's graduation label and Research's resource controls to matching bottom footer rows without adding filler content. `View experience` belongs at the top right of Current Work and `View research` at the top right of Research. Do not add an Education route action or a detached supporting-navigation row.
 
-Home order should remain: profile overview, skills, experience, education, research, projects, then the global footer. Each top-level Home section occupies its own full-width row.
+Keep `Hi, I’m {greetingName}` with no trailing period as the single Home `h1`; the full name in the portrait rail is non-heading text. About and panel labels use a logical subordinate heading structure, and the compact panel label is `Research`, not `Selected Research`. The compact Education facts read `Degree: Bachelor of Science in Computer Science` and `Concentration: Information Assurance & Cybersecurity`; the larger Home Education card uses the same degree wording. Generated organization, role, date, summary, education, research, URL, and logo values remain outside component code. Real marks are selected through existing CSV logo paths, and a missing mark leaves a clean text layout rather than producing a fake logo or initials badge. Compact Research uses the spreadsheet organization mark beside its title and summary. Verified resources are links, while a spreadsheet pending resource may appear in this profile panel only as a clearly disabled unpublished control; standalone Home Research cards omit it.
+
+Home order should remain: profile overview, experience, education, research, projects, six Skills category cards, recommendations, then the global footer. Each top-level Home section occupies its own full-width row. Projects and Research share a quiet three-card desktop rhythm; Skills uses two equal columns and three rows. Experience, Research, Projects, and Recommendations use consistently sized compact `View` buttons aligned to the top-right of their section headers. Enabled recommendation surfaces use an honest empty state when no rows are available.
+
+Recommendation cards are self-sized rather than stretched to their grid row, so opening one quote grows only that card while the surrounding section pushes the footer normally. Separate recommender metadata from the quote with a one-pixel inset divider. Use the standard body size for recommendation, Project, and Research explanatory copy, and keep LinkedIn/source actions at the same compact 36px geometry as Project and Research resource actions.
 
 ## Portfolio Cards
 
@@ -74,6 +78,8 @@ Avoid one-off card spacing when an existing variant can express the layout.
 
 Use `GlassSurface` for large section surfaces, `GlassCard` through `PortfolioCard` for content cards, and `GlassBlob` for header and footer docks.
 
+The footer dock is a normal-flow progressive disclosure. Its compact state uses the header's compact width and a single copyright/control row; its expanded state grows to the content width, adds a three-column identity/notices/resources layout, and becomes one column below 720px. State motion is limited to width, padding, grid-row height, opacity, and a slight vertical translation over roughly 420 ms. Never scale or animate blur on this transition. Under reduced motion, the disclosure changes immediately. Long resource URLs must wrap inside their column without horizontal overflow.
+
 Glass rules:
 
 - Keep blur bounded to surfaces.
@@ -89,6 +95,12 @@ Glass rules:
 - `GlassLink` is for section-level text links.
 - `GlassIconLink` is for external or social links.
 - `GlassChip` is for metadata, skills, roles, and short facts.
+
+Home section route actions use compact `GlassButton` controls. Keep them top-aligned with their headings and visually smaller than primary page CTAs.
+
+Home project cards mirror the quiet Research-card geometry: title, plain subtitle, product-focused summary, three compact icon skill badges, then bottom-aligned source/demo actions. Skill category cards form two equal columns and three rows on desktop, with six icon-and-label badges per card. Recommendation cards use plain identity metadata and a transparent idle expansion control that reveals its subtle button surface on hover or keyboard focus.
+
+Inside the profile overview, use compact `SmartLink` actions for Current Work and Research headers. Their overlaid action slots preserve consistent heading geometry. They appear as unadorned text while idle, then reveal the shared subtle control surface, border, and focus treatment over their full hit area on hover or keyboard focus. They do not use a persistent underline. Verified Research resource links remain plain text with a brighter or underlined hover/focus state; pending resources use the same quiet footprint but remain visibly disabled, non-interactive, and free of hover motion. Resource controls do not use arrows, pills, glass-button styling, blur, or scale effects. Organization marks inside these panels render without an added frame, fill, or padding around the source logo.
 
 External links must keep safe `target` and `rel` attributes.
 
@@ -109,15 +121,15 @@ The `::before` surface and `::after` sheen are decorative, have `pointer-events:
 
 ## Motion
 
-Motion uses opacity and transform only. Do not animate layout properties or blur text. Respect `prefers-reduced-motion` by disabling reveal motion, compress animation, smooth scroll, and skeleton shimmer.
+Motion uses opacity and transform for decorative movement. The recommendation disclosure is the narrow exception: it animates its clipped `max-height` for an understandable open/close state and pairs that change with a subtle opacity fade. Do not blur text. Respect `prefers-reduced-motion` by disabling reveal motion, recommendation expansion transitions, compress animation, smooth scroll, and skeleton shimmer.
 
 ## Responsive Behavior
 
 - Header remains compact and sticky with safe scroll margins.
 - Desktop navigation collapses to accessible mobile navigation.
 - Home and feature grids collapse cleanly to one column.
-- The profile academic grid collapses before either panel becomes cramped; Selected Research appears before Education on narrow screens even though Education is first on desktop.
-- Profile resource and supporting-link rows wrap without horizontal overflow, retain usable touch targets, and preserve bottom safe-area clearance.
+- The profile academic grid collapses below 720px; Education remains before Research in the stacked order.
+- Profile resource links wrap without horizontal overflow, retain usable touch targets, and preserve bottom safe-area clearance.
 - Buttons and labeled icon links become full-width where tap targets need more room.
 
 ## Skeletons
