@@ -293,6 +293,7 @@ function normalizeResearch(rows: CsvRow[]): ResearchItem[] {
   return rows.map((row, index) => {
     const location = `research row ${index + 2}`;
     const id = requiredText(row, "id", location);
+    const legacyProfileByline = normalizePipeDelimitedList(row.profile_contributions).join(" & ") || undefined;
 
     validateUniqueRowId(id, "research", seenIds);
 
@@ -309,7 +310,7 @@ function normalizeResearch(rows: CsvRow[]): ResearchItem[] {
       endDate: text(row, "end_date"),
       homeSummary: text(row, "home_summary"),
       profileSummary: text(row, "profile_summary"),
-      profileContributions: normalizePipeDelimitedList(row.profile_contributions),
+      profileByline: text(row, "profile_byline") ?? legacyProfileByline,
       profileLabs: normalizePipeDelimitedList(row.profile_labs),
       detailSummary: text(row, "detail_summary"),
       impact: text(row, "impact"),

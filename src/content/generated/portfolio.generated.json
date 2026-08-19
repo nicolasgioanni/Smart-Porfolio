@@ -107,10 +107,7 @@
       "startDate": "2024-08",
       "endDate": "2026-08",
       "homeSummary": "Built by UW Bothell School of STEM’s SEE Lab for the University of Utah Miller Lab, CytoCV is a Django platform using Mask R-CNN to segment yeast microscopy stacks and export per-cell fluorescence measurements.",
-      "profileContributions": [
-        "Lead Developer for CytoCV software",
-        "First Author of the CytoCV manuscript"
-      ],
+      "profileByline": "Lead Engineer & First Author",
       "profileLabs": [
         "SEE Lab, UW Bothell School of STEM",
         "Miller Lab, University of Utah"
@@ -167,7 +164,6 @@
       "startDate": "2024-09",
       "endDate": "2024-12",
       "homeSummary": "Experimental study of targeted training-data poisoning against SVMs learning from streams, testing whether attacks can evade loss-based anomaly filtering and whether a feature-space stability metric can detect decision-boundary manipulation.",
-      "profileContributions": [],
       "profileLabs": [],
       "detailSummary": "Used Python, TensorFlow/Keras, NumPy, and Matplotlib to automate attack and defense testing while tracking success rates, latency, and accuracy.",
       "impact": "Optimized batched Keras defense execution to under 5 seconds while preserving 94% clean-data accuracy.",
@@ -210,7 +206,6 @@
       "startDate": "2024-03",
       "endDate": "2024-08",
       "homeSummary": "Python sequence-design pipeline for yeast CRISPR/Cas9 experiments that selects 20-base guides near NGG PAMs, builds 132-base donor sequences around requested mutations, adds silent edits to prevent re-cutting, and exports XLS results.",
-      "profileContributions": [],
       "profileLabs": [],
       "detailSummary": "Used Python, pandas, Biopython, and regex to analyze 18,000+ FASTA files and export validated sequences to Excel.",
       "impact": "Reduced manual research workflows by 99%.",

@@ -142,6 +142,11 @@ describe("static portfolio security contracts", () => {
     const academicEntityRule =
       portfolioCss.match(/\.profile-overview__academic-grid\s+\.profile-overview__entity\s*{[^}]*}/s)?.[0] ?? "";
     const academicFooterRule = portfolioCss.match(/\.profile-overview__academic-footer\s*{[^}]*}/s)?.[0] ?? "";
+    const entitySubtitleRule = portfolioCss.match(/\.profile-overview__entity-subtitle\s*{[^}]*}/s)?.[0] ?? "";
+    const academicDetailDescriptionRule =
+      [...portfolioCss.matchAll(/\.profile-overview__academic-detail dd\s*{[^}]*}/gs)]
+        .map(([rule]) => rule)
+        .find((rule) => rule.includes("color")) ?? "";
     const researchLinksRule = portfolioCss.match(/\.profile-overview__research-links\s*{[^}]*}/s)?.[0] ?? "";
     const researchLinkRule = portfolioCss.match(/\.profile-overview__research-link\s*{[^}]*}/s)?.[0] ?? "";
     const pendingResearchLinkRule =
@@ -243,9 +248,18 @@ describe("static portfolio security contracts", () => {
     expect(profileOverviewSource).toMatch(/<dt>Degree<\/dt>/);
     expect(profileOverviewSource).toMatch(/<dt>Concentration<\/dt>/);
     expect(profileOverviewSource).toMatch(/profile-overview__academic-details profile-overview__research-details/);
-    expect(profileOverviewSource).toMatch(/<dt>Position<\/dt>/);
-    expect(profileOverviewSource).toMatch(/<dt>Contributions<\/dt>/);
+    expect(profileOverviewSource).not.toMatch(/<dt>Position<\/dt>/);
+    expect(profileOverviewSource).not.toMatch(/<dt>Contributions<\/dt>/);
     expect(profileOverviewSource).toMatch(/<dt>Labs<\/dt>/);
+    expect(profileOverviewSource).toMatch(
+      /className="profile-overview__entity-subtitle">{overview\.research\.byline}<\/p>/
+    );
+    for (const typographyRule of [entitySubtitleRule, academicDetailDescriptionRule]) {
+      expect(typographyRule).toMatch(/color:\s*var\(--color-ink-strong\)/);
+      expect(typographyRule).toMatch(/font-size:\s*var\(--font-size-small\)/);
+      expect(typographyRule).toMatch(/font-weight:\s*var\(--font-weight-semibold\)/);
+      expect(typographyRule).toMatch(/line-height:\s*var\(--line-height-normal\)/);
+    }
     expect(profileOverviewSource).toMatch(/className="profile-overview__research-fact-list"/);
     expect(researchFactListRule).toMatch(/display:\s*grid/);
     expect(researchFactListRule).toMatch(/gap:\s*2px/);
