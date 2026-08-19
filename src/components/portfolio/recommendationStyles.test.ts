@@ -3,6 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 const portfolioStyles = readFileSync(path.join(process.cwd(), "src", "styles", "portfolio.css"), "utf8");
+const tokenStyles = readFileSync(path.join(process.cwd(), "src", "styles", "tokens.css"), "utf8");
 
 describe("recommendation styles", () => {
   it("uses a true lower-line alpha mask only for collapsed overflowing quotes", () => {
@@ -34,6 +35,29 @@ describe("recommendation styles", () => {
       /\.home-recommendations__item \.recommendation-expandable__toggle\s*\{[\s\S]*align-self: end/
     );
     expect(portfolioStyles).toMatch(/\.home-recommendations__grid\s*\{[\s\S]*align-items: start/);
+  });
+
+  it("uses an opaque theme-matched surface for Home recommendation cards", () => {
+    const themeSurfaces = [
+      [/:root,\s*\[data-theme="navy"\]\s*\{([^}]*)\}/s, "#081627"],
+      [/\[data-theme="light"\]\s*\{([^}]*)\}/s, "#fefeff"],
+      [/\[data-theme="dark"\]\s*\{([^}]*)\}/s, "#14181f"]
+    ] as const;
+
+    for (const [themePattern, expectedSurface] of themeSurfaces) {
+      const themeTokens = tokenStyles.match(themePattern)?.[1] ?? "";
+
+      expect(themeTokens).toMatch(
+        new RegExp(`--color-home-recommendation-card-solid:\\s*${expectedSurface}`, "i")
+      );
+    }
+
+    expect(portfolioStyles).toMatch(
+      /\.home-section--recommendations \.recommendation-card--summary\s*\{[^}]*background:\s*var\(--color-home-recommendation-card-solid\);[^}]*backdrop-filter:\s*none/
+    );
+    expect(portfolioStyles).toMatch(
+      /\.home-section__surface \.portfolio-card\s*\{[^}]*background:\s*var\(--color-surface-soft\)/
+    );
   });
 
   it("keeps the Home panel collapsed while reserving normal flow for a protruding card", () => {
