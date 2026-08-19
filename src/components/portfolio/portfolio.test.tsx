@@ -538,7 +538,7 @@ describe("portfolio UI helpers", () => {
   });
 
   it("renders recommendation empty and populated states", () => {
-    const { rerender } = render(<RecommendationsList items={[]} />);
+    const { container, rerender } = render(<RecommendationsList items={[]} />);
 
     expect(screen.getByRole("status")).toHaveTextContent("No recommendations yet");
 
@@ -546,14 +546,16 @@ describe("portfolio UI helpers", () => {
 
     expect(screen.getByText("Alex Manager")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /view on linkedin/i })).toHaveAttribute("rel", "noopener noreferrer");
+    expect(container.querySelector(".recommendation-expandable")).toHaveAttribute("data-collapsed-lines", "4");
   });
 
   it("renders full Home recommendations with a detail route link", () => {
-    render(<HomeRecommendations items={[recommendation]} />);
+    const { container } = render(<HomeRecommendations items={[recommendation]} />);
 
     expect(screen.getByText(recommendation.fullQuote)).toBeInTheDocument();
     expect(screen.getByText("Engineering Manager at Example Company")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /see all recommendations/i })).toHaveAttribute("href", "/recommendations");
+    expect(container.querySelector(".recommendation-expandable")).toHaveAttribute("data-collapsed-lines", "4");
   });
 
   it("expands only the selected recommendation card", () => {

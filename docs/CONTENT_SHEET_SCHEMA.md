@@ -189,7 +189,7 @@ Fields:
 
 The spreadsheet is the source of truth for recommendation text. LinkedIn links are only verification/navigation links; the site does not scrape LinkedIn, use the LinkedIn API, or fetch recommendation content at runtime.
 
-When enabled, Home places Recommendations after the Skills cards and links to the detail route with a compact top-right button. Home selects the first configured rows through `show_on_home`, `home_order`, and `max_home_recommendation_items`; the detail page includes all rows. Both surfaces show `full_quote`, clamp long text to four lines, and provide an accessible `Show more`/`Show less` control with reduced-motion support. If no rows are published and empty display is enabled, both surfaces show an honest empty state rather than fabricated recommendation content.
+When enabled, Home places Recommendations after the Skills cards and links to the detail route with a compact top-right button. Home selects the first configured rows through `show_on_home`, `home_order`, and `max_home_recommendation_items`; the detail page includes all rows. Both surfaces show the unchanged `full_quote` and provide an accessible `Show more`/`Show less` control with reduced-motion support. Detail cards and single-card Home rows clamp long text to four lines; a taller header in a multi-card Home row may use three quote lines so the collapsed row remains level. If no rows are published and empty display is enabled, both surfaces show an honest empty state rather than fabricated recommendation content.
 
 ### education
 
