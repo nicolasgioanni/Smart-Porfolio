@@ -95,6 +95,7 @@
   --color-glass-surface: rgba(8, 22, 40, 0.72);
   --color-glass-surface-strong: rgba(7, 20, 38, 0.88);
   --color-glass-surface-soft: rgba(10, 25, 44, 0.5);
+  --color-home-recommendation-card-solid: #081627;
   --color-glass-blob: rgba(5, 16, 31, 0.82);
   --color-header-surface: rgba(5, 16, 31, 0.9);
   --color-glass-border: rgba(157, 183, 214, 0.2);
@@ -170,6 +171,7 @@
   --color-glass-surface: rgba(255, 255, 255, 0.78);
   --color-glass-surface-strong: rgba(255, 255, 255, 0.9);
   --color-glass-surface-soft: rgba(255, 255, 255, 0.62);
+  --color-home-recommendation-card-solid: #fefeff;
   --color-glass-blob: rgba(255, 255, 255, 0.86);
   --color-header-surface: rgba(255, 255, 255, 0.96);
   --color-glass-border: rgba(39, 58, 83, 0.16);
@@ -245,6 +247,7 @@
   --color-glass-surface: rgba(20, 24, 31, 0.78);
   --color-glass-surface-strong: rgba(25, 30, 38, 0.88);
   --color-glass-surface-soft: rgba(22, 26, 34, 0.58);
+  --color-home-recommendation-card-solid: #14181f;
   --color-glass-blob: rgba(18, 22, 29, 0.82);
   --color-header-surface: rgba(18, 22, 29, 0.92);
   --color-glass-border: rgba(202, 218, 228, 0.16);
