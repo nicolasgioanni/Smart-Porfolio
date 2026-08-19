@@ -5,6 +5,12 @@ import { describe, expect, it } from "vitest";
 const navigationStyles = readFileSync(path.join(process.cwd(), "src", "styles", "navigation.css"), "utf8");
 
 describe("progressive footer styles", () => {
+  it("uses a fixed, non-interactive trigger that cannot change footer layout", () => {
+    expect(navigationStyles).toMatch(
+      /\.blob-footer__viewport-trigger\s*\{(?=[^}]*position: absolute)(?=[^}]*(?:height|block-size): 64px)(?=[^}]*pointer-events: none)[^}]*\}/
+    );
+  });
+
   it("animates the compact and expanded geometry without scale or blur transitions", () => {
     expect(navigationStyles).toMatch(/\.blob-footer\s*\{[\s\S]*max-width: var\(--header-compact-width\)/);
     expect(navigationStyles).toMatch(/\.blob-footer--expanded\s*\{[\s\S]*max-width: var\(--container-width\)/);
