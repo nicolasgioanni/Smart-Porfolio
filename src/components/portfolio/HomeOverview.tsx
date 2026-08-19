@@ -62,7 +62,6 @@ export function HomeOverview({ content }: HomeOverviewProps) {
         <HomeOverviewSection
           actionAriaLabel="View Projects"
           actionVariant="button"
-          description="Selected engineering work with short summaries, stack context, and supporting links."
           href="/projects"
           linkLabel="View"
           motionEnabled={motionEnabled}
