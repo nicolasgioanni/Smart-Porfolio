@@ -1525,6 +1525,19 @@
   position: relative;
 }
 
+.home-section--recommendations[data-recommendation-overflow-layout="ready"] {
+  padding-bottom: var(--home-recommendations-overflow-reserve, 0px);
+}
+
+.home-section--recommendations[data-recommendation-overflow-layout="ready"] .home-section__surface {
+  height: var(--home-recommendations-panel-height);
+  overflow: visible;
+}
+
+.home-section--recommendations[data-recommendation-overflow-layout="ready"] .home-section__surface::before {
+  border-radius: inherit;
+}
+
 .home-section--recommendations::before {
   position: absolute;
   inset: -4rem 12% auto auto;
