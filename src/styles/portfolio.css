@@ -1536,6 +1536,23 @@
   align-items: start;
 }
 
+.home-recommendations__item {
+  align-self: start;
+  min-width: 0;
+}
+
+.home-recommendations__item .recommendation-card--summary {
+  min-height: var(--recommendation-row-collapsed-height, auto);
+}
+
+.home-recommendations__item .recommendation-expandable {
+  grid-template-rows: auto 1fr;
+}
+
+.home-recommendations__item .recommendation-expandable__toggle {
+  align-self: end;
+}
+
 .home-recommendations__actions {
   display: flex;
   justify-content: flex-start;
@@ -1612,22 +1629,21 @@
   max-height: var(--recommendation-expanded-height);
 }
 
-.recommendation-expandable__viewport::after {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  height: 2.25rem;
-  pointer-events: none;
-  content: "";
-  background: linear-gradient(to bottom, transparent, var(--color-surface-soft));
-  opacity: 1;
-  transition: opacity 320ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.recommendation-expandable[data-can-expand="false"] .recommendation-expandable__viewport::after,
-.recommendation-expandable[data-expanded="true"] .recommendation-expandable__viewport::after {
-  opacity: 0;
+.recommendation-expandable[data-can-expand="true"][data-expanded="false"] .recommendation-expandable__viewport {
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 0,
+    #000 calc(100% - 0.78em),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    #000 0,
+    #000 calc(100% - 0.78em),
+    transparent 100%
+  );
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
 }
 
 .recommendation-expandable__quote {
@@ -1845,7 +1861,6 @@
 
 
   .recommendation-expandable__viewport,
-  .recommendation-expandable__viewport::after,
   .recommendation-expandable__quote {
     transition: none;
   }

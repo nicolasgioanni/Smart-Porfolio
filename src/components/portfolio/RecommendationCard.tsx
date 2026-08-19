@@ -5,6 +5,7 @@ import { PortfolioCard } from "@/components/portfolio/PortfolioCard";
 import { formatSingleDate } from "@/lib/formatting/formatDateRange";
 
 type RecommendationCardProps = {
+  collapsedLineCount?: number;
   item: RecommendationItem;
   variant?: "summary" | "detail";
 };
@@ -13,7 +14,7 @@ function getRecommenderMeta(item: RecommendationItem): string {
   return [item.recommenderTitle, item.recommenderOrganization].filter(Boolean).join(" at ");
 }
 
-export function RecommendationCard({ item, variant = "detail" }: RecommendationCardProps) {
+export function RecommendationCard({ collapsedLineCount, item, variant = "detail" }: RecommendationCardProps) {
   const quote = item.fullQuote;
   const recommendationDate = formatSingleDate(item.recommendationDate);
   const sourceLabel = item.source || "Recommendation";
@@ -33,7 +34,12 @@ export function RecommendationCard({ item, variant = "detail" }: RecommendationC
         ) : null}
       </header>
 
-      <ExpandableRecommendationText id={item.id} quote={quote} recommenderName={item.recommenderName} />
+      <ExpandableRecommendationText
+        collapsedLineCount={collapsedLineCount}
+        id={item.id}
+        quote={quote}
+        recommenderName={item.recommenderName}
+      />
 
       {item.linkedinUrl || sourceUrl ? (
         <div className="card-links recommendation-card__links">
