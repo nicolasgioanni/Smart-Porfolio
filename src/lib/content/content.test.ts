@@ -318,6 +318,8 @@ describe("portfolio normalization", () => {
     expect(content.research[0]?.bullets).toEqual(["Read papers", "Wrote summary"]);
     expect(content.research[0]?.organizationLogo).toBe("/images/research/lab.svg");
     expect(content.research[0]?.organizationLogoAlt).toBe("Lab mark");
+    expect(content.research[0]?.profileContributions).toEqual([]);
+    expect(content.research[0]?.profileLabs).toEqual([]);
     expect(content.research[0]?.pendingLinks).toEqual(["Manuscript"]);
     expect(content.projects[0]?.stack).toEqual(["TypeScript", "Next.js"]);
     expect(content.projects[0]?.homeSkills).toEqual([]);
@@ -426,7 +428,7 @@ describe("portfolio normalization", () => {
     expect(content.profile.primaryEducationId).toBe("education-a");
   });
 
-  it("maps and parses the spreadsheet-driven Home role and research profile fields", () => {
+  it("maps and parses the spreadsheet-driven Home role and structured research profile fields", () => {
     const sheets = createSheets();
     sheets.profile.push(
       { key: "preferred_name", value: "Demo Preferred" },
@@ -435,7 +437,9 @@ describe("portfolio normalization", () => {
       { key: "role_alternate", value: "Research Scientist" }
     );
     sheets.research[0]!.home_title = "Research A Home";
-    sheets.research[0]!.profile_summary = "Research A compact profile summary.";
+    sheets.research[0]!.role = "Graduate Research Assistant";
+    sheets.research[0]!.profile_contributions = "Lead Developer|First Author";
+    sheets.research[0]!.profile_labs = "SEE Lab|Miller Lab";
 
     const content = normalizePortfolioContent(sheets, metadata);
     const overview = createProfileOverviewContent(content);
@@ -453,9 +457,15 @@ describe("portfolio normalization", () => {
       alternate: "Research Scientist"
     });
     expect(content.research[0]?.homeTitle).toBe("Research A Home");
-    expect(content.research[0]?.profileSummary).toBe("Research A compact profile summary.");
+    expect(content.research[0]?.profileContributions).toEqual(["Lead Developer", "First Author"]);
+    expect(content.research[0]?.profileLabs).toEqual(["SEE Lab", "Miller Lab"]);
     expect(overview.research?.title).toBe("Research A Home");
-    expect(overview.research?.summary).toBe("Research A compact profile summary.");
+    expect(overview.research).toMatchObject({
+      position: "Graduate Research Assistant",
+      contributions: ["Lead Developer", "First Author"],
+      labs: ["SEE Lab", "Miller Lab"]
+    });
+    expect(overview.research).not.toHaveProperty("summary");
   });
 
   it.each([
@@ -628,10 +638,6 @@ describe("portfolio normalization", () => {
       expect(overview.research).toMatchObject({
         id: featuredResearch!.id,
         title: featuredResearch!.homeTitle ?? featuredResearch!.title,
-        summary:
-          featuredResearch!.profileSummary ??
-          featuredResearch!.homeSummary ??
-          featuredResearch!.detailSummary,
         links: featuredResearch!.links,
         pendingLinks: featuredResearch!.pendingLinks,
         logo: {
@@ -639,6 +645,18 @@ describe("portfolio normalization", () => {
           alt: featuredResearch!.organizationLogoAlt
         }
       });
+      if (featuredResearch!.profileContributions?.length || featuredResearch!.profileLabs?.length) {
+        expect(overview.research).toMatchObject({
+          position: featuredResearch!.role,
+          contributions: featuredResearch!.profileContributions,
+          labs: featuredResearch!.profileLabs
+        });
+        expect(overview.research).not.toHaveProperty("summary");
+      } else {
+        expect(overview.research?.summary).toBe(
+          featuredResearch!.profileSummary ?? featuredResearch!.homeSummary ?? featuredResearch!.detailSummary
+        );
+      }
       expect(overview.research).not.toHaveProperty("organization");
     }
 
@@ -772,11 +790,19 @@ describe("portfolio normalization", () => {
     expect(cytocv).toMatchObject({
       title: "CytoCV: Web-based platform for reproducible yeast microscopy image analysis",
       homeTitle: "CytoCV",
+      role: "Graduate Research Assistant",
       homeSummary:
         "Built by UW Bothell School of STEM’s SEE Lab for the University of Utah Miller Lab, CytoCV is a Django platform using Mask R-CNN to segment yeast microscopy stacks and export per-cell fluorescence measurements.",
-      profileSummary:
-        "UW Bothell School of STEM’s SEE Lab built CytoCV for the University of Utah Miller Lab to automate yeast microscopy image analysis."
+      profileContributions: [
+        "Lead Developer for CytoCV software",
+        "First Author of the CytoCV manuscript"
+      ],
+      profileLabs: [
+        "SEE Lab, UW Bothell School of STEM",
+        "Miller Lab, University of Utah"
+      ]
     });
+    expect(cytocv?.profileSummary).toBeUndefined();
     expect(adversarialMl?.homeSummary).toBe(
       "Experimental study of targeted training-data poisoning against SVMs learning from streams, testing whether attacks can evade loss-based anomaly filtering and whether a feature-space stability metric can detect decision-boundary manipulation."
     );
@@ -786,14 +812,22 @@ describe("portfolio normalization", () => {
     const profileOverview = createProfileOverviewContent(content);
     expect(profileOverview.research).toMatchObject({
       title: "CytoCV",
-      summary:
-        "UW Bothell School of STEM’s SEE Lab built CytoCV for the University of Utah Miller Lab to automate yeast microscopy image analysis.",
+      position: "Graduate Research Assistant",
+      contributions: [
+        "Lead Developer for CytoCV software",
+        "First Author of the CytoCV manuscript"
+      ],
+      labs: [
+        "SEE Lab, UW Bothell School of STEM",
+        "Miller Lab, University of Utah"
+      ],
       pendingLinks: ["Manuscript"],
       logo: {
         src: "/images/organizations/uwb_stem_logo.png",
         alt: "UW Bothell School of STEM logo"
       }
     });
+    expect(profileOverview.research).not.toHaveProperty("summary");
     expect(profileOverview.education).toMatchObject({
       degree: "Bachelor of Science",
       field: "Computer Science",

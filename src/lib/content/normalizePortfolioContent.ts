@@ -309,6 +309,8 @@ function normalizeResearch(rows: CsvRow[]): ResearchItem[] {
       endDate: text(row, "end_date"),
       homeSummary: text(row, "home_summary"),
       profileSummary: text(row, "profile_summary"),
+      profileContributions: normalizePipeDelimitedList(row.profile_contributions),
+      profileLabs: normalizePipeDelimitedList(row.profile_labs),
       detailSummary: text(row, "detail_summary"),
       impact: text(row, "impact"),
       bullets: normalizePipeDelimitedList(row.bullets),

@@ -557,6 +557,18 @@
   line-height: var(--line-height-normal);
 }
 
+.profile-overview__research-fact-list {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.profile-overview__research-fact-list li {
+  overflow-wrap: anywhere;
+}
+
 .card-links,
 .home-resume-preview__actions {
   display: flex;

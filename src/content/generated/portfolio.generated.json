@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "generatedAt": "2026-08-20T02:33:50.768Z",
+    "generatedAt": "2026-08-20T03:07:17.929Z",
     "sourceMode": "templates",
     "sources": {
       "profile": "template",
@@ -99,7 +99,7 @@
       "id": "cytocv-miller-lab",
       "title": "CytoCV: Web-based platform for reproducible yeast microscopy image analysis",
       "homeTitle": "CytoCV",
-      "role": "Graduate Research",
+      "role": "Graduate Research Assistant",
       "organization": "UW Bothell School of STEM",
       "organizationLogo": "/images/organizations/uwb_stem_logo.png",
       "organizationLogoAlt": "UW Bothell School of STEM logo",
@@ -107,7 +107,14 @@
       "startDate": "2024-08",
       "endDate": "2026-08",
       "homeSummary": "Built by UW Bothell School of STEM’s SEE Lab for the University of Utah Miller Lab, CytoCV is a Django platform using Mask R-CNN to segment yeast microscopy stacks and export per-cell fluorescence measurements.",
-      "profileSummary": "UW Bothell School of STEM’s SEE Lab built CytoCV for the University of Utah Miller Lab to automate yeast microscopy image analysis.",
+      "profileContributions": [
+        "Lead Developer for CytoCV software",
+        "First Author of the CytoCV manuscript"
+      ],
+      "profileLabs": [
+        "SEE Lab, UW Bothell School of STEM",
+        "Miller Lab, University of Utah"
+      ],
       "detailSummary": "Built a Django and JavaScript platform for the University of Utah Miller Lab with REST APIs, deterministic batch ML processing, PostgreSQL data storage, and Linux VM deployment for 15+ scientists.",
       "impact": "Reduced manual analysis by 97%, cut processing time by 73%, and reduced file storage by 56.6%.",
       "bullets": [
@@ -160,6 +167,8 @@
       "startDate": "2024-09",
       "endDate": "2024-12",
       "homeSummary": "Experimental study of targeted training-data poisoning against SVMs learning from streams, testing whether attacks can evade loss-based anomaly filtering and whether a feature-space stability metric can detect decision-boundary manipulation.",
+      "profileContributions": [],
+      "profileLabs": [],
       "detailSummary": "Used Python, TensorFlow/Keras, NumPy, and Matplotlib to automate attack and defense testing while tracking success rates, latency, and accuracy.",
       "impact": "Optimized batched Keras defense execution to under 5 seconds while preserving 94% clean-data accuracy.",
       "bullets": [
@@ -201,6 +210,8 @@
       "startDate": "2024-03",
       "endDate": "2024-08",
       "homeSummary": "Python sequence-design pipeline for yeast CRISPR/Cas9 experiments that selects 20-base guides near NGG PAMs, builds 132-base donor sequences around requested mutations, adds silent edits to prevent re-cutting, and exports XLS results.",
+      "profileContributions": [],
+      "profileLabs": [],
       "detailSummary": "Used Python, pandas, Biopython, and regex to analyze 18,000+ FASTA files and export validated sequences to Excel.",
       "impact": "Reduced manual research workflows by 99%.",
       "bullets": [

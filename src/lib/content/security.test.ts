@@ -134,6 +134,10 @@ describe("static portfolio security contracts", () => {
     const researchLinkRule = portfolioCss.match(/\.profile-overview__research-link\s*{[^}]*}/s)?.[0] ?? "";
     const pendingResearchLinkRule =
       portfolioCss.match(/\.profile-overview__research-link--pending\s*{[^}]*}/s)?.[0] ?? "";
+    const researchFactListRule =
+      portfolioCss.match(/\.profile-overview__research-fact-list\s*{[^}]*}/s)?.[0] ?? "";
+    const researchFactListItemRule =
+      portfolioCss.match(/\.profile-overview__research-fact-list li\s*{[^}]*}/s)?.[0] ?? "";
     const roleRule = portfolioCss.match(/\.profile-role\s*{[^}]*}/s)?.[0] ?? "";
     const roleWindowRule = portfolioCss.match(/\.profile-role__window\s*{[^}]*}/s)?.[0] ?? "";
     const prefixWindowRule =
@@ -226,6 +230,15 @@ describe("static portfolio security contracts", () => {
     expect(profileOverviewSource).toMatch(/<dl className="profile-overview__academic-details">/);
     expect(profileOverviewSource).toMatch(/<dt>Degree<\/dt>/);
     expect(profileOverviewSource).toMatch(/<dt>Concentration<\/dt>/);
+    expect(profileOverviewSource).toMatch(/profile-overview__academic-details profile-overview__research-details/);
+    expect(profileOverviewSource).toMatch(/<dt>Position<\/dt>/);
+    expect(profileOverviewSource).toMatch(/<dt>Contributions<\/dt>/);
+    expect(profileOverviewSource).toMatch(/<dt>Labs<\/dt>/);
+    expect(profileOverviewSource).toMatch(/className="profile-overview__research-fact-list"/);
+    expect(researchFactListRule).toMatch(/display:\s*grid/);
+    expect(researchFactListRule).toMatch(/gap:\s*2px/);
+    expect(researchFactListRule).toMatch(/list-style:\s*none/);
+    expect(researchFactListItemRule).toMatch(/overflow-wrap:\s*anywhere/);
     expect(profileOverviewSource).toContain("<AffiliationLogo logo={overview.research.logo} />");
     expect(profileOverviewSource.match(/className="profile-overview__entity"/g)).toHaveLength(3);
     expect(profileOverviewSource).toMatch(
