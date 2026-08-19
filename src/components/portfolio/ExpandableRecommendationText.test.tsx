@@ -72,6 +72,38 @@ describe("ExpandableRecommendationText", () => {
     expect(root).toHaveAttribute("data-expanded", "false");
   });
 
+  it("renders the configured quote label once as a safe external link without changing the quote text", () => {
+    const quote =
+      "Nicolas has worked with me on an open source project, CytoCV, in collaboration with biologists at the University of Utah.";
+    const { container } = render(
+      <ExpandableRecommendationText
+        fullQuoteLink={{ label: "CytoCV", url: "https://github.com/BrentLagesse/CytoCV" }}
+        id="brent-lagesse"
+        quote={quote}
+        recommenderName="Brent Lagesse"
+      />
+    );
+    const quoteElement = container.querySelector("blockquote");
+    const link = screen.getByRole("link", { name: "CytoCV" });
+
+    expect(quoteElement).toHaveTextContent(quote);
+    expect(quoteElement?.querySelectorAll("a")).toHaveLength(1);
+    expect(link).toHaveClass("recommendation-expandable__inline-link");
+    expect(link).toHaveAttribute("href", "https://github.com/BrentLagesse/CytoCV");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+  });
+
+  it("keeps unconfigured URLs as plain quote text instead of auto-linking them", () => {
+    const quote = "Project details are available at https://example.com/recommendation.";
+    const { container } = render(
+      <ExpandableRecommendationText id="plain-url" quote={quote} recommenderName="Alex Manager" />
+    );
+
+    expect(container.querySelector("blockquote")).toHaveTextContent(quote);
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+  });
+
   it("omits the toggle when a quote fits within four lines", () => {
     const { container } = render(
       <ExpandableRecommendationText id="short" quote="A thoughtful and reliable collaborator." recommenderName="Alex Manager" />

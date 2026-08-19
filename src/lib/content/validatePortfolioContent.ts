@@ -229,6 +229,18 @@ function validateRecommendations(items: RecommendationItem[], errors: string[]):
     if (item.linkedinUrl && !isHttpsUrl(item.linkedinUrl)) {
       errors.push(`recommendations.${item.id} has an invalid linkedinUrl: ${item.linkedinUrl}`);
     }
+
+    if (item.fullQuoteLink) {
+      const { label, url } = item.fullQuoteLink;
+
+      if (!label || item.fullQuote.indexOf(label) < 0 || item.fullQuote.indexOf(label) !== item.fullQuote.lastIndexOf(label)) {
+        errors.push(`recommendations.${item.id} must include its fullQuoteLink label exactly once in fullQuote: ${label}`);
+      }
+
+      if (!isHttpsUrl(url)) {
+        errors.push(`recommendations.${item.id} has an invalid fullQuoteLink URL: ${url}`);
+      }
+    }
   }
 }
 

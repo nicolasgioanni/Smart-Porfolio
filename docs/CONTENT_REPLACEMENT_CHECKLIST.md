@@ -38,6 +38,7 @@ Use this checklist when replacing demo content with Nicolas-specific public cont
 - Add recommendations only when the text is public-safe and approved for display.
 - Required fields are `id`, `recommender_name`, and `full_quote`.
 - Keep the complete approved recommendation in `full_quote`; the detail route and single-card Home rows use four-line expansion, while multi-card Home rows may automatically show three lines for a taller-header card without changing the stored text.
+- For one inline quote link, populate `full_quote_link_label` and `full_quote_link_url` together, use an HTTPS URL, and confirm the case-sensitive label occurs exactly once in `full_quote`. Otherwise leave both fields blank.
 - Mark the intended first three rows `show_on_home=true` and order them with `home_order`; remaining rows stay available on the Recommendations route.
 - Use HTTPS verification links only.
 - Keep `show_empty_recommendations=false` until at least one recommendation row is ready, unless the empty page should be visible.

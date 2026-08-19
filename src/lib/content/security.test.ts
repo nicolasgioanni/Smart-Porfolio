@@ -35,6 +35,18 @@ describe("static portfolio security contracts", () => {
     expect(runtimeFetchFiles).toEqual([]);
   });
 
+  it("renders structured recommendation quote links without parsing spreadsheet markup", () => {
+    const recommendationTextSource = readFileSync(
+      path.join(projectRoot, "src", "components", "portfolio", "ExpandableRecommendationText.tsx"),
+      "utf8"
+    );
+
+    expect(recommendationTextSource).toMatch(/<SmartLink[^>]*href=\{link\.url\}/s);
+    expect(recommendationTextSource).toMatch(/\{link\.label\}/);
+    expect(recommendationTextSource).not.toMatch(/dangerouslySetInnerHTML|\.innerHTML\s*=/);
+    expect(recommendationTextSource).not.toContain("github.com/BrentLagesse/CytoCV");
+  });
+
   it("keeps scroll motion free of text blur", () => {
     const motionCss = readFileSync(path.join(projectRoot, "src", "styles", "motion.css"), "utf8");
 

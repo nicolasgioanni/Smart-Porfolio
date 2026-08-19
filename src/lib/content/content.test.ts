@@ -53,6 +53,9 @@ const metadata: GeneratedContentMetadata = {
   }
 };
 
+const brentFullQuote =
+  "Nicolas has worked with me on an open source project, CytoCV, in collaboration with biologists at the University of Utah. He has excelled in many critical areas on this project including software engineering, web development, UX, computer vision, and the ability to work with biologists and translate their needs into software. Nicolas is proactive in identifying and solving issues and has demonstrated excellent skills in writing, documentation, and collaboration.";
+
 function createSheets(overrides: Partial<RawPortfolioSheets> = {}): RawPortfolioSheets {
   return {
     profile: [
@@ -326,6 +329,7 @@ describe("portfolio normalization", () => {
     expect(content.experience[0]?.organizationLogo).toBe("/images/experience/company.svg");
     expect(content.experience[0]?.organizationLogoAlt).toBe("Company mark");
     expect(content.recommendations[0]?.skills).toEqual(["Communication", "TypeScript"]);
+    expect(content.recommendations[0]?.fullQuoteLink).toBeUndefined();
     expect(content.education[0]?.institutionLogo).toBe("/images/education/university-logo.svg");
     expect(content.education[0]?.institutionLogoAlt).toBe("University logo");
     expect(content.education[0]?.concentration).toBe("Information Assurance");
@@ -340,6 +344,63 @@ describe("portfolio normalization", () => {
     expect(content.siteSettings.legalEffectiveDate).toBe("2026-08-07");
     expect(content.siteSettings.hostingProviderName).toBe("Vercel");
     expect(content.siteSettings.hostingPrivacyUrl).toBe("https://vercel.com/legal/privacy-notice");
+  });
+
+  it("normalizes a paired recommendation quote label and HTTPS URL", () => {
+    const sheets = createSheets();
+    sheets.recommendations[0]!.full_quote = "Nicolas made CytoCV easier to use.";
+    sheets.recommendations[0]!.full_quote_link_label = "CytoCV";
+    sheets.recommendations[0]!.full_quote_link_url = "https://github.com/BrentLagesse/CytoCV";
+
+    const content = normalizePortfolioContent(sheets, metadata);
+
+    expect(content.recommendations[0]?.fullQuoteLink).toEqual({
+      label: "CytoCV",
+      url: "https://github.com/BrentLagesse/CytoCV"
+    });
+  });
+
+  it.each([
+    ["label only", "CytoCV", ""],
+    ["URL only", "", "https://github.com/BrentLagesse/CytoCV"]
+  ])("rejects a recommendation quote link with %s", (_caseName, label, url) => {
+    const sheets = createSheets();
+    sheets.recommendations[0]!.full_quote = "Nicolas made CytoCV easier to use.";
+    sheets.recommendations[0]!.full_quote_link_label = label;
+    sheets.recommendations[0]!.full_quote_link_url = url;
+
+    expect(() => normalizePortfolioContent(sheets, metadata)).toThrow(
+      /full_quote_link_label and .*full_quote_link_url must both be provided/i
+    );
+  });
+
+  it.each(["http://github.com/BrentLagesse/CytoCV", "javascript:alert(1)"])(
+    "rejects a non-HTTPS recommendation quote link URL: %s",
+    (url) => {
+      const sheets = createSheets();
+      sheets.recommendations[0]!.full_quote = "Nicolas made CytoCV easier to use.";
+      sheets.recommendations[0]!.full_quote_link_label = "CytoCV";
+      sheets.recommendations[0]!.full_quote_link_url = url;
+
+      expect(() => normalizePortfolioContent(sheets, metadata)).toThrow(
+        /full_quote_link_url must be a safe https URL/i
+      );
+    }
+  );
+
+  it.each([
+    ["missing", "A recommendation without the project label.", "CytoCV"],
+    ["case-mismatched", "Nicolas made CytoCV easier to use.", "cytocv"],
+    ["repeated", "CytoCV made CytoCV easier to use.", "CytoCV"]
+  ])("rejects a %s recommendation quote link label", (_caseName, fullQuote, label) => {
+    const sheets = createSheets();
+    sheets.recommendations[0]!.full_quote = fullQuote;
+    sheets.recommendations[0]!.full_quote_link_label = label;
+    sheets.recommendations[0]!.full_quote_link_url = "https://github.com/BrentLagesse/CytoCV";
+
+    expect(() => normalizePortfolioContent(sheets, metadata)).toThrow(
+      /full_quote_link_label must appear exactly once in full_quote/i
+    );
   });
 
   it.each([
@@ -950,6 +1011,15 @@ describe("portfolio normalization", () => {
       "Anoop Prasad",
       "Minh Nhat Huynh"
     ]);
+    expect(content.recommendations.find((item) => item.id === "brent-lagesse")).toMatchObject({
+      fullQuote: brentFullQuote,
+      fullQuoteLink: {
+        label: "CytoCV",
+        url: "https://github.com/BrentLagesse/CytoCV"
+      }
+    });
+    expect(content.recommendations.find((item) => item.id === "brent-lagesse")?.fullQuote).not.toContain("https://");
+    expect(content.recommendations.find((item) => item.id === "brent-lagesse")?.fullQuote.match(/CytoCV/g)).toHaveLength(1);
     expect(content.recommendations.filter((item) => item.showOnHome)).toHaveLength(3);
   });
 

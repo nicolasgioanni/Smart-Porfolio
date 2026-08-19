@@ -184,12 +184,14 @@ Fields:
 - `linkedin_url`: optional HTTPS LinkedIn recommendation/profile URL.
 - `home_quote`: legacy optional short quote; current recommendation cards use `full_quote` on both surfaces.
 - `full_quote`: required full recommendation text.
+- `full_quote_link_label`: optional visible label for one inline link within `full_quote`.
+- `full_quote_link_url`: optional HTTPS destination paired with `full_quote_link_label`.
 - `context`: optional context note.
 - `skills`: pipe-delimited skills or tags.
 - `featured`, `show_on_home`: booleans.
 - `home_order`, `detail_order`: numeric ordering fields.
 
-The spreadsheet is the source of truth for recommendation text. LinkedIn links are only verification/navigation links; the site does not scrape LinkedIn, use the LinkedIn API, or fetch recommendation content at runtime.
+The spreadsheet is the source of truth for recommendation text. Leave both inline-link fields blank, or populate both. The label is case-sensitive and must occur exactly once in `full_quote`; generation rejects partial pairs, non-HTTPS destinations, and labels that are missing or repeated. Content normalizes the pair as `fullQuoteLink`, and rendering replaces only that exact plain-text occurrence with an accessible link. Do not put HTML or Markdown in `full_quote`. LinkedIn links are only verification/navigation links; the site does not scrape LinkedIn, use the LinkedIn API, or fetch recommendation content at runtime.
 
 When enabled, Home places Recommendations after the Skills cards and links to the detail route with a compact top-right button. Home selects the first configured rows through `show_on_home`, `home_order`, and `max_home_recommendation_items`; the detail page includes all rows. Both surfaces show the unchanged `full_quote` and provide an accessible `Show more`/`Show less` control with reduced-motion support. Detail cards and single-card Home rows clamp long text to four lines; a taller header in a multi-card Home row may use three quote lines so the collapsed row remains level. If no rows are published and empty display is enabled, both surfaces show an honest empty state rather than fabricated recommendation content.
 

@@ -398,12 +398,39 @@ function normalizeRecommendationHttpsUrl(value: string | undefined, fieldName: s
   return normalizedValue;
 }
 
+function normalizeRecommendationFullQuoteLink(
+  labelValue: string | undefined,
+  urlValue: string | undefined,
+  fullQuote: string,
+  location: string
+): PortfolioContentLink | undefined {
+  const label = labelValue?.trim();
+  const url = urlValue?.trim();
+
+  if (!label && !url) return undefined;
+
+  if (!label || !url) {
+    throw new Error(`${location}.full_quote_link_label and ${location}.full_quote_link_url must both be provided`);
+  }
+
+  if (!isHttpsUrl(url)) {
+    throw new Error(`${location}.full_quote_link_url must be a safe https URL: ${urlValue}`);
+  }
+
+  if (fullQuote.indexOf(label) < 0 || fullQuote.indexOf(label) !== fullQuote.lastIndexOf(label)) {
+    throw new Error(`${location}.full_quote_link_label must appear exactly once in full_quote: ${label}`);
+  }
+
+  return { label, url };
+}
+
 function normalizeRecommendations(rows: CsvRow[]): RecommendationItem[] {
   const seenIds = new Set<string>();
 
   return rows.map((row, index) => {
     const location = `recommendations row ${index + 2}`;
     const id = requiredText(row, "id", location);
+    const fullQuote = requiredText(row, "full_quote", location);
 
     validateUniqueRowId(id, "recommendations", seenIds);
 
@@ -418,7 +445,13 @@ function normalizeRecommendations(rows: CsvRow[]): RecommendationItem[] {
       sourceUrl: normalizeRecommendationHttpsUrl(row.source_url, `${location}.source_url`),
       linkedinUrl: normalizeRecommendationHttpsUrl(row.linkedin_url, `${location}.linkedin_url`),
       homeQuote: text(row, "home_quote"),
-      fullQuote: requiredText(row, "full_quote", location),
+      fullQuote,
+      fullQuoteLink: normalizeRecommendationFullQuoteLink(
+        row.full_quote_link_label,
+        row.full_quote_link_url,
+        fullQuote,
+        location
+      ),
       context: text(row, "context"),
       skills: normalizePipeDelimitedList(row.skills),
       featured: normalizeBoolean(row.featured, `${location}.featured`),

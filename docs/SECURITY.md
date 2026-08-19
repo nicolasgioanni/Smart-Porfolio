@@ -27,7 +27,7 @@ Accepted general content URLs are:
 - valid `mailto:`
 - safe root-relative paths such as `/resume/resume.pdf`
 
-Root-relative paths must not contain traversal segments such as `..`. Recommendation `source_url` and `linkedin_url` values must be HTTPS URLs.
+Root-relative paths must not contain traversal segments such as `..`. Recommendation `source_url`, `linkedin_url`, and `full_quote_link_url` values must be HTTPS URLs.
 
 ## External links
 
@@ -42,7 +42,7 @@ LinkedIn recommendation links are verification/navigation links only. Do not scr
 
 ## Rendering spreadsheet content
 
-Spreadsheet text should render as plain React text. Do not use `dangerouslySetInnerHTML` for spreadsheet-provided content.
+Spreadsheet text should render as plain React text. Do not use `dangerouslySetInnerHTML` for spreadsheet-provided content. A recommendation's optional inline link is the only structured exception: generation validates its paired label and HTTPS URL, and the component composes ordinary text nodes with one escaped anchor. Do not parse HTML or Markdown, and do not auto-link raw URLs from recommendation copy.
 
 ## Environment variables
 

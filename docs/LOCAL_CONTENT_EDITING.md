@@ -195,6 +195,8 @@ Local recommendations live in `src/content/templates/recommendations.csv`. Keep 
 
 Both Home and the Recommendations page display the unchanged `full_quote`. Home shows the first three rows selected by `show_on_home` and `home_order`; the detail route shows all rows by `detail_order`. Detail cards and single-card Home rows use a four-line `Show more`/`Show less` preview. Multi-card Home rows automatically reduce a taller-header card to three quote lines when needed for a level collapsed row; this is a display treatment and does not shorten the stored quote. `home_quote` remains accepted only for compatibility and is not the current display source.
 
+To link one phrase inside a quote, set both `full_quote_link_label` and `full_quote_link_url`. For example, use `CytoCV` and `https://github.com/BrentLagesse/CytoCV`; the case-sensitive label must occur exactly once in `full_quote`, and the URL must use HTTPS. Leave both fields blank when no inline link is needed. Keep `full_quote` as plain text rather than adding a raw URL, HTML, or Markdown link syntax.
+
 Use `show_empty_recommendations=false` in `site_settings` when the navigation should hide the Recommendations route until there is at least one recommendation row.
 
 ## Footer and legal settings

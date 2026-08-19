@@ -549,6 +549,24 @@ describe("portfolio UI helpers", () => {
     expect(container.querySelector(".recommendation-expandable")).toHaveAttribute("data-collapsed-lines", "4");
   });
 
+  it("passes a structured inline quote link through recommendation cards", () => {
+    const linkedRecommendation: RecommendationItem = {
+      ...recommendation,
+      fullQuote: "A thoughtful engineer who made CytoCV easier to use.",
+      fullQuoteLink: {
+        label: "CytoCV",
+        url: "https://github.com/BrentLagesse/CytoCV"
+      }
+    };
+    const { container } = render(<RecommendationsList items={[linkedRecommendation]} />);
+    const link = screen.getByRole("link", { name: "CytoCV" });
+
+    expect(container.querySelector("blockquote")).toHaveTextContent(linkedRecommendation.fullQuote);
+    expect(link).toHaveAttribute("href", "https://github.com/BrentLagesse/CytoCV");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+  });
+
   it("renders full Home recommendations with a detail route link", () => {
     const { container } = render(<HomeRecommendations items={[recommendation]} />);
 
