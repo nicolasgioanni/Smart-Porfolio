@@ -23,14 +23,22 @@ const FOOTER_RUNWAY_OBSERVER_THRESHOLDS = [0, 1];
 
 type ScrollDirection = "down" | "idle" | "up";
 
-function isBelowViewport(entry: IntersectionObserverEntry): boolean {
-  const viewportBottom = entry.rootBounds?.bottom ?? window.innerHeight;
+type RunwayPosition = {
+  bottom: number;
+  top: number;
+  viewportBottom: number;
+};
 
-  return entry.boundingClientRect.top >= viewportBottom;
+function isBelowViewport(position: RunwayPosition): boolean {
+  return position.top >= position.viewportBottom;
 }
 
-function isAboveViewport(entry: IntersectionObserverEntry): boolean {
-  return entry.boundingClientRect.bottom <= 0;
+function isAboveViewport(position: RunwayPosition): boolean {
+  return position.bottom <= 0;
+}
+
+function isFullyVisible(position: RunwayPosition): boolean {
+  return position.top >= 0 && position.bottom <= position.viewportBottom;
 }
 
 function FooterLinkList({ label, links }: { label: string; links: ProgressiveFooterLink[] }) {
@@ -70,7 +78,6 @@ export function InteractiveBlobFooter({
   const manualCollapseSuppressedRef = useRef(false);
   const pendingCollapseRef = useRef(false);
   const runwayApproachedFromBelowRef = useRef(false);
-  const scrollDirectionRef = useRef<ScrollDirection>("idle");
   const pathname = usePathname();
   const previousPathnameRef = useRef(pathname);
 
@@ -95,6 +102,37 @@ export function InteractiveBlobFooter({
     collapseNow();
   }, [collapseNow]);
 
+  const evaluateRunwayPosition = useCallback(
+    (position: RunwayPosition, direction: ScrollDirection) => {
+      if (isBelowViewport(position)) {
+        runwayApproachedFromBelowRef.current = true;
+      } else if (isAboveViewport(position)) {
+        runwayApproachedFromBelowRef.current = false;
+      }
+
+      const fullyVisible = isFullyVisible(position);
+      const approachedFromBelow = runwayApproachedFromBelowRef.current;
+
+      if (fullyVisible) runwayApproachedFromBelowRef.current = false;
+
+      if (
+        fullyVisible &&
+        (direction === "down" || approachedFromBelow) &&
+        !expandedRef.current &&
+        !manualCollapseSuppressedRef.current &&
+        !pendingCollapseRef.current
+      ) {
+        expandNow();
+        return;
+      }
+
+      if (expandedRef.current && direction === "up" && isBelowViewport(position)) {
+        collapseUnlessDetailsFocused();
+      }
+    },
+    [collapseUnlessDetailsFocused, expandNow]
+  );
+
   useEffect(() => {
     if (previousPathnameRef.current === pathname) return;
 
@@ -102,7 +140,6 @@ export function InteractiveBlobFooter({
     lastScrollYRef.current = window.scrollY;
     manualCollapseSuppressedRef.current = false;
     runwayApproachedFromBelowRef.current = false;
-    scrollDirectionRef.current = "idle";
     collapseUnlessDetailsFocused();
   }, [collapseUnlessDetailsFocused, pathname]);
 
@@ -111,18 +148,26 @@ export function InteractiveBlobFooter({
 
     function handleScroll() {
       const currentScrollY = window.scrollY;
+      let direction: ScrollDirection = "idle";
+
       if (currentScrollY > lastScrollYRef.current) {
-        scrollDirectionRef.current = "down";
+        direction = "down";
       } else if (currentScrollY < lastScrollYRef.current) {
-        scrollDirectionRef.current = "up";
+        direction = "up";
       }
 
       lastScrollYRef.current = currentScrollY;
+
+      const runwaySentinel = runwaySentinelRef.current;
+      if (!runwaySentinel || direction === "idle") return;
+
+      const { bottom, top } = runwaySentinel.getBoundingClientRect();
+      evaluateRunwayPosition({ bottom, top, viewportBottom: window.innerHeight }, direction);
     }
 
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  }, [evaluateRunwayPosition]);
 
   useEffect(() => {
     const footer = footerRef.current;
@@ -154,35 +199,14 @@ export function InteractiveBlobFooter({
         const entry = entries[entries.length - 1];
         if (!entry) return;
 
-        if (!entry.isIntersecting && isBelowViewport(entry)) {
-          runwayApproachedFromBelowRef.current = true;
-        } else if (!entry.isIntersecting && isAboveViewport(entry)) {
-          runwayApproachedFromBelowRef.current = false;
-        }
-
-        const isFullyVisible = entry.isIntersecting && entry.intersectionRatio >= 1;
-        const approachedFromBelow = runwayApproachedFromBelowRef.current;
-
-        if (isFullyVisible) runwayApproachedFromBelowRef.current = false;
-
-        if (
-          isFullyVisible &&
-          (scrollDirectionRef.current === "down" || approachedFromBelow) &&
-          !manualCollapseSuppressedRef.current &&
-          !pendingCollapseRef.current
-        ) {
-          expandNow();
-          return;
-        }
-
-        if (
-          expandedRef.current &&
-          scrollDirectionRef.current === "up" &&
-          entry.intersectionRatio <= 0 &&
-          isBelowViewport(entry)
-        ) {
-          collapseUnlessDetailsFocused();
-        }
+        evaluateRunwayPosition(
+          {
+            bottom: entry.boundingClientRect.bottom,
+            top: entry.boundingClientRect.top,
+            viewportBottom: entry.rootBounds?.bottom ?? window.innerHeight
+          },
+          "idle"
+        );
       },
       { threshold: FOOTER_RUNWAY_OBSERVER_THRESHOLDS }
     );
@@ -192,7 +216,7 @@ export function InteractiveBlobFooter({
     return () => {
       observer.disconnect();
     };
-  }, [collapseUnlessDetailsFocused, expandNow, pathname]);
+  }, [evaluateRunwayPosition, pathname]);
 
   function handleToggle() {
     if (!expanded) {

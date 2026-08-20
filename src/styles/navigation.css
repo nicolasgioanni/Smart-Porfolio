@@ -521,12 +521,6 @@
   line-height: 1;
 }
 
-.blob-footer__toggle.hover-base-1 {
-  --hover-base-1-control-selected-shadow: none;
-  --hover-base-1-selected-layer-opacity: 0;
-  --hover-base-1-selected-text: var(--color-ink-strong);
-}
-
 .blob-footer__details {
   display: grid;
   grid-template-rows: 0fr;
