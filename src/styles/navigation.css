@@ -451,6 +451,15 @@
   z-index: -1;
 }
 
+.blob-footer__viewport-trigger {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 64px;
+  pointer-events: none;
+}
+
 .blob-footer__island {
   display: grid;
   gap: 0;

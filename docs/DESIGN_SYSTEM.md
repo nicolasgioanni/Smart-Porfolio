@@ -78,7 +78,7 @@ Avoid one-off card spacing when an existing variant can express the layout.
 
 Use `GlassSurface` for large section surfaces, `GlassCard` through `PortfolioCard` for content cards, and `GlassBlob` for header and footer docks.
 
-The footer dock is a normal-flow progressive disclosure. Its compact state uses the header's compact width and a single copyright/control row; its expanded state grows to the content width, adds a three-column identity/notices/resources layout, and becomes one column below 720px. State motion is limited to width, padding, grid-row height, opacity, and a slight vertical translation over roughly 420 ms. Never scale or animate blur on this transition. Under reduced motion, the disclosure changes immediately. Long resource URLs must wrap inside their column without horizontal overflow.
+The footer dock is a normal-flow progressive disclosure. Its compact state uses the header's compact width and a single copyright/control row; a fixed-size trigger aligned with that row opens the dock when roughly 50% visible and closes it during upward retreat at roughly 15% visibility. This threshold hysteresis and stable trigger keep the changing footer height from causing flicker. The expanded state grows to the content width, adds a three-column identity/notices/resources layout, and becomes one column below 720px. State motion is limited to width, padding, grid-row height, opacity, and a slight vertical translation over roughly 420 ms. Never scale or animate blur on this transition. Under reduced motion, the disclosure changes immediately. Long resource URLs must wrap inside their column without horizontal overflow.
 
 Glass rules:
 

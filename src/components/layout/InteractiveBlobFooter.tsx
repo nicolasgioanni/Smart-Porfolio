@@ -19,62 +19,16 @@ type InteractiveBlobFooterProps = {
   resourceLinks: ProgressiveFooterLink[];
 };
 
-export const FOOTER_SCROLL_INTENT_THRESHOLD = 140;
-const DOCUMENT_BOTTOM_TOLERANCE = 2;
+const FOOTER_EXPAND_VISIBILITY_RATIO = 0.5;
+const FOOTER_COLLAPSE_VISIBILITY_RATIO = 0.15;
+const FOOTER_OBSERVER_THRESHOLDS = [0, FOOTER_COLLAPSE_VISIBILITY_RATIO, FOOTER_EXPAND_VISIBILITY_RATIO, 1];
 
-export function normalizeWheelDelta(deltaY: number, deltaMode: number, viewportHeight: number): number {
-  if (!Number.isFinite(deltaY)) return 0;
+type ScrollDirection = "down" | "idle" | "up";
 
-  if (deltaMode === WheelEvent.DOM_DELTA_LINE) return deltaY * 16;
-  if (deltaMode === WheelEvent.DOM_DELTA_PAGE) return deltaY * viewportHeight;
+function isRetreatingBelowViewport(entry: IntersectionObserverEntry): boolean {
+  const viewportBottom = entry.rootBounds?.bottom ?? window.innerHeight;
 
-  return deltaY;
-}
-
-export function isFooterControlTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof Element)) return false;
-
-  return Boolean(
-    target.closest(
-      "a, button, input, select, textarea, [contenteditable]:not([contenteditable='false']), [role='button'], [role='combobox'], [role='link'], [role='textbox']"
-    )
-  );
-}
-
-function getDocumentHeight(): number {
-  const body = document.body;
-  const root = document.documentElement;
-  const scrollingElement = document.scrollingElement;
-
-  return Math.max(
-    root.scrollHeight,
-    root.offsetHeight,
-    body?.scrollHeight ?? 0,
-    body?.offsetHeight ?? 0,
-    scrollingElement?.scrollHeight ?? 0
-  );
-}
-
-export function isAtDocumentBottom(): boolean {
-  return getDocumentHeight() - (window.scrollY + window.innerHeight) <= DOCUMENT_BOTTOM_TOLERANCE;
-}
-
-function keyboardScrollIntent(event: KeyboardEvent): number {
-  if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.defaultPrevented) return 0;
-  if (isFooterControlTarget(event.target)) return 0;
-
-  switch (event.key) {
-    case "ArrowDown":
-      return 40;
-    case "PageDown":
-    case " ":
-    case "Spacebar":
-      return 100;
-    case "End":
-      return FOOTER_SCROLL_INTENT_THRESHOLD;
-    default:
-      return 0;
-  }
+  return entry.boundingClientRect.top >= 0 && entry.boundingClientRect.bottom >= viewportBottom;
 }
 
 function FooterLinkList({ label, links }: { label: string; links: ProgressiveFooterLink[] }) {
@@ -106,16 +60,26 @@ export function InteractiveBlobFooter({
   const detailsId = useId();
   const detailsRef = useRef<HTMLDivElement>(null);
   const footerRef = useRef<HTMLElement>(null);
+  const viewportTriggerRef = useRef<HTMLSpanElement>(null);
   const toggleRef = useRef<HTMLButtonElement>(null);
-  const intentRef = useRef(0);
+  const expandedRef = useRef(false);
   const isVisibleRef = useRef(false);
+  const lastScrollYRef = useRef(0);
+  const manualCollapseSuppressedRef = useRef(false);
   const pendingCollapseRef = useRef(false);
+  const scrollDirectionRef = useRef<ScrollDirection>("idle");
   const pathname = usePathname();
   const previousPathnameRef = useRef(pathname);
 
-  const collapseNow = useCallback(() => {
-    intentRef.current = 0;
+  const expandNow = useCallback(() => {
     pendingCollapseRef.current = false;
+    expandedRef.current = true;
+    setExpanded(true);
+  }, []);
+
+  const collapseNow = useCallback(() => {
+    pendingCollapseRef.current = false;
+    expandedRef.current = false;
     setExpanded(false);
   }, []);
 
@@ -132,8 +96,29 @@ export function InteractiveBlobFooter({
     if (previousPathnameRef.current === pathname) return;
 
     previousPathnameRef.current = pathname;
+    lastScrollYRef.current = window.scrollY;
+    manualCollapseSuppressedRef.current = false;
+    scrollDirectionRef.current = "idle";
     collapseUnlessDetailsFocused();
   }, [collapseUnlessDetailsFocused, pathname]);
+
+  useEffect(() => {
+    lastScrollYRef.current = window.scrollY;
+
+    function handleScroll() {
+      const currentScrollY = window.scrollY;
+      if (currentScrollY > lastScrollYRef.current) {
+        scrollDirectionRef.current = "down";
+      } else if (currentScrollY < lastScrollYRef.current) {
+        scrollDirectionRef.current = "up";
+      }
+
+      lastScrollYRef.current = currentScrollY;
+    }
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   useEffect(() => {
     const footer = footerRef.current;
@@ -144,96 +129,58 @@ export function InteractiveBlobFooter({
       if (!entry) return;
 
       isVisibleRef.current = entry.isIntersecting;
-      if (!entry.isIntersecting) collapseUnlessDetailsFocused();
-    });
+      if (!entry.isIntersecting) {
+        manualCollapseSuppressedRef.current = false;
+        collapseUnlessDetailsFocused();
+      }
+    }, { threshold: 0 });
 
     observer.observe(footer);
     return () => observer.disconnect();
   }, [collapseUnlessDetailsFocused]);
 
   useEffect(() => {
-    function recordIntent(delta: number) {
-      if (expanded) return;
+    const viewportTrigger = viewportTriggerRef.current;
+    if (!viewportTrigger || typeof IntersectionObserver === "undefined") return;
 
-      if (delta < 0 || !isAtDocumentBottom()) {
-        intentRef.current = 0;
-        return;
-      }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[entries.length - 1];
+        if (!entry) return;
 
-      if (delta === 0) return;
+        if (
+          entry.isIntersecting &&
+          entry.intersectionRatio >= FOOTER_EXPAND_VISIBILITY_RATIO &&
+          !manualCollapseSuppressedRef.current &&
+          !pendingCollapseRef.current
+        ) {
+          expandNow();
+          return;
+        }
 
-      intentRef.current += Math.min(delta, FOOTER_SCROLL_INTENT_THRESHOLD);
-      if (intentRef.current < FOOTER_SCROLL_INTENT_THRESHOLD) return;
+        if (
+          expandedRef.current &&
+          scrollDirectionRef.current === "up" &&
+          entry.intersectionRatio <= FOOTER_COLLAPSE_VISIBILITY_RATIO &&
+          isRetreatingBelowViewport(entry)
+        ) {
+          collapseUnlessDetailsFocused();
+        }
+      },
+      { threshold: FOOTER_OBSERVER_THRESHOLDS }
+    );
 
-      intentRef.current = 0;
-      setExpanded(true);
-    }
-
-    function handleWheel(event: WheelEvent) {
-      if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.defaultPrevented) return;
-
-      recordIntent(normalizeWheelDelta(event.deltaY, event.deltaMode, window.innerHeight));
-    }
-
-    let previousTouchY: number | null = null;
-
-    function handleTouchStart(event: TouchEvent) {
-      previousTouchY = event.touches.length === 1 ? event.touches[0]?.clientY ?? null : null;
-    }
-
-    function handleTouchMove(event: TouchEvent) {
-      if (event.touches.length !== 1 || previousTouchY === null) {
-        previousTouchY = null;
-        intentRef.current = 0;
-        return;
-      }
-
-      const currentY = event.touches[0]?.clientY;
-      if (currentY === undefined) return;
-
-      const delta = previousTouchY - currentY;
-      previousTouchY = currentY;
-      recordIntent(delta);
-    }
-
-    function handleTouchEnd() {
-      previousTouchY = null;
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      const delta = keyboardScrollIntent(event);
-      if (delta > 0) recordIntent(delta);
-    }
-
-    function handleScroll() {
-      if (!expanded && !isAtDocumentBottom()) {
-        intentRef.current = 0;
-      }
-    }
-
-    window.addEventListener("wheel", handleWheel, { passive: true });
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    window.addEventListener("touchstart", handleTouchStart, { passive: true });
-    window.addEventListener("touchmove", handleTouchMove, { passive: true });
-    window.addEventListener("touchend", handleTouchEnd, { passive: true });
-    window.addEventListener("touchcancel", handleTouchEnd, { passive: true });
-    document.addEventListener("keydown", handleKeyDown);
+    observer.observe(viewportTrigger);
 
     return () => {
-      window.removeEventListener("wheel", handleWheel);
-      window.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("touchstart", handleTouchStart);
-      window.removeEventListener("touchmove", handleTouchMove);
-      window.removeEventListener("touchend", handleTouchEnd);
-      window.removeEventListener("touchcancel", handleTouchEnd);
-      document.removeEventListener("keydown", handleKeyDown);
+      observer.disconnect();
     };
-  }, [expanded]);
+  }, [collapseUnlessDetailsFocused, expandNow, pathname]);
 
   function handleToggle() {
     if (!expanded) {
-      intentRef.current = 0;
-      setExpanded(true);
+      manualCollapseSuppressedRef.current = false;
+      expandNow();
       return;
     }
 
@@ -241,6 +188,7 @@ export function InteractiveBlobFooter({
       toggleRef.current?.focus();
     }
 
+    manualCollapseSuppressedRef.current = true;
     collapseNow();
   }
 
@@ -256,6 +204,7 @@ export function InteractiveBlobFooter({
       onBlurCapture={handleBlur}
       ref={footerRef}
     >
+      <span aria-hidden="true" className="blob-footer__viewport-trigger" ref={viewportTriggerRef} />
       <GlassBlob className="blob-footer__island" tone="footer">
         <div className="blob-footer__compact">
           <p className="blob-footer__copyright">{compactCopyright}</p>
