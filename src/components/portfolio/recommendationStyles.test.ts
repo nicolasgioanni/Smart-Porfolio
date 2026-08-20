@@ -13,7 +13,7 @@ describe("recommendation styles", () => {
     expect(portfolioStyles).not.toMatch(/\.recommendation-expandable__viewport::after/);
   });
 
-  it("styles inline quote links as bold underlined text with hover and keyboard-focus feedback", () => {
+  it("keeps inline quote links bold at rest and adds only color and an underline during interaction", () => {
     const inlineLinkRule =
       portfolioStyles.match(/\.recommendation-expandable__inline-link\s*\{[^}]*}/s)?.[0] ?? "";
     const interactionRule =
@@ -22,9 +22,14 @@ describe("recommendation styles", () => {
       )?.[0] ?? "";
 
     expect(inlineLinkRule).toMatch(/font-weight:\s*var\(--font-weight-bold\)/);
-    expect(inlineLinkRule).toMatch(/text-decoration-line:\s*underline/);
-    expect(interactionRule).toMatch(/color:\s*var\(--color-accent-strong\)/);
+    expect(inlineLinkRule).toMatch(/text-decoration-line:\s*none/);
+    expect(inlineLinkRule).not.toMatch(/background(?:-image)?:/);
+    expect(interactionRule).toMatch(/color:\s*var\(--hover-base-1-inline-link-text\)/);
+    expect(interactionRule).toMatch(/text-decoration-line:\s*underline/);
+    expect(interactionRule).toMatch(/text-decoration-color:\s*currentColor/);
     expect(interactionRule).toMatch(/text-decoration-thickness:\s*0\.14em/);
+    expect(interactionRule).not.toMatch(/background(?:-image)?:/);
+    expect(tokenStyles.match(/--hover-base-1-inline-link-text:/g)).toHaveLength(3);
   });
 
   it("keeps shared Home row sizing as a minimum so one expanded card can grow independently", () => {
