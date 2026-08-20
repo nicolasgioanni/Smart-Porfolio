@@ -1,6 +1,6 @@
 import type { SkillGroup } from "@/content/types";
-import { GlassChip } from "@/components/glass/GlassChip";
 import { PortfolioCard } from "@/components/portfolio/PortfolioCard";
+import { SkillBadge } from "@/components/portfolio/SkillBadge";
 
 function formatCategory(category: string): string {
   return category
@@ -14,16 +14,14 @@ function formatCategory(category: string): string {
 export function SkillsGroup({ compact = false, group }: { compact?: boolean; group: SkillGroup }) {
   if (compact) {
     return (
-      <section className="skills-group skills-group--compact">
+      <PortfolioCard as="section" className="skills-group skills-group--compact" variant="summary">
         <h3 className="skills-group__title">{formatCategory(group.category)}</h3>
         <div className="skills-group__chips">
           {group.skills.map((skill) => (
-            <GlassChip key={skill.id} tone={skill.featured ? "accent" : "default"}>
-              {skill.name}
-            </GlassChip>
+            <SkillBadge icon={skill.icon} key={skill.id} name={skill.name} />
           ))}
         </div>
-      </section>
+      </PortfolioCard>
     );
   }
 
@@ -32,9 +30,7 @@ export function SkillsGroup({ compact = false, group }: { compact?: boolean; gro
       <h3 className="skills-group__title">{formatCategory(group.category)}</h3>
       <div className="skills-group__chips">
         {group.skills.map((skill) => (
-          <GlassChip key={skill.id} tone={skill.featured ? "accent" : "default"}>
-            {skill.name}
-          </GlassChip>
+          <SkillBadge icon={skill.icon} key={skill.id} name={skill.name} />
         ))}
       </div>
     </PortfolioCard>

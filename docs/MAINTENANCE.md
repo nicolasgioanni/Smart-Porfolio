@@ -9,7 +9,13 @@ Future maintenance should preserve the portfolio hierarchy:
 - Generated static content is the performance strategy.
 - Skeletons and motion are polish only.
 
-Home order should remain profile overview, skills, experience, education, research, projects, then the global footer. Each top-level Home section should keep its own full-width row.
+Home order should remain profile overview, experience, education, research, projects, six Skills category cards, recommendations, then the global footer. Each top-level Home section should keep its own full-width row. Experience, Research, Projects, and Recommendations retain compact top-right buttons to their detail routes; enabled recommendation surfaces show an honest empty state when no rows exist.
+
+Keep the separate Home Research-card actions limited to verified `Source code`, `Manuscript`, and `Live demo` links in that order. Do not restore the Home Featured tag, a `Learn more` action, or controls for pending resources on those cards. The compact profile-overview Research panel is the deliberate exception: center its resource group and keep its button-like published links transparent at rest, revealing their surface and border on hover or focus without underlining the label. It may expose a spreadsheet pending resource such as `Manuscript` only as a native disabled, non-interactive unpublished button.
+
+Within the profile overview, preserve `Hi, I’m {greetingName}` without a trailing period as the sole Home H1, the spreadsheet-driven role with a static `headline` fallback, the personal About copy, full-width Current Work, and the equal 50/50 Education/Research row. Keep `View experience` and `View research` in overlaid slots within their relevant panel headers so control hit areas do not change header spacing; do not restore a detached bottom navigation row. Keep Education's graduation footer aligned with Research's resource footer. Both Home Education surfaces use the shared spreadsheet-backed wording `Bachelor of Science in Computer Science`; the compact panel keeps it under `Degree` and retains `Concentration: Information Assurance & Cybersecurity`. Compact Research uses its spreadsheet organization logo. The panel label is `Research`, and Education stacks before Research below 720px.
+
+Research `home_title` is the concise title for both Home surfaces. Keep the formal `title` for the Research page and résumé, and retain `title` as the Home fallback when `home_title` is blank. Optional `profile_summary` belongs only to the compact profile Research panel; its fallback order is `profile_summary`, `home_summary`, then `detail_summary`. The larger Home Research cards continue to render `home_summary` and must not substitute `profile_summary`.
 
 ## Adding Sections
 
@@ -37,7 +43,13 @@ When adding a spreadsheet field:
 6. Add or update tests.
 7. Regenerate content with `npm run generate:content`.
 
-When adding footer/legal fields, prefer `site_settings` or `links` rows. Do not hard-code repository URLs or license choices in components.
+Fields that form an optional group must be validated together. The Home role fields are either all blank/omitted or all non-empty; a partial set must fail generation instead of silently mixing animated and fallback content.
+
+When adding footer/legal fields, use `site_settings`; `links` remains the source for header and profile contact controls. Do not hard-code repository URLs or license choices in components.
+
+Keep the footer in normal flow and compact during server rendering. Its 140-pixel bottom-intent detector must remain passive, must not prevent default wheel/touch/key behavior, and must retain the explicit `Details`/`Collapse` control. Do not connect this behavior to `enable_scroll_motion`, restore duplicate social icons, or hide focused details.
+
+Before making a repository public or populating its public footer links, audit the current tracked tree and every reachable historical object for credentials, private contact information, unpublished assets, and unsafe configuration. A failed audit blocks both visibility changes and production source links until the history is remediated and re-audited. History rewriting and force-pushing require explicit authorization.
 
 ## Theme Maintenance
 
@@ -61,9 +73,9 @@ Template rows should remain generic demo content unless a real content update is
 
 ## Updating Generated Content
 
-Run `npm run generate:content`. Generated content is the build artifact consumed by static pages.
+Run `npm run generate:content`. Generation validates and normalizes local or remote CSV input, then rewrites `src/content/generated/portfolio.generated.json`, the build artifact consumed by static pages.
 
-Do not change generated content by hand. Change the source CSV or remote sheet, then regenerate.
+Do not change generated content by hand. Change the source CSV or remote sheet, regenerate, and review and commit the source and generated JSON together.
 
 ## Testing Changes
 

@@ -1,9 +1,12 @@
 import type { RecommendationItem } from "@/content/types";
 import { GlassButton } from "@/components/glass/GlassButton";
+import { EmptyState } from "@/components/portfolio/EmptyState";
 import { RecommendationCard } from "@/components/portfolio/RecommendationCard";
 
 export function HomeRecommendations({ items, showAction = true }: { items: RecommendationItem[]; showAction?: boolean }) {
-  if (items.length === 0) return null;
+  if (items.length === 0) {
+    return <EmptyState message="Professional recommendations will appear here when content is available." title="No recommendations yet" />;
+  }
 
   return (
     <div className="home-recommendations">

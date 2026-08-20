@@ -1,35 +1,37 @@
-id,category,name,priority,featured,show_on_home,order
-skill-python,languages,Python,1,true,true,1
-skill-typescript,languages,TypeScript,1,true,true,2
-skill-javascript,languages,JavaScript,1,true,true,3
-skill-sql,languages,SQL,2,true,true,4
-skill-bash,languages,Bash,2,false,true,5
-skill-c-cpp,languages,C/C++,2,false,true,6
-skill-html-css,languages,HTML/CSS,2,false,true,7
-skill-assembly,languages,Assembly,3,false,false,8
-skill-django,frameworks,Django,1,true,true,9
-skill-flask,frameworks,Flask,1,true,true,10
-skill-nextjs,frameworks,Next.js,1,true,true,11
-skill-react,frameworks,React,1,true,true,12
-skill-nodejs,frameworks,Node.js,2,false,true,13
-skill-tensorflow-keras,machine_learning,TensorFlow/Keras,1,true,true,14
-skill-opencv,machine_learning,OpenCV,1,true,true,15
-skill-scikit-image,machine_learning,scikit-image,2,false,true,16
-skill-numpy,machine_learning,NumPy,1,true,true,17
-skill-pandas,machine_learning,pandas,1,true,true,18
-skill-matplotlib,machine_learning,Matplotlib,2,false,true,19
-skill-pillow,machine_learning,Pillow,3,false,false,20
-skill-llm-api,machine_learning,LLM API,2,true,true,21
-skill-git,cloud_dev_tools,Git,1,true,true,22
-skill-docker,cloud_dev_tools,Docker,1,true,true,23
-skill-linux,cloud_dev_tools,Linux,1,true,true,24
-skill-ssh,cloud_dev_tools,SSH,2,false,true,25
-skill-nginx,cloud_dev_tools,Nginx,2,false,true,26
-skill-gunicorn,cloud_dev_tools,Gunicorn,2,false,true,27
-skill-lets-encrypt,cloud_dev_tools,Let's Encrypt,3,false,true,28
-skill-google-cloud,cloud_dev_tools,Google Cloud,2,false,true,29
-skill-azure,cloud_dev_tools,Azure,2,false,true,30
-skill-postgresql,databases,PostgreSQL,1,true,true,31
-skill-firestore,databases,Firestore,2,false,true,32
-skill-firebase,databases,Firebase,2,false,true,33
-
+id,category,category_order,name,icon,priority,featured,show_on_home,order
+skill-python,Computer Vision & ML,1,Python,python,1,true,true,1
+skill-tensorflow,Computer Vision & ML,1,TensorFlow,tensorflow,1,true,true,2
+skill-keras,Computer Vision & ML,1,Keras,keras,1,true,true,3
+skill-opencv,Computer Vision & ML,1,OpenCV,opencv,1,true,true,4
+skill-scikit-image,Computer Vision & ML,1,scikit-image,image-processing,1,true,true,5
+skill-numpy,Computer Vision & ML,1,NumPy,numpy,1,true,true,6
+skill-c-cpp,Cybersecurity & Systems,2,C/C++,cplusplus,1,true,true,1
+skill-bash,Cybersecurity & Systems,2,Bash,gnubash,1,true,true,2
+skill-assembly,Cybersecurity & Systems,2,Assembly,cpu,1,true,true,3
+skill-ssh,Cybersecurity & Systems,2,SSH,ssh,1,true,true,4
+skill-tls,Cybersecurity & Systems,2,TLS / Let's Encrypt,letsencrypt,1,true,true,5
+skill-information-assurance,Cybersecurity & Systems,2,Information Assurance,shield-check,1,true,true,6
+skill-typescript,Full-Stack Engineering,3,TypeScript,typescript,1,true,true,1
+skill-javascript,Full-Stack Engineering,3,JavaScript,javascript,1,true,true,2
+skill-react,Full-Stack Engineering,3,React,react,1,true,true,3
+skill-nextjs,Full-Stack Engineering,3,Next.js,nextdotjs,1,true,true,4
+skill-django,Full-Stack Engineering,3,Django,django,1,true,true,5
+skill-flask,Full-Stack Engineering,3,Flask,flask,1,true,true,6
+skill-postgresql,Data & API Engineering,4,PostgreSQL,postgresql,1,true,true,1
+skill-sql,Data & API Engineering,4,SQL,database,1,true,true,2
+skill-firestore,Data & API Engineering,4,Firestore,firebase,1,true,true,3
+skill-firebase-auth,Data & API Engineering,4,Firebase Auth,firebase,1,true,true,4
+skill-rest-apis,Data & API Engineering,4,REST APIs,api,1,true,true,5
+skill-pinecone,Data & API Engineering,4,Pinecone,pinecone,1,true,true,6
+skill-git,Cloud & DevOps,5,Git,git,1,true,true,1
+skill-docker,Cloud & DevOps,5,Docker,docker,1,true,true,2
+skill-linux,Cloud & DevOps,5,Linux,linux,1,true,true,3
+skill-nginx,Cloud & DevOps,5,Nginx,nginx,1,true,true,4
+skill-gunicorn,Cloud & DevOps,5,Gunicorn,gunicorn,1,true,true,5
+skill-azure,Cloud & DevOps,5,Azure,azure,1,true,true,6
+skill-llm-api,Applied AI & Research Computing,6,LLM APIs,llm,1,true,true,1
+skill-whisper,Applied AI & Research Computing,6,Whisper,openai,1,true,true,2
+skill-yolo,Applied AI & Research Computing,6,YOLO,ultralytics,1,true,true,3
+skill-pandas,Applied AI & Research Computing,6,pandas,pandas,1,true,true,4
+skill-biopython,Applied AI & Research Computing,6,Biopython,biopython,1,true,true,5
+skill-matplotlib,Applied AI & Research Computing,6,Matplotlib,matplotlib,1,true,true,6

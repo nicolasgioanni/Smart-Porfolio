@@ -42,6 +42,8 @@ The build runs once per deployment. The deployed output is static and does not n
 
 ## Home and detail layers
 
-The Home page is the summary layer. It includes the strongest scannable overview of profile, links, skills, experience, education, research, and projects. Recommendations and resume content remain available on their focused routes instead of adding more Home sections.
+The Home page is the summary layer. It presents the profile overview, experience, education, research, three projects, six spreadsheet-driven Skills category cards, and three Recommendations in that order. Compact top-right `View` buttons connect the Experience, Research, Projects, and Recommendations sections to their focused routes. Long recommendations expand in a focused client component; the surrounding cards and content remain static-first. When recommendations are enabled without published rows, Home and the Recommendations route may show an honest empty state instead of inventing content.
 
 The detail pages are evidence layers. Research, projects, experience, recommendations, and resume pages show longer explanations, bullets, context, impact details, recommendation quotes, and supporting links.
+
+The footer stays in normal document flow after every route. It server-renders as a compact copyright row, then a focused client wrapper expands its legal and resource details after 140 pixels of additional downward intent at the true document bottom. Wheel, single-touch, and unmodified keyboard scrolling are supported without preventing native scrolling; an explicit disclosure remains the device-independent fallback. The details collapse only after the footer leaves the viewport or the route changes, and focused details are never hidden. `/terms`, `/privacy`, and `/security` are static internal routes referenced only by the footer, not by the main header navigation.

@@ -5,15 +5,19 @@ default_theme,navy
 enable_skeletons,true
 enable_scroll_motion,false
 enable_glass_effects,true
-enable_recommendations,false
-show_empty_recommendations,false
+enable_recommendations,true
+show_empty_recommendations,true
 max_home_research_items,3
-max_home_project_items,2
+max_home_project_items,3
 max_home_experience_items,4
-max_home_recommendation_items,0
-max_home_skill_items,12
+max_home_recommendation_items,3
+max_home_skill_items,36
 recommendations_nav_label,Recommendations
-license_name,
+license_name,MIT
 license_url,
 copyright_owner,Nicolas Gioanni
 repository_url,
+legal_contact_email,ngioanni@uw.edu
+legal_effective_date,2026-08-07
+hosting_provider_name,Vercel
+hosting_privacy_url,https://vercel.com/legal/privacy-notice

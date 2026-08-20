@@ -22,6 +22,8 @@ Do not edit generated JSON directly unless debugging. Edit CSV templates or the 
 npm run generate:content
 ```
 
+Generation validates and normalizes the CSV data, then rewrites `src/content/generated/portfolio.generated.json`. Review and commit the source CSV and regenerated JSON together; never maintain the generated file by hand.
+
 Then view changes locally:
 
 ```powershell
@@ -42,11 +44,12 @@ The profile sheet must provide:
 
 The Home profile card is driven by generated content:
 
-- Name: `profile.full_name`
-- Headline: `profile.headline`
+- Greeting: `Hi, I’m {greetingName}`, where `greetingName` comes from `profile.preferred_name` or the first word of `profile.full_name`
+- Animated role source keys: `role_engineer_prefixes`, `role_engineer_suffix`, and `role_alternate`
+- Static role and résumé fallback: `profile.headline`
 - About: `profile.short_bio`, with a concise `profile.long_bio` fallback
 - Current work: a current `experience.csv` row, optionally identified by `profile.current_experience_id`; `profile.current_title` and `profile.current_company` are used only when no suitable current row exists
-- Selected research: one `research.csv` row selected from `show_on_home`, `featured`, and `home_order`; a valid `profile.featured_research_id` is the explicit fallback when no row is marked for Home
+- Research: one `research.csv` row selected from `show_on_home`, `featured`, and `home_order`; a valid `profile.featured_research_id` is the explicit fallback when no row is marked for Home
 - Education row: `profile.primary_education_id`, with deterministic education fallback when blank
 - Location: `profile.location`
 - Timezone: `profile.timezone`
@@ -56,17 +59,19 @@ The Home profile card is driven by generated content:
 
 Use `location` for the final wording you want shown, such as `Greater Seattle Area` or `Bothell, WA`. Use `timezone` for a stable display string such as `Pacific Time (UTC-07:00)`.
 
-Keep the right-side detail hierarchy in this order: Headline, About, Current Work, a coordinated Education and Selected Research row, then `View full experience` and `Explore research`. Current Work is full width. On desktop, Education uses roughly 40 percent and Selected Research roughly 60 percent of their row. On mobile, Selected Research stacks before Education. The inner summaries use subtle surfaces without timeline dots, vertical rails, repeated organization badges, or heavy nested glass effects.
+The three animated-role fields are an optional complete set. Use a pipe-delimited prefix value such as `Software|AI|Security`, a shared suffix such as `Engineer`, and a complete alternate such as `Research Scientist`. Leave all three blank or omit them to show `profile.headline` statically. If any one is populated, all three must be non-empty or generation fails; a prefix value containing only empty pipe segments also fails. Generated JSON stores these as `roleEngineerPrefixes`, `roleEngineerSuffix`, and `roleAlternate`. Keep `headline` concise and accurate because résumé surfaces and the static fallback still use it.
+
+Keep the right-side detail hierarchy in this order: greeting H1, role, About, Current Work, then a coordinated Education and Research row. Current Work is full width; its `View experience` link sits in the panel header. Research owns `View research` in its header. These links use an overlaid action slot so their hit areas do not make Current Work or Research headers taller than Education. Do not add a detached supporting-link row below the panels. On desktop, Education and Research split the row evenly, stretch to the same outer height, and align their bottom graduation/resource footer rows. Center the Research resources within that footer. On mobile, Education stacks before Research. The inner summaries use subtle surfaces without timeline dots, vertical rails, repeated organization badges, or heavy nested glass effects.
 
 Current Work accepts a row as current when its `end_date` is blank, `Present`, or `Current` according to normalization. When multiple current rows are available, keep the intended row Home-visible and use `featured` plus `home_order` to make its priority clear. The selected row supplies title, organization, dates, `home_summary`, and optional `organization_logo`. Use `current_title` and `current_company` as fallback text only when there is no suitable current experience row.
 
 Previous experience data stays in `experience.csv` and continues to appear on the Experience page. The Home profile card intentionally ignores `previous_experience_id` and never renders a Previous Work block, even if that reference remains populated for compatibility or editorial bookkeeping.
 
-The Education panel prefers `primary_education_id`, then the Home-visible/featured/ordered education fallback. Non-blank profile university, degree, field, and graduation values override the corresponding row display values; the row still supplies concentration, dates, and optional `institution_logo`. It presents the completion date compactly as `Graduated Jun 2025` rather than repeating the full enrollment range. Education location is not repeated in this compact panel because the left profile rail already supplies geographic context.
+The Education panel prefers `primary_education_id`, then the Home-visible/featured/ordered education fallback. Non-blank profile university, degree, field, and graduation values override the corresponding row display values; the row still supplies concentration, dates, and optional `institution_logo`. Keep `profile.degree=Bachelor of Science` and `profile.field_of_study=Computer Science`; the shared formatter presents them as `Degree: Bachelor of Science in Computer Science`. Keep the row's concentration as `Concentration: Information Assurance & Cybersecurity`. The panel presents the completion date compactly as `Graduated Jun 2025` rather than repeating the full enrollment range. Education location is not repeated because the left profile rail already supplies geographic context.
 
-For Selected Research, mark intended candidates with `show_on_home=true`; featured candidates sort first, followed by `home_order`. If none are marked for Home, `featured_research_id` is used when it resolves to a research row, followed by the established featured/ordered fallback. Keep `home_summary` concise because it is preferred over `detail_summary` here. The compact panel consumes only the selected title, summary, and valid `links`; it does not repeat research role, organization, logo, or dates. Missing URLs and label-only pending resources do not produce disabled actions.
+For Research, mark intended candidates with `show_on_home=true`; featured candidates sort first, followed by `home_order`. If none are marked for Home, `featured_research_id` is used when it resolves to a research row, followed by the established featured/ordered fallback. Use optional `home_title` for a concise display title on both the profile-overview panel and the separate Home Research card; leave it blank to use `title`. Research detail and résumé surfaces continue to use the formal `title`. Use optional `profile_summary` for extra-compact profile-panel copy. That panel falls back to `home_summary`, then `detail_summary` when it is blank. The larger Home Research card continues to use `home_summary` and never consumes `profile_summary`. The compact panel also consumes valid `links`, `organization_logo`, and `pending_links`; it does not repeat research role, organization text, or dates. Published resource links are centered button-like controls with no underline: they remain transparent while idle and reveal a surface and border on hover or keyboard focus. A pending resource may appear there only as a native disabled, non-interactive button. The separate Home Research cards omit label-only pending resources.
 
-All displayed personal facts remain spreadsheet-derived. Component code owns only stable section labels, the two internal route destinations, and decorative structure. It must not duplicate names, organizations, titles, programs, dates, summaries, external URLs, or asset paths. Content is normalized into generated JSON before the static build; the browser never requests Google Sheets at runtime.
+All displayed personal facts remain spreadsheet-derived. Component code owns only the greeting format, stable section labels, the two internal route destinations, and decorative structure. It must not duplicate names, roles, organizations, titles, programs, dates, summaries, external URLs, or asset paths. Content is normalized into generated JSON before the static build; the browser never requests Google Sheets at runtime.
 
 ## Pipe-delimited lists
 
@@ -78,12 +83,29 @@ Python|TypeScript|Next.js
 
 The recommendations sheet uses pipe-delimited `skills` in the same format.
 
+Project `home_skills` entries pair a visible label with a lowercase icon key:
+
+```text
+Next.js=nextdotjs|TypeScript=typescript|OpenAI API=openai
+```
+
+Keep exactly three verified `home_skills` on every published Home project; content validation rejects a fourth entry. The Skills sheet stores one exact skill per row; use `category_order` for the six broad-card order and `icon` for the shared brand or semantic icon key. The published Home layout expects six skills in each of six categories.
+
+Project tool explanations use ordered column pairs that match the `home_skills` positions:
+
+```text
+home_skill_1_summary: Next.js powers the project's web interface and routing.
+home_skill_1_details: The precise technical paragraph describing how Next.js is used.
+```
+
+Repeat the pattern through `home_skill_3_summary` and `home_skill_3_details`. Fill both fields for a position or leave both blank; a one-sided pair fails content validation. A numbered pair also fails when there is no skill at that position in `home_skills`. Existing rows with no explanation fields remain compatible.
+
 ## Link formatting
 
 Use either simple URLs or label and URL pairs:
 
 ```text
-https://example.com|GitHub=https://github.com/username|Live site=https://cytocv2.uwb.edu
+https://example.com|GitHub=https://github.com/username|Live site=https://cytocv.uwb.edu
 ```
 
 Research `pending_links` is a separate pipe-delimited list of labels without URLs:
@@ -92,7 +114,7 @@ Research `pending_links` is a separate pipe-delimited list of labels without URL
 Manuscript|Dataset
 ```
 
-Pending resources do not create disabled links in the compact Home profile card. When a resource is published, remove its label from `pending_links` and add a labelled verified URL to `links`. If a renderer supports publication status metadata, use explicit wording such as `Manuscript in preparation` rather than a button-shaped placeholder.
+Pending resources have no URL. The compact Home profile Research panel may expose one as a native disabled, non-interactive unpublished button, such as `Manuscript`, while the separate Home Research cards omit it. Do not emulate this state with an actionable link or click handler. When a resource is published, remove its label from `pending_links` and add a labelled verified URL to `links`; never leave both entries populated for the same resource.
 
 ## Boolean formatting
 
@@ -157,7 +179,7 @@ Recommendation `source_url` and `linkedin_url` values must be HTTPS URLs. Do not
 
 Experience and research `organization_logo` values and education `institution_logo` values should point to approved real local public assets when possible. Prefer the shared `/images/organizations/` path for new marks, then place that validated root-relative path in the corresponding CSV field. Leave the field blank until an approved asset is available; compact Home panels omit the mark rather than inventing a placeholder. Use the corresponding `_logo_alt` field when the asset needs explicit alternative text.
 
-Keep education `field` and `concentration` separate. For example, use `Computer Science & Software Engineering` as the field and `Information Assurance & Cybersecurity` as the concentration. Education `location` is optional: populate it to show a separate location line, or leave it blank to hide it.
+Keep education `degree`, `field`, and `concentration` separate. For the current row, use `Bachelor of Science` as the degree, `Computer Science` as the field, and `Information Assurance & Cybersecurity` as the concentration. The shared formatter produces `Bachelor of Science in Computer Science` wherever the Home program is shown. Education `location` is optional: populate it to show a separate location line, or leave it blank to hide it.
 
 ## Google Sheets versus local templates
 
@@ -171,22 +193,26 @@ Published spreadsheet CSVs are build-time sources, not live browser data. After 
 
 Local recommendations live in `src/content/templates/recommendations.csv`. Keep template rows blank unless there is explicit public-safe recommendation text to include. Required fields are `id`, `recommender_name`, and `full_quote`.
 
-Home uses `home_quote` when present. If it is blank, the build uses a safe excerpt from `full_quote`.
+Both Home and the Recommendations page display `full_quote`. Home shows the first three rows selected by `show_on_home` and `home_order`; the detail route shows all rows by `detail_order`. Long quotes receive the same four-line `Show more`/`Show less` interaction on both surfaces. `home_quote` remains accepted only for compatibility and is not the current display source.
 
 Use `show_empty_recommendations=false` in `site_settings` when the navigation should hide the Recommendations route until there is at least one recommendation row.
 
-## Footer settings
+## Footer and legal settings
 
-Footer owner, license, and repository data can come from `site_settings`:
+Footer identity, legal, hosting, license, and repository data come from `site_settings`:
 
 ```text
 copyright_owner
 license_name
 license_url
 repository_url
+legal_contact_email
+legal_effective_date
+hosting_provider_name
+hosting_privacy_url
 ```
 
-If no license is configured, the footer uses `All rights reserved`. Do not guess a license without confirmation.
+Use an ISO `YYYY-MM-DD` legal effective date and HTTPS repository, license, and hosting privacy URLs. `license_name=MIT` records the software license choice, but leave `repository_url` and `license_url` blank until the repository passes its exposure audit, is publicly accessible, and both anonymous links have been verified. Blank repository resources are omitted cleanly. The compact copyright statement reserves portfolio content except where another notice, such as the software license, states otherwise.
 
 ## Demo placeholder assets
 

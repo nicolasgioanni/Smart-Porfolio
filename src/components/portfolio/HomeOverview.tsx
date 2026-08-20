@@ -4,6 +4,8 @@ import { HomeFeaturedExperience } from "@/components/portfolio/HomeFeaturedExper
 import { HomeFeaturedProjects } from "@/components/portfolio/HomeFeaturedProjects";
 import { HomeFeaturedResearch } from "@/components/portfolio/HomeFeaturedResearch";
 import { HomeOverviewSection } from "@/components/portfolio/HomeOverviewSection";
+import { HomeRecommendations } from "@/components/portfolio/HomeRecommendations";
+import { HomeSkillsSnapshot } from "@/components/portfolio/HomeSkillsSnapshot";
 import { PortfolioHero } from "@/components/portfolio/PortfolioHero";
 import { ResumeSummary } from "@/components/portfolio/ResumeSummary";
 
@@ -13,6 +15,9 @@ type HomeOverviewProps = {
 
 export function HomeOverview({ content }: HomeOverviewProps) {
   const motionEnabled = content.siteSettings.enableScrollMotion;
+  const showRecommendations =
+    content.siteSettings.enableRecommendations !== false &&
+    (content.recommendations.length > 0 || content.siteSettings.showEmptyRecommendations === true);
 
   return (
     <div className="page-container page-container--home">
@@ -25,6 +30,10 @@ export function HomeOverview({ content }: HomeOverviewProps) {
 
       <div className="home-overview-grid" aria-label="Portfolio overview">
         <HomeOverviewSection
+          actionAriaLabel="View Experience"
+          actionVariant="button"
+          href="/experience"
+          linkLabel="View"
           motionEnabled={motionEnabled}
           title="Experience"
         >
@@ -39,31 +48,53 @@ export function HomeOverview({ content }: HomeOverviewProps) {
         </HomeOverviewSection>
 
         <HomeOverviewSection
-          description="Research highlights summarized for quick scanning, with deeper technical context one click away."
+          actionAriaLabel="View Research"
+          actionVariant="button"
           href="/research"
-          linkLabel="View research"
+          linkLabel="View"
           motionEnabled={motionEnabled}
-          title="Featured research"
+          title="Research"
+          wide
         >
           <HomeFeaturedResearch items={content.research} />
         </HomeOverviewSection>
 
         <HomeOverviewSection
+          actionAriaLabel="View Projects"
+          actionVariant="button"
           description="Selected engineering work with short summaries, stack context, and supporting links."
           href="/projects"
-          linkLabel="View projects"
+          linkLabel="View"
           motionEnabled={motionEnabled}
-          title="Featured projects"
+          title="Projects"
           wide
         >
           <HomeFeaturedProjects items={content.projects} />
         </HomeOverviewSection>
 
         <HomeOverviewSection
-          className="home-section--empty home-section--skills"
+          className="home-section--skills"
           motionEnabled={motionEnabled}
           title="Skills"
-        />
+          wide
+        >
+          <HomeSkillsSnapshot skillGroups={content.skillGroups} />
+        </HomeOverviewSection>
+
+        {showRecommendations ? (
+          <HomeOverviewSection
+            actionAriaLabel="View Recommendations"
+            actionVariant="button"
+            className="home-section--recommendations"
+            href="/recommendations"
+            linkLabel="View"
+            motionEnabled={motionEnabled}
+            title="Recommendations"
+            wide
+          >
+            <HomeRecommendations items={content.recommendations} showAction={false} />
+          </HomeOverviewSection>
+        ) : null}
       </div>
     </div>
   );

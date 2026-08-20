@@ -89,36 +89,6 @@
   grid-template-columns: minmax(0, 1fr);
 }
 
-.skeleton-skills {
-  display: grid;
-  gap: var(--space-5);
-  margin-top: var(--space-5);
-}
-
-.skeleton-skills__toolkit {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  padding-bottom: var(--space-5);
-  border-bottom: 1px solid var(--color-line);
-}
-
-.skeleton-skills__explorer {
-  display: grid;
-  grid-template-columns: minmax(230px, 0.36fr) minmax(0, 1fr);
-  gap: var(--space-6);
-  align-items: start;
-}
-
-.skeleton-skills__selector {
-  display: grid;
-  gap: var(--space-2);
-}
-
-.skeleton-skills__explorer > .skeleton-card {
-  min-height: 560px;
-}
-
 .skeleton-page {
   width: min(var(--container-width), calc(100% - 32px));
   margin: 0 auto;
@@ -134,6 +104,10 @@
 
 .skeleton-page__section {
   padding: var(--space-6);
+}
+
+.home-skeleton__skills {
+  margin-top: var(--space-5);
 }
 
 .skeleton-page__stack {
@@ -172,21 +146,4 @@
     padding: var(--space-6);
   }
 
-  .skeleton-skills__explorer {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .skeleton-skills__selector {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .skeleton-skills__explorer > .skeleton-card {
-    min-height: 420px;
-  }
-}
-
-@media (max-width: 620px) {
-  .skeleton-skills__selector {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
