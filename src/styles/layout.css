@@ -1,5 +1,8 @@
 .site-shell {
-  min-height: 100vh;
+  --footer-compact-footprint: 66px;
+  --footer-stage-height: 28rem;
+
+  min-height: calc(100vh + var(--footer-stage-height) - var(--footer-compact-footprint));
   display: flex;
   flex-direction: column;
 }
@@ -336,5 +339,19 @@
   .legal-document__body {
     gap: var(--space-6);
     margin-top: var(--space-6);
+  }
+}
+
+@media (max-width: 720px) {
+  .site-shell {
+    --footer-compact-footprint: 74px;
+    --footer-stage-height: 44rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .site-shell {
+    --footer-compact-footprint: 96px;
+    --footer-stage-height: 48rem;
   }
 }

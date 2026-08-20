@@ -428,16 +428,13 @@
 .blob-footer {
   --footer-motion-duration: 420ms;
   --footer-motion-easing: cubic-bezier(0.22, 1, 0.36, 1);
+  --footer-runway-entry-gap: var(--space-12);
 
+  display: grid;
   width: calc(100% - 32px);
-  max-width: var(--header-compact-width);
+  max-width: var(--container-width);
   margin: var(--space-16) auto var(--space-8);
   position: relative;
-  transition: max-width var(--footer-motion-duration) var(--footer-motion-easing);
-}
-
-.blob-footer--expanded {
-  max-width: var(--container-width);
 }
 
 .blob-footer::before {
@@ -451,23 +448,41 @@
   z-index: -1;
 }
 
-.blob-footer__viewport-trigger {
+.blob-footer__runway,
+.blob-footer__island {
+  grid-area: 1 / 1;
+}
+
+.blob-footer__runway {
+  min-height: var(--footer-stage-height, 24rem);
+  position: relative;
+  pointer-events: none;
+}
+
+.blob-footer__runway-sentinel {
   position: absolute;
-  top: 0;
-  left: 0;
+  top: calc(var(--footer-compact-footprint, 66px) + var(--footer-runway-entry-gap));
+  left: 50%;
   width: 1px;
-  height: 64px;
+  height: var(--footer-runway-band-height, 48px);
   pointer-events: none;
 }
 
 .blob-footer__island {
+  align-self: start;
   display: grid;
   gap: 0;
+  width: 100%;
+  max-width: var(--header-compact-width);
+  margin-inline: auto;
   padding: var(--space-4) var(--space-5);
-  transition: padding var(--footer-motion-duration) var(--footer-motion-easing);
+  transition:
+    max-width var(--footer-motion-duration) var(--footer-motion-easing),
+    padding var(--footer-motion-duration) var(--footer-motion-easing);
 }
 
 .blob-footer--expanded .blob-footer__island {
+  max-width: var(--container-width);
   padding: var(--space-8);
 }
 
@@ -504,6 +519,12 @@
   font-size: var(--font-size-caption);
   font-weight: var(--font-weight-bold);
   line-height: 1;
+}
+
+.blob-footer__toggle.hover-base-1 {
+  --hover-base-1-control-selected-shadow: none;
+  --hover-base-1-selected-layer-opacity: 0;
+  --hover-base-1-selected-text: var(--color-ink-strong);
 }
 
 .blob-footer__details {
@@ -739,6 +760,8 @@
   }
 
   .blob-footer {
+    --footer-runway-entry-gap: var(--space-10);
+
     width: calc(100% - 20px);
   }
 
