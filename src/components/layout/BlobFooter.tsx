@@ -3,6 +3,7 @@ import {
   InteractiveBlobFooter,
   type ProgressiveFooterLink
 } from "@/components/layout/InteractiveBlobFooter";
+import { siteRoutes } from "@/components/navigation/siteRoutes";
 
 const repositoryKinds = new Set(["repository", "source", "github_repository"]);
 
@@ -38,6 +39,8 @@ function createResourceLinks(content: GeneratedPortfolioContent): ProgressiveFoo
   if (contactEmail) {
     links.push({ href: `mailto:${contactEmail}`, label: contactEmail });
   }
+
+  links.push({ href: siteRoutes.contact, label: "Contact Form" });
 
   return links;
 }

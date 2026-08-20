@@ -27,13 +27,34 @@ export default function SecurityPage() {
       <section>
         <h2>Architecture and scope</h2>
         <p>
-          This portfolio is delivered as a statically generated website. It does not provide visitor accounts, payments,
-          submission forms, databases, or application APIs. Hosting, source control, email, linked demonstrations, and other
-          external services are independently operated third-party systems and are outside this site&apos;s testing scope.
+          The public portfolio pages are statically generated and do not provide visitor accounts, payments, or a general
+          application API. Contact requests are handled by a narrowly scoped Cloudflare Pages Function. Cloudflare Turnstile
+          supplies bot-protection signals, and Resend delivers the visitor confirmation and private owner notification.
+          Hosting, source control, Turnstile, Resend, receiving email systems, linked demonstrations, and other external
+          services are independently operated third-party systems and are outside this site&apos;s testing scope.
         </p>
         <p>
           A suspected issue should concern the portfolio pages or assets controlled by Nicolas Gioanni. An issue affecting a
           third-party service must be reported through that provider&apos;s authorized disclosure process.
+        </p>
+      </section>
+
+      <section>
+        <h2>Contact submission safeguards</h2>
+        <p>
+          Browser-side field checks improve usability but are not treated as a security boundary. The Pages Function performs
+          independent schema, type, length, email, and required-acknowledgment validation; verifies the Turnstile token with
+          Cloudflare on the server; applies request rate limits and abuse checks; and returns generic errors that do not expose
+          provider responses or private configuration.
+        </p>
+        <p>
+          Email delivery uses a fixed, verified sender identity. Automated confirmation mail is sent from
+          noreply@nicolasmgioanni.dev and directs follow-up to the public ngioanni@uw.edu address. Visitor-supplied addresses
+          are used only as recipients or contact details and cannot control the message sender, reply handling, or other mail
+          headers. The private owner destination and all provider secrets remain server-side and are not returned to the
+          browser. The handler minimizes sensitive logging and fails closed when required Turnstile, validation, rate-limit,
+          email, or private-recipient configuration is unavailable. A browser widget or client-side success state alone never
+          authorizes delivery.
         </p>
       </section>
 
@@ -65,7 +86,8 @@ export default function SecurityPage() {
           <li>Intrude on privacy or attempt to access, obtain, alter, delete, retain, or disclose data that is not yours.</li>
           <li>Establish persistence, execute malware, exfiltrate information, or move beyond the minimum evidence of an issue.</li>
           <li>
-            Test Vercel, GitHub, email providers, linked demonstrations, institutional systems, or any other third-party system.
+            Test Cloudflare, GitHub, Resend, receiving email providers, linked demonstrations, institutional systems, or any
+            other third-party system.
           </li>
         </ul>
         <p>

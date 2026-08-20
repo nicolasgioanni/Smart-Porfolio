@@ -26,6 +26,7 @@ describe("site route registry", () => {
       "/projects",
       "/recommendations",
       "/resume",
+      "/contact",
       "/terms",
       "/privacy",
       "/security"
@@ -56,6 +57,7 @@ describe("site route registry", () => {
     expect(isSiteRouteHref("/terms")).toBe(true);
     expect(isSiteRouteHref("/privacy#email-communications")).toBe(true);
     expect(isSiteRouteHref("/security?source=footer")).toBe(true);
+    expect(isSiteRouteHref("/contact?source=footer")).toBe(true);
 
     expect(isSiteRouteHref("/projects/example")).toBe(false);
     expect(isSiteRouteHref("/resume/demo.pdf")).toBe(false);

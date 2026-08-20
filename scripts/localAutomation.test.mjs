@@ -1,10 +1,11 @@
-import { mkdtemp, mkdir, rm, utimes, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, utimes, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  copyEnvExampleIfMissing,
   createPackageState,
   findAvailablePort,
   findProjectRoot,
@@ -36,6 +37,19 @@ describe("local automation helpers", () => {
     await mkdir(childDirectory, { recursive: true });
 
     expect(findProjectRoot(childDirectory)).toBe(projectRoot);
+  });
+
+  it("creates .env from .env.example without overwriting local configuration", async () => {
+    const projectRoot = await createTemporaryProject();
+    const envPath = path.join(projectRoot, ".env");
+    await writeFile(path.join(projectRoot, ".env.example"), "EXAMPLE_VALUE=\n", "utf8");
+
+    expect(await copyEnvExampleIfMissing(projectRoot)).toBe(true);
+    expect(await readFile(envPath, "utf8")).toBe("EXAMPLE_VALUE=\n");
+
+    await writeFile(envPath, "EXAMPLE_VALUE=local\n", "utf8");
+    expect(await copyEnvExampleIfMissing(projectRoot)).toBe(false);
+    expect(await readFile(envPath, "utf8")).toBe("EXAMPLE_VALUE=local\n");
   });
 
   it("marks dependencies current only when node_modules and setup hashes match", async () => {

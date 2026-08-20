@@ -1,5 +1,7 @@
 ﻿import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import path from "node:path";
+import { loadEnvFile } from "node:process";
 import { fileURLToPath } from "node:url";
 import type { ContentSourceMode, GeneratedContentMetadata } from "../src/content/types";
 import { parseCsv } from "../src/lib/csv/parseCsv";
@@ -9,8 +11,13 @@ import { normalizePortfolioContent } from "../src/lib/content/normalizePortfolio
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const templateDirectory = path.join(projectRoot, "src", "content", "templates");
 const outputPath = path.join(projectRoot, "src", "content", "generated", "portfolio.generated.json");
+const localEnvPath = path.join(projectRoot, ".env");
 
-const sheetConfigs: Array<{ name: PortfolioSheetName; fileName: string; envName: string }> = [
+if (existsSync(localEnvPath)) {
+  loadEnvFile(localEnvPath);
+}
+
+const sheetConfigs: Array<{ name: PortfolioSheetName; fileName: string; envName?: string }> = [
   { name: "profile", fileName: "profile.csv", envName: "PORTFOLIO_PROFILE_CSV_URL" },
   { name: "links", fileName: "links.csv", envName: "PORTFOLIO_LINKS_CSV_URL" },
   { name: "research", fileName: "research.csv", envName: "PORTFOLIO_RESEARCH_CSV_URL" },
@@ -19,7 +26,7 @@ const sheetConfigs: Array<{ name: PortfolioSheetName; fileName: string; envName:
   { name: "recommendations", fileName: "recommendations.csv", envName: "PORTFOLIO_RECOMMENDATIONS_CSV_URL" },
   { name: "education", fileName: "education.csv", envName: "PORTFOLIO_EDUCATION_CSV_URL" },
   { name: "skills", fileName: "skills.csv", envName: "PORTFOLIO_SKILLS_CSV_URL" },
-  { name: "resume", fileName: "resume.csv", envName: "PORTFOLIO_RESUME_CSV_URL" },
+  { name: "resume", fileName: "resume.csv" },
   { name: "site_settings", fileName: "site_settings.csv", envName: "PORTFOLIO_SITE_SETTINGS_CSV_URL" }
 ];
 
@@ -54,10 +61,10 @@ async function main(): Promise<void> {
   const missingRemoteEnvironmentVariables: string[] = [];
 
   for (const config of sheetConfigs) {
-    const csvUrl = process.env[config.envName]?.trim();
+    const csvUrl = config.envName ? process.env[config.envName]?.trim() : undefined;
 
     if (!csvUrl) {
-      missingRemoteEnvironmentVariables.push(config.envName);
+      if (config.envName) missingRemoteEnvironmentVariables.push(config.envName);
       const csvText = await readTemplateCsv(config.fileName);
       sheets[config.name] = parseCsv(csvText);
       sources[config.name] = "template";

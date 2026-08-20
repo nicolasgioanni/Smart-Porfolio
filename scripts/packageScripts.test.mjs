@@ -8,6 +8,7 @@ describe("package and CI scripts", () => {
 
     for (const scriptName of [
       "dev",
+      "dev:pages",
       "generate:content",
       "build",
       "lint",

@@ -4,8 +4,9 @@ out
 coverage
 .env
 .env.*
-.env*.local
-!.env.local.example
+!.env.example
+.dev.vars
+.dev.vars.*
 *.tsbuildinfo
 .DS_Store
 .local

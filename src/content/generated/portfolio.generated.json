@@ -1069,8 +1069,8 @@
     "licenseName": "MIT",
     "copyrightOwner": "Nicolas Gioanni",
     "legalContactEmail": "ngioanni@uw.edu",
-    "legalEffectiveDate": "2026-08-07",
-    "hostingProviderName": "Vercel",
-    "hostingPrivacyUrl": "https://vercel.com/legal/privacy-notice"
+    "legalEffectiveDate": "2026-08-22",
+    "hostingProviderName": "Cloudflare",
+    "hostingPrivacyUrl": "https://www.cloudflare.com/privacypolicy/"
   }
 }

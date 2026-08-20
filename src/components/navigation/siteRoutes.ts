@@ -5,6 +5,7 @@ export const siteRoutes = {
   projects: "/projects",
   recommendations: "/recommendations",
   resume: "/resume",
+  contact: "/contact",
   terms: "/terms",
   privacy: "/privacy",
   security: "/security"

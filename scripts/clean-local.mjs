@@ -55,7 +55,7 @@ async function main() {
     console.log(`Removed: ${removed.join(", ")}`);
   }
 
-  console.log("Preserved src/content/templates, public assets, and .env.local.");
+  console.log("Preserved src/content/templates, public assets, and .env.");
 }
 
 main().catch((error) => {

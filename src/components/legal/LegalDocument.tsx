@@ -3,8 +3,8 @@ import { GlassSurface } from "@/components/glass/GlassSurface";
 import { PageContainer } from "@/components/layout/PageContainer";
 
 const fallbackEffectiveDate = {
-  iso: "2026-08-07",
-  label: "August 7, 2026"
+  iso: "2026-08-22",
+  label: "August 22, 2026"
 } as const;
 
 const fallbackContactEmail = "ngioanni@uw.edu";

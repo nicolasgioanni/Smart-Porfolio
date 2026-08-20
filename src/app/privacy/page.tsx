@@ -6,7 +6,7 @@ import { getPortfolioContent } from "@/lib/content/getPortfolioContent";
 
 const pageTitle = "Privacy Notice";
 const pageDescription =
-  "Privacy information for this portfolio, including theme storage, hosting request data, email communications, and visitor choices.";
+  "Privacy information for this portfolio, including theme storage, hosting request data, contact submissions, email communications, and visitor choices.";
 
 export function generateMetadata(): Metadata {
   return createPageMetadata(getPortfolioContent(), pageTitle, pageDescription);
@@ -19,11 +19,11 @@ export default function PrivacyPage() {
   const hostingProvider =
     typeof content.siteSettings.hostingProviderName === "string" && content.siteSettings.hostingProviderName.trim()
       ? content.siteSettings.hostingProviderName.trim()
-      : "Vercel";
+      : "Cloudflare";
   const hostingPrivacyUrl =
     typeof content.siteSettings.hostingPrivacyUrl === "string" && content.siteSettings.hostingPrivacyUrl.startsWith("https://")
       ? content.siteSettings.hostingPrivacyUrl
-      : "https://vercel.com/legal/privacy-notice";
+      : "https://www.cloudflare.com/privacypolicy/";
 
   return (
     <LegalDocument
@@ -35,13 +35,14 @@ export default function PrivacyPage() {
       <section>
         <h2>Scope and portfolio data practices</h2>
         <p>
-          This notice applies to this portfolio website. The portfolio has no visitor accounts, submission forms,
-          first-party analytics, advertising, tracking pixels, or application-set cookies. It does not ask visitors to enter
-          payment information or create a profile.
+          This notice applies to this portfolio website. The portfolio has no visitor accounts, payment processing,
+          first-party analytics, advertising, tracking pixels, or application-set cookies. Its contact form provides a
+          direct channel for legitimate professional inquiries.
         </p>
         <p>
           This does not mean that no personal data is ever processed. The hosting provider may process technical request
-          information, and information is processed when a visitor chooses to send an email or open an external destination.
+          information, and information is processed when a visitor submits the contact form, chooses to send an email, or
+          opens an external destination.
         </p>
       </section>
 
@@ -76,12 +77,30 @@ export default function PrivacyPage() {
       </section>
 
       <section>
-        <h2>Email communications</h2>
+        <h2>Contact requests and email communications</h2>
         <p>
-          Selecting an email link opens your chosen email service or application. If you send a message, the message and any
-          information you include—such as your name, email address, organization, attachments, and correspondence—will be
-          processed to review and respond to your communication. Email providers involved in transmitting or storing the
-          message operate under their own terms and privacy practices.
+          The contact form collects your first name, last name, email address, optional phone number, message, and your
+          confirmation of each of the three required acknowledgments shown during review. It also processes a Cloudflare
+          Turnstile response and limited request information needed to validate the submission, prevent abuse, and apply rate
+          limits. The information is used to review your inquiry, send a receipt, and respond to you.
+        </p>
+        <p>
+          Values remain in your browser while you complete and review the form. They are transmitted over HTTPS to a
+          narrowly scoped Cloudflare Pages Function only when you choose <em>Send request</em>. The endpoint verifies the
+          Turnstile response and validates the submitted fields and acknowledgments before accepting the request.
+        </p>
+        <p>
+          After acceptance, Resend delivers a transactional confirmation to the email address you supplied and a private
+          notification to the portfolio owner. The confirmation summarizes the information you submitted. The private owner
+          recipient is server-side configuration and is not included in the page, browser bundle, or endpoint response.
+          Cloudflare, Resend, and the receiving email services process information under their own terms and privacy
+          practices.
+        </p>
+        <p>
+          Selecting a direct email link instead opens your chosen email service or application. If you send an email, the
+          message, attachments, addressing information, and subsequent correspondence are processed to review and respond to
+          your communication. Do not submit passwords, payment data, government identifiers, medical information, access
+          tokens, or other secrets through either contact method.
         </p>
       </section>
 
@@ -97,14 +116,18 @@ export default function PrivacyPage() {
       <section>
         <h2>Retention and security</h2>
         <p>
-          The local theme preference remains in your browser until you remove it. Email correspondence may be retained for as
-          long as reasonably necessary to address the communication, maintain appropriate professional records, resolve a
-          concern, or satisfy an applicable obligation. Hosting logs and related request information are retained according to
-          the hosting provider&apos;s practices.
+          The portfolio does not intentionally add contact submissions to a first-party contact database. The Cloudflare
+          function processes each accepted request for validation and email delivery. Resend, Cloudflare, receiving email
+          services, and the recipient mailboxes may retain messages, delivery records, security signals, or request metadata
+          according to their configurations and practices. Contact correspondence may be retained for as long as reasonably
+          necessary to respond, maintain appropriate professional records, investigate abuse or a security concern, or meet
+          an applicable obligation. No exact retention period is promised where the relevant period is controlled by a
+          service provider, mailbox setting, backup cycle, or legitimate operational need.
         </p>
         <p>
-          Reasonable measures are used to maintain the portfolio and limit unnecessary collection. No internet transmission,
-          browser storage mechanism, hosting service, or email system can be guaranteed completely secure.
+          The local theme preference remains in your browser until you remove it. Reasonable measures are used to maintain
+          the portfolio and limit unnecessary collection, but no internet transmission, browser storage mechanism, hosting
+          service, bot-protection service, or email system can be guaranteed completely secure.
         </p>
       </section>
 
