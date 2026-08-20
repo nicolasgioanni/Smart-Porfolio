@@ -21,9 +21,9 @@ export default function ResumePage() {
 
   return (
     <PageContainer
-      eyebrow="Resume"
       title="Resume"
-      description="Experience, research, projects, education, skills, and resume file access in one place."
+      description="See my experience, research, projects, education, and technical skills below, or open the full PDF."
+      introVariant="panel"
       motionEnabled={content.siteSettings.enableScrollMotion}
     >
       <ResumeSummary
