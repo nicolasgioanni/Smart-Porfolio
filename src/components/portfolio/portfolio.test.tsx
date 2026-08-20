@@ -740,7 +740,9 @@ describe("portfolio UI helpers", () => {
       research: {
         id: "research-sentinel",
         title: "Research Project Sentinel",
-        summary: "Research summary supplied through the overview prop.",
+        position: "Graduate Research Assistant",
+        contributions: ["Lead Developer for the software", "First Author of the manuscript"],
+        labs: ["SEE Lab, UW Bothell School of STEM", "Miller Lab, University of Utah"],
         logo: { src: "/images/organizations/research-sentinel.svg", alt: "Research Organization Sentinel mark" },
         links: [
           { label: "Live site", url: "https://example.com/research-live" },
@@ -838,7 +840,23 @@ describe("portfolio UI helpers", () => {
 
     const research = within(researchSection!);
     expect(research.getAllByRole("heading", { level: 3, name: "Research Project Sentinel" })).toHaveLength(1);
-    expect(research.getByText("Research summary supplied through the overview prop.")).toBeInTheDocument();
+    const researchDetails = researchSection!.querySelector("dl.profile-overview__research-details");
+    expect(researchDetails).not.toBeNull();
+    expect(Array.from(researchDetails!.querySelectorAll("dt")).map((term) => term.textContent)).toEqual([
+      "Position",
+      "Contributions",
+      "Labs"
+    ]);
+    expect(research.getByText("Graduate Research Assistant")).toBeInTheDocument();
+    expect(
+      Array.from(researchDetails!.querySelectorAll("ul.profile-overview__research-fact-list")).map((list) =>
+        Array.from(list.querySelectorAll("li")).map((item) => item.textContent)
+      )
+    ).toEqual([
+      ["Lead Developer for the software", "First Author of the manuscript"],
+      ["SEE Lab, UW Bothell School of STEM", "Miller Lab, University of Utah"]
+    ]);
+    expect(researchSection!.querySelector(".profile-overview__summary")).not.toBeInTheDocument();
     expect(screen.getAllByText("Current Organization Sentinel")).toHaveLength(1);
 
     const researchEntity = researchSection!.querySelector<HTMLElement>(".profile-overview__entity");

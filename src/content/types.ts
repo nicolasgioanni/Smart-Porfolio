@@ -63,6 +63,8 @@ export type ResearchItem = {
   endDate?: string;
   homeSummary?: string;
   profileSummary?: string;
+  profileContributions?: string[];
+  profileLabs?: string[];
   detailSummary?: string;
   impact?: string;
   bullets: string[];
@@ -252,6 +254,9 @@ export type ProfileOverviewWork = {
 export type ProfileOverviewResearch = {
   id: string;
   title: string;
+  position?: string;
+  contributions?: string[];
+  labs?: string[];
   summary?: string;
   links: PortfolioContentLink[];
   pendingLinks: string[];

@@ -75,6 +75,9 @@ export function ProfileOverviewDetails({ overview }: ProfileOverviewDetailsProps
   const currentWorkRole = overview.currentWork?.organization ? overview.currentWork.title : undefined;
   const educationProgram = formatEducationProgram(overview.education?.degree, overview.education?.field);
   const educationTitle = overview.education?.institution ?? educationProgram;
+  const hasStructuredResearchDetails = Boolean(
+    overview.research?.position || overview.research?.contributions?.length || overview.research?.labs?.length
+  );
 
   return (
     <div className="profile-overview__details">
@@ -175,7 +178,40 @@ export function ProfileOverviewDetails({ overview }: ProfileOverviewDetailsProps
                 <AffiliationLogo logo={overview.research.logo} />
                 <div className="profile-overview__entity-copy profile-overview__research-copy">
                   <h3 className="profile-overview__entity-title">{overview.research.title}</h3>
-                  {overview.research.summary ? (
+                  {hasStructuredResearchDetails ? (
+                    <dl className="profile-overview__academic-details profile-overview__research-details">
+                      {overview.research.position ? (
+                        <div className="profile-overview__academic-detail">
+                          <dt>Position</dt>
+                          <dd>{overview.research.position}</dd>
+                        </div>
+                      ) : null}
+                      {overview.research.contributions?.length ? (
+                        <div className="profile-overview__academic-detail">
+                          <dt>Contributions</dt>
+                          <dd>
+                            <ul className="profile-overview__research-fact-list">
+                              {overview.research.contributions.map((contribution) => (
+                                <li key={contribution}>{contribution}</li>
+                              ))}
+                            </ul>
+                          </dd>
+                        </div>
+                      ) : null}
+                      {overview.research.labs?.length ? (
+                        <div className="profile-overview__academic-detail">
+                          <dt>Labs</dt>
+                          <dd>
+                            <ul className="profile-overview__research-fact-list">
+                              {overview.research.labs.map((lab) => (
+                                <li key={lab}>{lab}</li>
+                              ))}
+                            </ul>
+                          </dd>
+                        </div>
+                      ) : null}
+                    </dl>
+                  ) : overview.research.summary ? (
                     <p className="profile-overview__summary">{overview.research.summary}</p>
                   ) : null}
                 </div>
