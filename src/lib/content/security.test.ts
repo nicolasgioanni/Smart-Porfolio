@@ -324,11 +324,13 @@ describe("static portfolio security contracts", () => {
     const recommendationGridRule = portfolioCss.match(/\.home-recommendations__grid\s*{[^}]*}/s)?.[0] ?? "";
     const recommendationCardRule = portfolioCss.match(/\.recommendation-card\s*{[^}]*}/s)?.[0] ?? "";
     const recommendationExpandableRule =
-      portfolioCss.match(/\.recommendation-expandable\s*{[^}]*}/s)?.[0] ?? "";
+      portfolioCss.match(/(?:^|\n)\.recommendation-expandable\s*{[^}]*}/s)?.[0] ?? "";
     const recommendationDividerRule =
       portfolioCss.match(/\.recommendation-expandable::before\s*{[^}]*}/s)?.[0] ?? "";
-    const recommendationFadeRule =
-      portfolioCss.match(/\.recommendation-expandable__viewport::after\s*{[^}]*}/s)?.[0] ?? "";
+    const recommendationMaskRule =
+      portfolioCss.match(
+        /\.recommendation-expandable\[data-can-expand="true"\]\[data-expanded="false"\] \.recommendation-expandable__viewport\s*{[^}]*}/s
+      )?.[0] ?? "";
     const recommendationQuoteRule =
       portfolioCss.match(/\.recommendation-expandable__quote\s*{\s*color:[^}]*}/s)?.[0] ?? "";
     const recommendationLinkRule =
@@ -397,10 +399,14 @@ describe("static portfolio security contracts", () => {
     expect(recommendationViewportRule).toMatch(
       /transition:\s*max-height 520ms cubic-bezier\(0\.22,\s*1,\s*0\.36,\s*1\)/
     );
-    expect(recommendationFadeRule).toMatch(
+    expect(recommendationMaskRule).toMatch(/-webkit-mask-image:\s*linear-gradient/);
+    expect(recommendationMaskRule).toMatch(/mask-image:\s*linear-gradient/);
+    expect(recommendationMaskRule).toMatch(/transparent 100%/);
+    expect(portfolioCss).not.toMatch(/\.recommendation-expandable__viewport::after/);
+    expect(recommendationQuoteRule).toMatch(/font-size:\s*var\(--font-size-body\)/);
+    expect(recommendationQuoteRule).toMatch(
       /transition:\s*opacity 320ms cubic-bezier\(0\.22,\s*1,\s*0\.36,\s*1\)/
     );
-    expect(recommendationQuoteRule).toMatch(/font-size:\s*var\(--font-size-body\)/);
     expect(recommendationQuoteRule).toMatch(
       /transition:\s*opacity 320ms cubic-bezier\(0\.22,\s*1,\s*0\.36,\s*1\)/
     );

@@ -59,7 +59,7 @@ Keep `Hi, I’m {greetingName}` with no trailing period as the single Home `h1`;
 
 Home order should remain: profile overview, experience, education, research, projects, six Skills category cards, recommendations, then the global footer. Each top-level Home section occupies its own full-width row. Projects and Research share a quiet three-card desktop rhythm; Skills uses two equal columns and three rows. Experience, Research, Projects, and Recommendations use consistently sized compact `View` buttons aligned to the top-right of their section headers. Enabled recommendation surfaces use an honest empty state when no rows are available.
 
-Recommendation cards are self-sized rather than stretched to their grid row, so opening one quote grows only that card while the surrounding section pushes the footer normally. Separate recommender metadata from the quote with a one-pixel inset divider. Use the standard body size for recommendation, Project, and Research explanatory copy, and keep LinkedIn/source actions at the same compact 36px geometry as Project and Research resource actions.
+Recommendation cards in each multi-card Home row share a measured collapsed minimum height, with a taller header receiving at most a one-line quote-preview reduction. The minimum height keeps collapsed borders and actions level without stretching siblings when one quote opens; only the selected card grows while the surrounding section pushes the footer normally. Single-card Home rows and detail cards retain four-line previews. Separate recommender metadata from the quote with a one-pixel inset divider. Use the standard body size for recommendation, Project, and Research explanatory copy, and keep LinkedIn/source actions at the same compact 36px geometry as Project and Research resource actions.
 
 ## Portfolio Cards
 
@@ -121,7 +121,7 @@ The `::before` surface and `::after` sheen are decorative, have `pointer-events:
 
 ## Motion
 
-Motion uses opacity and transform for decorative movement. The recommendation disclosure is the narrow exception: it animates its clipped `max-height` for an understandable open/close state and pairs that change with a subtle opacity fade. Do not blur text. Respect `prefers-reduced-motion` by disabling reveal motion, recommendation expansion transitions, compress animation, smooth scroll, and skeleton shimmer.
+Motion uses opacity and transform for decorative movement. The recommendation disclosure is the narrow exception: it animates its clipped `max-height` for an understandable open/close state and pairs that change with a subtle opacity fade. While collapsed overflow exists, a static alpha mask fades only the lower half of the final visible line to transparency; do not substitute blur or a card-colored overlay. Respect `prefers-reduced-motion` by disabling reveal motion, recommendation expansion transitions, compress animation, smooth scroll, and skeleton shimmer.
 
 ## Responsive Behavior
 

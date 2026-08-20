@@ -193,7 +193,7 @@ Published spreadsheet CSVs are build-time sources, not live browser data. After 
 
 Local recommendations live in `src/content/templates/recommendations.csv`. Keep template rows blank unless there is explicit public-safe recommendation text to include. Required fields are `id`, `recommender_name`, and `full_quote`.
 
-Both Home and the Recommendations page display `full_quote`. Home shows the first three rows selected by `show_on_home` and `home_order`; the detail route shows all rows by `detail_order`. Long quotes receive the same four-line `Show more`/`Show less` interaction on both surfaces. `home_quote` remains accepted only for compatibility and is not the current display source.
+Both Home and the Recommendations page display the unchanged `full_quote`. Home shows the first three rows selected by `show_on_home` and `home_order`; the detail route shows all rows by `detail_order`. Detail cards and single-card Home rows use a four-line `Show more`/`Show less` preview. Multi-card Home rows automatically reduce a taller-header card to three quote lines when needed for a level collapsed row; this is a display treatment and does not shorten the stored quote. `home_quote` remains accepted only for compatibility and is not the current display source.
 
 Use `show_empty_recommendations=false` in `site_settings` when the navigation should hide the Recommendations route until there is at least one recommendation row.
 

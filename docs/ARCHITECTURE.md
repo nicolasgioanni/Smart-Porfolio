@@ -42,7 +42,7 @@ The build runs once per deployment. The deployed output is static and does not n
 
 ## Home and detail layers
 
-The Home page is the summary layer. It presents the profile overview, experience, education, research, three projects, six spreadsheet-driven Skills category cards, and three Recommendations in that order. Compact top-right `View` buttons connect the Experience, Research, Projects, and Recommendations sections to their focused routes. Long recommendations expand in a focused client component; the surrounding cards and content remain static-first. When recommendations are enabled without published rows, Home and the Recommendations route may show an honest empty state instead of inventing content.
+The Home page is the summary layer. It presents the profile overview, experience, education, research, three projects, six spreadsheet-driven Skills category cards, and three Recommendations in that order. Compact top-right `View` buttons connect the Experience, Research, Projects, and Recommendations sections to their focused routes. A focused client coordinator hydrates the server-rendered Home recommendation grid to balance three/four-line previews per visual row and handle disclosure; the surrounding page remains static-first. When recommendations are enabled without published rows, Home and the Recommendations route may show an honest empty state instead of inventing content.
 
 The detail pages are evidence layers. Research, projects, experience, recommendations, and resume pages show longer explanations, bullets, context, impact details, recommendation quotes, and supporting links.
 

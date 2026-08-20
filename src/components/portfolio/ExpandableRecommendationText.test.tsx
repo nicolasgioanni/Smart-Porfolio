@@ -81,6 +81,38 @@ describe("ExpandableRecommendationText", () => {
     expect(container.querySelector(".recommendation-expandable")).toHaveAttribute("data-can-expand", "false");
   });
 
+  it("supports a three-line preview and remeasures when the line count changes", async () => {
+    vi.spyOn(HTMLElement.prototype, "scrollHeight", "get").mockReturnValue(240);
+    const { container, rerender } = render(
+      <ExpandableRecommendationText
+        collapsedLineCount={3}
+        id="adaptive"
+        quote="A measured recommendation that remains complete while its collapsed viewport changes."
+        recommenderName="Taylor Collaborator"
+      />
+    );
+    const root = container.querySelector<HTMLElement>(".recommendation-expandable");
+
+    await waitFor(() => {
+      expect(root).toHaveAttribute("data-collapsed-lines", "3");
+      expect(root?.style.getPropertyValue("--recommendation-collapsed-height")).toBe("72px");
+    });
+
+    rerender(
+      <ExpandableRecommendationText
+        collapsedLineCount={4}
+        id="adaptive"
+        quote="A measured recommendation that remains complete while its collapsed viewport changes."
+        recommenderName="Taylor Collaborator"
+      />
+    );
+
+    await waitFor(() => {
+      expect(root).toHaveAttribute("data-collapsed-lines", "4");
+      expect(root?.style.getPropertyValue("--recommendation-collapsed-height")).toBe("96px");
+    });
+  });
+
   it("uses measured overflow, exposes reduced motion, and cleans up its observer", async () => {
     vi.spyOn(HTMLElement.prototype, "scrollHeight", "get").mockReturnValue(240);
     vi.unstubAllGlobals();
