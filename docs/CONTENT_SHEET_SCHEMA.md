@@ -265,7 +265,7 @@ Supported defaults include `site_title`, `site_description`, `default_theme`, `e
 Footer/legal settings:
 
 - `legal_contact_email`: valid public contact email used by the footer and all notices.
-- `legal_effective_date`: real ISO `YYYY-MM-DD` date rendered in long form on each notice.
+- `legal_effective_date`: real calendar date rendered in long form on each notice. ISO `YYYY-MM-DD` is preferred; a valid Google Sheets display value in `M/D/YYYY` or `MM/DD/YYYY` form is normalized to ISO before validation.
 - `hosting_provider_name`: public host name used by the Privacy Notice.
 - `hosting_privacy_url`: HTTPS privacy-notice URL for the hosting provider.
 - `repository_url`: HTTPS public source repository. Leave blank until an exposure audit passes and anonymous access succeeds.

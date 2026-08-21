@@ -238,7 +238,7 @@ hosting_provider_name
 hosting_privacy_url
 ```
 
-Use an ISO `YYYY-MM-DD` legal effective date and HTTPS repository, license, and hosting privacy URLs. `license_name=MIT` records the software license choice, but leave `repository_url` and `license_url` blank until the repository passes its exposure audit, is publicly accessible, and both anonymous links have been verified. Blank repository resources are omitted cleanly. The compact copyright statement reserves portfolio content except where another notice, such as the software license, states otherwise.
+Use an ISO `YYYY-MM-DD` legal effective date when possible and HTTPS repository, license, and hosting privacy URLs. Valid dates displayed by Google Sheets as `M/D/YYYY` or `MM/DD/YYYY` are normalized to ISO during generation; other date formats remain invalid. `license_name=MIT` records the software license choice, but leave `repository_url` and `license_url` blank until the repository passes its exposure audit, is publicly accessible, and both anonymous links have been verified. Blank repository resources are omitted cleanly. The compact copyright statement reserves portfolio content except where another notice, such as the software license, states otherwise.
 
 ## Demo placeholder assets
 

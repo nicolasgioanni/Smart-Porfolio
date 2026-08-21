@@ -105,6 +105,17 @@ jobs:
           echo "pages_domain=$CLOUDFLARE_PAGES_DOMAIN" >> "$GITHUB_OUTPUT"
           echo "pages_project_name=$CLOUDFLARE_PAGES_PROJECT_NAME" >> "$GITHUB_OUTPUT"
 
+      - name: Mask the anonymous workbook URL
+        if: github.event_name != 'pull_request' && steps.candidate.outputs.is_latest == 'true'
+        env:
+          PORTFOLIO_WORKBOOK_URL: ${{ vars.PORTFOLIO_WORKBOOK_URL }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -n "${PORTFOLIO_WORKBOOK_URL:-}" ]]; then
+            echo "::add-mask::$PORTFOLIO_WORKBOOK_URL"
+          fi
+
       - name: Fetch and generate the strict public workbook snapshot once
         if: github.event_name != 'pull_request' && steps.candidate.outputs.is_latest == 'true'
         env:

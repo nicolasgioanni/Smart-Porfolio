@@ -143,7 +143,7 @@ The resume sheet is retained as a header-only compatibility source and always no
 
 Unsupported theme values resolve to `navy` at render time.
 
-`license_url`, `repository_url`, and `hosting_privacy_url` must be HTTPS URLs. `legal_contact_email` must be a valid email address, and `legal_effective_date` must be a real ISO `YYYY-MM-DD` date. The legal routes use safe production fallbacks if legacy generated content predates these settings.
+`license_url`, `repository_url`, and `hosting_privacy_url` must be HTTPS URLs. `legal_contact_email` must be a valid email address. `legal_effective_date` must be a real calendar date; ISO `YYYY-MM-DD` is preferred, while valid `M/D/YYYY` and `MM/DD/YYYY` Google Sheets display values normalize to ISO. The legal routes use safe production fallbacks if legacy generated content predates these settings.
 
 ## Footer And Notice Behavior
 
