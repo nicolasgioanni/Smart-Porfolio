@@ -12,6 +12,20 @@ describe("recommendation styles", () => {
     expect(portfolioStyles).not.toMatch(/\.recommendation-expandable__viewport::after/);
   });
 
+  it("styles inline quote links as bold underlined text with hover and keyboard-focus feedback", () => {
+    const inlineLinkRule =
+      portfolioStyles.match(/\.recommendation-expandable__inline-link\s*\{[^}]*}/s)?.[0] ?? "";
+    const interactionRule =
+      portfolioStyles.match(
+        /\.recommendation-expandable__inline-link:hover,\s*\.recommendation-expandable__inline-link:focus-visible\s*\{[^}]*}/s
+      )?.[0] ?? "";
+
+    expect(inlineLinkRule).toMatch(/font-weight:\s*var\(--font-weight-bold\)/);
+    expect(inlineLinkRule).toMatch(/text-decoration-line:\s*underline/);
+    expect(interactionRule).toMatch(/color:\s*var\(--color-accent-strong\)/);
+    expect(interactionRule).toMatch(/text-decoration-thickness:\s*0\.14em/);
+  });
+
   it("keeps shared Home row sizing as a minimum so one expanded card can grow independently", () => {
     expect(portfolioStyles).toMatch(
       /\.home-recommendations__item \.recommendation-card--summary\s*\{[\s\S]*min-height: var\(--recommendation-row-collapsed-height, auto\)/
@@ -22,9 +36,24 @@ describe("recommendation styles", () => {
     expect(portfolioStyles).toMatch(/\.home-recommendations__grid\s*\{[\s\S]*align-items: start/);
   });
 
+  it("keeps the Home panel collapsed while reserving normal flow for a protruding card", () => {
+    expect(portfolioStyles).toMatch(
+      /\.home-section--recommendations\[data-recommendation-overflow-layout="ready"\]\s*\{[\s\S]*padding-bottom: var\(--home-recommendations-overflow-reserve, 0px\)/
+    );
+    expect(portfolioStyles).toMatch(
+      /\.home-section--recommendations\[data-recommendation-overflow-layout="ready"\] \.home-section__surface\s*\{[\s\S]*height: var\(--home-recommendations-panel-height\);[\s\S]*overflow: visible/
+    );
+    expect(portfolioStyles).toMatch(
+      /\.home-section--recommendations\[data-recommendation-overflow-layout="ready"\] \.home-section__surface::before\s*\{[\s\S]*border-radius: inherit/
+    );
+    expect(portfolioStyles).not.toMatch(
+      /\.home-section--recommendations\[data-recommendation-overflow-layout="ready"\][^{]*\{[^}]*(?:transform|margin-bottom):/
+    );
+  });
+
   it("still removes recommendation expansion transitions for reduced motion", () => {
     expect(portfolioStyles).toMatch(
-      /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.recommendation-expandable__viewport,[\s\S]*\.recommendation-expandable__quote\s*\{[\s\S]*transition: none/
+      /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.recommendation-expandable__viewport,\s*\.recommendation-expandable__quote,\s*\.recommendation-expandable__inline-link\s*\{[^}]*transition: none/
     );
   });
 });

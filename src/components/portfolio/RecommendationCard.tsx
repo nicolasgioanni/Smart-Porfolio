@@ -36,6 +36,7 @@ export function RecommendationCard({ collapsedLineCount, item, variant = "detail
 
       <ExpandableRecommendationText
         collapsedLineCount={collapsedLineCount}
+        fullQuoteLink={item.fullQuoteLink}
         id={item.id}
         quote={quote}
         recommenderName={item.recommenderName}

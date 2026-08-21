@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "generatedAt": "2026-08-20T03:07:17.929Z",
+    "generatedAt": "2026-08-21T23:43:28.156Z",
     "sourceMode": "templates",
     "sources": {
       "profile": "template",
@@ -542,7 +542,11 @@
       "recommendationDate": "2026-07-21",
       "source": "LinkedIn",
       "linkedinUrl": "https://www.linkedin.com/in/brent-lagesse-1a117960/",
-      "fullQuote": "Nicolas has worked with me on an open source project (https://github.com/BrentLagesse/CytoCV/) in collaboration with biologists at the University of Utah. He has excelled in many critical areas on this project including software engineering, web development, UX, computer vision, and the ability to work with biologists and translate their needs into software. Nicolas is proactive in identifying and solving issues and has demonstrated excellent skills in writing, documentation, and collaboration.",
+      "fullQuote": "Nicolas has worked with me on an open source project, CytoCV, in collaboration with biologists at the University of Utah. He has excelled in many critical areas on this project including software engineering, web development, UX, computer vision, and the ability to work with biologists and translate their needs into software. Nicolas is proactive in identifying and solving issues and has demonstrated excellent skills in writing, documentation, and collaboration.",
+      "fullQuoteLink": {
+        "label": "CytoCV",
+        "url": "https://github.com/BrentLagesse/CytoCV"
+      },
       "skills": [],
       "featured": false,
       "showOnHome": true,

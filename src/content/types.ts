@@ -136,6 +136,7 @@ export type RecommendationItem = {
   linkedinUrl?: string;
   homeQuote?: string;
   fullQuote: string;
+  fullQuoteLink?: PortfolioContentLink;
   context?: string;
   skills: string[];
   featured: boolean;

@@ -1679,6 +1679,22 @@
   transition: opacity 320ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+.recommendation-expandable__inline-link {
+  color: inherit;
+  font-weight: var(--font-weight-bold);
+  text-decoration-line: underline;
+  text-decoration-color: currentColor;
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.18em;
+  transition: color 180ms ease, text-decoration-color 180ms ease, text-decoration-thickness 180ms ease;
+}
+
+.recommendation-expandable__inline-link:hover,
+.recommendation-expandable__inline-link:focus-visible {
+  color: var(--color-accent-strong);
+  text-decoration-thickness: 0.14em;
+}
+
 .recommendation-expandable[data-expanded="true"] .recommendation-expandable__quote {
   opacity: 1;
 }
@@ -1886,7 +1902,8 @@
 
 
   .recommendation-expandable__viewport,
-  .recommendation-expandable__quote {
+  .recommendation-expandable__quote,
+  .recommendation-expandable__inline-link {
     transition: none;
   }
 }

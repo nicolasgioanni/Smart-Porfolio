@@ -1,8 +1,10 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useReducedMotionPreference } from "@/components/motion/useReducedMotionPreference";
+import { SmartLink } from "@/components/navigation/SmartLink";
+import type { PortfolioContentLink } from "@/content/types";
 
 const defaultCollapsedLineCount = 4;
 const fallbackLineHeight = 24;
@@ -19,6 +21,7 @@ type QuoteMeasurement = {
 
 type ExpandableRecommendationTextProps = {
   collapsedLineCount?: number;
+  fullQuoteLink?: PortfolioContentLink;
   id: string;
   quote: string;
   recommenderName: string;
@@ -60,8 +63,27 @@ function sanitizeDomId(value: string): string {
   return value.trim().replace(/[^a-zA-Z0-9_-]+/g, "-").replace(/^-+|-+$/g, "") || "recommendation";
 }
 
+function renderQuoteWithLink(quote: string, link: PortfolioContentLink | undefined): ReactNode {
+  if (!link?.label) return quote;
+
+  const linkStart = quote.indexOf(link.label);
+
+  if (linkStart < 0 || linkStart !== quote.lastIndexOf(link.label)) return quote;
+
+  return (
+    <>
+      {quote.slice(0, linkStart)}
+      <SmartLink className="recommendation-expandable__inline-link" href={link.url}>
+        {link.label}
+      </SmartLink>
+      {quote.slice(linkStart + link.label.length)}
+    </>
+  );
+}
+
 export function ExpandableRecommendationText({
   collapsedLineCount,
+  fullQuoteLink,
   id,
   quote,
   recommenderName
@@ -77,6 +99,7 @@ export function ExpandableRecommendationText({
   );
   const resolvedMeasurement =
     measurement?.quote === quote && measurement.lineCount === resolvedLineCount ? measurement : fallbackMeasurement;
+  const renderedQuote = useMemo(() => renderQuoteWithLink(quote, fullQuoteLink), [quote, fullQuoteLink]);
   const controlledId = `recommendation-${sanitizeDomId(id)}-quote`;
 
   const measureQuote = useCallback(() => {
@@ -157,7 +180,7 @@ export function ExpandableRecommendationText({
     >
       <div className="recommendation-expandable__viewport" id={controlledId}>
         <blockquote className="recommendation-expandable__quote" ref={quoteRef}>
-          {quote}
+          {renderedQuote}
         </blockquote>
       </div>
 
