@@ -31,7 +31,7 @@
 - Keep `TURNSTILE_SECRET_KEY`, `RESEND_API_KEY`, and `CONTACT_RECIPIENT_EMAIL` in Cloudflare Pages encrypted secrets.
 - Keep reviewed `CONTACT_FROM_EMAIL` and `CONTACT_REPLY_TO_EMAIL` values in non-secret Wrangler environment variables; never substitute them for the encrypted destination inbox.
 - Confirm `CONTACT_RECIPIENT_EMAIL` never appears in tracked files, build output, response bodies, client variables, analytics, or logs.
-- Verify the fixed Resend From address belongs to a verified `nicolasmgioanni.dev` domain.
+- Verify the fixed Resend From address is `Nicolas Gioanni <noreply@mail.nicolasmgioanni.dev>` and matches the verified `mail.nicolasmgioanni.dev` subdomain exactly.
 - Use the submission-scoped Resend idempotency key and test both owner notification and visitor receipt.
 - Do not log request bodies, message text, visitor contact details, Turnstile tokens, provider response bodies, or recipient-secret values.
 - Keep retention statements accurate for Cloudflare, Resend, and downstream email providers even though the site has no contact database.
