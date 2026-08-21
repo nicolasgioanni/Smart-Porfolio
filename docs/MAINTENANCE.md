@@ -89,6 +89,7 @@ Do not change generated content by hand. For a local template change, regenerate
 ## Maintaining deployment automation
 
 - GitHub Actions is the only production deployment path; keep Cloudflare Git integration and Vercel automatic deployment disabled after cutover.
+- Keep `CLOUDFLARE_PAGES_PROJECT_NAME=smart-portfolio` for Wrangler deployment and `CLOUDFLARE_PAGES_DOMAIN=smart-portfolio-bds.pages.dev` for polling and smoke tests. The assigned domain must not be derived from the project name.
 - Keep the daily schedule at `13:17 UTC`. Compare the candidate hash with the production `/content-version.json` using no-cache headers and a cache-busting query. An unchanged hash is a green no-op before lint, tests, build, artifact upload, or deployment.
 - Preserve strict remote mode for every production candidate. Missing or malformed public content must fail closed without local-template fallback.
 - Keep production and preview deploy jobs dependent on green `verify`, preserve their concurrency controls, and retain the latest-`main` guard for production.

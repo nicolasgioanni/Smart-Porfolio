@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Node.js 20.19 or newer is required. Node.js 22 LTS matches GitHub Actions.
+- Node.js 22.13 or newer is required. Node.js 22 LTS matches GitHub Actions and `.nvmrc`.
 - npm is required.
 - PowerShell is recommended on Windows.
 
@@ -28,7 +28,7 @@ This command:
 - Finds the project root.
 - Checks Node and npm.
 - Prints detected versions.
-- Warns when Node is older than 20.19.
+- Stops before installation when Node is older than 22.13.
 - Uses `npm ci` when `package-lock.json` exists.
 - Uses `npm install` when `package-lock.json` is missing.
 - Skips install when dependencies and setup hashes are current.
@@ -90,7 +90,7 @@ The equivalent direct Wrangler command is:
 
 ```powershell
 npm run build
-npx --yes wrangler@4.86.0 pages dev out --env-file .env
+npx --no-install wrangler pages dev out --env-file .env
 ```
 
 Wrangler serves the project at `http://localhost:8788` by default. The checked-in example therefore allows `localhost` and `127.0.0.1` as Turnstile hostnames and lists both matching port-8788 origins. Remove any origin you do not use. Rebuild after changing `NEXT_PUBLIC_TURNSTILE_SITE_KEY` because Next.js compiles public values into the browser bundle.
@@ -170,7 +170,7 @@ The static output is written to `out/` by Next.js. A plain static file server is
 
 ### node not found
 
-Install Node.js 20.19 or newer and open a new terminal. Node.js 22 LTS matches GitHub Actions.
+Install Node.js 22.13 or newer and open a new terminal. Node.js 22 LTS matches GitHub Actions.
 
 ### npm not found
 
