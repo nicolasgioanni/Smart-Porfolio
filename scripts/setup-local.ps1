@@ -6,7 +6,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
-  Write-Error "Node.js was not found. Install Node 20 or newer and try again."
+  Write-Error "Node.js was not found. Install Node 22.13 or newer and try again."
 }
 
 if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {

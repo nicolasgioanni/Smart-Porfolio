@@ -1,38 +1,395 @@
-﻿name: CI
+name: CI
 
 on:
   push:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+  schedule:
+    - cron: "17 13 * * *"
+  workflow_dispatch:
+    inputs:
+      force_deploy:
+        description: Run the green-gated deployment even when deployed content is unchanged
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
 
 jobs:
   verify:
+    name: verify
     runs-on: ubuntu-latest
+    outputs:
+      candidate_branch: ${{ steps.candidate.outputs.candidate_branch }}
+      candidate_sha: ${{ steps.candidate.outputs.candidate_sha }}
+      content_hash: ${{ steps.content.outputs.content_hash }}
+      deploy_target: ${{ steps.decision.outputs.deploy_target }}
+      pages_domain: ${{ steps.pages.outputs.pages_domain }}
+      pages_project_name: ${{ steps.pages.outputs.pages_project_name }}
+      should_deploy: ${{ steps.decision.outputs.should_deploy }}
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
+      - name: Check out the exact candidate
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'main' || github.sha }}
+          fetch-depth: 0
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
-      - name: Install dependencies
+      - name: Install locked dependencies
         run: npm ci
 
+      - name: Resolve and check the candidate revision
+        id: candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          candidate_sha="$(git rev-parse HEAD)"
+          echo "candidate_sha=$candidate_sha" >> "$GITHUB_OUTPUT"
+
+          if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
+            echo "candidate_branch=" >> "$GITHUB_OUTPUT"
+            echo "is_latest=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
+            candidate_branch="$GITHUB_REF_NAME"
+          else
+            candidate_branch="main"
+          fi
+
+          git fetch --no-tags origin "+refs/heads/$candidate_branch:refs/remotes/origin/$candidate_branch"
+          latest_sha="$(git rev-parse "refs/remotes/origin/$candidate_branch")"
+          echo "candidate_branch=$candidate_branch" >> "$GITHUB_OUTPUT"
+
+          if [[ "$latest_sha" == "$candidate_sha" ]]; then
+            echo "is_latest=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_latest=false" >> "$GITHUB_OUTPUT"
+            echo "Skipping stale $candidate_branch revision $candidate_sha; the branch is now $latest_sha."
+          fi
+
+      - name: Generate validated local template content for pull requests
+        if: github.event_name == 'pull_request'
+        env:
+          PORTFOLIO_REQUIRE_REMOTE_CONTENT: "false"
+        run: npm run generate:content
+
+      - name: Validate the immutable Cloudflare Pages target
+        id: pages
+        if: github.event_name != 'pull_request' && steps.candidate.outputs.is_latest == 'true'
+        env:
+          CLOUDFLARE_PAGES_DOMAIN: ${{ vars.CLOUDFLARE_PAGES_DOMAIN }}
+          CLOUDFLARE_PAGES_PROJECT_NAME: ${{ vars.CLOUDFLARE_PAGES_PROJECT_NAME }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$CLOUDFLARE_PAGES_PROJECT_NAME" != "smart-portfolio" ]]; then
+            echo "CLOUDFLARE_PAGES_PROJECT_NAME must be smart-portfolio."
+            exit 1
+          fi
+          if [[ "$CLOUDFLARE_PAGES_DOMAIN" != "smart-portfolio-bds.pages.dev" ]]; then
+            echo "CLOUDFLARE_PAGES_DOMAIN must match the reviewed Cloudflare-assigned domain."
+            exit 1
+          fi
+          node scripts/checkDeployedContent.mjs url "$CLOUDFLARE_PAGES_DOMAIN" main > /dev/null
+          node scripts/checkDeployedContent.mjs url "$CLOUDFLARE_PAGES_DOMAIN" develop > /dev/null
+          echo "pages_domain=$CLOUDFLARE_PAGES_DOMAIN" >> "$GITHUB_OUTPUT"
+          echo "pages_project_name=$CLOUDFLARE_PAGES_PROJECT_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch and generate the strict public workbook snapshot once
+        if: github.event_name != 'pull_request' && steps.candidate.outputs.is_latest == 'true'
+        env:
+          PORTFOLIO_WORKBOOK_URL: ${{ secrets.PORTFOLIO_WORKBOOK_URL }}
+          PORTFOLIO_REQUIRE_REMOTE_CONTENT: "true"
+        run: npm run generate:content
+
+      - name: Read the validated workbook content hash
+        id: content
+        if: github.event_name != 'pull_request' && steps.candidate.outputs.is_latest == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          content_hash="$(node -p "require('./src/content/generated/portfolio.generated.json').metadata.contentHash")"
+          if [[ ! "$content_hash" =~ ^[a-f0-9]{64}$ ]]; then
+            echo "Generated content is missing a valid SHA-256 contentHash."
+            exit 1
+          fi
+          echo "content_hash=$content_hash" >> "$GITHUB_OUTPUT"
+
+      - name: Compare the validated snapshot with production
+        id: deployed_content
+        if: >-
+          steps.candidate.outputs.is_latest == 'true' &&
+          (github.event_name == 'schedule' ||
+          (github.event_name == 'workflow_dispatch' && inputs.force_deploy == false))
+        env:
+          CLOUDFLARE_PAGES_DOMAIN: ${{ steps.pages.outputs.pages_domain }}
+          CONTENT_HASH: ${{ steps.content.outputs.content_hash }}
+          CANDIDATE_SHA: ${{ steps.candidate.outputs.candidate_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          production_url="$(node scripts/checkDeployedContent.mjs url "$CLOUDFLARE_PAGES_DOMAIN" main)"
+          node scripts/checkDeployedContent.mjs compare \
+            "$production_url" \
+            "$CONTENT_HASH" \
+            "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${CANDIDATE_SHA}"
+
+      - name: Decide whether full verification and deployment are required
+        id: decision
+        shell: bash
+        env:
+          CANDIDATE_IS_LATEST: ${{ steps.candidate.outputs.is_latest }}
+          DEPLOYED_CONTENT_MATCHES: ${{ steps.deployed_content.outputs.deployed_content_matches }}
+          FORCE_DEPLOY: ${{ inputs.force_deploy }}
+        run: |
+          set -euo pipefail
+          should_verify=false
+          should_deploy=false
+          deploy_target="none"
+
+          if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
+            should_verify=true
+          elif [[ "${CANDIDATE_IS_LATEST:-false}" != "true" ]]; then
+            echo "The candidate is stale; no verification artifact or deployment will be produced."
+          elif [[ "$GITHUB_EVENT_NAME" == "push" && "$GITHUB_REF" == "refs/heads/main" ]]; then
+            should_verify=true
+            should_deploy=true
+            deploy_target="production"
+          elif [[ "$GITHUB_EVENT_NAME" == "push" && "$GITHUB_REF" == "refs/heads/develop" ]]; then
+            should_verify=true
+            should_deploy=true
+            deploy_target="preview"
+          else
+            deploy_target="production"
+            if [[ "${FORCE_DEPLOY:-false}" == "true" || "${DEPLOYED_CONTENT_MATCHES:-false}" != "true" ]]; then
+              should_verify=true
+              should_deploy=true
+            fi
+          fi
+
+          echo "should_verify=$should_verify" >> "$GITHUB_OUTPUT"
+          echo "should_deploy=$should_deploy" >> "$GITHUB_OUTPUT"
+          echo "deploy_target=$deploy_target" >> "$GITHUB_OUTPUT"
+
       - name: Lint
+        if: steps.decision.outputs.should_verify == 'true'
         run: npm run lint
 
       - name: Typecheck
+        if: steps.decision.outputs.should_verify == 'true'
         run: npm run typecheck
 
       - name: Footer regression tests
+        if: steps.decision.outputs.should_verify == 'true'
         run: npm run test:footer
 
-      - name: Test
+      - name: Full test suite
+        if: steps.decision.outputs.should_verify == 'true'
         run: npm run test
 
-      - name: Build
-        run: npm run build
+      - name: Build the pull-request snapshot without remote credentials
+        if: steps.decision.outputs.should_verify == 'true' && steps.decision.outputs.deploy_target == 'none'
+        env:
+          DEPLOYMENT_COMMIT_SHA: ${{ steps.candidate.outputs.candidate_sha }}
+        run: npm run build:generated
+
+      - name: Build the exact production snapshot
+        if: steps.decision.outputs.should_verify == 'true' && steps.decision.outputs.deploy_target == 'production'
+        env:
+          DEPLOYMENT_COMMIT_SHA: ${{ steps.candidate.outputs.candidate_sha }}
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
+        run: npm run build:generated
+
+      - name: Build the exact develop preview snapshot
+        if: steps.decision.outputs.should_verify == 'true' && steps.decision.outputs.deploy_target == 'preview'
+        env:
+          DEPLOYMENT_COMMIT_SHA: ${{ steps.candidate.outputs.candidate_sha }}
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY }}
+        run: npm run build:generated
+
+      - name: Create and verify the artifact integrity manifest
+        if: steps.decision.outputs.should_deploy == 'true'
+        env:
+          CANDIDATE_SHA: ${{ steps.candidate.outputs.candidate_sha }}
+        run: |
+          node scripts/artifactIntegrity.mjs create out
+          node scripts/artifactIntegrity.mjs verify out "$CANDIDATE_SHA"
+
+      - name: Upload the exact verified static export
+        if: steps.decision.outputs.should_deploy == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: cloudflare-pages-build
+          path: out/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
+  deploy:
+    name: deploy-${{ needs.verify.outputs.deploy_target }}
+    needs: verify
+    if: needs.verify.result == 'success' && needs.verify.outputs.should_deploy == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    concurrency:
+      group: cloudflare-${{ needs.verify.outputs.deploy_target }}
+      cancel-in-progress: true
+    steps:
+      - name: Check out the exact verified candidate
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.verify.outputs.candidate_sha }}
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install the locked local deployment tool
+        run: npm ci
+
+      - name: Download the immutable verified export
+        uses: actions/download-artifact@v8
+        with:
+          name: cloudflare-pages-build
+          path: out
+
+      - name: Validate every downloaded artifact file
+        env:
+          CANDIDATE_SHA: ${{ needs.verify.outputs.candidate_sha }}
+        run: node scripts/artifactIntegrity.mjs verify out "$CANDIDATE_SHA"
+
+      - name: Recheck the deployment branch immediately before Wrangler
+        shell: bash
+        env:
+          CANDIDATE_BRANCH: ${{ needs.verify.outputs.candidate_branch }}
+          CANDIDATE_SHA: ${{ needs.verify.outputs.candidate_sha }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "+refs/heads/$CANDIDATE_BRANCH:refs/remotes/origin/$CANDIDATE_BRANCH"
+          latest_sha="$(git rev-parse "refs/remotes/origin/$CANDIDATE_BRANCH")"
+          if [[ "$latest_sha" != "$CANDIDATE_SHA" ]]; then
+            echo "Refusing to deploy stale $CANDIDATE_BRANCH revision $CANDIDATE_SHA; the branch is now $latest_sha."
+            exit 1
+          fi
+
+      - name: Deploy the verified export and Pages Function with pinned Wrangler
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_PAGES_PROJECT_NAME: ${{ needs.verify.outputs.pages_project_name }}
+          CANDIDATE_BRANCH: ${{ needs.verify.outputs.candidate_branch }}
+          CANDIDATE_SHA: ${{ needs.verify.outputs.candidate_sha }}
+        run: >-
+          npx --no-install wrangler pages deploy out
+          --project-name "$CLOUDFLARE_PAGES_PROJECT_NAME"
+          --branch "$CANDIDATE_BRANCH"
+          --commit-hash "$CANDIDATE_SHA"
+
+      - name: Smoke test static content, integrity metadata, and the contact API
+        env:
+          CLOUDFLARE_PAGES_DOMAIN: ${{ needs.verify.outputs.pages_domain }}
+          CANDIDATE_BRANCH: ${{ needs.verify.outputs.candidate_branch }}
+          CANDIDATE_SHA: ${{ needs.verify.outputs.candidate_sha }}
+          CONTENT_HASH: ${{ needs.verify.outputs.content_hash }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          deployment_url="$(node scripts/checkDeployedContent.mjs url "$CLOUDFLARE_PAGES_DOMAIN" "$CANDIDATE_BRANCH")"
+          node scripts/checkDeployedContent.mjs smoke "$deployment_url" out "$CONTENT_HASH" "$CANDIDATE_SHA"
+
+  heartbeat:
+    name: automation-heartbeat
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: automation-heartbeat
+      cancel-in-progress: false
+    steps:
+      - name: Check out main without modifying it
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Refresh the dedicated heartbeat branch after 30 inactive days
+        shell: bash
+        run: |
+          set -euo pipefail
+          heartbeat_branch="automation-heartbeat"
+          heartbeat_path=".github/schedule-heartbeat"
+          now_epoch="$(date -u +%s)"
+
+          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+          main_epoch="$(git log -1 --format=%ct refs/remotes/origin/main)"
+          latest_activity_epoch="$main_epoch"
+          heartbeat_exists=false
+
+          if git ls-remote --exit-code --heads origin "$heartbeat_branch" > /dev/null; then
+            heartbeat_exists=true
+            git fetch --no-tags origin "+refs/heads/$heartbeat_branch:refs/remotes/origin/$heartbeat_branch"
+            heartbeat_epoch="$(git log -1 --format=%ct "refs/remotes/origin/$heartbeat_branch")"
+            if (( heartbeat_epoch > latest_activity_epoch )); then
+              latest_activity_epoch="$heartbeat_epoch"
+            fi
+          fi
+
+          if (( now_epoch - latest_activity_epoch < 30 * 24 * 60 * 60 )); then
+            echo "Main or the heartbeat branch has activity within the last 30 days."
+            exit 0
+          fi
+
+          if [[ "$heartbeat_exists" == "true" ]]; then
+            git switch --force-create "$heartbeat_branch" "refs/remotes/origin/$heartbeat_branch"
+          else
+            git switch --create "$heartbeat_branch"
+          fi
+
+          date -u +'%Y-%m-%dT%H:%M:%SZ' > "$heartbeat_path"
+          worktree_status="$(git status --porcelain=v1 --untracked-files=all)"
+          unexpected=""
+          while IFS= read -r status_line; do
+            [[ -z "$status_line" ]] && continue
+            changed_path="${status_line:3}"
+            if [[ "$changed_path" != "$heartbeat_path" ]]; then
+              unexpected+="$status_line"$'\n'
+            fi
+          done <<< "$worktree_status"
+
+          if [[ -n "$unexpected" ]]; then
+            echo "Refusing to commit unexpected heartbeat paths:"
+            echo "$unexpected"
+            exit 1
+          fi
+
+          git add -- "$heartbeat_path"
+          staged="$(git diff --cached --name-only)"
+          if [[ "$staged" != "$heartbeat_path" ]]; then
+            echo "Refusing to commit a heartbeat with an unexpected staged path: $staged"
+            exit 1
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore(ci): refresh scheduled workflow heartbeat"
+          git push origin "HEAD:refs/heads/$heartbeat_branch"

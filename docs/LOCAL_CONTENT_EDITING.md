@@ -16,13 +16,27 @@ src/content/generated/portfolio.generated.json
 
 Do not edit generated JSON directly unless debugging. Edit CSV templates or the Google Sheet source, then regenerate content.
 
+Production uses one public Google Sheets workbook. To seed it without granting Drive access to this project, create the workbook yourself in the Google Sheets UI and manually import these checked-in templates as nine separate tabs:
+
+- `profile.csv` as `profile`
+- `links.csv` as `links`
+- `research.csv` as `research`
+- `projects.csv` as `projects`
+- `experience.csv` as `experience`
+- `recommendations.csv` as `recommendations`
+- `education.csv` as `education`
+- `skills.csv` as `skills`
+- `site_settings.csv` as `site_settings`
+
+Tab-name matching is case-insensitive and tab order does not matter. Do not import `resume.csv` or create a `resume` tab. The local header-only file exists solely for compatibility with the private Resume route.
+
 ## Regenerate content
 
 ```powershell
 npm run generate:content
 ```
 
-Generation validates and normalizes the CSV data, then rewrites `src/content/generated/portfolio.generated.json`. Review and commit the source CSV and regenerated JSON together; never maintain the generated file by hand.
+Generation validates and normalizes the content, then rewrites `src/content/generated/portfolio.generated.json`. For local template work, review and commit the source CSV and regenerated JSON together; never maintain the generated file by hand. For a production workbook edit, GitHub Actions uses generated JSON only as a transient candidate, then verifies and deploys the exact tested artifact. The active deployment manifest records success; no generated-content commit is made.
 
 Then view changes locally:
 
@@ -191,11 +205,13 @@ Keep education `degree`, `field`, and `concentration` separate. For the current 
 
 ## Google Sheets versus local templates
 
-Local templates are enough for local development. Google Sheets CSV URLs can be added through the ignored `.env` created from `.env.example`, but they are not required. The one exception is the resume sheet, which must always use its empty local template and has no remote CSV variable.
+Local templates are enough for local development. To test the public workbook locally, put its anonymous HTTPS XLSX export URL in `PORTFOLIO_WORKBOOK_URL` in the ignored `.env` created from `.env.example`. The generator downloads the workbook once, matches required titles case-insensitively and independent of order, and parses displayed cell text locally; there are no per-tab URL variables.
 
-If `PORTFOLIO_REQUIRE_REMOTE_CONTENT=true`, missing CSV URL environment variables will fail content generation.
+No Google Drive connector, API credential, OAuth token, service account, or owner account access is needed. The URL exposes deliberately public content only. Review every tab before making the workbook anonymously readable, and keep private resume content, credentials, recipient addresses, and unpublished personal data out of it.
 
-Published spreadsheet CSVs are build-time sources, not live browser data. After editing a remote sheet, run `npm run generate:content` for local verification and rebuild/redeploy the static site so the profile overview receives the updated values.
+When `PORTFOLIO_REQUIRE_REMOTE_CONTENT=true`, a missing workbook URL, inaccessible or oversized response, timeout, HTML/login response, invalid XLSX, missing/invalid/hidden tab, malformed row, invalid header, or schema failure stops generation without falling back to templates. GitHub Actions uses this strict mode for `main`, `develop`, scheduled, and manual deployment candidates. The empty local resume template is intentionally exempt because it has no workbook tab.
+
+Published spreadsheet tabs are build-time sources, not live browser data. The scheduled workflow checks them daily at `13:17 UTC`. It compares the normalized candidate hash with the active `/content-version.json`, so formatting-only edits are no-ops; a meaningful change must pass the complete CI gate before GitHub Actions deploys the tested artifact. Use the manual workflow when an immediate check is required.
 
 ## Recommendations
 
@@ -222,7 +238,7 @@ hosting_provider_name
 hosting_privacy_url
 ```
 
-Use an ISO `YYYY-MM-DD` legal effective date and HTTPS repository, license, and hosting privacy URLs. `license_name=MIT` records the software license choice, but leave `repository_url` and `license_url` blank until the repository passes its exposure audit, is publicly accessible, and both anonymous links have been verified. Blank repository resources are omitted cleanly. The compact copyright statement reserves portfolio content except where another notice, such as the software license, states otherwise.
+Use an ISO `YYYY-MM-DD` legal effective date when possible and HTTPS repository, license, and hosting privacy URLs. Valid dates displayed by Google Sheets as `M/D/YYYY` or `MM/DD/YYYY` are normalized to ISO during generation; other date formats remain invalid. `license_name=MIT` records the software license choice, but leave `repository_url` and `license_url` blank until the repository passes its exposure audit, is publicly accessible, and both anonymous links have been verified. Blank repository resources are omitted cleanly. The compact copyright statement reserves portfolio content except where another notice, such as the software license, states otherwise.
 
 ## Demo placeholder assets
 

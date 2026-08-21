@@ -110,7 +110,7 @@ The Home profile overview prefers the row named by `profile.primary_education_id
 
 Education rows may provide `institution_logo`, `institution_logo_alt`, and `concentration`. Logo paths should use real safe local assets such as `/images/organizations/uw-logo.svg`; when no logo is provided, the compact panel omits the image without showing a fake mark. Education location remains available to detailed renderers but is omitted from this profile panel rather than duplicated beside the left-rail location.
 
-Whether content comes from local templates or published spreadsheet CSV URLs, generation validates role-set completeness, parses role prefixes, maps the optional research profile summary, byline, and lab affiliations, resolves Home-title and legacy summary fallbacks, and writes the same normalized model. The deprecated `profile_contributions` column is still accepted as a byline alias during generation. Remote sheet edits are not fetched by the browser at runtime; run `npm run generate:content`, commit the regenerated JSON with its source changes, and redeploy before expecting those edits to appear.
+Whether content comes from local templates or the nine worksheets in the XLSX downloaded from `PORTFOLIO_WORKBOOK_URL`, generation validates role-set completeness, parses role prefixes, maps the optional research profile summary, byline, and lab affiliations, resolves Home-title and legacy summary fallbacks, and writes the same normalized model. The deprecated `profile_contributions` column is still accepted as a byline alias during generation. Workbook edits are never fetched by the browser at runtime; the daily or manually dispatched GitHub workflow verifies and deploys meaningful normalized changes, and the active `/content-version.json` records the successful content hash without a repository snapshot commit.
 
 ## Resume Mapping
 
@@ -143,7 +143,7 @@ The resume sheet is retained as a header-only compatibility source and always no
 
 Unsupported theme values resolve to `navy` at render time.
 
-`license_url`, `repository_url`, and `hosting_privacy_url` must be HTTPS URLs. `legal_contact_email` must be a valid email address, and `legal_effective_date` must be a real ISO `YYYY-MM-DD` date. The legal routes use safe production fallbacks if legacy generated content predates these settings.
+`license_url`, `repository_url`, and `hosting_privacy_url` must be HTTPS URLs. `legal_contact_email` must be a valid email address. `legal_effective_date` must be a real calendar date; ISO `YYYY-MM-DD` is preferred, while valid `M/D/YYYY` and `MM/DD/YYYY` Google Sheets display values normalize to ISO. The legal routes use safe production fallbacks if legacy generated content predates these settings.
 
 ## Footer And Notice Behavior
 

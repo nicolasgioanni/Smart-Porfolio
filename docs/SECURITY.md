@@ -2,7 +2,7 @@
 
 ## Static-first architecture with an isolated endpoint
 
-Portfolio content is fetched from public CSV sources at build time, normalized into generated JSON, and rendered as a static Next.js export. Core pages do not need a database, authentication service, runtime Next.js server, or runtime Google Sheets request.
+Portfolio content is fetched by one anonymous HTTPS XLSX download at build time, normalized into generated JSON, and rendered as a static Next.js export. Core pages do not need a database, authentication service, runtime Next.js server, Google authentication, or a runtime Google Sheets request.
 
 The sole request-handling boundary is the Cloudflare Pages Function at `/api/contact`. `public/_routes.json` limits Function invocation to that exact path. Do not broaden the include rule or introduce another endpoint without documenting its data, abuse cases, validation, logging, and rate limits first.
 
@@ -26,9 +26,9 @@ Missing, invalid, expired, duplicated, action-mismatched, hostname-mismatched, m
 
 ## Email delivery and personal data
 
-After all checks pass, the Function uses Resend's batch endpoint to send an owner notification to the private `CONTACT_RECIPIENT_EMAIL` and a receipt to the visitor's required email address. It uses a submission-scoped Resend idempotency key to reduce duplicate sends. The fixed From identity must belong to the verified `nicolasmgioanni.dev` sending domain. Owner notifications reply to the visitor's validated email; confirmation messages reply to the fixed public address `ngioanni@uw.edu`.
+After all checks pass, the Function uses Resend's batch endpoint to send an owner notification to the private `CONTACT_RECIPIENT_EMAIL` and a receipt to the visitor's required email address. It uses a submission-scoped Resend idempotency key to reduce duplicate sends. The `CONTACT_FROM_EMAIL` runtime value must belong to a verified sending domain. Owner notifications reply to the visitor's validated email; confirmation messages reply to the separately configured public `CONTACT_REPLY_TO_EMAIL`.
 
-`CONTACT_RECIPIENT_EMAIL`, `RESEND_API_KEY`, and `TURNSTILE_SECRET_KEY` are encrypted runtime secrets. Never expose the recipient through `NEXT_PUBLIC_` values, examples, generated JSON, source maps, response bodies, analytics, or logs. The public direct-contact/reply-to address is intentionally separate from the private delivery recipient.
+`CONTACT_RECIPIENT_EMAIL`, `RESEND_API_KEY`, and `TURNSTILE_SECRET_KEY` are encrypted runtime secrets. `CONTACT_FROM_EMAIL` and `CONTACT_REPLY_TO_EMAIL` are reviewed, non-secret Wrangler variables; they still must not be confused with the private destination inbox. Never expose the recipient through `NEXT_PUBLIC_` values, examples, generated JSON, source maps, response bodies, analytics, or logs.
 
 The site does not persist contact submissions in a database. Resend and email providers still process and retain delivery data under their own policies. Do not log request bodies, Turnstile tokens, email addresses, phone numbers, message content, API responses containing provider identifiers, or the recipient secret. Operational logs should be limited to coarse outcome codes, timings, and non-sensitive aggregate counts.
 
@@ -50,9 +50,11 @@ Cloudflare Pages `_headers` rules do not apply to Function-generated responses. 
 
 ## Spreadsheet data rules
 
-Google Sheets CSV URLs are treated as public content sources. Do not store secrets, private recommendation text, credentials, unpublished contact details, private resume files or access links, or sensitive personal data in spreadsheet rows.
+The workbook URL and all nine worksheets are intentionally public content sources. The downloaded workbook must contain exactly the expected visible worksheets and no hidden, unexpected, duplicate, or `resume` sheet. Do not store secrets, private recommendation text, credentials, unpublished contact details, private resume files or access links, or sensitive personal data in worksheet cells or workbook metadata.
 
-Generated JSON is a build artifact. Edit CSV templates or remote sheets, then run `npm run generate:content`.
+Treat the XLSX file as untrusted input even though its URL is configured by the repository owner. The generator enforces HTTPS, a fixed timeout and byte limit, HTML/login-page rejection, XLSX ZIP validation, exact worksheet structure, cached formula results, headers, row shape, and the existing content schema before build. It does not log the workbook URL, Google identifiers, or response metadata. GitHub Actions registers the configured workbook URL for masking before the strict generation step so later runner output redacts it.
+
+Generated JSON is a transient build input in deployment workflows. The tested `out/` artifact carries a digest and a public-safe `/content-version.json`; no generated snapshot or deployment state is committed to `main`.
 
 ## URL rules
 
@@ -98,9 +100,9 @@ Spreadsheet text should render as plain React text. Do not use `dangerouslySetIn
 
 ## Environment separation
 
-CSV URL variables identify public content locations, not secrets. Local development uses one Git-ignored `.env` file for build-time values and Pages Function values. Create it from the tracked `.env.example`, which must contain placeholders only, and pass it to Wrangler with `npm run dev:pages` or `wrangler pages dev out --env-file .env`.
+`PORTFOLIO_WORKBOOK_URL` identifies one anonymous XLSX download, not a Google credential. GitHub Actions stores it as an encrypted Actions secret solely for automatic runner-log redaction. It grants no Google account or Drive access; the build performs one ordinary HTTPS request and never uses a connector, Google API, API key, OAuth grant, or service account. Local development uses one Git-ignored `.env` file for build-time values and Pages Function values. Create it from the tracked `.env.example`, which must contain placeholders only, and pass it to Wrangler with `npm run dev:pages` or `wrangler pages dev out --env-file .env`.
 
-The consolidated local file does not change the production trust boundary. Production secrets belong in Cloudflare Pages encrypted secrets, while non-secret production and preview values remain dashboard-configured environment variables. Never upload `.env` to Cloudflare or copy local credentials into production. Only `NEXT_PUBLIC_TURNSTILE_SITE_KEY` is client-visible. Keep preview and production site keys, server secrets, allowed hostnames, allowed origins, Resend keys, and recipient values separated by environment.
+The consolidated local file does not change the production trust boundary. Build-time public values normally belong in GitHub repository variables; the anonymous workbook URL is the narrow exception because Actions secret storage guarantees automatic log redaction. The restricted direct-upload credential also belongs in GitHub Actions secrets. Cloudflare Pages encrypted secrets hold the server-only Turnstile, Resend, and recipient values; reviewed hostnames, origins, sender, and reply-to identities live as non-secret production/preview Wrangler variables. Never upload `.env` to either service or copy local credentials into production. `NEXT_PUBLIC_TURNSTILE_SITE_KEY` is client-visible; a `develop` build receives only `NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY`, with no production-key fallback. Keep preview and production site keys, server secrets, allowed hostnames, allowed origins, Resend keys, and recipient values separated by environment.
 
 ## Repository publication
 

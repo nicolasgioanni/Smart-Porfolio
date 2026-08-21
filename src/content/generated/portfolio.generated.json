@@ -1,6 +1,7 @@
 {
   "metadata": {
-    "generatedAt": "2026-08-24T06:39:37.268Z",
+    "generatedAt": "2026-08-28T01:29:03.485Z",
+    "contentHash": "a76f944d1a0e7934dc8171ad25c18cea3d6287b880ac232e8083dd99c5d57d34",
     "sourceMode": "templates",
     "sources": {
       "profile": "template",
@@ -11,8 +12,8 @@
       "recommendations": "template",
       "education": "template",
       "skills": "template",
-      "resume": "template",
-      "site_settings": "template"
+      "site_settings": "template",
+      "resume": "template"
     }
   },
   "profile": {

@@ -1,13 +1,17 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { CONTACT_ACTION, CONTACT_FROM_EMAIL, CONTACT_REPLY_TO_EMAIL, MAX_REQUEST_BYTES } from "../_shared/contact";
+import { CONTACT_ACTION, MAX_REQUEST_BYTES } from "../_shared/contact";
 import { onRequest } from "./contact";
 
 const privateRecipient = "private-owner@example.net";
+const configuredFromEmail = "Portfolio Contact <contact@example.com>";
+const configuredReplyToEmail = "reply@example.com";
 const submissionId = "4e57585c-9638-4c1e-8f2f-7bd4c5a7c6e9";
 
 const env = {
   CONTACT_ALLOWED_ORIGINS: "https://nicolasmgioanni.dev",
+  CONTACT_FROM_EMAIL: configuredFromEmail,
   CONTACT_RECIPIENT_EMAIL: privateRecipient,
+  CONTACT_REPLY_TO_EMAIL: configuredReplyToEmail,
   RESEND_API_KEY: "re_test_secret",
   TURNSTILE_ALLOWED_HOSTNAMES: "nicolasmgioanni.dev,www.nicolasmgioanni.dev",
   TURNSTILE_SECRET_KEY: "turnstile_test_secret"
@@ -119,13 +123,14 @@ describe("Cloudflare contact function", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("fails the origin guard closed when its allowlist is malformed", async () => {
+  it("treats a malformed origin allowlist as unavailable configuration", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
 
     const response = await invoke(requestFor(validPayload()), { ...env, CONTACT_ALLOWED_ORIGINS: "not-an-origin" });
 
-    expect(response.status).toBe(403);
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ ok: false, error: "service_unavailable" });
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -143,11 +148,19 @@ describe("Cloudflare contact function", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("fails closed when configuration is missing", async () => {
+  it.each([
+    ["Turnstile secret", { TURNSTILE_SECRET_KEY: "" }],
+    ["Turnstile hostname allowlist", { TURNSTILE_ALLOWED_HOSTNAMES: "valid.example,not valid" }],
+    ["origin allowlist", { CONTACT_ALLOWED_ORIGINS: "" }],
+    ["Resend key", { RESEND_API_KEY: "" }],
+    ["recipient", { CONTACT_RECIPIENT_EMAIL: "not-an-email" }],
+    ["sender", { CONTACT_FROM_EMAIL: "Invalid Sender <not-an-email>" }],
+    ["fixed reply-to", { CONTACT_REPLY_TO_EMAIL: "not-an-email" }]
+  ])("fails closed when %s configuration is missing or invalid", async (_label, override) => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
 
-    const response = await invoke(requestFor(validPayload()), { ...env, RESEND_API_KEY: "" });
+    const response = await invoke(requestFor(validPayload()), { ...env, ...override });
 
     expect(response.status).toBe(503);
     expect(await response.json()).toEqual({ ok: false, error: "service_unavailable" });
@@ -228,17 +241,19 @@ describe("Cloudflare contact function", () => {
     const messages = JSON.parse(String(resendInit.body)) as Array<Record<string, unknown>>;
     expect(messages).toHaveLength(2);
     expect(messages[0]).toMatchObject({
-      from: CONTACT_FROM_EMAIL,
+      from: configuredFromEmail,
       to: [privateRecipient],
       reply_to: "avery@example.com",
       subject: "New portfolio contact request"
     });
     expect(messages[1]).toMatchObject({
-      from: CONTACT_FROM_EMAIL,
+      from: configuredFromEmail,
       to: ["avery@example.com"],
-      reply_to: CONTACT_REPLY_TO_EMAIL,
+      reply_to: configuredReplyToEmail,
       subject: "Contact request received"
     });
+    expect(messages[1]?.text).toContain(`email ${configuredReplyToEmail}`);
+    expect(messages[1]?.html).toContain(`mailto:${configuredReplyToEmail}`);
     for (const message of messages) {
       expect(message.html).toContain("Avery &lt;script&gt;");
       expect(message.html).toContain("&lt;img src=x onerror=alert(1)&gt;<br>Second line");

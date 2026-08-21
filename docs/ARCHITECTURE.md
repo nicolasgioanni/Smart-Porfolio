@@ -6,17 +6,23 @@ This project is a static-first smart portfolio. Next.js App Router pages are ren
 
 ## Google Sheets as a lightweight CMS
 
-Google Sheets is used only as a public-safe editing surface. Each sheet tab is exported as CSV. The site does not use Google API credentials and does not store secrets.
+Google Sheets is used only as a public-safe editing surface. One workbook contains the nine public tabs `profile`, `links`, `research`, `projects`, `experience`, `recommendations`, `education`, `skills`, and `site_settings`; case does not affect tab matching and tab order is irrelevant. There is no remote `resume` tab.
+
+The owner manually creates one workbook in the Google Sheets UI, imports each of the nine checked-in CSV templates into its matching named tab, and exposes only the reviewed workbook for anonymous XLSX download. The project never receives Google Drive access, a connector, Google API credentials, OAuth tokens, a service account, or permission to the owner's account. GitHub Actions holds only `PORTFOLIO_WORKBOOK_URL`, an anonymously downloadable public URL stored as an Actions secret solely for automatic runner-log redaction.
 
 ## Build-time content fetching
 
-The content generation script reads CSV URLs from environment variables. If a URL is missing, local template CSV files are used unless strict production mode is enabled.
+The content generator performs one anonymous HTTPS request to `PORTFOLIO_WORKBOOK_URL` and parses the returned XLSX file locally. It accepts exactly the nine expected visible worksheets. A worksheet is matched by `worksheetName.trim().toLowerCase()`, so capitalization and physical order do not matter, while internal spaces, hyphens, and spelling changes remain invalid. Duplicate normalized names, missing or unexpected worksheets, any `resume` worksheet, hidden sheets, HTML/login responses, oversized or timed-out downloads, invalid ZIP/XLSX data, malformed headers or rows, and schema failures are rejected.
 
-The script parses CSV, validates required fields, normalizes values, and writes `src/content/generated/portfolio.generated.json`.
+Displayed cell text is converted into the existing CSV-equivalent row model, so the established normalization and validation logic remains authoritative. Equivalent line endings and harmless trailing blank cells or rows normalize consistently. Local development may use checked-in templates when the workbook URL is blank and strict mode is false. GitHub Actions enables strict remote mode for `main`, `develop`, scheduled, and manual deployment candidates, so it never falls back to templates.
+
+Generation writes `src/content/generated/portfolio.generated.json` once per workflow run. The workflow then uses `npm run build:generated`, which consumes that already-generated file instead of fetching Google Sheets again, so tests and deployment use the exact same snapshot.
 
 ## Generated JSON and typed UI mapping
 
-The UI imports generated JSON through typed helpers. Pages receive normalized profile, links, research, projects, experience, recommendations, education, skills, resume, and site settings.
+The UI imports generated JSON through typed helpers. Pages receive normalized profile, links, research, projects, experience, recommendations, education, skills, the empty local resume compatibility source, and site settings.
+
+Generated metadata includes a SHA-256 `contentHash` over canonical normalized rendered content with volatile metadata excluded. When the hash is unchanged, generation preserves `generatedAt` and reports `content_changed=false`. Worksheet order or title capitalization, XLSX author/modified metadata, download time, line-ending representation, trailing blank cells, and generation timestamps therefore cannot cause a deployment unless normalized visible content changes.
 
 This keeps display components simple and avoids spreadsheet parsing inside React components.
 
@@ -30,7 +36,7 @@ The footer-only `/contact` page is statically exported and hydrates a focused cl
 
 The browser-side checks are usability controls, not the trust boundary. The Pages Function rejects unsupported methods and media types, enforces origin, body-size, field, acknowledgement, timing, and honeypot rules, and sends generic failure responses. It then calls Cloudflare Turnstile Siteverify with the server-only secret and accepts a token only when verification succeeds and both the `portfolio_contact` action and configured hostname match.
 
-After verification, the Function uses Resend to deliver the request to the server-only `CONTACT_RECIPIENT_EMAIL` and send a confirmation to the visitor. Resend and Turnstile credentials never enter browser code, generated content, or the static export. The form does not use a database; delivery is email-only.
+After verification, the Function uses Resend to deliver the request to the server-only `CONTACT_RECIPIENT_EMAIL` and send a confirmation to the visitor. The non-secret sender and fixed reply-to identities come from `CONTACT_FROM_EMAIL` and `CONTACT_REPLY_TO_EMAIL`; provider credentials and the recipient remain encrypted runtime secrets. Resend and Turnstile credentials never enter browser code, generated content, or the static export. The form does not use a database; delivery is email-only.
 
 ## No database
 
@@ -46,7 +52,15 @@ The deployed site does not fetch spreadsheet data in the browser. This avoids lo
 
 ## Cloudflare Pages fit
 
-The content build runs once per deployment and publishes `out/` as static assets. Cloudflare compiles the repository-level `functions/` directory separately, while `public/_routes.json` keeps the invocation surface limited to `/api/contact`. No database, authentication service, background job, or runtime content API is required.
+GitHub Actions owns the content check, quality gate, static build, and Cloudflare Direct Upload. Cloudflare Git integration stays disabled. The Pages project name is `smart-portfolio`, but its assigned domain is `smart-portfolio-bds.pages.dev`; `CLOUDFLARE_PAGES_DOMAIN` keeps polling and smoke-test URLs independent from the deployment project name. The workflow uploads the tested `out/` artifact from repository root so Wrangler also compiles the repository-level `functions/` directory, while `public/_routes.json` keeps the invocation surface limited to `/api/contact`. No database, authentication service, background job, or runtime content API is required.
+
+## Green-gated content flow
+
+Pull requests verify without deploying. A green `develop` push deploys the tested artifact only to the `develop` preview branch; it cannot update production. A `main` push or forced manual run becomes a production candidate. A daily `13:17 UTC` run becomes one only when the candidate hash differs from the active production `/content-version.json`. Production concurrency and a current-`main` guard keep stale runs from publishing.
+
+The verify job fetches and parses the workbook once, generates JSON once, tests that snapshot, builds `out/` without refetching, writes the public-safe `content-version.json`, and uploads a SHA-256-verified artifact. A deploy job checks out the same commit for `functions/` and `wrangler.jsonc`, validates the downloaded artifact, and runs Wrangler from the repository root without rebuilding or downloading the workbook again.
+
+Generated content and deployment state are not committed. The manifest served by the currently successful Cloudflare deployment remains the source of truth; a failed run leaves it untouched and is retried on the next poll. An unchanged scheduled run is a no-op except for a narrowly allowed heartbeat after 30 inactive days. That heartbeat is written only to the isolated `automation-heartbeat` branch, never `main`, and cannot deploy. Cloudflare stores contact-provider runtime secrets; GitHub stores the public build inputs and restricted Pages deployment credential.
 
 ## Home and detail layers
 

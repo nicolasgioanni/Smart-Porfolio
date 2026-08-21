@@ -1,5 +1,5 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 import { TurnstileWidget } from "@/components/contact/TurnstileWidget";
 
 vi.mock("next/script", () => ({
@@ -7,11 +7,12 @@ vi.mock("next/script", () => ({
 }));
 
 type WidgetOptions = Parameters<NonNullable<Window["turnstile"]>["render"]>[1];
+type TurnstileApi = NonNullable<Window["turnstile"]>;
 
 let options: WidgetOptions | undefined;
-let renderMock: ReturnType<typeof vi.fn>;
-let removeMock: ReturnType<typeof vi.fn>;
-let resetMock: ReturnType<typeof vi.fn>;
+let renderMock: Mock<TurnstileApi["render"]>;
+let removeMock: Mock<TurnstileApi["remove"]>;
+let resetMock: Mock<TurnstileApi["reset"]>;
 
 function renderedOptions(): WidgetOptions {
   if (!options) throw new Error("Expected Turnstile render options.");

@@ -15,7 +15,12 @@
   SkillItem
 } from "@/content/types";
 import type { CsvRow } from "@/lib/csv/parseCsv";
-import { isHttpsUrl, isSupportedUrl, validatePortfolioContent } from "@/lib/content/validatePortfolioContent";
+import {
+  isHttpsUrl,
+  isIsoDate,
+  isSupportedUrl,
+  validatePortfolioContent
+} from "@/lib/content/validatePortfolioContent";
 
 export type PortfolioSheetName =
   | "profile"
@@ -126,6 +131,20 @@ export function normalizeNumber(value: string | undefined, fieldName = "number")
   }
 
   return parsedValue;
+}
+
+export function normalizeLegalEffectiveDate(value: string | undefined): string | undefined {
+  const normalizedValue = value?.trim();
+
+  if (!normalizedValue || isIsoDate(normalizedValue)) return normalizedValue || undefined;
+
+  const displayedDate = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(normalizedValue);
+  if (!displayedDate) return normalizedValue;
+
+  const [, month, day, year] = displayedDate;
+  const isoDate = `${year}-${month!.padStart(2, "0")}-${day!.padStart(2, "0")}`;
+
+  return isIsoDate(isoDate) ? isoDate : normalizedValue;
 }
 
 export function normalizePipeDelimitedList(value: string | undefined): string[] {
@@ -563,6 +582,8 @@ function normalizeSiteSettings(rows: CsvRow[]): SiteSettings {
       settings[mappedKey] = normalizeBoolean(rawValue, `site_settings.${key}`);
     } else if (numberSettingKeys.has(mappedKey)) {
       settings[mappedKey] = normalizeNumber(rawValue, `site_settings.${key}`) ?? 0;
+    } else if (mappedKey === "legalEffectiveDate") {
+      settings[mappedKey] = normalizeLegalEffectiveDate(rawValue);
     } else {
       settings[mappedKey] = rawValue;
     }
