@@ -55,14 +55,14 @@ Use this checklist when replacing demo content with Nicolas-specific public cont
 
 ## Private resume
 
-- Keep `resume_url` and `resume_download_label` blank in the local profile template and every configured remote profile sheet.
-- Keep `src/content/templates/resume.csv` header-only. Do not add a remote resume sheet or remote-source environment variable; the generator must always use the empty local template.
+- Keep `resume_url` and `resume_download_label` blank in the local profile template and the public workbook's `profile` tab.
+- Keep `src/content/templates/resume.csv` header-only. Do not add a workbook `resume` tab or remote-source environment variable; the generator must always use the empty local template.
 - Remove resume-kind file-link rows and keep resume PDFs outside `public/`, generated content, tracked source, and deploy artifacts.
 - After content generation, search generated JSON, built HTML, and `out/` for old resume filenames and URLs before deployment.
 - Treat old deployments, CDN caches, repository history, and shared copies as a separate exposure review. Do not claim that deleting a current link retracts an already published file.
 
 ## Production strict mode
 
-- Configure remote CSV URLs for every remotely configurable sheet. The resume sheet remains the intentionally empty local exception.
-- Set `PORTFOLIO_REQUIRE_REMOTE_CONTENT=true` when demo fallback content should never deploy.
-- Run `npm run generate:content`, review and commit `src/content/generated/portfolio.generated.json` with the source changes, then run `npm run verify`. Do not edit generated JSON directly.
+- Configure the one anonymous XLSX export URL as `PORTFOLIO_WORKBOOK_URL`; the downloaded workbook must contain exactly the nine required visible named tabs. The resume source remains the intentionally empty local exception.
+- Keep `PORTFOLIO_REQUIRE_REMOTE_CONTENT=true` in production so demo fallback content can never deploy.
+- For local template changes, run `npm run generate:content`, review and commit the generated JSON with its source changes, then run `npm run verify`. For production workbook changes, let GitHub Actions verify and deploy the exact tested artifact; `/content-version.json`, not a repository commit, records the successful hash. Do not edit generated JSON directly.
