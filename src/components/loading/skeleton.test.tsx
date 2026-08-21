@@ -1,5 +1,6 @@
 ﻿import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import LoadingContact from "@/app/contact/loading";
 import LoadingExperience from "@/app/experience/loading";
 import LoadingHome from "@/app/loading";
 import LoadingProjects from "@/app/projects/loading";
@@ -42,7 +43,7 @@ describe("skeleton components", () => {
   });
 
   it("route loading files render page skeletons", () => {
-    const components = [LoadingHome, LoadingResearch, LoadingProjects, LoadingExperience, LoadingRecommendations, LoadingResume];
+    const components = [LoadingHome, LoadingResearch, LoadingProjects, LoadingExperience, LoadingRecommendations, LoadingResume, LoadingContact];
 
     for (const Component of components) {
       const { unmount } = render(<Component />);

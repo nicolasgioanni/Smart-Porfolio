@@ -29,18 +29,26 @@ export function selectHomeItems<TItem extends HomeSelectableItem>(items: TItem[]
 }
 
 export function groupSkillsByCategory(skills: SkillItem[]): SkillGroup[] {
-  const groups = new Map<string, SkillItem[]>();
+  const groups = new Map<string, SkillGroup>();
 
-  for (const skill of sortGeneric(skills)) {
-    const existingSkills = groups.get(skill.category) ?? [];
-    existingSkills.push(skill);
-    groups.set(skill.category, existingSkills);
+  for (const skill of skills) {
+    const existingGroup = groups.get(skill.category) ?? {
+      category: skill.category,
+      order: skill.categoryOrder,
+      skills: []
+    };
+
+    existingGroup.skills.push(skill);
+    existingGroup.order ??= skill.categoryOrder;
+    groups.set(skill.category, existingGroup);
   }
 
-  return Array.from(groups.entries()).map(([category, groupedSkills]) => ({
-    category,
-    skills: groupedSkills
-  }));
+  return Array.from(groups.values())
+    .map((group) => ({ ...group, skills: sortGeneric(group.skills) }))
+    .sort((left, right) => {
+      const orderDifference = (left.order ?? Number.MAX_SAFE_INTEGER) - (right.order ?? Number.MAX_SAFE_INTEGER);
+      return orderDifference || left.category.localeCompare(right.category);
+    });
 }
 
 export function selectPrimaryLinks(links: PortfolioLink[]): PortfolioLink[] {
@@ -83,7 +91,7 @@ export function selectHomeRecommendations(recommendations: RecommendationItem[],
   const candidateItems = showOnHomeItems.length > 0 ? showOnHomeItems : featuredItems.length > 0 ? featuredItems : recommendations;
   const sortedItems = sortRecommendationsForHome(candidateItems);
 
-  return sortedItems.slice(0, safeMaxItems(maxItems, 1));
+  return sortedItems.slice(0, safeMaxItems(maxItems, 3));
 }
 
 export function getFeaturedRecommendation(recommendations: RecommendationItem[]): RecommendationItem | undefined {

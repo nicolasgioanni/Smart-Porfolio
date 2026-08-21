@@ -15,9 +15,9 @@ export default function ExperiencePage() {
 
   return (
     <PageContainer
-      eyebrow="Experience"
       title="Experience"
-      description="Professional, research, teaching, and leadership work with concise context and supporting details."
+      description="My experience spans AI engineering, full-stack research software, and computer science teaching—see the roles below."
+      introVariant="panel"
       motionEnabled={content.siteSettings.enableScrollMotion}
     >
       <ExperienceTimeline items={experienceItems} variant="detail" />

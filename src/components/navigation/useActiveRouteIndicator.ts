@@ -1,9 +1,12 @@
 "use client";
 
-import { useLayoutEffect, useRef } from "react";
+import { useCallback, useLayoutEffect, useRef } from "react";
 
 const routeIndicatorDurationMs = 420;
 const routeIndicatorEasing = "cubic-bezier(0.65, 0, 0.35, 1)";
+// The header geometry morph lasts 460ms. Keep the route transition alive for
+// one additional frame so resize observations can retarget without snapping.
+const routeGeometrySettleDurationMs = 480;
 const geometryTolerance = 0.5;
 
 type IndicatorGeometry = {
@@ -15,6 +18,12 @@ type IndicatorGeometry = {
 
 type AlignOptions = {
   animate: boolean;
+  durationMs?: number;
+};
+
+type RouteTransition = {
+  id: number;
+  settleAt: number;
 };
 
 type UseActiveRouteIndicatorOptions = {
@@ -53,26 +62,69 @@ function prefersReducedMotion(): boolean {
   return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 }
 
+function getCurrentTime(): number {
+  return window.performance?.now() ?? Date.now();
+}
+
 export function useActiveRouteIndicator({ activeHref, pathname }: UseActiveRouteIndicatorOptions) {
   const navigationRef = useRef<HTMLElement>(null);
   const indicatorRef = useRef<HTMLSpanElement>(null);
   const activeHrefRef = useRef(activeHref);
+  const committedActiveHrefRef = useRef(activeHref);
   const animationRef = useRef<Animation | null>(null);
   const geometryRef = useRef<IndicatorGeometry | null>(null);
   const initializedRef = useRef(false);
   const pathnameRef = useRef(pathname);
   const rafRef = useRef<number | null>(null);
+  const routeSettleTimerRef = useRef<number | null>(null);
+  const routeTransitionIdRef = useRef(0);
+  const routeTransitionRef = useRef<RouteTransition | null>(null);
   const alignRef = useRef<(options: AlignOptions) => void>(() => undefined);
 
   activeHrefRef.current = activeHref;
 
-  function cancelAnimation() {
+  const cancelAnimation = useCallback(() => {
     const animation = animationRef.current;
     animationRef.current = null;
     animation?.cancel();
-  }
+  }, []);
 
-  alignRef.current = ({ animate }) => {
+  const clearRouteTransition = useCallback(() => {
+    routeTransitionRef.current = null;
+
+    if (routeSettleTimerRef.current !== null) {
+      window.clearTimeout(routeSettleTimerRef.current);
+      routeSettleTimerRef.current = null;
+    }
+  }, []);
+
+  const beginRouteTransition = useCallback(() => {
+    clearRouteTransition();
+
+    const transitionId = routeTransitionIdRef.current + 1;
+    routeTransitionIdRef.current = transitionId;
+    routeTransitionRef.current = {
+      id: transitionId,
+      settleAt: getCurrentTime() + routeGeometrySettleDurationMs
+    };
+    routeSettleTimerRef.current = window.setTimeout(() => {
+      if (routeTransitionRef.current?.id !== transitionId) return;
+
+      routeTransitionRef.current = null;
+      routeSettleTimerRef.current = null;
+      alignRef.current({ animate: false });
+    }, routeGeometrySettleDurationMs);
+  }, [clearRouteTransition]);
+
+  const getRemainingRouteDuration = useCallback((): number => {
+    const transition = routeTransitionRef.current;
+    if (!transition) return 0;
+
+    const remainingDuration = Math.ceil(transition.settleAt - getCurrentTime());
+    return Math.max(0, Math.min(routeIndicatorDurationMs, remainingDuration));
+  }, []);
+
+  alignRef.current = ({ animate, durationMs = routeIndicatorDurationMs }) => {
     const navigation = navigationRef.current;
     const indicator = indicatorRef.current;
 
@@ -114,6 +166,7 @@ export function useActiveRouteIndicator({ activeHref, pathname }: UseActiveRoute
       previousRect.height > 0 &&
       nextGeometry.width > 0 &&
       nextGeometry.height > 0 &&
+      durationMs > 0 &&
       !prefersReducedMotion() &&
       typeof indicator.animate === "function";
 
@@ -138,7 +191,7 @@ export function useActiveRouteIndicator({ activeHref, pathname }: UseActiveRoute
           { opacity: 1, transform: geometryTransform(nextGeometry) }
         ],
         {
-          duration: routeIndicatorDurationMs,
+          duration: durationMs,
           easing: routeIndicatorEasing,
           fill: "none"
         }
@@ -160,11 +213,30 @@ export function useActiveRouteIndicator({ activeHref, pathname }: UseActiveRoute
 
   useLayoutEffect(() => {
     const pathnameChanged = initializedRef.current && pathnameRef.current !== pathname;
+    const activeHrefChanged = initializedRef.current && committedActiveHrefRef.current !== activeHref;
+    const indicator = indicatorRef.current;
+    const animateRouteChange =
+      pathnameChanged &&
+      activeHrefChanged &&
+      Boolean(activeHref) &&
+      geometryRef.current !== null &&
+      !prefersReducedMotion() &&
+      typeof indicator?.animate === "function";
+
+    if (animateRouteChange) {
+      beginRouteTransition();
+    } else {
+      clearRouteTransition();
+    }
 
     pathnameRef.current = pathname;
-    alignRef.current({ animate: pathnameChanged });
+    committedActiveHrefRef.current = activeHref;
+    alignRef.current({
+      animate: animateRouteChange,
+      durationMs: animateRouteChange ? getRemainingRouteDuration() : undefined
+    });
     initializedRef.current = true;
-  }, [activeHref, pathname]);
+  }, [activeHref, beginRouteTransition, clearRouteTransition, getRemainingRouteDuration, pathname]);
 
   useLayoutEffect(() => {
     const navigation = navigationRef.current;
@@ -172,18 +244,24 @@ export function useActiveRouteIndicator({ activeHref, pathname }: UseActiveRoute
 
     let active = true;
 
-    function alignWithoutRouteAnimation() {
+    function alignAfterGeometryChange() {
       rafRef.current = null;
-      if (active) alignRef.current({ animate: false });
+      if (!active) return;
+
+      const remainingRouteDuration = getRemainingRouteDuration();
+      alignRef.current({
+        animate: remainingRouteDuration > 0,
+        durationMs: remainingRouteDuration || undefined
+      });
     }
 
     function scheduleAlignment() {
       if (!active || rafRef.current !== null) return;
 
       if (typeof window.requestAnimationFrame === "function") {
-        rafRef.current = window.requestAnimationFrame(alignWithoutRouteAnimation);
+        rafRef.current = window.requestAnimationFrame(alignAfterGeometryChange);
       } else {
-        alignWithoutRouteAnimation();
+        alignAfterGeometryChange();
       }
     }
 
@@ -215,9 +293,10 @@ export function useActiveRouteIndicator({ activeHref, pathname }: UseActiveRoute
       }
 
       rafRef.current = null;
+      clearRouteTransition();
       cancelAnimation();
     };
-  }, []);
+  }, [cancelAnimation, clearRouteTransition, getRemainingRouteDuration]);
 
   return { indicatorRef, navigationRef };
 }

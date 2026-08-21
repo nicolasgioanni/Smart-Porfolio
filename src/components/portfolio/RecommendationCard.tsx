@@ -1,54 +1,49 @@
 import type { RecommendationItem } from "@/content/types";
-import { GlassChip } from "@/components/glass/GlassChip";
 import { GlassIconLink } from "@/components/glass/GlassIconLink";
+import { ExpandableRecommendationText } from "@/components/portfolio/ExpandableRecommendationText";
 import { PortfolioCard } from "@/components/portfolio/PortfolioCard";
-import { createRecommendationExcerpt } from "@/lib/content/selectHomeContent";
 import { formatSingleDate } from "@/lib/formatting/formatDateRange";
 
 type RecommendationCardProps = {
+  collapsedLineCount?: number;
   item: RecommendationItem;
   variant?: "summary" | "detail";
 };
 
 function getRecommenderMeta(item: RecommendationItem): string {
-  return [item.recommenderTitle, item.recommenderOrganization].filter(Boolean).join(" / ");
+  return [item.recommenderTitle, item.recommenderOrganization].filter(Boolean).join(" at ");
 }
 
-export function RecommendationCard({ item, variant = "detail" }: RecommendationCardProps) {
-  const quote = variant === "summary" ? item.homeQuote || createRecommendationExcerpt(item.fullQuote) : item.fullQuote;
+export function RecommendationCard({ collapsedLineCount, item, variant = "detail" }: RecommendationCardProps) {
+  const quote = item.fullQuote;
   const recommendationDate = formatSingleDate(item.recommendationDate);
   const sourceLabel = item.source || "Recommendation";
   const sourceUrl = item.sourceUrl && item.sourceUrl !== item.linkedinUrl ? item.sourceUrl : undefined;
 
   return (
     <PortfolioCard className={["recommendation-card", `recommendation-card--${variant}`].join(" ")} variant={variant}>
-      <header className="content-card__header">
-        <div className="content-card__meta-row">
-          {item.featured ? <GlassChip tone="accent">Featured</GlassChip> : null}
-          <GlassChip tone="muted">{sourceLabel}</GlassChip>
-          {recommendationDate ? <GlassChip>{recommendationDate}</GlassChip> : null}
-        </div>
-        <div>
-          <h3 className="content-card__title">{item.recommenderName}</h3>
-          {getRecommenderMeta(item) ? <p className="content-card__meta">{getRecommenderMeta(item)}</p> : null}
-        </div>
+      <header className="recommendation-card__header">
+        <h3 className="recommendation-card__name">{item.recommenderName}</h3>
+        {getRecommenderMeta(item) ? <p className="recommendation-card__position">{getRecommenderMeta(item)}</p> : null}
+        {recommendationDate || item.relationship ? (
+          <p className="recommendation-card__meta">
+            {recommendationDate ? <time dateTime={item.recommendationDate}>{recommendationDate}</time> : null}
+            {recommendationDate && item.relationship ? <span aria-hidden="true"> · </span> : null}
+            {item.relationship ? <span>{item.relationship}</span> : null}
+          </p>
+        ) : null}
       </header>
 
-      <blockquote className="recommendation-card__quote">{quote}</blockquote>
-
-      {variant === "detail" && item.relationship ? <p className="content-card__summary">{item.relationship}</p> : null}
-      {variant === "detail" && item.context ? <p className="content-card__impact">{item.context}</p> : null}
-
-      {item.skills.length > 0 ? (
-        <div className="tag-list">
-          {item.skills.map((skill) => (
-            <GlassChip key={skill}>{skill}</GlassChip>
-          ))}
-        </div>
-      ) : null}
+      <ExpandableRecommendationText
+        collapsedLineCount={collapsedLineCount}
+        fullQuoteLink={item.fullQuoteLink}
+        id={item.id}
+        quote={quote}
+        recommenderName={item.recommenderName}
+      />
 
       {item.linkedinUrl || sourceUrl ? (
-        <div className="card-links">
+        <div className="card-links recommendation-card__links">
           {item.linkedinUrl ? <GlassIconLink kind="linkedin" label="View on LinkedIn" url={item.linkedinUrl} /> : null}
           {sourceUrl ? <GlassIconLink label={`View ${sourceLabel}`} url={sourceUrl} /> : null}
         </div>

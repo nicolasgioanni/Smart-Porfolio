@@ -59,9 +59,9 @@ async function main() {
 
   const envCreated = await copyEnvExampleIfMissing(projectRoot);
   if (envCreated) {
-    console.log("Created .env.local from .env.local.example.");
+    console.log("Created .env from .env.example.");
   } else {
-    console.log("No .env.local changes needed.");
+    console.log("No .env changes needed.");
   }
 
   const dependenciesCurrent = await isDependencyInstallCurrent(projectRoot);

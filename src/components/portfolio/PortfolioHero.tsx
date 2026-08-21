@@ -51,9 +51,9 @@ export function PortfolioHero({ links, motionEnabled = true, overview, profile }
               </div>
             </div>
             <div className="profile-overview__identity">
-              <h1 className="profile-overview__identity-name" id="portfolio-hero-title">
+              <p className="profile-overview__identity-name">
                 {profile.fullName}
-              </h1>
+              </p>
               {profile.pronouns ? <p className="profile-overview__identity-subtitle">{profile.pronouns}</p> : null}
               {identityItems.length > 0 ? (
                 <ul className="profile-overview__identity-list" aria-label="Profile contact details">

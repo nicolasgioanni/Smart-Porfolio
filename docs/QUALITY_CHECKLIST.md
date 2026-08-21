@@ -27,9 +27,9 @@ Run this checklist before shipping meaningful changes.
 
 ## Code
 
-- Static export assumptions still hold.
+- Static export assumptions still hold for portfolio pages.
 - No runtime portfolio content fetch was added.
-- No backend-only feature was introduced.
+- Runtime request handling remains isolated to the documented `/api/contact` Cloudflare Pages Function.
 - Client components are justified by interaction or browser APIs.
 
 ## Verification

@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "generatedAt": "2026-08-06T09:56:21.466Z",
+    "generatedAt": "2026-08-24T06:39:37.268Z",
     "sourceMode": "templates",
     "sources": {
       "profile": "template",
@@ -18,10 +18,13 @@
   "profile": {
     "fullName": "Nicolas Gioanni",
     "preferredName": "Nicolas",
-    "headline": "Software engineer building AI/ML, vision, and secure systems.",
-    "currentTitle": "Research Assistant (Software Engineering)",
-    "currentCompany": "UW Bothell School of STEM",
-    "currentExperienceId": "research-assistant-software-engineering",
+    "headline": "Software Engineer",
+    "roleEngineerPrefixes": "Software|AI|Security",
+    "roleEngineerSuffix": "Engineer",
+    "roleAlternate": "Research Scientist",
+    "currentTitle": "AI Engineer",
+    "currentCompany": "U.S. Department of the Treasury",
+    "currentExperienceId": "us-treasury-ai-engineer",
     "previousExperienceId": "research-assistant-software-engineering",
     "featuredResearchId": "cytocv-miller-lab",
     "primaryEducationId": "uw-bscsse",
@@ -30,14 +33,12 @@
     "email": "ngioanni@uw.edu",
     "university": "University of Washington",
     "degree": "Bachelor of Science",
-    "fieldOfStudy": "Computer Science & Software Engineering",
+    "fieldOfStudy": "Computer Science",
     "graduation": "Jun 2025",
-    "shortBio": "University of Washington CSSE graduate focused on full-stack engineering, AI/ML tooling, computer vision, and secure software systems.",
+    "shortBio": "I’m ambitious, relentlessly curious, and always looking for the next hard problem to learn from. I care about moving with urgency, doing things well, and getting better with every project.",
     "longBio": "I build practical software systems at the intersection of full-stack engineering, AI/ML, computer vision, and security. My work includes research software for microscopy analysis, adversarial machine learning pipelines, teaching support for core CS courses, and production-style projects using Next.js, Flask, Django, Firebase, and cloud deployment tooling.",
     "portraitImage": "/favicon/favicon.png",
     "faviconImage": "/favicon/favicon.png",
-    "resumeUrl": "/resume/Nicolas-Gioanni-Resume.pdf",
-    "resumeDownloadLabel": "Open resume",
     "primaryCtaLabel": "View projects",
     "secondaryCtaLabel": "Read research"
   },
@@ -77,30 +78,26 @@
       "showInHeader": true,
       "showInFooter": true,
       "order": 3
-    },
-    {
-      "id": "resume",
-      "label": "Resume",
-      "url": "/resume/Nicolas-Gioanni-Resume.pdf",
-      "icon": "file",
-      "kind": "resume",
-      "isPrimary": false,
-      "showOnHome": true,
-      "showInHeader": false,
-      "showInFooter": true,
-      "order": 5
     }
   ],
   "research": [
     {
       "id": "cytocv-miller-lab",
-      "title": "CytoCV",
-      "role": "Graduate Research",
+      "title": "CytoCV: Web-based platform for reproducible yeast microscopy image analysis",
+      "homeTitle": "CytoCV",
+      "role": "Graduate Research Assistant",
       "organization": "UW Bothell School of STEM",
-      "location": "Bothell, WA",
+      "organizationLogo": "/images/organizations/uwb_stem_logo.png",
+      "organizationLogoAlt": "UW Bothell School of STEM logo",
+      "location": "Bothell, Washington, United States",
       "startDate": "2024-08",
-      "endDate": "Present",
-      "homeSummary": "Web-based platform for reproducible yeast microscopy image analysis.",
+      "endDate": "2026-08",
+      "homeSummary": "Built by UW Bothell School of STEM’s SEE Lab for the University of Utah Miller Lab, CytoCV is a Django platform using Mask R-CNN to segment yeast microscopy stacks and export per-cell fluorescence measurements.",
+      "profileByline": "Lead Engineer & First Author",
+      "profileLabs": [
+        "SEE Lab, UW Bothell School of STEM",
+        "Miller Lab, University of Utah"
+      ],
       "detailSummary": "Built a Django and JavaScript platform for the University of Utah Miller Lab with REST APIs, deterministic batch ML processing, PostgreSQL data storage, and Linux VM deployment for 15+ scientists.",
       "impact": "Reduced manual analysis by 97%, cut processing time by 73%, and reduced file storage by 56.6%.",
       "bullets": [
@@ -127,7 +124,7 @@
       "links": [
         {
           "label": "Live site",
-          "url": "https://cytocv2.uwb.edu"
+          "url": "https://cytocv.uwb.edu"
         },
         {
           "label": "Source code",
@@ -144,13 +141,16 @@
     },
     {
       "id": "adversarial-machine-learning",
-      "title": "Adversarial machine learning pipelines",
+      "title": "Adversarial Machine Learning: Analysis of Causative Attacks against SVMs Learning from Data Streams",
       "role": "Undergraduate Researcher (Adversarial Machine Learning)",
-      "organization": "University of Washington",
-      "location": "Bothell, WA",
+      "organization": "UW Bothell School of STEM",
+      "organizationLogo": "/images/organizations/uwb_stem_logo.png",
+      "organizationLogoAlt": "UW Bothell School of STEM logo",
+      "location": "Bothell, Washington, United States",
       "startDate": "2024-09",
       "endDate": "2024-12",
-      "homeSummary": "Implemented adversarial attack and defense pipelines for image classification models.",
+      "homeSummary": "Experimental study of targeted training-data poisoning against SVMs learning from streams, testing whether attacks can evade loss-based anomaly filtering and whether a feature-space stability metric can detect decision-boundary manipulation.",
+      "profileLabs": [],
       "detailSummary": "Used Python, TensorFlow/Keras, NumPy, and Matplotlib to automate attack and defense testing while tracking success rates, latency, and accuracy.",
       "impact": "Optimized batched Keras defense execution to under 5 seconds while preserving 94% clean-data accuracy.",
       "bullets": [
@@ -165,7 +165,16 @@
         "Matplotlib",
         "Adversarial ML"
       ],
-      "links": [],
+      "links": [
+        {
+          "label": "Source code",
+          "url": "https://github.com/nicolasgioanni/Independent-Study"
+        },
+        {
+          "label": "Manuscript",
+          "url": "https://faculty.washington.edu/lagesse/publications/CausativeSVM.pdf"
+        }
+      ],
       "pendingLinks": [],
       "featured": false,
       "showOnHome": true,
@@ -174,13 +183,16 @@
     },
     {
       "id": "yeast-dna-target-selection",
-      "title": "Yeast DNA target selection automation",
+      "title": "Guide Donor Scheduler: Yeast DNA target selection automation",
       "role": "Research Assistant (AI/ML)",
       "organization": "UW Bothell School of STEM",
-      "location": "Bothell, WA",
+      "organizationLogo": "/images/organizations/uwb_stem_logo.png",
+      "organizationLogoAlt": "UW Bothell School of STEM logo",
+      "location": "Bothell, Washington, United States",
       "startDate": "2024-03",
       "endDate": "2024-08",
-      "homeSummary": "Developed an automated target selection system for yeast DNA research workflows.",
+      "homeSummary": "Python sequence-design pipeline for yeast CRISPR/Cas9 experiments that selects 20-base guides near NGG PAMs, builds 132-base donor sequences around requested mutations, adds silent edits to prevent re-cutting, and exports XLS results.",
+      "profileLabs": [],
       "detailSummary": "Used Python, pandas, Biopython, and regex to analyze 18,000+ FASTA files and export validated sequences to Excel.",
       "impact": "Reduced manual research workflows by 99%.",
       "bullets": [
@@ -195,7 +207,12 @@
         "Regex",
         "Excel"
       ],
-      "links": [],
+      "links": [
+        {
+          "label": "Source code",
+          "url": "https://github.com/BrentLagesse/GuideDonorScheduler"
+        }
+      ],
       "pendingLinks": [],
       "featured": false,
       "showOnHome": true,
@@ -207,28 +224,51 @@
     {
       "id": "notepal",
       "title": "NotePal",
-      "subtitle": "Note-taking and study app",
-      "homeSummary": "Built and deployed a full-stack study app with AI note generation, flashcards, quizzes, and RAG chat.",
-      "detailSummary": "Created a Next.js and TypeScript frontend with a Notion-style editor and a Flask REST API that orchestrates OCR, ASR, and LLM pipelines using Whisper, YOLO, LLM APIs, Firebase Auth, Firestore, and Pinecone.",
-      "problem": "Students need to turn mixed study material into usable notes and practice materials without losing time to manual formatting.",
-      "solution": "Automated note, flashcard, quiz, and chat workflows from multimodal input with per-user data isolation.",
-      "impact": "Cut study time by 67% and shipped on Vercel with CI/CD.",
+      "subtitle": "Multimodal study workspace",
+      "homeSummary": "Turns documents, images, audio, and video into structured notes, generated quizzes, and content-aware chat support.",
+      "homeSkills": [
+        {
+          "name": "Next.js",
+          "icon": "nextdotjs",
+          "summary": "Next.js powers NotePal's web interface and routing.",
+          "details": "The Next.js frontend provides the application interface, route structure, and authenticated study workflow while sending uploaded content to the separate Flask processing API."
+        },
+        {
+          "name": "TypeScript",
+          "icon": "typescript",
+          "summary": "TypeScript gives NotePal's frontend a typed application layer.",
+          "details": "TypeScript supports the Next.js component and routing code that coordinates file uploads, generated notes, quizzes, session state, and content-aware chat responses."
+        },
+        {
+          "name": "OpenAI API",
+          "icon": "openai",
+          "summary": "OpenAI API generates NotePal's language-based study features.",
+          "details": "Backend requests use OpenAI models for text summarization, multiple-choice and short-answer quiz generation, and chatbot answers based on content extracted from uploaded documents and media."
+        }
+      ],
+      "detailSummary": "A full-stack learning platform that combines multimodal content processing with note generation, practice quizzes, and retrieval-backed chat.",
+      "problem": "Study material arrives in many formats, making it difficult to organize and review in one place.",
+      "solution": "Combines a Next.js interface with Python services for document parsing, transcription, visual analysis, and LLM-assisted study tools.",
       "stack": [
         "Next.js",
         "TypeScript",
-        "LLM API",
+        "Python",
         "Flask",
-        "Whisper",
-        "YOLO",
-        "Firebase Auth",
-        "Firestore",
+        "OpenAI API",
+        "LangChain",
         "Pinecone",
-        "Vercel"
+        "Whisper",
+        "PaddleOCR",
+        "YOLOv5"
       ],
       "links": [
         {
-          "label": "GitHub",
+          "label": "Source code",
           "url": "https://github.com/nicolasgioanni/NotePal"
+        },
+        {
+          "label": "Live demo",
+          "url": "https://www.mynotepal.ai/"
         }
       ],
       "featured": true,
@@ -239,19 +279,42 @@
     {
       "id": "clair",
       "title": "Clair",
-      "subtitle": "Automotive file organizer",
-      "homeSummary": "Built a Python and Bash desktop app to automate file cleanup for automotive workflows.",
-      "detailSummary": "Created a local file organization utility that automates folder cleanup and reduces repeated manual sorting.",
-      "problem": "Manual file cleanup is repetitive and error-prone when folders accumulate inconsistent names and structures.",
-      "solution": "Used Python and Bash automation to organize files into repeatable folder structures.",
-      "impact": "Reduced manual sorting time by 80%.",
+      "subtitle": "Customizable desktop file organizer",
+      "homeSummary": "Sorts files into folders by type with customizable categories, reusable presets, recursive scanning, and optional empty-folder cleanup.",
+      "homeSkills": [
+        {
+          "name": "Python",
+          "icon": "python",
+          "summary": "Python runs Clair's file-organization engine.",
+          "details": "Python 3.11 and the standard os module scan selected folders, map file extensions to JSON-defined categories, create destination folders, move files, and optionally remove empty directories."
+        },
+        {
+          "name": "Bash",
+          "icon": "gnubash",
+          "summary": "Bash supports Clair's source-based development workflow.",
+          "details": "Shell commands create and activate the development environment, install Python requirements, and launch the application from source; Clair's sorting logic itself remains Python-based."
+        },
+        {
+          "name": "PySide6",
+          "icon": "qt",
+          "summary": "PySide6 provides Clair's cross-platform desktop interface.",
+          "details": "Qt for Python renders the dark-mode controls for folder selection, category and extension management, reusable presets, recursive scanning, optional cleanup, and the one-click organization workflow."
+        }
+      ],
+      "detailSummary": "A cross-platform desktop utility for organizing folders through a polished Qt interface and user-defined file rules.",
+      "problem": "Downloads and working folders quickly become difficult to navigate when files use inconsistent naming and locations.",
+      "solution": "Maps extensions to editable categories, applies reusable presets, and packages the workflow as a standalone desktop application.",
       "stack": [
+        "PySide6",
         "Python",
-        "Bash"
+        "PyInstaller",
+        "Qt",
+        "JSON",
+        "Inno Setup"
       ],
       "links": [
         {
-          "label": "GitHub",
+          "label": "Source code",
           "url": "https://github.com/nicolasgioanni/Clair"
         }
       ],
@@ -259,17 +322,80 @@
       "showOnHome": true,
       "homeOrder": 2,
       "detailOrder": 2
+    },
+    {
+      "id": "leetnotes",
+      "title": "LeetNotes",
+      "subtitle": "Automated LeetCode study system",
+      "homeSummary": "Keeps Google Sheets study data synchronized with structured notes, generated Python solutions, indexed problem folders, and scheduled repository updates.",
+      "homeSkills": [
+        {
+          "name": "Python",
+          "icon": "python",
+          "summary": "Python implements the LeetNotes synchronization CLI.",
+          "details": "The package reads published sheet CSVs, normalizes problem titles and LeetCode slugs, generates Markdown study notes, writes solution.py variants, and maintains the repository's indexed problem structure."
+        },
+        {
+          "name": "GitHub Actions",
+          "icon": "githubactions",
+          "summary": "GitHub Actions keeps generated study material synchronized.",
+          "details": "The scheduled notes.yml workflow runs the CLI, rebuilds notes and solution files from published sheet data, and commits any repository changes for review."
+        },
+        {
+          "name": "Google Sheets",
+          "icon": "googlesheets",
+          "summary": "Google Sheets serves as LeetNotes' editable content source.",
+          "details": "Each list uses paired Notes and Solutions sheets published as CSV: one stores problem metadata, approaches, complexity, and study notes; the other stores plain-text Python solutions."
+        }
+      ],
+      "detailSummary": "A Python CLI and scheduled automation workflow that turns spreadsheet-authored problem notes and solutions into a consistent interview-preparation repository.",
+      "problem": "Daily problem-solving notes and solution files become difficult to keep consistent across spreadsheets and folders.",
+      "solution": "Normalizes problem metadata, generates Markdown and Python files, and uses GitHub Actions to keep the repository synchronized on a schedule.",
+      "stack": [
+        "Python",
+        "GitHub Actions",
+        "Google Sheets",
+        "CSV",
+        "pytest"
+      ],
+      "links": [
+        {
+          "label": "Source code",
+          "url": "https://github.com/nicolasgioanni/LeetNotes"
+        }
+      ],
+      "featured": false,
+      "showOnHome": true,
+      "homeOrder": 3,
+      "detailOrder": 3
     }
   ],
   "experience": [
     {
+      "id": "us-treasury-ai-engineer",
+      "title": "AI Engineer",
+      "organization": "U.S. Department of the Treasury",
+      "organizationLogo": "/images/organizations/us_treasury_logo.webp",
+      "organizationLogoAlt": "U.S. Department of the Treasury logo",
+      "startDate": "2026-08",
+      "endDate": "Present",
+      "bullets": [],
+      "skills": [],
+      "featured": true,
+      "showOnHome": true,
+      "homeOrder": 1,
+      "detailOrder": 1
+    },
+    {
       "id": "research-assistant-software-engineering",
       "title": "Research Assistant (Software Engineering)",
       "organization": "UW Bothell School of STEM",
+      "organizationLogo": "/images/organizations/uwb_stem_logo.png",
+      "organizationLogoAlt": "UW Bothell School of STEM logo",
       "type": "research",
       "location": "Bothell, WA",
       "startDate": "2024-08",
-      "endDate": "Present",
+      "endDate": "2026-08",
       "homeSummary": "Built and deployed full-stack computer-vision tools for scientific microscopy analysis.",
       "detailSummary": "Architected a Django REST API and JavaScript frontend for the University of Utah Miller Lab, paired with deterministic ML processing and Linux VM deployment for 15+ scientists.",
       "bullets": [
@@ -294,13 +420,15 @@
       ],
       "featured": true,
       "showOnHome": true,
-      "homeOrder": 1,
-      "detailOrder": 1
+      "homeOrder": 2,
+      "detailOrder": 2
     },
     {
       "id": "teaching-assistant",
       "title": "Teaching Assistant",
       "organization": "University of Washington",
+      "organizationLogo": "/images/organizations/uw_logo.png",
+      "organizationLogoAlt": "University of Washington logo",
       "type": "teaching",
       "location": "Bothell, WA",
       "startDate": "2025-01",
@@ -323,13 +451,15 @@
       ],
       "featured": true,
       "showOnHome": true,
-      "homeOrder": 2,
-      "detailOrder": 2
+      "homeOrder": 3,
+      "detailOrder": 3
     },
     {
       "id": "undergraduate-researcher-adversarial-ml",
       "title": "Undergraduate Researcher (Adversarial Machine Learning)",
       "organization": "University of Washington",
+      "organizationLogo": "/images/organizations/uw_logo.png",
+      "organizationLogoAlt": "University of Washington logo",
       "type": "research",
       "location": "Bothell, WA",
       "startDate": "2024-09",
@@ -350,13 +480,15 @@
       ],
       "featured": false,
       "showOnHome": true,
-      "homeOrder": 3,
-      "detailOrder": 3
+      "homeOrder": 4,
+      "detailOrder": 4
     },
     {
       "id": "research-assistant-ai-ml",
       "title": "Research Assistant (AI/ML)",
       "organization": "UW Bothell School of STEM",
+      "organizationLogo": "/images/organizations/uwb_stem_logo.png",
+      "organizationLogoAlt": "UW Bothell School of STEM logo",
       "type": "research",
       "location": "Bothell, WA",
       "startDate": "2024-03",
@@ -377,44 +509,88 @@
       ],
       "featured": false,
       "showOnHome": true,
-      "homeOrder": 4,
-      "detailOrder": 4
-    },
-    {
-      "id": "gdg-officer",
-      "title": "Officer",
-      "organization": "Google Developer Groups on Campus",
-      "type": "leadership",
-      "location": "Bothell, WA",
-      "startDate": "2024-09",
-      "endDate": "2025-06",
-      "homeSummary": "Mentored students through workshops on courses, coding practices, and developer tools.",
-      "detailSummary": "Supported 100+ students through workshops and mentoring on courses, coding practices, Git, Docker, and VS Code.",
-      "bullets": [
-        "Mentored 100+ students",
-        "Led practical workshops on coding practices and tools",
-        "Helped students navigate courses and project workflows"
-      ],
-      "skills": [
-        "Mentorship",
-        "Git",
-        "Docker",
-        "VS Code",
-        "Communication"
-      ],
-      "featured": false,
-      "showOnHome": true,
       "homeOrder": 5,
       "detailOrder": 5
     }
   ],
-  "recommendations": [],
+  "recommendations": [
+    {
+      "id": "brent-lagesse",
+      "recommenderName": "Brent Lagesse",
+      "recommenderTitle": "Associate Professor",
+      "recommenderOrganization": "University of Washington Bothell",
+      "relationship": "Managed Nicolas directly",
+      "recommendationDate": "2026-07-21",
+      "source": "LinkedIn",
+      "linkedinUrl": "https://www.linkedin.com/in/brent-lagesse-1a117960/",
+      "fullQuote": "Nicolas has worked with me on an open source project, CytoCV, in collaboration with biologists at the University of Utah. He has excelled in many critical areas on this project including software engineering, web development, UX, computer vision, and the ability to work with biologists and translate their needs into software. Nicolas is proactive in identifying and solving issues and has demonstrated excellent skills in writing, documentation, and collaboration.",
+      "fullQuoteLink": {
+        "label": "CytoCV",
+        "url": "https://github.com/BrentLagesse/CytoCV"
+      },
+      "skills": [],
+      "featured": false,
+      "showOnHome": true,
+      "homeOrder": 1,
+      "detailOrder": 1
+    },
+    {
+      "id": "annuska-zolyomi",
+      "recommenderName": "Annuska Zolyomi, PhD",
+      "recommenderTitle": "Assistant Professor",
+      "recommenderOrganization": "University of Washington Bothell",
+      "relationship": "Managed Nicolas directly",
+      "recommendationDate": "2026-06-17",
+      "source": "LinkedIn",
+      "linkedinUrl": "https://www.linkedin.com/in/annuskap/",
+      "fullQuote": "I highly recommend Nicolas for software engineering and development roles. I was his instructor for two undergraduate CSS courses and then he was a grader for two CSS courses. Nicolas is dedicated, detail-oriented, and has strong collaboration skills. I counted on him to provide meaningful feedback on student work, and he was proactive in raising issues and potential solutions. He will be a great asset to his future teams!",
+      "skills": [],
+      "featured": false,
+      "showOnHome": true,
+      "homeOrder": 2,
+      "detailOrder": 2
+    },
+    {
+      "id": "anoop-prasad",
+      "recommenderName": "Anoop Prasad",
+      "recommenderTitle": "Graduate Research Assistant",
+      "recommenderOrganization": "University of Washington Bothell",
+      "relationship": "Worked with Nicolas on the same team",
+      "recommendationDate": "2026-05-29",
+      "source": "LinkedIn",
+      "linkedinUrl": "https://www.linkedin.com/in/anoop-prasad-uwb/",
+      "fullQuote": "Since January 2026, I have had the pleasure of working with Nicolas on the CytoCV platform, improving both functionality and usability throughout the application. Not only was his work prior to my having joined the project in September 2025 a solid foundation, but in my time working with him directly, he has been a reliable, hard worker with strong technical and problem solving skills, as well as extremely professional. He is a strong communicator, including across disciplines, and highly organized, maintaining the documentation of CytoCV's GitHub repository expertly. He has produced consistently high-quality work, and has been invaluable to the project; any team would benefit from his work ethic, positive attitude, and skills.",
+      "skills": [],
+      "featured": false,
+      "showOnHome": true,
+      "homeOrder": 3,
+      "detailOrder": 3
+    },
+    {
+      "id": "minh-nhat-huynh",
+      "recommenderName": "Minh Nhat Huynh",
+      "recommenderTitle": "Research Assistant",
+      "recommenderOrganization": "University of Washington Bothell",
+      "relationship": "Worked with Nicolas on the same team",
+      "recommendationDate": "2026-05-28",
+      "source": "LinkedIn",
+      "linkedinUrl": "https://www.linkedin.com/in/timhmn/",
+      "fullQuote": "I collaborated with Nick on several university engineering projects, where he proved to be a reliable and versatile developer. He managed our full-stack workflow seamlessly including structuring backend logic with Python, Django, and SQL, while keeping our frontends functional with JavaScript, HTML5, and CSS. He has solid engineering discipline, working comfortably across Linux environments, Git version control, and Azure cloud deployment.",
+      "skills": [],
+      "featured": false,
+      "showOnHome": false,
+      "homeOrder": 4,
+      "detailOrder": 4
+    }
+  ],
   "education": [
     {
       "id": "uw-bscsse",
       "institution": "University of Washington",
+      "institutionLogo": "/images/education/uw_logo.png",
+      "institutionLogoAlt": "University of Washington logo",
       "degree": "Bachelor of Science",
-      "field": "Computer Science & Software Engineering",
+      "field": "Computer Science",
       "concentration": "Information Assurance & Cybersecurity",
       "startDate": "2022-09",
       "endDate": "2025-06",
@@ -434,26 +610,41 @@
   "skills": [
     {
       "id": "skill-python",
-      "category": "languages",
+      "category": "Core Programming",
+      "categoryOrder": 1,
       "name": "Python",
+      "icon": "python",
+      "proficiency": "Advanced",
+      "summary": "A versatile language for backend services, automation, machine learning, and data workflows.",
+      "whereUsed": "Used across CytoCV, adversarial-ML research, Guide Donor Scheduler, NotePal, Clair, and LeetNotes to build APIs, ML pipelines, research automation, desktop tooling, and CLIs.",
       "priority": 1,
       "featured": true,
       "showOnHome": true,
       "order": 1
     },
     {
-      "id": "skill-typescript",
-      "category": "languages",
-      "name": "TypeScript",
+      "id": "skill-c-cpp",
+      "category": "Core Programming",
+      "categoryOrder": 1,
+      "name": "C/C++",
+      "icon": "cplusplus",
+      "proficiency": "Working proficiency",
+      "summary": "Performance-oriented languages for systems programming, memory management, and core computer-science fundamentals.",
+      "whereUsed": "Built a foundation through UW data structures, algorithms, operating systems, and software engineering, then reinforced it while tutoring and reviewing C/C++ coursework as a teaching assistant.",
       "priority": 1,
       "featured": true,
       "showOnHome": true,
       "order": 2
     },
     {
-      "id": "skill-javascript",
-      "category": "languages",
-      "name": "JavaScript",
+      "id": "skill-typescript-javascript",
+      "category": "Core Programming",
+      "categoryOrder": 1,
+      "name": "TypeScript / JavaScript",
+      "icon": "typescript",
+      "proficiency": "Proficient",
+      "summary": "The languages I use to build typed, interactive web applications.",
+      "whereUsed": "Built NotePal's Next.js interface in TypeScript, CytoCV's Fetch API frontend in JavaScript, and this portfolio; also supported JavaScript coursework as a teaching assistant.",
       "priority": 1,
       "featured": true,
       "showOnHome": true,
@@ -461,307 +652,132 @@
     },
     {
       "id": "skill-sql",
-      "category": "languages",
+      "category": "Core Programming",
+      "categoryOrder": 1,
       "name": "SQL",
-      "priority": 2,
+      "icon": "database",
+      "proficiency": "Proficient",
+      "summary": "The standard language for modeling, querying, and maintaining relational data.",
+      "whereUsed": "Re-architected CytoCV's data layer and migrated its application data from SQLite to PostgreSQL, supported by UW Database Systems coursework.",
+      "priority": 1,
       "featured": true,
       "showOnHome": true,
       "order": 4
-    },
-    {
-      "id": "skill-bash",
-      "category": "languages",
-      "name": "Bash",
-      "priority": 2,
-      "featured": false,
-      "showOnHome": true,
-      "order": 5
-    },
-    {
-      "id": "skill-c-cpp",
-      "category": "languages",
-      "name": "C/C++",
-      "priority": 2,
-      "featured": false,
-      "showOnHome": true,
-      "order": 6
-    },
-    {
-      "id": "skill-html-css",
-      "category": "languages",
-      "name": "HTML/CSS",
-      "priority": 2,
-      "featured": false,
-      "showOnHome": true,
-      "order": 7
-    },
-    {
-      "id": "skill-assembly",
-      "category": "languages",
-      "name": "Assembly",
-      "priority": 3,
-      "featured": false,
-      "showOnHome": false,
-      "order": 8
-    },
-    {
-      "id": "skill-django",
-      "category": "frameworks",
-      "name": "Django",
-      "priority": 1,
-      "featured": true,
-      "showOnHome": true,
-      "order": 9
-    },
-    {
-      "id": "skill-flask",
-      "category": "frameworks",
-      "name": "Flask",
-      "priority": 1,
-      "featured": true,
-      "showOnHome": true,
-      "order": 10
-    },
-    {
-      "id": "skill-nextjs",
-      "category": "frameworks",
-      "name": "Next.js",
-      "priority": 1,
-      "featured": true,
-      "showOnHome": true,
-      "order": 11
-    },
-    {
-      "id": "skill-react",
-      "category": "frameworks",
-      "name": "React",
-      "priority": 1,
-      "featured": true,
-      "showOnHome": true,
-      "order": 12
-    },
-    {
-      "id": "skill-nodejs",
-      "category": "frameworks",
-      "name": "Node.js",
-      "priority": 2,
-      "featured": false,
-      "showOnHome": true,
-      "order": 13
     },
     {
       "id": "skill-tensorflow-keras",
-      "category": "machine_learning",
-      "name": "TensorFlow/Keras",
+      "category": "AI, ML & Data",
+      "categoryOrder": 2,
+      "name": "TensorFlow / Keras",
+      "icon": "tensorflow",
+      "proficiency": "Advanced",
+      "summary": "Deep-learning frameworks for building and evaluating neural-network pipelines.",
+      "whereUsed": "Built CytoCV's Mask R-CNN segmentation workflow and adversarial attack-and-defense experiments; optimized batched Keras evaluation to under five seconds while preserving 94% clean-data accuracy.",
       "priority": 1,
       "featured": true,
       "showOnHome": true,
-      "order": 14
-    },
-    {
-      "id": "skill-opencv",
-      "category": "machine_learning",
-      "name": "OpenCV",
-      "priority": 1,
-      "featured": true,
-      "showOnHome": true,
-      "order": 15
-    },
-    {
-      "id": "skill-scikit-image",
-      "category": "machine_learning",
-      "name": "scikit-image",
-      "priority": 2,
-      "featured": false,
-      "showOnHome": true,
-      "order": 16
-    },
-    {
-      "id": "skill-numpy",
-      "category": "machine_learning",
-      "name": "NumPy",
-      "priority": 1,
-      "featured": true,
-      "showOnHome": true,
-      "order": 17
-    },
-    {
-      "id": "skill-pandas",
-      "category": "machine_learning",
-      "name": "pandas",
-      "priority": 1,
-      "featured": true,
-      "showOnHome": true,
-      "order": 18
-    },
-    {
-      "id": "skill-matplotlib",
-      "category": "machine_learning",
-      "name": "Matplotlib",
-      "priority": 2,
-      "featured": false,
-      "showOnHome": true,
-      "order": 19
-    },
-    {
-      "id": "skill-pillow",
-      "category": "machine_learning",
-      "name": "Pillow",
-      "priority": 3,
-      "featured": false,
-      "showOnHome": false,
-      "order": 20
-    },
-    {
-      "id": "skill-llm-api",
-      "category": "machine_learning",
-      "name": "LLM API",
-      "priority": 2,
-      "featured": true,
-      "showOnHome": true,
-      "order": 21
-    },
-    {
-      "id": "skill-git",
-      "category": "cloud_dev_tools",
-      "name": "Git",
-      "priority": 1,
-      "featured": true,
-      "showOnHome": true,
-      "order": 22
-    },
-    {
-      "id": "skill-docker",
-      "category": "cloud_dev_tools",
-      "name": "Docker",
-      "priority": 1,
-      "featured": true,
-      "showOnHome": true,
-      "order": 23
-    },
-    {
-      "id": "skill-linux",
-      "category": "cloud_dev_tools",
-      "name": "Linux",
-      "priority": 1,
-      "featured": true,
-      "showOnHome": true,
-      "order": 24
-    },
-    {
-      "id": "skill-ssh",
-      "category": "cloud_dev_tools",
-      "name": "SSH",
-      "priority": 2,
-      "featured": false,
-      "showOnHome": true,
-      "order": 25
-    },
-    {
-      "id": "skill-nginx",
-      "category": "cloud_dev_tools",
-      "name": "Nginx",
-      "priority": 2,
-      "featured": false,
-      "showOnHome": true,
-      "order": 26
-    },
-    {
-      "id": "skill-gunicorn",
-      "category": "cloud_dev_tools",
-      "name": "Gunicorn",
-      "priority": 2,
-      "featured": false,
-      "showOnHome": true,
-      "order": 27
-    },
-    {
-      "id": "skill-lets-encrypt",
-      "category": "cloud_dev_tools",
-      "name": "Let's Encrypt",
-      "priority": 3,
-      "featured": false,
-      "showOnHome": true,
-      "order": 28
-    },
-    {
-      "id": "skill-google-cloud",
-      "category": "cloud_dev_tools",
-      "name": "Google Cloud",
-      "priority": 2,
-      "featured": false,
-      "showOnHome": true,
-      "order": 29
-    },
-    {
-      "id": "skill-azure",
-      "category": "cloud_dev_tools",
-      "name": "Azure",
-      "priority": 2,
-      "featured": false,
-      "showOnHome": true,
-      "order": 30
-    },
-    {
-      "id": "skill-postgresql",
-      "category": "databases",
-      "name": "PostgreSQL",
-      "priority": 1,
-      "featured": true,
-      "showOnHome": true,
-      "order": 31
-    },
-    {
-      "id": "skill-firestore",
-      "category": "databases",
-      "name": "Firestore",
-      "priority": 2,
-      "featured": false,
-      "showOnHome": true,
-      "order": 32
-    },
-    {
-      "id": "skill-firebase",
-      "category": "databases",
-      "name": "Firebase",
-      "priority": 2,
-      "featured": false,
-      "showOnHome": true,
-      "order": 33
-    }
-  ],
-  "resume": [
-    {
-      "section": "summary",
-      "key": "headline",
-      "value": "Full-stack software engineer focused on AI/ML, computer vision, and secure software systems.",
       "order": 1
     },
     {
-      "section": "summary",
-      "key": "focus",
-      "value": "Python, TypeScript, Django, Flask, Next.js, TensorFlow/Keras, PostgreSQL, Docker, and cloud deployment.",
+      "id": "skill-opencv",
+      "category": "AI, ML & Data",
+      "categoryOrder": 2,
+      "name": "OpenCV",
+      "icon": "opencv",
+      "proficiency": "Proficient",
+      "summary": "A computer-vision toolkit for reproducible image processing and analysis.",
+      "whereUsed": "Used alongside scikit-image in CytoCV's microscopy pipeline to preprocess images, support segmentation, and extract 30+ cell metrics; the pipeline cut processing time by 73%.",
+      "priority": 1,
+      "featured": true,
+      "showOnHome": true,
       "order": 2
     },
     {
-      "section": "summary",
-      "key": "impact",
-      "value": "Delivered research software that reduced microscopy analysis by 97%, reduced ML processing time by 73%, reduced storage by 56.6%, and supported 15+ scientists.",
+      "id": "skill-numpy-pandas",
+      "category": "AI, ML & Data",
+      "categoryOrder": 2,
+      "name": "NumPy / pandas",
+      "icon": "numpy",
+      "proficiency": "Proficient",
+      "summary": "Numerical and tabular data tools for efficient array processing, analysis, and automation.",
+      "whereUsed": "Used NumPy in CytoCV and adversarial-ML automation to process arrays and evaluate metrics; used pandas in Guide Donor Scheduler to analyze 18,000+ FASTA files and export results.",
+      "priority": 1,
+      "featured": true,
+      "showOnHome": true,
       "order": 3
     },
     {
-      "section": "education",
-      "key": "note",
-      "value": "B.S. in Computer Science & Software Engineering, University of Washington, Jun 2025; GPA 3.75/4.0.",
+      "id": "skill-llm-rag",
+      "category": "AI, ML & Data",
+      "categoryOrder": 2,
+      "name": "LLM APIs & RAG",
+      "icon": "llm",
+      "proficiency": "Applied proficiency",
+      "summary": "Interfaces and retrieval techniques for building grounded generative-AI product features.",
+      "whereUsed": "Built NotePal's OpenAI-powered autocomplete, notes, flashcards, quizzes, and Pinecone-backed RAG chat while coordinating OCR and speech-processing services through Flask.",
+      "priority": 1,
+      "featured": true,
+      "showOnHome": true,
       "order": 4
     },
     {
-      "section": "manuscripts",
-      "key": "in_preparation",
-      "value": "First-author SoftwareX manuscript in preparation on CytoCV with the University of Utah Miller Lab.",
-      "order": 5
+      "id": "skill-django",
+      "category": "Full-Stack & Systems",
+      "categoryOrder": 3,
+      "name": "Django",
+      "icon": "django",
+      "proficiency": "Advanced",
+      "summary": "A Python web framework for secure, data-backed applications and APIs.",
+      "whereUsed": "Architected CytoCV's Django backend, REST API, data model, and full-stack workflow for 15+ scientists; the platform reduced manual microscopy analysis by 97%.",
+      "priority": 1,
+      "featured": true,
+      "showOnHome": true,
+      "order": 1
+    },
+    {
+      "id": "skill-nextjs-react",
+      "category": "Full-Stack & Systems",
+      "categoryOrder": 3,
+      "name": "Next.js / React",
+      "icon": "nextdotjs",
+      "proficiency": "Proficient",
+      "summary": "A production React stack for building routed, interactive web applications.",
+      "whereUsed": "Built and deployed NotePal's typed Next.js interface on Vercel with CI/CD, including a Notion-style editor and AI autocomplete; also used Next.js for this portfolio.",
+      "priority": 1,
+      "featured": true,
+      "showOnHome": true,
+      "order": 2
+    },
+    {
+      "id": "skill-rest-apis",
+      "category": "Full-Stack & Systems",
+      "categoryOrder": 3,
+      "name": "REST APIs",
+      "icon": "api",
+      "proficiency": "Proficient",
+      "summary": "Service interfaces that connect frontends with application, data, and AI backends.",
+      "whereUsed": "Built Django REST endpoints and a JavaScript Fetch client for CytoCV, plus a modular Flask API coordinating NotePal's OCR, speech, LLM, authentication, and retrieval workflows.",
+      "priority": 1,
+      "featured": true,
+      "showOnHome": true,
+      "order": 3
+    },
+    {
+      "id": "skill-docker-linux",
+      "category": "Full-Stack & Systems",
+      "categoryOrder": 3,
+      "name": "Docker & Linux",
+      "icon": "docker",
+      "proficiency": "Working proficiency",
+      "summary": "Tools for reproducible development environments and production server operations.",
+      "whereUsed": "Deployed CytoCV on a UW-IT Linux VM with Nginx, Gunicorn, CI/CD, and TLS; used Docker in UW teaching, project review, and developer workshops.",
+      "priority": 1,
+      "featured": true,
+      "showOnHome": true,
+      "order": 4
     }
   ],
+  "resume": [],
   "siteSettings": {
     "siteTitle": "Nicolas Gioanni Portfolio",
     "siteDescription": "Software engineering portfolio for Nicolas Gioanni, featuring full-stack AI/ML projects, research software, teaching, and cybersecurity-focused coursework.",
@@ -769,14 +785,19 @@
     "enableSkeletons": true,
     "enableScrollMotion": false,
     "enableGlassEffects": true,
-    "enableRecommendations": false,
-    "showEmptyRecommendations": false,
+    "enableRecommendations": true,
+    "showEmptyRecommendations": true,
     "maxHomeResearchItems": 3,
-    "maxHomeProjectItems": 2,
+    "maxHomeProjectItems": 3,
     "maxHomeExperienceItems": 4,
-    "maxHomeRecommendationItems": 0,
+    "maxHomeRecommendationItems": 3,
     "recommendationsNavLabel": "Recommendations",
     "maxHomeSkillItems": 12,
-    "copyrightOwner": "Nicolas Gioanni"
+    "licenseName": "MIT",
+    "copyrightOwner": "Nicolas Gioanni",
+    "legalContactEmail": "ngioanni@uw.edu",
+    "legalEffectiveDate": "2026-08-22",
+    "hostingProviderName": "Cloudflare",
+    "hostingPrivacyUrl": "https://www.cloudflare.com/privacypolicy/"
   }
 }

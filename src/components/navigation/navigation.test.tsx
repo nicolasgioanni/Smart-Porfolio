@@ -97,21 +97,27 @@ function createRect(left: number, top: number, width: number, height: number): D
   };
 }
 
-function installNavigationGeometryMock(indicatorRect: { current: DOMRect }) {
-  const routeRects = new Map([
+function createNavigationRouteRects() {
+  return new Map([
     ["/", createRect(108, 25, 80, 38)],
     ["/experience", createRect(192, 25, 112, 38)],
     ["/research", createRect(308, 25, 96, 38)],
     ["/projects", createRect(408, 25, 100, 38)],
     ["/resume", createRect(512, 25, 88, 38)]
   ]);
+}
+
+function installNavigationGeometryMock(
+  indicatorRect: { current: DOMRect },
+  routeRectsRef: { current: Map<string, DOMRect> } = { current: createNavigationRouteRects() }
+) {
 
   return vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function getBoundingClientRect(this: Element) {
     if (this.classList.contains("main-navigation")) return createRect(100, 20, 508, 48);
     if (this.classList.contains("active-route-indicator")) return indicatorRect.current;
 
     const href = this.getAttribute("href");
-    return (href && routeRects.get(href)) || createRect(0, 0, 0, 0);
+    return (href && routeRectsRef.current.get(href)) || createRect(0, 0, 0, 0);
   });
 }
 
@@ -144,6 +150,7 @@ describe("navigation helpers", () => {
   afterEach(() => {
     setScrollY(0);
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
 
     if (originalAnimateDescriptor) {
       Object.defineProperty(Element.prototype, "animate", originalAnimateDescriptor);
@@ -171,9 +178,14 @@ describe("navigation helpers", () => {
       "/projects",
       "/resume"
     ]);
-    expect(createNavigationItems({ enableRecommendations: true, recommendationCount: 0, showEmptyRecommendations: true }).map((item) => item.href)).toContain(
-      "/recommendations"
-    );
+    expect(createNavigationItems({ enableRecommendations: true, recommendationCount: 0, showEmptyRecommendations: true }).map((item) => item.href)).toEqual([
+      "/",
+      "/experience",
+      "/research",
+      "/projects",
+      "/recommendations",
+      "/resume"
+    ]);
     expect(createNavigationItems({ enableRecommendations: true, recommendationCount: 1, recommendationsNavLabel: "References" }).find((item) => item.href === "/recommendations")?.label).toBe("References");
   });
 
@@ -239,6 +251,85 @@ describe("navigation helpers", () => {
       transform: "translate3d(150px, 9px, 0) scale(0.8541666666666666, 0.7894736842105263)"
     });
     expect(secondKeyframes[1]).toMatchObject({ opacity: 1, transform: "translate3d(208px, 5px, 0)" });
+  });
+
+  it("retargets an active route transition through header geometry changes without extending its deadline", () => {
+    let resizeCallback: ResizeObserverCallback | undefined;
+    const disconnectResizeObserver = vi.fn();
+
+    class ControlledResizeObserver implements ResizeObserver {
+      constructor(callback: ResizeObserverCallback) {
+        resizeCallback = callback;
+      }
+
+      disconnect = disconnectResizeObserver;
+      observe = vi.fn();
+      unobserve = vi.fn();
+    }
+
+    vi.stubGlobal("ResizeObserver", ControlledResizeObserver);
+
+    const currentTime = { value: 0 };
+    vi.spyOn(window.performance, "now").mockImplementation(() => currentTime.value);
+    const animationFrameCallbacks: FrameRequestCallback[] = [];
+    vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
+      animationFrameCallbacks.push(callback);
+      return animationFrameCallbacks.length;
+    });
+
+    function flushAnimationFrame() {
+      const callback = animationFrameCallbacks.shift();
+      if (callback) callback(currentTime.value);
+    }
+
+    const routeRectsRef = { current: createNavigationRouteRects() };
+    const indicatorRect = { current: createRect(112, 29, 72, 30) };
+    installNavigationGeometryMock(indicatorRect, routeRectsRef);
+    const firstAnimation = createAnimationMock();
+    const secondAnimation = createAnimationMock();
+    const thirdAnimation = createAnimationMock();
+    const animate = installAnimateMock(firstAnimation, secondAnimation, thirdAnimation);
+    const view = render(<MainNavigation items={headerNavigationItems} />);
+
+    navigationMock.pathname = "/projects";
+    view.rerender(<MainNavigation items={headerNavigationItems} />);
+
+    expect(animate).toHaveBeenCalledTimes(1);
+    expect(animate.mock.calls[0][1]).toMatchObject({ duration: 420 });
+
+    currentTime.value = 160;
+    indicatorRect.current = createRect(250, 29, 82, 30);
+    routeRectsRef.current.set("/projects", createRect(438, 25, 104, 38));
+    act(() => {
+      resizeCallback?.([], {} as ResizeObserver);
+      flushAnimationFrame();
+    });
+
+    expect(firstAnimation.cancel).toHaveBeenCalledOnce();
+    expect(animate).toHaveBeenCalledTimes(2);
+    expect(animate.mock.calls[1][1]).toMatchObject({ duration: 320 });
+
+    currentTime.value = 300;
+    indicatorRect.current = createRect(326, 27, 98, 34);
+    routeRectsRef.current.set("/projects", createRect(448, 25, 106, 38));
+    act(() => {
+      resizeCallback?.([], {} as ResizeObserver);
+      flushAnimationFrame();
+    });
+
+    const finalKeyframes = animate.mock.calls[2][0] as Keyframe[];
+    expect(secondAnimation.cancel).toHaveBeenCalledOnce();
+    expect(animate).toHaveBeenCalledTimes(3);
+    expect(animate.mock.calls[2][1]).toEqual({
+      duration: 180,
+      easing: "cubic-bezier(0.65, 0, 0.35, 1)",
+      fill: "none"
+    });
+    expect(finalKeyframes[1]).toMatchObject({ opacity: 1, transform: "translate3d(348px, 5px, 0)" });
+
+    view.unmount();
+    expect(thirdAnimation.cancel).toHaveBeenCalledOnce();
+    expect(disconnectResizeObserver).toHaveBeenCalledOnce();
   });
 
   it("snaps committed route changes when reduced motion is requested", () => {

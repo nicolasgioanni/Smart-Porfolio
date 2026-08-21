@@ -11,8 +11,7 @@ export function PageSkeleton({ children, showHeader = true }: PageSkeletonProps)
     <section aria-busy="true" aria-label="Loading page" className="skeleton-page">
       {showHeader ? (
         <header className="skeleton-page__header" aria-hidden="true">
-          <SkeletonBlock height={13} width={120} />
-          <SkeletonBlock height={74} radius={24} width="68%" />
+          <SkeletonBlock height={54} radius={16} width="42%" />
           <SkeletonBlock height={20} width="78%" />
         </header>
       ) : null}
