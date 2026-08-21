@@ -7,7 +7,6 @@ import { HomeOverviewSection } from "@/components/portfolio/HomeOverviewSection"
 import { HomeRecommendations } from "@/components/portfolio/HomeRecommendations";
 import { HomeSkillsSnapshot } from "@/components/portfolio/HomeSkillsSnapshot";
 import { PortfolioHero } from "@/components/portfolio/PortfolioHero";
-import { ResumeSummary } from "@/components/portfolio/ResumeSummary";
 
 type HomeOverviewProps = {
   content: HomePortfolioContent;
@@ -96,17 +95,5 @@ export function HomeOverview({ content }: HomeOverviewProps) {
         ) : null}
       </div>
     </div>
-  );
-}
-
-export function FullResumePreview({ content }: HomeOverviewProps) {
-  return (
-    <ResumeSummary
-      education={content.education}
-      experience={content.experience}
-      profile={content.profile}
-      resume={content.resume}
-      skillGroups={content.skillGroups}
-    />
   );
 }

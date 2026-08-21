@@ -1,6 +1,6 @@
 import { PageSkeleton } from "@/components/loading/PageSkeleton";
 import { SkeletonBlock } from "@/components/loading/SkeletonBlock";
-import { SkeletonGrid } from "@/components/loading/SkeletonGrid";
+import { SkeletonButton } from "@/components/loading/SkeletonButton";
 import { SkeletonText } from "@/components/loading/SkeletonText";
 
 export function ResumePageSkeleton() {
@@ -8,10 +8,14 @@ export function ResumePageSkeleton() {
     <PageSkeleton>
       <div className="skeleton-page__stack">
         <section className="skeleton-page__section" aria-hidden="true">
-          <SkeletonBlock height={42} width="42%" />
-          <SkeletonText rows={2} />
+          <SkeletonBlock height={14} width={112} />
+          <SkeletonBlock height={34} width="46%" />
+          <SkeletonText rows={3} />
+          <div className="skeleton-page__actions">
+            <SkeletonButton width={210} />
+            <SkeletonButton width={190} />
+          </div>
         </section>
-        <SkeletonGrid items={4} />
       </div>
     </PageSkeleton>
   );

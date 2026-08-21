@@ -23,7 +23,7 @@ short_bio,"I’m ambitious, relentlessly curious, and always looking for the nex
 long_bio,"I build practical software systems at the intersection of full-stack engineering, AI/ML, computer vision, and security. My work includes research software for microscopy analysis, adversarial machine learning pipelines, teaching support for core CS courses, and production-style projects using Next.js, Flask, Django, Firebase, and cloud deployment tooling."
 portrait_image,/favicon/favicon.png
 favicon_image,/favicon/favicon.png
-resume_url,/resume/Nicolas-Gioanni-Resume.pdf
-resume_download_label,Open resume
+resume_url,
+resume_download_label,
 primary_cta_label,View projects
 secondary_cta_label,Read research

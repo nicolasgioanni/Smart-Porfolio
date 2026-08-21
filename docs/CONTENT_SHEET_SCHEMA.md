@@ -10,9 +10,9 @@ This portfolio uses public-safe spreadsheet content as the source of truth. Each
 - `projects`: project summaries and detail content.
 - `experience`: professional, research, teaching, internship, leadership, or volunteer experience.
 - `recommendations`: professional recommendations and verification links.
-- `education`: education entries used on Home and Resume.
-- `skills`: grouped skills for Home and Resume.
-- `resume`: resume-specific custom text and ordering helpers.
+- `education`: education entries used across portfolio surfaces.
+- `skills`: grouped skills used across portfolio surfaces.
+- `resume`: reserved local-only compatibility sheet. Keep `src/content/templates/resume.csv` empty except for its header while the Resume route is private.
 - `site_settings`: safe UI and selection configuration.
 
 ## Field rules
@@ -21,8 +21,9 @@ This portfolio uses public-safe spreadsheet content as the source of truth. Each
 - Collection sheets with an `id` field require unique non-empty IDs.
 - Optional fields may be blank.
 - Invalid URLs fail validation.
-- Accepted URL values are `http`, `https`, valid `mailto`, and safe root-relative paths such as `/resume/resume.pdf`.
+- Accepted URL values are `http`, `https`, valid `mailto`, and safe root-relative paths such as `/images/profile/portrait.png`.
 - Root-relative paths must not contain traversal segments such as `..`.
+- URL validation is not access control. Every referenced file under `public/` is deployed for anonymous access.
 - Date values should use `YYYY`, `YYYY-MM`, `YYYY-MM-DD`, or clear text such as `Present`.
 
 ## Boolean formatting
@@ -69,13 +70,15 @@ Fields:
 
 Example keys include `full_name`, `preferred_name`, `headline`, `role_engineer_prefixes`, `role_engineer_suffix`, `role_alternate`, `current_title`, `current_company`, `current_experience_id`, `previous_experience_id`, `featured_research_id`, `primary_education_id`, `location`, `timezone`, `email`, `pronouns`, `university`, `degree`, `field_of_study`, `graduation`, `short_bio`, `long_bio`, `portrait_image`, `favicon_image`, `resume_url`, `resume_download_label`, `primary_cta_label`, and `secondary_cta_label`.
 
+`resume_url` and `resume_download_label` remain supported optional fields for an intentionally public resume. For this private-resume configuration, keep both values blank in local and remote profile sources and do not place a resume file under `public/`.
+
 The Home role configuration is an optional complete set:
 
 - `role_engineer_prefixes`: pipe-delimited non-empty prefixes such as `Software|AI|Security`.
 - `role_engineer_suffix`: the shared suffix, such as `Engineer`.
 - `role_alternate`: the complete alternate role, such as `Research Scientist`.
 
-When all three keys are omitted or blank, Home displays the required `headline` as its static role and older sheets remain compatible. If any role key is populated, all three must be present and non-empty, and `role_engineer_prefixes` must produce at least one non-empty item; partial configurations fail content generation. Keep `headline` accurate because it remains the static fallback and is used by résumé surfaces.
+When all three keys are omitted or blank, Home displays the required `headline` as its static role and older sheets remain compatible. If any role key is populated, all three must be present and non-empty, and `role_engineer_prefixes` must produce at least one non-empty item; partial configurations fail content generation. Keep `headline` accurate because it remains the static fallback and a general metadata-safe role.
 
 The four Home profile-overview reference keys point to exact IDs in their matching sheets:
 
@@ -101,13 +104,15 @@ Fields:
 - `show_in_footer`: boolean.
 - `order`: numeric display order.
 
+The `resume` kind remains valid for intentionally public deployments. Omit resume-kind file rows from local and remote link sources while the resume is private.
+
 ### research
 
 Fields:
 
 - `id`: required unique ID.
 - `title`: required title.
-- `home_title`: optional concise title used everywhere the row appears on Home. When blank, Home falls back to `title`; Research detail and résumé surfaces continue to use `title`.
+- `home_title`: optional concise title used everywhere the row appears on Home. When blank, Home falls back to `title`; the Research detail route continues to use `title`.
 - `role`, `organization`, `location`, `start_date`, `end_date`: optional context.
 - `organization_logo`: optional static path or URL for the organization mark.
 - `organization_logo_alt`: optional alt text. If blank, the UI derives text from `organization`.
@@ -227,11 +232,14 @@ Fields:
 - `category_order`: numeric order for the broad category card.
 - `name`: required skill name.
 - `icon`: lowercase icon key used by the shared brand/semantic icon renderer.
+- `proficiency`: optional concise level such as `Advanced`, `Proficient`, `Applied proficiency`, or `Working proficiency`.
+- `summary`: optional one-sentence explanation of what the skill is.
+- `where_used`: optional concise evidence describing where and how the skill was applied.
 - `priority`: numeric priority.
 - `featured`, `show_on_home`: booleans.
 - `order`: numeric display order.
 
-Home renders six broad category cards in a two-column desktop grid, with exactly six primary skills per category in the published template. Skill names and icon keys remain spreadsheet-owned; the component does not hard-code Nicolas-specific tools.
+Provide `proficiency`, `summary`, and `where_used` together to make a skill interactive; partial popup copy is rejected during content validation. Home renders three recruiter-focused category cards in a three-column desktop grid, with exactly four primary skills per category in the published template. Selecting a skill opens a concise dialog with its proficiency, definition, and evidence of use. Skill names, icon keys, and popup copy remain spreadsheet-owned; the component does not hard-code Nicolas-specific tools.
 
 ### resume
 
@@ -242,7 +250,7 @@ Fields:
 - `value`: required text value.
 - `order`: numeric order.
 
-The resume sheet supports resume-specific summaries, headings, or custom ordering. It does not need to duplicate all content from other sheets.
+The resume schema is retained only for generator compatibility. `src/content/templates/resume.csv` must remain header-only: do not add rows, a remote source, a private resume file, a private access URL, or sensitive resume-only information. There is intentionally no remote-source environment variable, so content generation always uses this empty local template.
 
 ### site_settings
 
@@ -282,7 +290,7 @@ Recommendation visibility settings:
 
 ## Home page versus detail pages
 
-The Home page is the complete high-level overview. After the profile overview, it presents full-width Experience, Education, Research, and Projects sections, then six spreadsheet-driven Skills category cards and Recommendations before the global footer. Experience, Research, Projects, and Recommendations use compact top-right buttons to open their detail routes.
+The Home page is the complete high-level overview. After the profile overview, it presents full-width Experience, Education, Research, and Projects sections, then three spreadsheet-driven Skills category cards and Recommendations before the global footer. Experience, Research, Projects, and Recommendations use compact top-right buttons to open their detail routes.
 
 Detail pages contain longer explanations, full bullets, technical context, impact details, and supporting links.
 
@@ -299,7 +307,7 @@ Detail pages contain longer explanations, full bullets, technical context, impac
 3. Select `File`, then `Share`, then `Publish to web`.
 4. Choose the tab and CSV output.
 5. Copy the published CSV URL.
-6. Store the URL in the matching environment variable.
+6. Store the URL in the matching environment variable listed below. Do not create or publish a resume tab; that source is intentionally the empty local template.
 
 ## Environment variables
 
@@ -311,11 +319,12 @@ Detail pages contain longer explanations, full bullets, technical context, impac
 - `PORTFOLIO_RECOMMENDATIONS_CSV_URL`
 - `PORTFOLIO_EDUCATION_CSV_URL`
 - `PORTFOLIO_SKILLS_CSV_URL`
-- `PORTFOLIO_RESUME_CSV_URL`
 - `PORTFOLIO_SITE_SETTINGS_CSV_URL`
 - `PORTFOLIO_REQUIRE_REMOTE_CONTENT`
 
-When `PORTFOLIO_REQUIRE_REMOTE_CONTENT=true`, missing CSV URLs fail the content generation step. This helps prevent accidental demo-content deployments.
+Put local values in the ignored `.env` created from the tracked, placeholder-only `.env.example`. Production build values remain configured separately in the Cloudflare Pages dashboard.
+
+When `PORTFOLIO_REQUIRE_REMOTE_CONTENT=true`, missing CSV URLs for the remotely configurable sheets fail the content generation step. The empty local resume template is intentionally exempt because it has no remote source. This helps prevent accidental demo-content deployments without reopening the private resume surface.
 
 ## Updating the portfolio
 

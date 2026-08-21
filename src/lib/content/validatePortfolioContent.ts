@@ -332,6 +332,13 @@ export function validatePortfolioContent(content: GeneratedPortfolioContent): Ge
   for (const skill of content.skills) {
     if (!skill.category) errors.push(`skills.${skill.id} is missing category`);
     if (!skill.name) errors.push(`skills.${skill.id} is missing name`);
+
+    const popupFields = [skill.proficiency, skill.summary, skill.whereUsed];
+    const popupFieldCount = popupFields.filter((value) => Boolean(value?.trim())).length;
+
+    if (popupFieldCount > 0 && popupFieldCount < popupFields.length) {
+      errors.push(`skills.${skill.id} must provide proficiency, summary, and whereUsed together`);
+    }
   }
 
   for (const entry of content.resume) {

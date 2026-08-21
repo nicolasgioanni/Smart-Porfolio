@@ -13,6 +13,10 @@ const generatedContentPath = path.join(
 );
 
 const requiredLocalAssets = ["/favicon/favicon.png"];
+const privateResumeAssets = [
+  path.join(projectRoot, "public", "resume", "Nicolas-Gioanni-Resume.pdf"),
+  path.join(projectRoot, "public", "resume", "demo-resume.pdf"),
+];
 
 function readTemplateText() {
   const templateFiles = [
@@ -55,6 +59,22 @@ describe("demo asset references", () => {
 
       expect(existsSync(publicPath), `${assetPath} should exist under public`).toBe(true);
       expect(statSync(publicPath).size, `${assetPath} should not be empty`).toBeGreaterThan(0);
+    }
+  });
+
+  it("does not publish resume PDF assets", () => {
+    const templateText = readTemplateText();
+    const resumeTemplateText = readFileSync(path.join(templateDirectory, "resume.csv"), "utf8").trim();
+    const generatedText = existsSync(generatedContentPath)
+      ? readFileSync(generatedContentPath, "utf8")
+      : "";
+
+    expect(`${templateText}\n${generatedText}`).not.toMatch(/\/resume\/[^\s,"|]+\.pdf/i);
+    expect(resumeTemplateText).toBe("section,key,value,order");
+    expect(JSON.parse(generatedText).resume).toEqual([]);
+
+    for (const privateResumeAsset of privateResumeAssets) {
+      expect(existsSync(privateResumeAsset), `${privateResumeAsset} should not be published`).toBe(false);
     }
   });
 });

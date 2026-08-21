@@ -69,7 +69,8 @@
   padding: var(--space-5);
 }
 
-.skeleton-actions {
+.skeleton-actions,
+.skeleton-page__actions {
   display: flex;
   gap: var(--space-3);
   flex-wrap: wrap;

@@ -28,11 +28,14 @@ describe("static portfolio security contracts", () => {
     expect(serverActionFiles).toEqual([]);
   });
 
-  it("does not fetch portfolio content at runtime from source files", () => {
+  it("keeps runtime requests limited to the scoped contact endpoint", () => {
     const sourceFiles = collectFiles(path.join(projectRoot, "src"), [".ts", ".tsx"]).filter((filePath) => !filePath.endsWith(".test.ts"));
     const runtimeFetchFiles = sourceFiles.filter((filePath) => readFileSync(filePath, "utf8").includes("fetch("));
 
-    expect(runtimeFetchFiles).toEqual([]);
+    expect(runtimeFetchFiles.map((filePath) => path.relative(projectRoot, filePath).replaceAll("\\", "/"))).toEqual([
+      "src/components/contact/ContactForm.tsx"
+    ]);
+    expect(readFileSync(runtimeFetchFiles[0], "utf8")).toContain('fetch("/api/contact"');
   });
 
   it("renders structured recommendation quote links without parsing spreadsheet markup", () => {
@@ -221,13 +224,14 @@ describe("static portfolio security contracts", () => {
 
     expect(researchLinksRule).toMatch(/display:\s*flex/);
     expect(researchLinksRule).toMatch(/flex-wrap:\s*wrap/);
+    expect(researchLinksRule).toMatch(/gap:\s*var\(--space-2\)/);
     expect(researchLinksRule).toMatch(/align-items:\s*center/);
     expect(researchLinksRule).toMatch(/justify-content:\s*center/);
     expect(researchLinksRule).toMatch(/width:\s*100%/);
     expect(researchLinkRule).toMatch(/display:\s*inline-flex/);
     expect(researchLinkRule).toMatch(/justify-content:\s*center/);
     expect(researchLinkRule).toMatch(/min-height:\s*36px/);
-    expect(researchLinkRule).toMatch(/padding:\s*0 var\(--space-3\)/);
+    expect(researchLinkRule).toMatch(/padding:\s*0 var\(--space-2\)/);
     expect(researchLinkRule).toMatch(/border:\s*1px solid transparent/);
     expect(researchLinkRule).toMatch(/background:\s*transparent/);
     expect(researchLinkRule).toMatch(/font-size:\s*var\(--font-size-caption\)/);
@@ -339,6 +343,10 @@ describe("static portfolio security contracts", () => {
       path.join(projectRoot, "src", "components", "portfolio", "ProjectSkillShowcase.tsx"),
       "utf8"
     );
+    const interactiveSkillSource = readFileSync(
+      path.join(projectRoot, "src", "components", "portfolio", "InteractiveSkillShowcase.tsx"),
+      "utf8"
+    );
     const recommendationSource = readFileSync(
       path.join(projectRoot, "src", "components", "portfolio", "RecommendationCard.tsx"),
       "utf8"
@@ -408,20 +416,27 @@ describe("static portfolio security contracts", () => {
     expect(researchActionsRule).toMatch(/justify-content:\s*center/);
     expect(projectSubtitleRule).toMatch(/color:\s*var\(--color-muted\)/);
     expect(projectSubtitleRule).toMatch(/font-weight:\s*var\(--font-weight-medium\)/);
-    expect(projectSkillSource).toMatch(/createPortal\(dialog,\s*document\.body\)/);
-    expect(projectSkillSource).toMatch(/aria-haspopup="dialog"/);
-    expect(projectSkillSource).toMatch(/aria-modal="true"/);
-    expect(projectSkillSource).toMatch(/projectSkillDialogFadeMs\s*=\s*180/);
+    expect(interactiveSkillSource).toMatch(/createPortal\(dialog,\s*document\.body\)/);
+    expect(interactiveSkillSource).toMatch(/aria-haspopup="dialog"/);
+    expect(interactiveSkillSource).toMatch(/aria-modal="true"/);
+    expect(interactiveSkillSource).toMatch(/interactiveSkillDialogFadeMs\s*=\s*180/);
+    expect(projectSkillSource).toMatch(/projectSkillDialogFadeMs\s*=\s*interactiveSkillDialogFadeMs/);
     expect(projectSkillDialogRule).toMatch(/position:\s*fixed/);
     expect(projectSkillDialogRule).toMatch(/inset:\s*0/);
     expect(projectSkillDialogRule).toMatch(/transition:\s*opacity 180ms cubic-bezier\(0\.22,\s*1,\s*0\.36,\s*1\)/);
+    expect(portfolioCss).toMatch(
+      /\.project-skill-dialog\[data-state="open"\],\s*\.project-skill-dialog\[data-state="closing"\]\s*{[^}]*pointer-events:\s*auto/s
+    );
     expect(projectSkillDialogFrameRule).toMatch(/max-height:/);
     expect(projectSkillDialogFrameRule).toMatch(/overflow-y:\s*auto/);
     expect(portfolioCss).toMatch(
       /@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*?\.project-skill-dialog,[\s\S]*?\.project-skill-dialog__frame\s*{[^}]*transition:\s*none/s
     );
-    expect(skillsGridRule).toMatch(/grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
+    expect(skillsGridRule).toMatch(/grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/);
     expect(skillsGridRule).toMatch(/align-items:\s*stretch/);
+    expect(portfolioCss).toMatch(
+      /@media\s*\(max-width:\s*480px\)[\s\S]*?\.portfolio-skill-showcase\s*{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/s
+    );
     expect(skillPanelRule).toMatch(/height:\s*100%/);
     expect(recommendationSource).toMatch(/const quote = item\.fullQuote/);
     expect(recommendationSource).toMatch(/ExpandableRecommendationText/);

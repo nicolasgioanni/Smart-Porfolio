@@ -505,7 +505,7 @@
   width: auto;
   max-width: 100%;
   min-height: 36px;
-  padding: 0 var(--space-3);
+  padding: 0 var(--space-2);
   appearance: none;
   border: 1px solid transparent;
   border-radius: var(--radius-card);
@@ -921,6 +921,10 @@
 
 .project-skill-dialog[data-state="open"] {
   opacity: 1;
+}
+
+.project-skill-dialog[data-state="open"],
+.project-skill-dialog[data-state="closing"] {
   pointer-events: auto;
 }
 
@@ -1350,7 +1354,7 @@
 }
 
 .skills-cloud--compact {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-5);
   align-items: stretch;
 }
@@ -1376,11 +1380,33 @@
   text-align: center;
 }
 
-.skills-group__chips {
+.skills-group__chips,
+.portfolio-skill-showcase {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-2);
   min-width: 0;
+}
+
+.portfolio-skill-showcase__item {
+  display: flex;
+  min-width: 0;
+}
+
+.portfolio-skill-showcase__trigger,
+.portfolio-skill-showcase__badge {
+  width: 100%;
+}
+
+.portfolio-skill-showcase__trigger {
+  appearance: none;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.portfolio-skill-showcase__badge {
+  cursor: default;
 }
 
 .skill-badge {
@@ -1477,6 +1503,40 @@
 .resume-line,
 .resume-item p {
   margin: 0;
+}
+
+.resume-access__content {
+  display: grid;
+  gap: var(--space-3);
+  max-width: 66ch;
+  color: var(--color-muted);
+  line-height: var(--line-height-relaxed);
+}
+
+.resume-access__content .eyebrow {
+  margin-bottom: 0;
+}
+
+.resume-access__content a {
+  color: var(--color-ink-strong);
+  font-weight: var(--font-weight-bold);
+  text-decoration: underline;
+  text-decoration-color: var(--color-line-strong);
+  text-underline-offset: 0.2em;
+}
+
+.resume-access__content a:hover,
+.resume-access__content a:focus-visible {
+  color: var(--color-accent-strong);
+  text-decoration-color: currentColor;
+}
+
+.resume-access__actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: min(100%, 15rem);
 }
 
 .resume-section {
@@ -1755,6 +1815,10 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .skills-cloud--compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .profile-overview__shell {
     grid-template-columns: minmax(0, 1fr);
     padding: var(--space-8);
@@ -1885,11 +1949,21 @@
     padding: var(--space-6);
   }
 
+  .resume-access__actions {
+    width: 100%;
+  }
+
   .resume-note {
     grid-template-columns: 1fr;
     gap: var(--space-1);
   }
 
+}
+
+@media (max-width: 480px) {
+  .portfolio-skill-showcase {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

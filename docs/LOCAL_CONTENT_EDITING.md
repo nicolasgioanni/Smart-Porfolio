@@ -46,7 +46,7 @@ The Home profile card is driven by generated content:
 
 - Greeting: `Hi, I’m {greetingName}`, where `greetingName` comes from `profile.preferred_name` or the first word of `profile.full_name`
 - Animated role source keys: `role_engineer_prefixes`, `role_engineer_suffix`, and `role_alternate`
-- Static role and résumé fallback: `profile.headline`
+- Static role and resume fallback: `profile.headline`
 - About: `profile.short_bio`, with a concise `profile.long_bio` fallback
 - Current work: a current `experience.csv` row, optionally identified by `profile.current_experience_id`; `profile.current_title` and `profile.current_company` are used only when no suitable current row exists
 - Research: one `research.csv` row selected from `show_on_home`, `featured`, and `home_order`; a valid `profile.featured_research_id` is the explicit fallback when no row is marked for Home
@@ -54,12 +54,12 @@ The Home profile card is driven by generated content:
 - Location: `profile.location`
 - Timezone: `profile.timezone`
 - Portrait: `profile.portrait_image`
-- Contact links: GitHub, LinkedIn, Email, Resume, and Portfolio or Website rows from `links.csv`
+- Contact links: GitHub, LinkedIn, Email, and Portfolio or Website rows from `links.csv`. Omit resume-file rows for the private-resume configuration.
 - Education display overrides and fallbacks: `profile.university`, `profile.degree`, `profile.field_of_study`, and `profile.graduation`
 
 Use `location` for the final wording you want shown, such as `Greater Seattle Area` or `Bothell, WA`. Use `timezone` for a stable display string such as `Pacific Time (UTC-07:00)`.
 
-The three animated-role fields are an optional complete set. Use a pipe-delimited prefix value such as `Software|AI|Security`, a shared suffix such as `Engineer`, and a complete alternate such as `Research Scientist`. Leave all three blank or omit them to show `profile.headline` statically. If any one is populated, all three must be non-empty or generation fails; a prefix value containing only empty pipe segments also fails. Generated JSON stores these as `roleEngineerPrefixes`, `roleEngineerSuffix`, and `roleAlternate`. Keep `headline` concise and accurate because résumé surfaces and the static fallback still use it.
+The three animated-role fields are an optional complete set. Use a pipe-delimited prefix value such as `Software|AI|Security`, a shared suffix such as `Engineer`, and a complete alternate such as `Research Scientist`. Leave all three blank or omit them to show `profile.headline` statically. If any one is populated, all three must be non-empty or generation fails; a prefix value containing only empty pipe segments also fails. Generated JSON stores these as `roleEngineerPrefixes`, `roleEngineerSuffix`, and `roleAlternate`. Keep `headline` concise and accurate because the static fallback and general metadata still use it.
 
 Keep the right-side detail hierarchy in this order: greeting H1, role, About, Current Work, then a coordinated Education and Research row. Current Work is full width; its `View experience` link sits in the panel header. Research owns `View research` in its header. These links use an overlaid action slot so their hit areas do not make Current Work or Research headers taller than Education. Do not add a detached supporting-link row below the panels. On desktop, Education and Research split the row evenly, stretch to the same outer height, and align their bottom graduation/resource footer rows. Center the Research resources within that footer. On mobile, Education stacks before Research. The inner summaries use subtle surfaces without timeline dots, vertical rails, repeated organization badges, or heavy nested glass effects.
 
@@ -69,7 +69,7 @@ Previous experience data stays in `experience.csv` and continues to appear on th
 
 The Education panel prefers `primary_education_id`, then the Home-visible/featured/ordered education fallback. Non-blank profile university, degree, field, and graduation values override the corresponding row display values; the row still supplies concentration, dates, and optional `institution_logo`. Keep `profile.degree=Bachelor of Science` and `profile.field_of_study=Computer Science`; the shared formatter presents them as `Degree: Bachelor of Science in Computer Science`. Keep the row's concentration as `Concentration: Information Assurance & Cybersecurity`. The panel presents the completion date compactly as `Graduated Jun 2025` rather than repeating the full enrollment range. Education location is not repeated because the left profile rail already supplies geographic context.
 
-For Research, mark intended candidates with `show_on_home=true`; featured candidates sort first, followed by `home_order`. If none are marked for Home, `featured_research_id` is used when it resolves to a research row, followed by the established featured/ordered fallback. Use optional `home_title` for a concise display title on both the profile-overview panel and the separate Home Research card; leave it blank to use `title`. Research detail and résumé surfaces continue to use the formal `title`. For a compact profile panel, put a short unlabelled descriptor such as `Lead Engineer & First Author` in `profile_byline` and pipe-delimited affiliations in `profile_labs`. The compact panel does not display `role`. When both fields are blank, legacy copy resolves from `profile_summary`, then `home_summary`, then `detail_summary`. The larger Home Research card continues to use `home_summary` and never consumes the profile-only fields. The compact panel also consumes valid `links`, `organization_logo`, and `pending_links`; it does not repeat organization text or dates. Published resource links are centered button-like controls with no underline: they remain transparent while idle and reveal a surface and border on hover or keyboard focus. A pending resource may appear there only as a native disabled, non-interactive button. The separate Home Research cards omit label-only pending resources.
+For Research, mark intended candidates with `show_on_home=true`; featured candidates sort first, followed by `home_order`. If none are marked for Home, `featured_research_id` is used when it resolves to a research row, followed by the established featured/ordered fallback. Use optional `home_title` for a concise display title on both the profile-overview panel and the separate Home Research card; leave it blank to use `title`. The Research detail route continues to use the formal `title`. For a compact profile panel, put a short unlabelled descriptor such as `Lead Engineer & First Author` in `profile_byline` and pipe-delimited affiliations in `profile_labs`. The compact panel does not display `role`. When both fields are blank, legacy copy resolves from `profile_summary`, then `home_summary`, then `detail_summary`. The larger Home Research card continues to use `home_summary` and never consumes the profile-only fields. The compact panel also consumes valid `links`, `organization_logo`, and `pending_links`; it does not repeat organization text or dates. Published resource links are centered button-like controls with no underline: they remain transparent while idle and reveal a surface and border on hover or keyboard focus. A pending resource may appear there only as a native disabled, non-interactive button. The separate Home Research cards omit label-only pending resources.
 
 All displayed personal facts remain spreadsheet-derived. Component code owns only the greeting format, stable section labels, the two internal route destinations, and decorative structure. It must not duplicate names, roles, organizations, titles, programs, dates, summaries, external URLs, or asset paths. Content is normalized into generated JSON before the static build; the browser never requests Google Sheets at runtime.
 
@@ -89,7 +89,7 @@ Project `home_skills` entries pair a visible label with a lowercase icon key:
 Next.js=nextdotjs|TypeScript=typescript|OpenAI API=openai
 ```
 
-Keep exactly three verified `home_skills` on every published Home project; content validation rejects a fourth entry. The Skills sheet stores one exact skill per row; use `category_order` for the six broad-card order and `icon` for the shared brand or semantic icon key. The published Home layout expects six skills in each of six categories.
+Keep exactly three verified `home_skills` on every published Home project; content validation rejects a fourth entry. The Skills sheet stores one recruiter-focused skill per row; use `category_order` for the three broad-card order and `icon` for the shared brand or semantic icon key. The published Home layout expects four skills in each of three categories. Fill `proficiency`, `summary`, and `where_used` together so every published skill opens a complete evidence-based dialog.
 
 Project tool explanations use ordered column pairs that match the `home_skills` positions:
 
@@ -155,7 +155,8 @@ Place assets in these folders:
 - Project images: `public/images/projects/`
 - Research images: `public/images/research/`
 - Favicon files: `public/favicon/`
-- Resume PDF files: `public/resume/`
+
+Every file under `public/` is deployed for anonymous access. Do not place a private resume in `public/resume/` or any other public asset folder.
 
 ## Valid local paths
 
@@ -164,7 +165,6 @@ Place assets in these folders:
 /images/organizations/uw-logo.svg
 /images/education/uw-logo.svg
 /favicon/favicon.ico
-/resume/Nicolas-Gioanni-Resume.pdf
 ```
 
 ## Valid external links
@@ -177,13 +177,21 @@ mailto:name@example.com
 
 Recommendation `source_url` and `linkedin_url` values must be HTTPS URLs. Do not paste private LinkedIn data into the app; the spreadsheet text is the source of truth and links are only for verification/navigation.
 
+## Private resume configuration
+
+Keep `resume_url` and `resume_download_label` blank in `profile.csv` and in any configured remote profile sheet. Remove resume-kind file rows from `links.csv` and its remote equivalent, and keep the resume PDF outside the repository, `public/`, generated content, and deployment artifacts.
+
+Keep `src/content/templates/resume.csv` empty except for its header. The resume sheet is deliberately local-only and has no remote-source environment variable; do not add a remote source or populate the local rows while the resume is private.
+
+Safe root-relative URL validation is not access control. After regeneration, search generated JSON, built HTML, and `out/` for prior resume filenames or URLs. Review prior deployments, caches, source archives, and repository history separately because removing the current asset does not retract an already published copy.
+
 Experience and research `organization_logo` values and education `institution_logo` values should point to approved real local public assets when possible. Prefer the shared `/images/organizations/` path for new marks, then place that validated root-relative path in the corresponding CSV field. Leave the field blank until an approved asset is available; compact Home panels omit the mark rather than inventing a placeholder. Use the corresponding `_logo_alt` field when the asset needs explicit alternative text.
 
 Keep education `degree`, `field`, and `concentration` separate. For the current row, use `Bachelor of Science` as the degree, `Computer Science` as the field, and `Information Assurance & Cybersecurity` as the concentration. The shared formatter produces `Bachelor of Science in Computer Science` wherever the Home program is shown. Education `location` is optional: populate it to show a separate location line, or leave it blank to hide it.
 
 ## Google Sheets versus local templates
 
-Local templates are enough for local development. Google Sheets CSV URLs can be added through `.env.local`, but they are not required.
+Local templates are enough for local development. Google Sheets CSV URLs can be added through the ignored `.env` created from `.env.example`, but they are not required. The one exception is the resume sheet, which must always use its empty local template and has no remote CSV variable.
 
 If `PORTFOLIO_REQUIRE_REMOTE_CONTENT=true`, missing CSV URL environment variables will fail content generation.
 
@@ -224,6 +232,5 @@ The local templates reference demo-safe placeholder files so a fresh clone can r
 - `/images/projects/project-placeholder.png`
 - `/images/research/research-placeholder.png`
 - `/favicon/favicon.png`
-- `/resume/demo-resume.pdf`
 
-These files are generic local development assets. Replace them with Nicolas-specific files later by either overwriting the public files or by updating the matching CSV values to new root-relative paths. Keep custom assets under `public` so static export can serve them without a backend.
+These files are generic local development assets. Replace them with approved public files later by either overwriting the public files or by updating the matching CSV values to new root-relative paths. Keep only intentionally public assets under `public`; private resume files must remain outside the static export.
