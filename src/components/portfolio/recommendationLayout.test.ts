@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  calculateHomeRecommendationCollapsedGridHeight,
   calculateHomeRecommendationLayout,
+  calculateHomeRecommendationOverflowLayout,
   type HomeRecommendationMetric
 } from "@/components/portfolio/recommendationLayout";
 
@@ -69,5 +71,57 @@ describe("Home recommendation row layout", () => {
     ]);
 
     expect(layout.short?.collapsedLineCount).toBe(4);
+  });
+
+  it("calculates the collapsed grid height for desktop and responsive rows", () => {
+    const desktopMetrics = [
+      createMetric("brent"),
+      createMetric("annuska"),
+      createMetric("anoop", {
+        headerHeight: 111,
+        naturalCollapsedHeightAtFourLines: 371
+      })
+    ];
+    const twoColumnMetrics = desktopMetrics.map((metric, index) => ({
+      ...metric,
+      top: index === 2 ? 390 : 0
+    }));
+    const singleColumnMetrics = desktopMetrics.map((metric, index) => ({
+      ...metric,
+      top: index * 390
+    }));
+
+    const desktopLayout = calculateHomeRecommendationLayout(desktopMetrics);
+    const twoColumnLayout = calculateHomeRecommendationLayout(twoColumnMetrics);
+    const singleColumnLayout = calculateHomeRecommendationLayout(singleColumnMetrics);
+
+    expect(calculateHomeRecommendationCollapsedGridHeight(desktopMetrics, desktopLayout, 24)).toBe(350);
+    expect(calculateHomeRecommendationCollapsedGridHeight(twoColumnMetrics, twoColumnLayout, 24)).toBe(745);
+    expect(calculateHomeRecommendationCollapsedGridHeight(singleColumnMetrics, singleColumnLayout, 24)).toBe(1119);
+  });
+
+  it("keeps the panel at its collapsed height and reserves only real overflow", () => {
+    expect(
+      calculateHomeRecommendationOverflowLayout({
+        actualContentHeight: 510,
+        collapsedContentHeight: 350,
+        headerHeight: 44,
+        headerMarginBottom: 20,
+        surfaceFrameHeight: 82
+      })
+    ).toEqual({
+      panelHeight: 496,
+      reserveHeight: 160
+    });
+
+    expect(
+      calculateHomeRecommendationOverflowLayout({
+        actualContentHeight: 340,
+        collapsedContentHeight: 350,
+        headerHeight: 44,
+        headerMarginBottom: 20,
+        surfaceFrameHeight: 82
+      }).reserveHeight
+    ).toBe(0);
   });
 });

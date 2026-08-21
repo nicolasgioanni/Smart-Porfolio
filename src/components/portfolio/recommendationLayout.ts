@@ -17,6 +17,11 @@ export type HomeRecommendationLayout = {
   collapsedMinHeight: number;
 };
 
+export type HomeRecommendationOverflowLayout = {
+  panelHeight: number;
+  reserveHeight: number;
+};
+
 function groupMetricsByVisualRow(metrics: HomeRecommendationMetric[]): HomeRecommendationMetric[][] {
   const rows: HomeRecommendationMetric[][] = [];
 
@@ -69,4 +74,45 @@ export function calculateHomeRecommendationLayout(
   }
 
   return layout;
+}
+
+export function calculateHomeRecommendationCollapsedGridHeight(
+  metrics: HomeRecommendationMetric[],
+  layout: Record<string, HomeRecommendationLayout>,
+  rowGap: number
+): number {
+  const rows = groupMetricsByVisualRow(metrics);
+
+  if (rows.length === 0) return 0;
+
+  const rowsHeight = rows.reduce((totalHeight, row) => {
+    const rowHeight = Math.max(...row.map((metric) => layout[metric.id]?.collapsedMinHeight ?? 0));
+    return totalHeight + rowHeight;
+  }, 0);
+
+  return Math.ceil(rowsHeight + Math.max(0, rowGap) * Math.max(0, rows.length - 1));
+}
+
+export function calculateHomeRecommendationOverflowLayout({
+  actualContentHeight,
+  collapsedContentHeight,
+  headerHeight,
+  headerMarginBottom,
+  surfaceFrameHeight
+}: {
+  actualContentHeight: number;
+  collapsedContentHeight: number;
+  headerHeight: number;
+  headerMarginBottom: number;
+  surfaceFrameHeight: number;
+}): HomeRecommendationOverflowLayout {
+  return {
+    panelHeight: Math.ceil(
+      Math.max(0, surfaceFrameHeight) +
+        Math.max(0, headerHeight) +
+        Math.max(0, headerMarginBottom) +
+        Math.max(0, collapsedContentHeight)
+    ),
+    reserveHeight: Math.ceil(Math.max(0, actualContentHeight - collapsedContentHeight))
+  };
 }

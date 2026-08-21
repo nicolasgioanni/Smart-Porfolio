@@ -7,7 +7,9 @@ import { GlassButton } from "@/components/glass/GlassButton";
 import { EmptyState } from "@/components/portfolio/EmptyState";
 import { RecommendationCard } from "@/components/portfolio/RecommendationCard";
 import {
+  calculateHomeRecommendationCollapsedGridHeight,
   calculateHomeRecommendationLayout,
+  calculateHomeRecommendationOverflowLayout,
   defaultRecommendationPreviewLines,
   type HomeRecommendationLayout,
   type HomeRecommendationMetric
@@ -20,6 +22,10 @@ type RecommendationItemStyle = CSSProperties & {
   "--recommendation-row-collapsed-height"?: string;
 };
 
+const overflowLayoutAttribute = "recommendationOverflowLayout";
+const panelHeightProperty = "--home-recommendations-panel-height";
+const reserveHeightProperty = "--home-recommendations-overflow-reserve";
+
 function parsePixelValue(value: string): number {
   const parsedValue = Number.parseFloat(value);
   return Number.isFinite(parsedValue) ? parsedValue : 0;
@@ -27,6 +33,8 @@ function parsePixelValue(value: string): number {
 
 function getRenderedHeight(element: HTMLElement | null, fallback = 0): number {
   if (!element) return fallback;
+
+  if (element.offsetHeight > 0) return element.offsetHeight;
 
   const rectHeight = element.getBoundingClientRect().height;
 
@@ -53,6 +61,78 @@ function getLineHeight(element: HTMLElement): number {
 function getGridRowGap(element: HTMLElement): number {
   const computedStyle = window.getComputedStyle(element);
   return parsePixelValue(computedStyle.rowGap) || parsePixelValue(computedStyle.gap);
+}
+
+function getDirectChildByClassName(element: HTMLElement, className: string): HTMLElement | null {
+  return (
+    Array.from(element.children).find(
+      (child): child is HTMLElement => child instanceof HTMLElement && child.classList.contains(className)
+    ) ?? null
+  );
+}
+
+function setPixelCustomProperty(element: HTMLElement, property: string, value: number) {
+  const nextValue = `${Math.max(0, Math.ceil(value))}px`;
+
+  if (element.style.getPropertyValue(property) !== nextValue) {
+    element.style.setProperty(property, nextValue);
+  }
+}
+
+function clearRecommendationOverflowLayout(grid: HTMLElement) {
+  const section = grid.closest<HTMLElement>(".home-section--recommendations");
+
+  if (!section) return;
+
+  delete section.dataset[overflowLayoutAttribute];
+  section.style.removeProperty(panelHeightProperty);
+  section.style.removeProperty(reserveHeightProperty);
+}
+
+function applyRecommendationOverflowLayout(
+  grid: HTMLElement,
+  metrics: HomeRecommendationMetric[],
+  layout: Record<string, HomeRecommendationLayout>
+) {
+  const homeRecommendations = grid.parentElement;
+  const section = grid.closest<HTMLElement>(".home-section--recommendations");
+  const surface = section ? getDirectChildByClassName(section, "home-section__surface") : null;
+  const sectionHeader = surface?.querySelector<HTMLElement>(".home-section__header") ?? null;
+
+  if (!homeRecommendations || !section || !surface || !sectionHeader) return;
+
+  const collapsedGridHeight = calculateHomeRecommendationCollapsedGridHeight(
+    metrics,
+    layout,
+    getGridRowGap(grid)
+  );
+
+  if (collapsedGridHeight <= 0) return;
+
+  const actions = getDirectChildByClassName(homeRecommendations, "home-recommendations__actions");
+  const collapsedContentHeight =
+    collapsedGridHeight +
+    (actions ? getGridRowGap(homeRecommendations) + getRenderedHeight(actions) : 0);
+  const surfaceStyle = window.getComputedStyle(surface);
+  const headerStyle = window.getComputedStyle(sectionHeader);
+  const surfaceFrameHeight =
+    parsePixelValue(surfaceStyle.paddingTop) +
+    parsePixelValue(surfaceStyle.paddingBottom) +
+    parsePixelValue(surfaceStyle.borderTopWidth) +
+    parsePixelValue(surfaceStyle.borderBottomWidth);
+  const overflowLayout = calculateHomeRecommendationOverflowLayout({
+    actualContentHeight: getRenderedHeight(homeRecommendations, collapsedContentHeight),
+    collapsedContentHeight,
+    headerHeight: getRenderedHeight(sectionHeader),
+    headerMarginBottom: parsePixelValue(headerStyle.marginBottom),
+    surfaceFrameHeight
+  });
+
+  if (overflowLayout.panelHeight <= 0) return;
+
+  setPixelCustomProperty(section, panelHeightProperty, overflowLayout.panelHeight);
+  setPixelCustomProperty(section, reserveHeightProperty, overflowLayout.reserveHeight);
+  section.dataset[overflowLayoutAttribute] = "ready";
 }
 
 function measureRecommendationMetric(wrapper: HTMLElement): HomeRecommendationMetric | null {
@@ -100,7 +180,7 @@ function measureRecommendationMetric(wrapper: HTMLElement): HomeRecommendationMe
     id,
     naturalCollapsedHeightAtFourLines: cardBoxHeight + cardChildrenHeight + cardGapsHeight,
     quoteLineHeight,
-    top: wrapper.getBoundingClientRect().top
+    top: wrapper.offsetParent ? wrapper.offsetTop : wrapper.getBoundingClientRect().top
   };
 }
 
@@ -128,6 +208,7 @@ export function HomeRecommendations({ items, showAction = true }: { items: Recom
   const gridRef = useRef<HTMLDivElement>(null);
   const scheduledFrameRef = useRef<number>();
   const [layout, setLayout] = useState<Record<string, HomeRecommendationLayout>>({});
+  const layoutRef = useRef<Record<string, HomeRecommendationLayout>>({});
   const itemSignature = useMemo(() => items.map((item) => item.id).join("|"), [items]);
 
   const measureLayout = useCallback(() => {
@@ -143,7 +224,13 @@ export function HomeRecommendations({ items, showAction = true }: { items: Recom
     if (metrics.length !== items.length) return;
 
     const nextLayout = calculateHomeRecommendationLayout(metrics);
-    setLayout((currentLayout) => (layoutsMatch(currentLayout, nextLayout) ? currentLayout : nextLayout));
+    if (!layoutsMatch(layoutRef.current, nextLayout)) {
+      layoutRef.current = nextLayout;
+      setLayout(nextLayout);
+      return;
+    }
+
+    applyRecommendationOverflowLayout(grid, metrics, nextLayout);
   }, [items.length]);
 
   const scheduleMeasurement = useCallback(() => {
@@ -159,7 +246,7 @@ export function HomeRecommendations({ items, showAction = true }: { items: Recom
 
   useLayoutEffect(() => {
     measureLayout();
-  }, [itemSignature, measureLayout]);
+  }, [itemSignature, layout, measureLayout]);
 
   useEffect(() => {
     const grid = gridRef.current;
@@ -169,12 +256,19 @@ export function HomeRecommendations({ items, showAction = true }: { items: Recom
     let active = true;
 
     const resizeObserver =
-      typeof ResizeObserver === "function" ? new ResizeObserver(() => scheduleMeasurement()) : undefined;
+      typeof ResizeObserver === "function" ? new ResizeObserver(() => measureLayout()) : undefined;
 
     resizeObserver?.observe(grid);
+    resizeObserver?.observe(grid.parentElement ?? grid);
     grid
       .querySelectorAll<HTMLElement>(".recommendation-card__header, .recommendation-expandable__quote")
       .forEach((element) => resizeObserver?.observe(element));
+    const section = grid.closest<HTMLElement>(".home-section--recommendations");
+    const sectionSurface = section ? getDirectChildByClassName(section, "home-section__surface") : null;
+    const sectionHeader = sectionSurface?.querySelector<HTMLElement>(".home-section__header");
+
+    if (sectionHeader) resizeObserver?.observe(sectionHeader);
+
     window.addEventListener("resize", scheduleMeasurement);
     void document.fonts?.ready.then(() => {
       if (active) scheduleMeasurement();
@@ -189,8 +283,9 @@ export function HomeRecommendations({ items, showAction = true }: { items: Recom
 
       resizeObserver?.disconnect();
       window.removeEventListener("resize", scheduleMeasurement);
+      clearRecommendationOverflowLayout(grid);
     };
-  }, [itemSignature, scheduleMeasurement]);
+  }, [itemSignature, measureLayout, scheduleMeasurement]);
 
   if (items.length === 0) {
     return <EmptyState message="Professional recommendations will appear here when content is available." title="No recommendations yet" />;
