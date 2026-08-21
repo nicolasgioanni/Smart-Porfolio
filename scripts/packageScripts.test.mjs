@@ -49,6 +49,11 @@ describe("package and CI deployment automation", () => {
     );
     expect(workflow).toMatch(/jobs:\s+verify:\s+name: verify/);
     expect(workflow.match(/node-version: 22/g)).toHaveLength(3);
+    expect(workflow.match(/actions\/checkout@v6/g)).toHaveLength(3);
+    expect(workflow.match(/actions\/setup-node@v6/g)).toHaveLength(3);
+    expect(workflow.match(/actions\/upload-artifact@v7/g)).toHaveLength(1);
+    expect(workflow.match(/actions\/download-artifact@v8/g)).toHaveLength(1);
+    expect(workflow).not.toMatch(/actions\/(?:checkout|setup-node|upload-artifact|download-artifact)@v4/);
     expect(workflow).toContain(
       "ref: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'main' || github.sha }}"
     );
