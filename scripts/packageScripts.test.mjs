@@ -65,6 +65,11 @@ describe("package and CI deployment automation", () => {
   it("runs full template verification for pull requests without deployment credentials", async () => {
     const workflow = await readFile(workflowPath, "utf8");
     const verifyJob = section(workflow, "  verify:", "\n  deploy:");
+    const pullRequestGeneration = section(
+      verifyJob,
+      "- name: Generate validated local template content for pull requests",
+      "- name: Validate the immutable Cloudflare Pages target"
+    );
     const pullRequestBuild = section(
       verifyJob,
       "- name: Build the pull-request snapshot without remote credentials",
@@ -79,16 +84,30 @@ describe("package and CI deployment automation", () => {
     expect(verifyJob).toContain("run: npm run test:footer");
     expect(verifyJob).toContain("run: npm run test");
     expect(pullRequestBuild).toContain("run: npm run build:generated");
+    expect(pullRequestGeneration).not.toContain("secrets.");
     expect(pullRequestBuild).not.toContain("NEXT_PUBLIC_TURNSTILE");
-    expect(verifyJob).not.toContain("secrets.");
+    expect(pullRequestBuild).not.toContain("secrets.");
+    expect(verifyJob).not.toContain("CLOUDFLARE_API_TOKEN");
+    expect(verifyJob).not.toContain("CLOUDFLARE_ACCOUNT_ID");
   });
 
   it("fetches one strict workbook snapshot for latest main and develop candidates", async () => {
     const workflow = await readFile(workflowPath, "utf8");
     const verifyJob = section(workflow, "  verify:", "\n  deploy:");
+    const workbookStep = section(
+      verifyJob,
+      "- name: Fetch and generate the strict public workbook snapshot once",
+      "- name: Read the validated workbook content hash"
+    );
 
     expect(verifyJob).toContain("Fetch and generate the strict public workbook snapshot once");
-    expect(verifyJob).toContain("PORTFOLIO_WORKBOOK_URL: ${{ vars.PORTFOLIO_WORKBOOK_URL }}");
+    expect(workbookStep).toContain(
+      "if: github.event_name != 'pull_request' && steps.candidate.outputs.is_latest == 'true'"
+    );
+    expect(workbookStep).toContain(
+      "PORTFOLIO_WORKBOOK_URL: ${{ secrets.PORTFOLIO_WORKBOOK_URL }}"
+    );
+    expect(verifyJob).not.toContain("PORTFOLIO_WORKBOOK_URL: ${{ vars.PORTFOLIO_WORKBOOK_URL }}");
     expect(verifyJob).toContain('PORTFOLIO_REQUIRE_REMOTE_CONTENT: "true"');
     expect(verifyJob).not.toContain("PORTFOLIO_GOOGLE_SHEET_URL");
     expect(verifyJob).not.toMatch(/PORTFOLIO_[A-Z_]+_CSV_URL/);
@@ -102,19 +121,8 @@ describe("package and CI deployment automation", () => {
     expect(verifyJob.indexOf("Validate the immutable Cloudflare Pages target")).toBeLessThan(
       verifyJob.indexOf("Fetch and generate the strict public workbook snapshot once")
     );
-    const maskStep = verifyJob.slice(
-      verifyJob.indexOf("Mask the anonymous workbook URL"),
-      verifyJob.indexOf("Fetch and generate the strict public workbook snapshot once")
-    );
-    expect(verifyJob).toContain("Mask the anonymous workbook URL");
-    expect(maskStep).toContain("if: github.event_name != 'pull_request' && steps.candidate.outputs.is_latest == 'true'");
-    expect(maskStep).toContain("PORTFOLIO_WORKBOOK_URL: ${{ vars.PORTFOLIO_WORKBOOK_URL }}");
-    expect(maskStep).toContain('if [[ -n "${PORTFOLIO_WORKBOOK_URL:-}" ]]');
-    expect(maskStep).toContain('echo "::add-mask::$PORTFOLIO_WORKBOOK_URL"');
-    expect(maskStep).not.toContain("secrets.");
-    expect(verifyJob.indexOf("Mask the anonymous workbook URL")).toBeLessThan(
-      verifyJob.indexOf("Fetch and generate the strict public workbook snapshot once")
-    );
+    expect(verifyJob).not.toContain("Mask the anonymous workbook URL");
+    expect(verifyJob).not.toContain("::add-mask::");
     expect(verifyJob.indexOf("run: npm run generate:content")).toBeLessThan(
       verifyJob.indexOf("run: npm run lint")
     );

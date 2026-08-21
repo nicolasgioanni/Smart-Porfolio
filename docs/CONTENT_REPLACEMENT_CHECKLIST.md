@@ -63,6 +63,6 @@ Use this checklist when replacing demo content with Nicolas-specific public cont
 
 ## Production strict mode
 
-- Configure the one anonymous XLSX export URL as `PORTFOLIO_WORKBOOK_URL`; the downloaded workbook must contain exactly the nine required visible named tabs. The resume source remains the intentionally empty local exception.
+- Configure the one anonymous XLSX export URL as the `PORTFOLIO_WORKBOOK_URL` GitHub Actions secret for automatic runner-log redaction; the downloaded workbook must contain exactly the nine required visible named tabs. The resume source remains the intentionally empty local exception.
 - Keep `PORTFOLIO_REQUIRE_REMOTE_CONTENT=true` in production so demo fallback content can never deploy.
 - For local template changes, run `npm run generate:content`, review and commit the generated JSON with its source changes, then run `npm run verify`. For production workbook changes, let GitHub Actions verify and deploy the exact tested artifact; `/content-version.json`, not a repository commit, records the successful hash. Do not edit generated JSON directly.

@@ -314,7 +314,7 @@ Detail pages contain longer explanations, full bullets, technical context, impac
 - `PORTFOLIO_WORKBOOK_URL`
 - `PORTFOLIO_REQUIRE_REMOTE_CONTENT`
 
-Put local values in the ignored `.env` created from the tracked, placeholder-only `.env.example`. Configure `PORTFOLIO_WORKBOOK_URL` as a GitHub repository variable for production; Cloudflare does not build or fetch spreadsheet content.
+Put local values in the ignored `.env` created from the tracked, placeholder-only `.env.example`. Configure `PORTFOLIO_WORKBOOK_URL` as a GitHub Actions secret for production so GitHub automatically redacts the anonymous URL from runner logs; this does not turn it into a Google credential or grant account access. Cloudflare does not build or fetch spreadsheet content.
 
 When `PORTFOLIO_REQUIRE_REMOTE_CONTENT=true`, a missing or invalid workbook source fails content generation. The empty local resume template is intentionally exempt because it has no remote source. GitHub Actions hard-codes this setting for production candidates to prevent fallback-content deployments without reopening the private resume surface.
 

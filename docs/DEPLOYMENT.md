@@ -64,16 +64,18 @@ Generated content and deployment state are not committed after deployment.
 
 Repository variables:
 
-- `PORTFOLIO_WORKBOOK_URL`: the one anonymously downloadable HTTPS XLSX URL.
 - `CLOUDFLARE_PAGES_PROJECT_NAME`: `smart-portfolio`.
 - `CLOUDFLARE_PAGES_DOMAIN`: `smart-portfolio-bds.pages.dev`, the exact domain assigned by Cloudflare. Do not derive it from the project name.
 - `NEXT_PUBLIC_TURNSTILE_SITE_KEY`: the production public widget key.
 - `NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY`: optional public key for the `develop` preview. There is no production-key fallback.
 
-Actions secrets used only by deployment jobs:
+Actions secrets:
 
+- `PORTFOLIO_WORKBOOK_URL`: the anonymously downloadable HTTPS XLSX URL. It is public-read-only configuration stored as a secret solely so GitHub automatically redacts it from runner logs. It grants no Google account or Drive access, and the workflow never injects it into pull-request steps.
 - `CLOUDFLARE_API_TOKEN`: a restricted token with Pages Edit only.
 - `CLOUDFLARE_ACCOUNT_ID`: the target account identifier.
+
+The Cloudflare secrets are used only by deployment jobs.
 
 The workflow hard-codes `PORTFOLIO_REQUIRE_REMOTE_CONTENT=true` for `main`, `develop`, scheduled, and manual deployment candidates. Pull requests never receive Cloudflare credentials. Verification jobs use `contents: read`; deployment jobs add only the deployment permission they require. No job uses `pull_request_target`, `always()` as a failure bypass, `continue-on-error` for a required step, a deploy hook, a test-skipping passcode or commit message, a personal token, or a privileged PR-head checkout.
 
@@ -85,7 +87,7 @@ The automation performs one anonymous HTTPS download. It does not request Google
 2. Manually import the nine matching CSV templates from `src/content/templates` as worksheets named `profile`, `links`, `research`, `projects`, `experience`, `recommendations`, `education`, `skills`, and `site_settings`. Never import `resume.csv`.
 3. Preserve row-one field names and text formatting where automatic conversion would alter identifiers, dates, URLs, booleans, or multiline text.
 4. Review every value and workbook property for anonymous public release.
-5. Configure a Google Sheets URL that returns the complete workbook as XLSX without login or permission prompts as `PORTFOLIO_WORKBOOK_URL`.
+5. Configure a Google Sheets URL that returns the complete workbook as XLSX without login or permission prompts as the `PORTFOLIO_WORKBOOK_URL` GitHub Actions secret. Secret storage is used only for automatic runner-log redaction; the URL remains an anonymous download and is not a Google credential.
 
 The workbook must contain exactly those nine visible worksheets and nothing else. Worksheet matching uses `worksheetName.trim().toLowerCase()`: capitalization and physical order are ignored, but internal spaces, hyphens, and spelling changes are not aliases. A missing, duplicate-normalized, unexpected, `resume`, hidden, or very-hidden worksheet fails generation. HTML/login responses, invalid ZIP/XLSX data, an oversized response, timeout, invalid headers, malformed rows, uncached formula results, or schema violations also fail without template fallback.
 
