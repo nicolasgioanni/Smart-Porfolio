@@ -51,8 +51,8 @@ async function main() {
   console.log(`npm: ${npmVersion}`);
 
   const nodeMajorVersion = getNodeMajorVersion(nodeVersion);
-  if (nodeMajorVersion < 20 || (nodeMajorVersion === 20 && getNodeMinorVersion(nodeVersion) < 19)) {
-    console.warn("Warning: Node 20.19 or newer avoids engine warnings from some development dependencies.");
+  if (nodeMajorVersion < 22 || (nodeMajorVersion === 22 && getNodeMinorVersion(nodeVersion) < 13)) {
+    throw new Error("Node.js 22.13 or newer is required. Install Node 22 LTS and reopen the terminal.");
   }
 
   const envCreated = await copyEnvExampleIfMissing(projectRoot);

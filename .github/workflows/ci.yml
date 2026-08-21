@@ -27,6 +27,8 @@ jobs:
       candidate_sha: ${{ steps.candidate.outputs.candidate_sha }}
       content_hash: ${{ steps.content.outputs.content_hash }}
       deploy_target: ${{ steps.decision.outputs.deploy_target }}
+      pages_domain: ${{ steps.pages.outputs.pages_domain }}
+      pages_project_name: ${{ steps.pages.outputs.pages_project_name }}
       should_deploy: ${{ steps.decision.outputs.should_deploy }}
     steps:
       - name: Check out the exact candidate
@@ -81,6 +83,28 @@ jobs:
           PORTFOLIO_REQUIRE_REMOTE_CONTENT: "false"
         run: npm run generate:content
 
+      - name: Validate the immutable Cloudflare Pages target
+        id: pages
+        if: github.event_name != 'pull_request' && steps.candidate.outputs.is_latest == 'true'
+        env:
+          CLOUDFLARE_PAGES_DOMAIN: ${{ vars.CLOUDFLARE_PAGES_DOMAIN }}
+          CLOUDFLARE_PAGES_PROJECT_NAME: ${{ vars.CLOUDFLARE_PAGES_PROJECT_NAME }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$CLOUDFLARE_PAGES_PROJECT_NAME" != "smart-portfolio" ]]; then
+            echo "CLOUDFLARE_PAGES_PROJECT_NAME must be smart-portfolio."
+            exit 1
+          fi
+          if [[ "$CLOUDFLARE_PAGES_DOMAIN" != "smart-portfolio-bds.pages.dev" ]]; then
+            echo "CLOUDFLARE_PAGES_DOMAIN must match the reviewed Cloudflare-assigned domain."
+            exit 1
+          fi
+          node scripts/checkDeployedContent.mjs url "$CLOUDFLARE_PAGES_DOMAIN" main > /dev/null
+          node scripts/checkDeployedContent.mjs url "$CLOUDFLARE_PAGES_DOMAIN" develop > /dev/null
+          echo "pages_domain=$CLOUDFLARE_PAGES_DOMAIN" >> "$GITHUB_OUTPUT"
+          echo "pages_project_name=$CLOUDFLARE_PAGES_PROJECT_NAME" >> "$GITHUB_OUTPUT"
+
       - name: Fetch and generate the strict public workbook snapshot once
         if: github.event_name != 'pull_request' && steps.candidate.outputs.is_latest == 'true'
         env:
@@ -105,16 +129,20 @@ jobs:
         id: deployed_content
         if: >-
           steps.candidate.outputs.is_latest == 'true' &&
-          (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+          (github.event_name == 'schedule' ||
+          (github.event_name == 'workflow_dispatch' && inputs.force_deploy == false))
         env:
-          CLOUDFLARE_PAGES_PROJECT_NAME: ${{ vars.CLOUDFLARE_PAGES_PROJECT_NAME || 'smart-portfolio' }}
+          CLOUDFLARE_PAGES_DOMAIN: ${{ steps.pages.outputs.pages_domain }}
           CONTENT_HASH: ${{ steps.content.outputs.content_hash }}
           CANDIDATE_SHA: ${{ steps.candidate.outputs.candidate_sha }}
-        run: >-
-          node scripts/checkDeployedContent.mjs compare
-          "https://${CLOUDFLARE_PAGES_PROJECT_NAME}.pages.dev"
-          "$CONTENT_HASH"
-          "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${CANDIDATE_SHA}"
+        shell: bash
+        run: |
+          set -euo pipefail
+          production_url="$(node scripts/checkDeployedContent.mjs url "$CLOUDFLARE_PAGES_DOMAIN" main)"
+          node scripts/checkDeployedContent.mjs compare \
+            "$production_url" \
+            "$CONTENT_HASH" \
+            "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${CANDIDATE_SHA}"
 
       - name: Decide whether full verification and deployment are required
         id: decision
@@ -261,7 +289,7 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_PAGES_PROJECT_NAME: ${{ vars.CLOUDFLARE_PAGES_PROJECT_NAME || 'smart-portfolio' }}
+          CLOUDFLARE_PAGES_PROJECT_NAME: ${{ needs.verify.outputs.pages_project_name }}
           CANDIDATE_BRANCH: ${{ needs.verify.outputs.candidate_branch }}
           CANDIDATE_SHA: ${{ needs.verify.outputs.candidate_sha }}
         run: >-
@@ -272,18 +300,14 @@ jobs:
 
       - name: Smoke test static content, integrity metadata, and the contact API
         env:
-          CLOUDFLARE_PAGES_PROJECT_NAME: ${{ vars.CLOUDFLARE_PAGES_PROJECT_NAME || 'smart-portfolio' }}
+          CLOUDFLARE_PAGES_DOMAIN: ${{ needs.verify.outputs.pages_domain }}
           CANDIDATE_BRANCH: ${{ needs.verify.outputs.candidate_branch }}
           CANDIDATE_SHA: ${{ needs.verify.outputs.candidate_sha }}
           CONTENT_HASH: ${{ needs.verify.outputs.content_hash }}
         shell: bash
         run: |
           set -euo pipefail
-          if [[ "$CANDIDATE_BRANCH" == "main" ]]; then
-            deployment_url="https://${CLOUDFLARE_PAGES_PROJECT_NAME}.pages.dev"
-          else
-            deployment_url="https://${CANDIDATE_BRANCH}.${CLOUDFLARE_PAGES_PROJECT_NAME}.pages.dev"
-          fi
+          deployment_url="$(node scripts/checkDeployedContent.mjs url "$CLOUDFLARE_PAGES_DOMAIN" "$CANDIDATE_BRANCH")"
           node scripts/checkDeployedContent.mjs smoke "$deployment_url" out "$CONTENT_HASH" "$CANDIDATE_SHA"
 
   heartbeat:
