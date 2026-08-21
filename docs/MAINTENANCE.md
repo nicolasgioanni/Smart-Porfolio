@@ -39,9 +39,10 @@ When adding a spreadsheet field:
 2. Update normalization in `src/lib/content/normalizePortfolioContent.ts`.
 3. Update validation in `src/lib/content/validatePortfolioContent.ts` if the field affects correctness.
 4. Update CSV templates in `src/content/templates`.
-5. Update docs in `docs/CONTENT_SHEET_SCHEMA.md` and `docs/CONTENT_MAPPING.md`.
-6. Add or update tests.
-7. Regenerate content with `npm run generate:content`.
+5. Keep the corresponding public workbook tab header aligned before its next manual CSV import.
+6. Update docs in `docs/CONTENT_SHEET_SCHEMA.md` and `docs/CONTENT_MAPPING.md`.
+7. Add or update tests.
+8. Regenerate content with `npm run generate:content`.
 
 Fields that form an optional group must be validated together. The Home role fields are either all blank/omitted or all non-empty; a partial set must fail generation instead of silently mixing animated and fallback content.
 
@@ -71,11 +72,31 @@ Validators should fail on malformed production-critical content and stay toleran
 
 Template rows should remain generic demo content unless a real content update is intentionally requested. Templates should prove the UI works without accidentally publishing private or inaccurate data.
 
+## Maintaining the public workbook
+
+Production uses one public Google Sheets workbook, anonymously downloaded as XLSX from `PORTFOLIO_WORKBOOK_URL`. It must contain exactly the nine visible tabs `profile`, `links`, `research`, `projects`, `experience`, `recommendations`, `education`, `skills`, and `site_settings`, with nothing else. Matching uses the trimmed, lowercase worksheet title, so capitalization and physical order do not matter; spaces, hyphens, and spelling changes are not aliases. Never add a `resume`, hidden, or very-hidden tab.
+
+The owner creates the workbook and manually imports each checked-in CSV template into its matching tab in the Google Sheets UI. Never add a Drive connector, Google API key, service account, OAuth flow, Sheets/Drive API dependency, or other account access to automate that import. The build receives only an anonymous HTTPS XLSX export URL after the workbook is deliberately made public-safe. It downloads that file once per candidate and parses every required worksheet locally.
+
+Review all nine tabs before publication. Public workbook data is not a secret, even if the URL is hard to guess. Keep private resume details, credentials, recipient addresses, unpublished recommendations, and sensitive personal data out of it.
+
 ## Updating Generated Content
 
-Run `npm run generate:content`. Generation validates and normalizes local or remote CSV input, then rewrites `src/content/generated/portfolio.generated.json`, the build artifact consumed by static pages.
+Run `npm run generate:content`. Generation validates and normalizes the local templates or configured public workbook, then rewrites `src/content/generated/portfolio.generated.json`, the build artifact consumed by static pages. It hashes normalized rendered content rather than spreadsheet formatting or generated metadata and preserves `generatedAt` when content is unchanged.
 
-Do not change generated content by hand. Change the source CSV or remote sheet, regenerate, and review and commit the source and generated JSON together.
+Do not change generated content by hand. For a local template change, regenerate and review the source and generated JSON together. For a production workbook change, let GitHub Actions fetch it once, verify it, build from it without refetching, validate the artifact digest, and deploy that exact artifact. Production generation and deployment state are not committed to `main`; the active `/content-version.json` manifest records the last successful content hash. A failure before or during deployment leaves that manifest unchanged so the next poll retries.
+
+## Maintaining deployment automation
+
+- GitHub Actions is the only production deployment path; keep Cloudflare Git integration and Vercel automatic deployment disabled after cutover.
+- Keep the daily schedule at `13:17 UTC`. Compare the candidate hash with the production `/content-version.json` using no-cache headers and a cache-busting query. An unchanged hash is a green no-op before lint, tests, build, artifact upload, or deployment.
+- Preserve strict remote mode for every production candidate. Missing or malformed public content must fail closed without local-template fallback.
+- Keep production and preview deploy jobs dependent on green `verify`, preserve their concurrency controls, and retain the latest-`main` guard for production.
+- Keep pull requests verification-only. A green `develop` push may deploy only `--branch=develop`; a green `main` candidate may deploy production.
+- Never rebuild, refetch the workbook, or check out a different commit in a deploy job. Verify the downloaded `out/` artifact before Wrangler runs from repository root so matching Pages Functions are included.
+- Keep generated content and deployment state out of repository commits. The only Actions write is the 30-day inactivity heartbeat on the isolated `automation-heartbeat` branch; it never modifies `main` or deploys.
+- Keep `main` protected by the strict required `verify` check, PR-based changes with zero mandatory approvals, and blocked force-push/deletion. GitHub Actions does not need a `main` bypass.
+- A scheduled run may still show Nicolas as its associated actor because GitHub ties schedules to an account. Do not replace `GITHUB_TOKEN` or the Cloudflare credential with Nicolas's personal token; deployments remain Actions-owned.
 
 ## Testing Changes
 
