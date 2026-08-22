@@ -70,6 +70,22 @@ type ProfileOverviewDetailsProps = {
   overview: ProfileOverviewContent;
 };
 
+export function ProfileOverviewIntroduction({ overview }: ProfileOverviewDetailsProps) {
+  return (
+    <header
+      className="profile-overview__introduction"
+      data-has-about={overview.about ? "true" : "false"}
+    >
+      <div className="profile-overview__greeting-group">
+        <h1 className="profile-overview__greeting" id="portfolio-hero-title">
+          Hi, I’m {overview.greetingName}
+        </h1>
+        <AnimatedRole role={overview.role} />
+      </div>
+    </header>
+  );
+}
+
 export function ProfileOverviewDetails({ overview }: ProfileOverviewDetailsProps) {
   const currentWorkTitle = overview.currentWork?.organization ?? overview.currentWork?.title;
   const currentWorkRole = overview.currentWork?.organization ? overview.currentWork.title : undefined;
@@ -81,20 +97,12 @@ export function ProfileOverviewDetails({ overview }: ProfileOverviewDetailsProps
 
   return (
     <div className="profile-overview__details">
-      <header className="profile-overview__introduction">
-        <div className="profile-overview__greeting-group">
-          <h1 className="profile-overview__greeting" id="portfolio-hero-title">
-            Hi, I’m {overview.greetingName}
-          </h1>
-          <AnimatedRole role={overview.role} />
-        </div>
-        {overview.about ? (
-          <section aria-labelledby="profile-overview-about-heading" className="profile-overview__about">
-            <ProfileSectionHeading id="profile-overview-about-heading">About</ProfileSectionHeading>
-            <p className="profile-overview__about-copy">{overview.about}</p>
-          </section>
-        ) : null}
-      </header>
+      {overview.about ? (
+        <section aria-labelledby="profile-overview-about-heading" className="profile-overview__about">
+          <ProfileSectionHeading id="profile-overview-about-heading">About</ProfileSectionHeading>
+          <p className="profile-overview__about-copy">{overview.about}</p>
+        </section>
+      ) : null}
 
       {overview.currentWork ? (
         <section

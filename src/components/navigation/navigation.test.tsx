@@ -1,8 +1,9 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { InteractiveBlobHeader } from "@/components/layout/InteractiveBlobHeader";
 import { MainNavigation } from "@/components/navigation/MainNavigation";
 import { SocialLinkGroup } from "@/components/navigation/SocialLinkGroup";
+import { MOBILE_UI_QUERY } from "@/components/responsive/useMediaQuery";
 import {
   createNavigationItems,
   isNavigationItemActive,
@@ -16,6 +17,20 @@ vi.mock("next/navigation", () => ({
 }));
 
 const originalAnimateDescriptor = Object.getOwnPropertyDescriptor(Element.prototype, "animate");
+const finePointerQuery = "(hover: hover) and (pointer: fine)";
+
+type MediaQueryListener = (event: MediaQueryListEvent) => void;
+type ControlledMediaQuery = {
+  addEventListener: ReturnType<typeof vi.fn>;
+  addListener: ReturnType<typeof vi.fn>;
+  listeners: Set<MediaQueryListener>;
+  matches: boolean;
+  media: string;
+  removeEventListener: ReturnType<typeof vi.fn>;
+  removeListener: ReturnType<typeof vi.fn>;
+};
+
+let controlledMediaQueries = new Map<string, ControlledMediaQuery>();
 
 const headerBrand = {
   initial: "D",
@@ -50,17 +65,52 @@ function setScrollY(value: number) {
   });
 }
 
-function setFinePointer(matches: boolean) {
+function installMediaQueries({
+  finePointer = true,
+  mobileUi = false,
+  reducedMotion = false
+}: { finePointer?: boolean; mobileUi?: boolean; reducedMotion?: boolean } = {}) {
+  controlledMediaQueries = new Map();
+  const configuredMatches = new Map([
+    [finePointerQuery, finePointer],
+    [MOBILE_UI_QUERY, mobileUi],
+    ["(prefers-reduced-motion: reduce)", reducedMotion]
+  ]);
+
   Object.defineProperty(window, "matchMedia", {
     configurable: true,
-    value: vi.fn().mockImplementation((query: string) => ({
-      addEventListener: vi.fn(),
-      addListener: vi.fn(),
-      matches: query === "(prefers-reduced-motion: reduce)" ? false : matches,
-      media: query,
-      removeEventListener: vi.fn(),
-      removeListener: vi.fn()
-    }))
+    value: vi.fn().mockImplementation((query: string) => {
+      const existingQuery = controlledMediaQueries.get(query);
+      if (existingQuery) return existingQuery as unknown as MediaQueryList;
+
+      const listeners = new Set<MediaQueryListener>();
+      const mediaQuery: ControlledMediaQuery = {
+        addEventListener: vi.fn((_type: string, listener: MediaQueryListener) => listeners.add(listener)),
+        addListener: vi.fn((listener: MediaQueryListener) => listeners.add(listener)),
+        listeners,
+        matches: configuredMatches.get(query) ?? false,
+        media: query,
+        removeEventListener: vi.fn((_type: string, listener: MediaQueryListener) => listeners.delete(listener)),
+        removeListener: vi.fn((listener: MediaQueryListener) => listeners.delete(listener))
+      };
+      controlledMediaQueries.set(query, mediaQuery);
+      return mediaQuery as unknown as MediaQueryList;
+    })
+  });
+}
+
+function setFinePointer(matches: boolean) {
+  installMediaQueries({ finePointer: matches });
+}
+
+function setMediaQueryMatches(query: string, matches: boolean) {
+  const mediaQuery = controlledMediaQueries.get(query);
+  if (!mediaQuery) throw new Error(`Media query was not observed: ${query}`);
+
+  act(() => {
+    mediaQuery.matches = matches;
+    const event = { matches, media: query } as MediaQueryListEvent;
+    mediaQuery.listeners.forEach((listener) => listener(event));
   });
 }
 
@@ -143,7 +193,7 @@ function installAnimateMock(...animations: Animation[]) {
 describe("navigation helpers", () => {
   beforeEach(() => {
     navigationMock.pathname = "/";
-    setFinePointer(true);
+    installMediaQueries();
     setScrollY(0);
   });
 
@@ -424,6 +474,119 @@ describe("navigation helpers", () => {
     });
   });
 
+  it("keeps the mobile panel mounted for its fade while closed content stays inaccessible", () => {
+    installMediaQueries({ mobileUi: true });
+    const { container } = renderHeader();
+    const trigger = screen.getByRole("button", { name: /menu/i });
+    const panel = container.querySelector<HTMLElement>(".mobile-navigation__panel");
+
+    expect(panel).not.toBeNull();
+    expect(panel).toHaveAttribute("data-state", "closed");
+    expect(panel).toHaveAttribute("aria-hidden", "true");
+    expect(panel).toHaveAttribute("inert");
+    expect(panel).not.toHaveAttribute("hidden");
+    expect(screen.queryByRole("navigation", { name: /mobile navigation/i })).not.toBeInTheDocument();
+
+    fireEvent.click(trigger);
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+    expect(panel).toHaveAttribute("data-state", "open");
+    expect(panel).toHaveAttribute("aria-hidden", "false");
+    expect(panel).not.toHaveAttribute("inert");
+    expect(screen.getByRole("navigation", { name: /mobile navigation/i })).toBeInTheDocument();
+
+    fireEvent.click(trigger);
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect(panel).toHaveAttribute("data-state", "closed");
+    expect(panel).toHaveAttribute("aria-hidden", "true");
+    expect(panel).toHaveAttribute("inert");
+  });
+
+  it("closes the mobile menu from an outside pointer interaction but not from panel content", () => {
+    installMediaQueries({ mobileUi: true });
+    const { container } = renderHeader();
+    const trigger = screen.getByRole("button", { name: /menu/i });
+    const panel = container.querySelector<HTMLElement>(".mobile-navigation__panel");
+
+    fireEvent.click(trigger);
+    fireEvent.pointerDown(panel as HTMLElement);
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+
+    fireEvent.pointerDown(document.body);
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect(panel).toHaveAttribute("data-state", "closed");
+  });
+
+  it("closes the mobile menu from Escape and restores focus to its trigger", () => {
+    installMediaQueries({ mobileUi: true });
+    const { container } = renderHeader();
+    const trigger = screen.getByRole("button", { name: /menu/i });
+    const panel = container.querySelector<HTMLElement>(".mobile-navigation__panel");
+
+    fireEvent.click(trigger);
+    const researchLink = within(panel as HTMLElement).getByRole("link", { name: "Research" });
+    researchLink.focus();
+    expect(researchLink).toHaveFocus();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect(trigger).toHaveFocus();
+  });
+
+  it("closes the mobile menu when navigation or social destinations are selected", () => {
+    installMediaQueries({ mobileUi: true });
+    const { container } = renderHeader();
+    const trigger = screen.getByRole("button", { name: /menu/i });
+    const panel = container.querySelector<HTMLElement>(".mobile-navigation__panel");
+
+    fireEvent.click(trigger);
+    const navigationLink = within(panel as HTMLElement).getByRole("link", { name: "Research" });
+    navigationLink.addEventListener("click", (event) => event.preventDefault(), { once: true });
+    fireEvent.click(navigationLink);
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(trigger);
+    const socialLink = within(panel as HTMLElement).getByRole("link", { name: /github/i });
+    socialLink.addEventListener("click", (event) => event.preventDefault(), { once: true });
+    fireEvent.click(socialLink);
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("closes the mobile menu after pathname changes and when desktop navigation returns", () => {
+    installMediaQueries({ mobileUi: true });
+    const view = renderHeader();
+    const trigger = screen.getByRole("button", { name: /menu/i });
+
+    fireEvent.click(trigger);
+    navigationMock.pathname = "/research";
+    view.rerender(
+      <InteractiveBlobHeader brand={headerBrand} initialTheme="navy" navigationItems={headerNavigationItems} primaryLinks={headerLinks} />
+    );
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(trigger);
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+    setMediaQueryMatches(MOBILE_UI_QUERY, false);
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("removes mobile-menu document listeners when the disclosure closes and unmounts", () => {
+    installMediaQueries({ mobileUi: true });
+    const addEventListener = vi.spyOn(document, "addEventListener");
+    const removeEventListener = vi.spyOn(document, "removeEventListener");
+    const view = renderHeader();
+    const trigger = screen.getByRole("button", { name: /menu/i });
+
+    fireEvent.click(trigger);
+    const pointerListener = addEventListener.mock.calls.find(([type]) => type === "pointerdown")?.[1];
+    const keyboardListener = addEventListener.mock.calls.find(([type]) => type === "keydown")?.[1];
+    expect(pointerListener).toBeTypeOf("function");
+    expect(keyboardListener).toBeTypeOf("function");
+
+    view.unmount();
+    expect(removeEventListener).toHaveBeenCalledWith("pointerdown", pointerListener);
+    expect(removeEventListener).toHaveBeenCalledWith("keydown", keyboardListener);
+  });
+
   it("opens the profile photo preview and closes when clicking outside the frame", async () => {
     const { container } = renderHeader();
 
@@ -470,6 +633,27 @@ describe("navigation helpers", () => {
     expect(header).toHaveAttribute("data-header-state", "expanded");
   });
 
+  it("ignores scroll and pointer geometry changes in mobile UI mode and restores desktop behavior", () => {
+    installMediaQueries({ mobileUi: true });
+    const { container } = renderHeader();
+    const header = container.querySelector(".blob-header");
+
+    scrollToPosition(160);
+    movePointerTo(24);
+    movePointerTo(240);
+    scrollToPosition(220);
+    expect(header).toHaveAttribute("data-header-state", "expanded");
+    expect(header).not.toHaveClass("blob-header--compact");
+
+    setMediaQueryMatches(MOBILE_UI_QUERY, false);
+    expect(header).toHaveAttribute("data-header-state", "compact");
+
+    scrollToPosition(160);
+    expect(header).toHaveAttribute("data-header-state", "expanded");
+    scrollToPosition(220);
+    expect(header).toHaveAttribute("data-header-state", "compact");
+  });
+
   it("expands near the top proximity zone and compacts again when the pointer moves away", () => {
     const { container } = renderHeader();
     const header = container.querySelector(".blob-header");
@@ -495,12 +679,15 @@ describe("navigation helpers", () => {
     expect(header).toHaveAttribute("data-header-state", "expanded");
   });
 
-  it("keeps the header expanded while the mobile menu is open", () => {
+  it("enters mobile UI mode expanded and remains stable while the menu opens and closes", () => {
     const { container } = renderHeader();
     const header = container.querySelector(".blob-header");
 
     scrollToPosition(140);
     expect(header).toHaveAttribute("data-header-state", "compact");
+
+    setMediaQueryMatches(MOBILE_UI_QUERY, true);
+    expect(header).toHaveAttribute("data-header-state", "expanded");
 
     fireEvent.click(screen.getByRole("button", { name: /menu/i }));
     expect(screen.getByRole("button", { name: /menu/i })).toHaveAttribute("aria-expanded", "true");
@@ -511,13 +698,16 @@ describe("navigation helpers", () => {
 
     scrollToPosition(190);
     expect(header).toHaveAttribute("data-header-state", "expanded");
+
+    fireEvent.click(screen.getByRole("button", { name: /menu/i }));
+    expect(screen.getByRole("button", { name: /menu/i })).toHaveAttribute("aria-expanded", "false");
+    expect(header).toHaveAttribute("data-header-state", "expanded");
   });
 
-  it("keeps the header geometry stable while the theme menu is open and coordinates it with mobile navigation", () => {
+  it("keeps the header geometry stable while the desktop theme menu is open", () => {
     const { container } = renderHeader();
     const header = container.querySelector(".blob-header");
     const themeTrigger = screen.getByRole("button", { name: /choose color theme/i });
-    const mobileTrigger = screen.getByRole("button", { name: /menu/i });
 
     scrollToPosition(140);
     expect(header).toHaveAttribute("data-header-state", "compact");
@@ -534,6 +724,17 @@ describe("navigation helpers", () => {
     expect(header).toHaveAttribute("data-header-state", "compact");
 
     fireEvent.click(themeTrigger);
+    fireEvent.keyDown(themeTrigger, { key: "Escape" });
+    expect(themeTrigger).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("coordinates the theme and navigation disclosures in mobile UI mode", () => {
+    installMediaQueries({ mobileUi: true });
+    renderHeader();
+    const themeTrigger = screen.getByRole("button", { name: /choose color theme/i });
+    const mobileTrigger = screen.getByRole("button", { name: /menu/i });
+
+    fireEvent.click(themeTrigger);
     fireEvent.click(mobileTrigger);
     expect(mobileTrigger).toHaveAttribute("aria-expanded", "true");
     expect(themeTrigger).toHaveAttribute("aria-expanded", "false");
@@ -541,9 +742,6 @@ describe("navigation helpers", () => {
     fireEvent.click(themeTrigger);
     expect(themeTrigger).toHaveAttribute("aria-expanded", "true");
     expect(mobileTrigger).toHaveAttribute("aria-expanded", "false");
-
-    fireEvent.keyDown(themeTrigger, { key: "Escape" });
-    expect(themeTrigger).toHaveAttribute("aria-expanded", "false");
   });
 
   it("uses scroll direction instead of pointer proximity on coarse pointer devices", () => {

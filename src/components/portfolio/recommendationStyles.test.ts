@@ -80,6 +80,18 @@ describe("recommendation styles", () => {
     );
   });
 
+  it("defensively restores natural Home recommendation flow at responsive breakpoints", () => {
+    expect(portfolioStyles).toMatch(
+      /@media \(max-width: 980px\)[\s\S]*\.home-section--recommendations\[data-recommendation-overflow-layout="ready"\]\s*\{[^}]*padding-bottom:\s*0/
+    );
+    expect(portfolioStyles).toMatch(
+      /@media \(max-width: 980px\)[\s\S]*\.home-section--recommendations\[data-recommendation-overflow-layout="ready"\] \.home-section__surface\s*\{[^}]*height:\s*auto;[^}]*overflow:\s*visible/
+    );
+    expect(portfolioStyles).toMatch(
+      /@media \(max-width: 720px\)[\s\S]*\.home-recommendations__item \.recommendation-card--summary\s*\{[^}]*min-height:\s*0/
+    );
+  });
+
   it("still removes recommendation expansion transitions for reduced motion", () => {
     expect(portfolioStyles).toMatch(
       /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.recommendation-expandable__viewport,\s*\.recommendation-expandable__quote,\s*\.recommendation-expandable__inline-link\s*\{[^}]*transition: none/
