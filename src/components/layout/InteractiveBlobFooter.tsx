@@ -19,9 +19,9 @@ type InteractiveBlobFooterProps = {
   resourceLinks: ProgressiveFooterLink[];
 };
 
-const FOOTER_RUNWAY_OBSERVER_THRESHOLDS = [0, 1];
-
 type ScrollDirection = "down" | "idle" | "up";
+
+const DOWNWARD_SCROLL_KEYS = new Set([" ", "ArrowDown", "End", "PageDown", "Spacebar"]);
 
 type RunwayPosition = {
   bottom: number;
@@ -33,12 +33,18 @@ function isBelowViewport(position: RunwayPosition): boolean {
   return position.top >= position.viewportBottom;
 }
 
-function isAboveViewport(position: RunwayPosition): boolean {
-  return position.bottom <= 0;
-}
-
 function isFullyVisible(position: RunwayPosition): boolean {
   return position.top >= 0 && position.bottom <= position.viewportBottom;
+}
+
+function isEditableOrInteractiveTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false;
+
+  return Boolean(
+    target.closest(
+      "a, button, input, select, textarea, [contenteditable]:not([contenteditable='false']), [role='button'], [role='combobox'], [role='link'], [role='textbox']"
+    )
+  );
 }
 
 function FooterLinkList({ label, links }: { label: string; links: ProgressiveFooterLink[] }) {
@@ -58,7 +64,13 @@ function FooterLinkList({ label, links }: { label: string; links: ProgressiveFoo
   );
 }
 
-export function InteractiveBlobFooter({
+export function InteractiveBlobFooter(props: InteractiveBlobFooterProps) {
+  const pathname = usePathname();
+
+  return <RouteScopedInteractiveBlobFooter key={pathname} {...props} />;
+}
+
+function RouteScopedInteractiveBlobFooter({
   closingStatement,
   compactCopyright,
   identityDescription,
@@ -77,9 +89,7 @@ export function InteractiveBlobFooter({
   const lastScrollYRef = useRef(0);
   const manualCollapseSuppressedRef = useRef(false);
   const pendingCollapseRef = useRef(false);
-  const runwayApproachedFromBelowRef = useRef(false);
-  const pathname = usePathname();
-  const previousPathnameRef = useRef(pathname);
+  const scrollActivationArmedRef = useRef(false);
 
   const expandNow = useCallback(() => {
     pendingCollapseRef.current = false;
@@ -104,20 +114,11 @@ export function InteractiveBlobFooter({
 
   const evaluateRunwayPosition = useCallback(
     (position: RunwayPosition, direction: ScrollDirection) => {
-      if (isBelowViewport(position)) {
-        runwayApproachedFromBelowRef.current = true;
-      } else if (isAboveViewport(position)) {
-        runwayApproachedFromBelowRef.current = false;
-      }
-
       const fullyVisible = isFullyVisible(position);
-      const approachedFromBelow = runwayApproachedFromBelowRef.current;
-
-      if (fullyVisible) runwayApproachedFromBelowRef.current = false;
 
       if (
         fullyVisible &&
-        (direction === "down" || approachedFromBelow) &&
+        direction === "down" &&
         !expandedRef.current &&
         !manualCollapseSuppressedRef.current &&
         !pendingCollapseRef.current
@@ -134,17 +135,35 @@ export function InteractiveBlobFooter({
   );
 
   useEffect(() => {
-    if (previousPathnameRef.current === pathname) return;
-
-    previousPathnameRef.current = pathname;
     lastScrollYRef.current = window.scrollY;
-    manualCollapseSuppressedRef.current = false;
-    runwayApproachedFromBelowRef.current = false;
-    collapseUnlessDetailsFocused();
-  }, [collapseUnlessDetailsFocused, pathname]);
 
-  useEffect(() => {
-    lastScrollYRef.current = window.scrollY;
+    function handleWheel(event: WheelEvent) {
+      if (event.deltaY > 0) scrollActivationArmedRef.current = true;
+    }
+
+    function handleTouchStart() {
+      scrollActivationArmedRef.current = true;
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      if (event.isPrimary && event.button === 0) scrollActivationArmedRef.current = true;
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.shiftKey ||
+        event.defaultPrevented ||
+        !DOWNWARD_SCROLL_KEYS.has(event.key) ||
+        isEditableOrInteractiveTarget(event.target)
+      ) {
+        return;
+      }
+
+      scrollActivationArmedRef.current = true;
+    }
 
     function handleScroll() {
       const currentScrollY = window.scrollY;
@@ -162,11 +181,24 @@ export function InteractiveBlobFooter({
       if (!runwaySentinel || direction === "idle") return;
 
       const { bottom, top } = runwaySentinel.getBoundingClientRect();
-      evaluateRunwayPosition({ bottom, top, viewportBottom: window.innerHeight }, direction);
+      if (direction === "up" || scrollActivationArmedRef.current) {
+        evaluateRunwayPosition({ bottom, top, viewportBottom: window.innerHeight }, direction);
+      }
     }
 
+    window.addEventListener("pointerdown", handlePointerDown, { passive: true });
     window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    window.addEventListener("touchstart", handleTouchStart, { passive: true });
+    window.addEventListener("wheel", handleWheel, { passive: true });
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("pointerdown", handlePointerDown);
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("touchstart", handleTouchStart);
+      window.removeEventListener("wheel", handleWheel);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, [evaluateRunwayPosition]);
 
   useEffect(() => {
@@ -189,34 +221,6 @@ export function InteractiveBlobFooter({
     observer.observe(island);
     return () => observer.disconnect();
   }, [collapseUnlessDetailsFocused]);
-
-  useEffect(() => {
-    const runwaySentinel = runwaySentinelRef.current;
-    if (!runwaySentinel || typeof IntersectionObserver === "undefined") return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[entries.length - 1];
-        if (!entry) return;
-
-        evaluateRunwayPosition(
-          {
-            bottom: entry.boundingClientRect.bottom,
-            top: entry.boundingClientRect.top,
-            viewportBottom: entry.rootBounds?.bottom ?? window.innerHeight
-          },
-          "idle"
-        );
-      },
-      { threshold: FOOTER_RUNWAY_OBSERVER_THRESHOLDS }
-    );
-
-    observer.observe(runwaySentinel);
-
-    return () => {
-      observer.disconnect();
-    };
-  }, [evaluateRunwayPosition, pathname]);
 
   function handleToggle() {
     if (!expanded) {

@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 import { InteractiveBlobFooter } from "@/components/layout/InteractiveBlobFooter";
+import { siteRoutePaths } from "@/components/navigation/siteRoutes";
 
 const navigationMock = vi.hoisted(() => ({ pathname: "/" }));
 vi.mock("next/navigation", () => ({
@@ -120,16 +121,22 @@ function reportIntersection(
     top = 570
   }: { bottom?: number; isIntersecting?: boolean; ratio: number; top?: number }
 ) {
-  const record = findObserver(selector);
+  if (selector === ".blob-footer__runway-sentinel") {
+    setRunwayRect({ bottom, top });
+  }
+
+  const record = [...observerRecords]
+    .reverse()
+    .find(({ targets }) => [...targets].some((target) => target.matches(selector)));
+
+  if (!record && selector === ".blob-footer__runway-sentinel") return;
+  if (!record) throw new Error(`Missing IntersectionObserver for ${selector}.`);
+
   const target = [...record.targets].find((candidate) => candidate.matches(selector));
   if (!target) throw new Error(`Missing observed target for ${selector}.`);
 
   const height = Math.max(bottom - top, 1);
   const intersectionHeight = isIntersecting ? height * ratio : 0;
-
-  if (target.matches(".blob-footer__runway-sentinel")) {
-    setRunwayRect({ bottom, top });
-  }
 
   act(() => {
     record.callback(
@@ -154,6 +161,8 @@ function reportIntersection(
 }
 
 function scrollTo(scrollY: number) {
+  const deltaY = scrollY - window.scrollY;
+  if (deltaY > 0) fireEvent.wheel(window, { deltaY });
   setScrollY(scrollY);
   fireEvent.scroll(window);
 }
@@ -322,17 +331,14 @@ describe("InteractiveBlobFooter", () => {
     );
   });
 
-  it("observes a stable runway sentinel and the visual island", () => {
+  it("renders a stable runway sentinel and observes the visual island", () => {
     const { container } = renderFooter();
     const runway = container.querySelector(".blob-footer__runway");
     const sentinel = container.querySelector(".blob-footer__runway-sentinel");
-    const sentinelObserver = findObserver(".blob-footer__runway-sentinel");
     const island = container.querySelector(".blob-footer__island");
 
     expect(runway).toHaveAttribute("aria-hidden", "true");
     expect(sentinel).toBeInTheDocument();
-    expect(sentinelObserver.observe).toHaveBeenCalledWith(sentinel);
-    expect(sentinelObserver.options?.threshold).toEqual([0, 1]);
     expect(findObserver(".blob-footer__island").observe).toHaveBeenCalledWith(island);
     expect(findObserver(".blob-footer__island").options?.threshold ?? 0).toBe(0);
   });
@@ -373,7 +379,7 @@ describe("InteractiveBlobFooter", () => {
     expect(screen.getByRole("button", { name: "Details" })).toHaveAttribute("aria-expanded", "false");
   });
 
-  it("expands when collapsing page content moves the full runway sentinel into view without scrolling", () => {
+  it("stays compact when a layout shift moves the full runway sentinel into view without scrolling", () => {
     const { container } = renderFooter();
 
     reportIntersection(".blob-footer__runway-sentinel", {
@@ -388,10 +394,11 @@ describe("InteractiveBlobFooter", () => {
     reportIntersection(".blob-footer__runway-sentinel", { bottom: 588, ratio: 1, top: 540 });
 
     expect(window.scrollY).toBe(400);
-    expectFooterState(container, "expanded");
+    expectFooterState(container, "compact");
+    expect(screen.getByRole("button", { name: "Details" })).toHaveAttribute("aria-expanded", "false");
   });
 
-  it("expands after a content collapse moves the sentinel upward while the browser clamps scrollY upward", () => {
+  it("stays compact when a content collapse and upward scroll clamp move the sentinel into view", () => {
     const { container } = renderFooter();
 
     reportIntersection(".blob-footer__runway-sentinel", {
@@ -408,7 +415,7 @@ describe("InteractiveBlobFooter", () => {
     reportIntersection(".blob-footer__runway-sentinel", { bottom: 588, ratio: 1, top: 540 });
 
     expect(window.scrollY).toBe(320);
-    expectFooterState(container, "expanded");
+    expectFooterState(container, "compact");
   });
 
   it("does not treat ordinary upward scrolling as an upward layout shift", () => {
@@ -425,6 +432,17 @@ describe("InteractiveBlobFooter", () => {
     reportIntersection(".blob-footer__runway-sentinel", { bottom: 290, ratio: 1, top: 242 });
 
     expectFooterState(container, "compact");
+  });
+
+  it("does not expand for a restored or programmatic downward scroll without fresh user input", () => {
+    const { container } = renderFooter();
+
+    setRunwayRect({ bottom: 588, top: 540 });
+    setScrollY(440);
+    fireEvent.scroll(window);
+
+    expectFooterState(container, "compact");
+    expect(screen.getByRole("button", { name: "Details" })).toHaveAttribute("aria-expanded", "false");
   });
 
   it("expands inside the reserved runway without requiring the hard document bottom", () => {
@@ -448,7 +466,7 @@ describe("InteractiveBlobFooter", () => {
     reportIntersection(".blob-footer__runway-sentinel", { bottom: -10, isIntersecting: false, ratio: 0, top: -58 });
 
     expectFooterState(container, "expanded");
-    expect(findObserver(".blob-footer__runway-sentinel").targets).toContain(sentinel);
+    expect(container.querySelector(".blob-footer__runway-sentinel")).toBe(sentinel);
   });
 
   it("stays expanded when the sentinel exits above the viewport in either scroll direction", () => {
@@ -596,6 +614,7 @@ describe("InteractiveBlobFooter", () => {
 
   it("expands on the next downward scroll after a route reset when the sentinel is already fully visible", () => {
     const view = renderFooter();
+    const previousFooter = view.container.querySelector(".blob-footer");
     enterRunwayDownward();
     expectFooterState(view.container, "expanded");
 
@@ -603,6 +622,7 @@ describe("InteractiveBlobFooter", () => {
     navigationMock.pathname = "/privacy";
     view.rerender(<InteractiveBlobFooter {...footerProps} />);
     expectFooterState(view.container, "compact");
+    expect(view.container.querySelector(".blob-footer")).not.toBe(previousFooter);
 
     reportIntersection(".blob-footer__runway-sentinel", { bottom: 588, ratio: 1, top: 540 });
     expectFooterState(view.container, "compact");
@@ -630,36 +650,53 @@ describe("InteractiveBlobFooter", () => {
     expect(screen.getByRole("button", { name: "Collapse" })).toHaveAttribute("aria-expanded", "true");
   });
 
-  it("defers a route-change reset until focus leaves the details", () => {
+  it.each(siteRoutePaths)("starts %s in a fresh compact route scope even when old details held focus", (targetPath) => {
+    navigationMock.pathname = targetPath === "/" ? "/terms" : "/";
     const view = renderFooter();
-    enterRunwayDownward();
+    fireEvent.click(screen.getByRole("button", { name: "Details" }));
+    const previousFooter = view.container.querySelector(".blob-footer");
+    const previousDetails = view.container.querySelector<HTMLElement>(".blob-footer__details");
     screen.getByRole("link", { name: "Site Terms & Accuracy" }).focus();
 
-    navigationMock.pathname = "/security";
+    navigationMock.pathname = targetPath;
     view.rerender(<InteractiveBlobFooter {...footerProps} />);
-    expectFooterState(view.container, "expanded");
 
-    act(() => {
-      screen.getByRole("button", { name: "Collapse" }).focus();
-    });
+    const nextFooter = view.container.querySelector(".blob-footer");
+    const nextDetails = view.container.querySelector<HTMLElement>(".blob-footer__details");
+    expect(nextFooter).not.toBe(previousFooter);
+    expect(previousFooter).not.toBeInTheDocument();
+    expect(previousDetails).not.toBeInTheDocument();
     expectFooterState(view.container, "compact");
+    expect(screen.getByRole("button", { name: "Details" })).toHaveAttribute("aria-expanded", "false");
+    expect(nextDetails).toHaveAttribute("aria-hidden", "true");
+    expect(nextDetails).toHaveAttribute("inert");
   });
 
-  it("disconnects observers and removes only its passive native scroll listener", () => {
+  it("disconnects observers and removes its scroll-intent listeners", () => {
     const addEventListener = vi.spyOn(window, "addEventListener");
     const removeEventListener = vi.spyOn(window, "removeEventListener");
+    const addDocumentEventListener = vi.spyOn(document, "addEventListener");
+    const removeDocumentEventListener = vi.spyOn(document, "removeEventListener");
     const view = renderFooter();
 
-    expect(addEventListener).toHaveBeenCalledWith("scroll", expect.any(Function), { passive: true });
-    expect(addEventListener).not.toHaveBeenCalledWith("wheel", expect.any(Function), expect.anything());
-    expect(addEventListener).not.toHaveBeenCalledWith("touchmove", expect.any(Function), expect.anything());
-    const scrollListener = addEventListener.mock.calls.find(([type]) => type === "scroll")?.[1];
-    expect(scrollListener).toBeTypeOf("function");
+    const nativeListeners = ["pointerdown", "scroll", "touchstart", "wheel"] as const;
+    const listeners = new Map(
+      nativeListeners.map((type) => [type, addEventListener.mock.calls.find(([eventType]) => eventType === type)?.[1]])
+    );
+    for (const [type, listener] of listeners) {
+      expect(addEventListener).toHaveBeenCalledWith(type, listener, { passive: true });
+      expect(listener).toBeTypeOf("function");
+    }
+    const keydownListener = addDocumentEventListener.mock.calls.find(([type]) => type === "keydown")?.[1];
+    expect(keydownListener).toBeTypeOf("function");
 
     view.unmount();
 
     expect(observerRecords.length).toBeGreaterThanOrEqual(1);
     for (const record of observerRecords) expect(record.disconnect).toHaveBeenCalledOnce();
-    expect(removeEventListener).toHaveBeenCalledWith("scroll", scrollListener);
+    for (const [type, listener] of listeners) {
+      expect(removeEventListener).toHaveBeenCalledWith(type, listener);
+    }
+    expect(removeDocumentEventListener).toHaveBeenCalledWith("keydown", keydownListener);
   });
 });
