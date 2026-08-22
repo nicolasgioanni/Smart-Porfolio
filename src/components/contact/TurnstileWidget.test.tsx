@@ -1,4 +1,5 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { useCallback, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 import { TurnstileWidget } from "@/components/contact/TurnstileWidget";
 
@@ -17,6 +18,28 @@ let resetMock: Mock<TurnstileApi["reset"]>;
 function renderedOptions(): WidgetOptions {
   if (!options) throw new Error("Expected Turnstile render options.");
   return options;
+}
+
+function StatefulVerificationHarness() {
+  const [token, setToken] = useState("");
+  const [status, setStatus] = useState("loading");
+  const handleTokenChange = useCallback(async (nextToken: string) => {
+    setToken(nextToken);
+  }, []);
+  const handleStatusChange = useCallback((nextStatus: string) => {
+    setStatus(nextStatus);
+  }, []);
+
+  return (
+    <>
+      <TurnstileWidget
+        onStatusChange={handleStatusChange}
+        onTokenChange={handleTokenChange}
+        siteKey="public-site-key"
+      />
+      <output data-testid="verification-state">{status}:{token}</output>
+    </>
+  );
 }
 
 beforeEach(() => {
@@ -71,7 +94,21 @@ describe("TurnstileWidget", () => {
     act(() => renderedOptions().callback("verified-token"));
     expect(onTokenChange).toHaveBeenLastCalledWith("verified-token");
     expect(onStatusChange).toHaveBeenLastCalledWith("ready");
-    expect(screen.getByRole("status")).toHaveTextContent("Verification complete. You can continue.");
+    expect(screen.getByRole("status")).toHaveTextContent("Security check complete. Confirming with the server...");
+  });
+
+  it("does not recreate the challenge when stable callbacks update parent verification state", async () => {
+    const { unmount } = render(<StatefulVerificationHarness />);
+    await waitFor(() => expect(renderMock).toHaveBeenCalledTimes(1));
+
+    await act(async () => renderedOptions().callback("verified-token"));
+
+    expect(screen.getByTestId("verification-state")).toHaveTextContent("ready:verified-token");
+    expect(renderMock).toHaveBeenCalledTimes(1);
+    expect(removeMock).not.toHaveBeenCalled();
+
+    unmount();
+    expect(removeMock).toHaveBeenCalledWith("widget-id");
   });
 
   it("clears expired tokens and lets the visitor reset the same widget", async () => {
