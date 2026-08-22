@@ -36,8 +36,9 @@ export default function PrivacyPage() {
         <h2>Scope and portfolio data practices</h2>
         <p>
           This notice applies to this portfolio website. The portfolio has no visitor accounts, payment processing,
-          first-party analytics, advertising, tracking pixels, or application-set cookies. Its contact form provides a
-          direct channel for legitimate professional inquiries.
+          first-party analytics, advertising, or tracking pixels. It does not use advertising, analytics, or cross-site
+          tracking cookies. Its contact form uses one short-lived, essential verification cookie to enforce its initial
+          human-verification gate and provides a direct channel for legitimate professional inquiries.
         </p>
         <p>
           This does not mean that no personal data is ever processed. The hosting provider may process technical request
@@ -47,7 +48,7 @@ export default function PrivacyPage() {
       </section>
 
       <section>
-        <h2>Appearance preference stored in your browser</h2>
+        <h2>Browser storage and essential verification cookie</h2>
         <p>
           When you select a color theme, the site stores the selected value in your browser&apos;s local storage under the key{" "}
           <code>portfolio-theme</code>. The value is used only to restore your chosen appearance on later visits. It is not used
@@ -56,12 +57,21 @@ export default function PrivacyPage() {
         <p>
           The preference remains on your device until you change it or clear this site&apos;s local storage through your browser&apos;s
           site-data or privacy controls. Clearing the value restores the site&apos;s default theme. A separate cookie banner is not
-          presented for this user-selected appearance preference; transparent information about the storage remains available
-          here. For general regulatory context, see the UK Information Commissioner&apos;s Office guidance on{" "}
+          presented for this user-selected appearance preference or the essential verification cookie described below;
+          neither is used for advertising, analytics, or tracking. Transparent information about both mechanisms remains
+          available here. For general regulatory context, see the UK Information Commissioner&apos;s Office guidance on{" "}
           <SmartLink href="https://ico.org.uk/for-organisations/direct-marketing-and-privacy-and-electronic-communications/guidance-on-the-use-of-storage-and-access-technologies/what-are-the-exceptions/">
             storage and access exceptions
           </SmartLink>
           .
+        </p>
+        <p>
+          After Cloudflare verifies the visible Turnstile check at the start of the contact form, the site sets a signed
+          contact-verification cookie for up to 30 minutes. It is restricted to this host and sent only over secure
+          connections, is unavailable to browser scripts, and is limited to same-site requests. It contains a verification
+          ticket bound to one opaque submission identifier, not your name, email address, phone number, message,
+          acknowledgments, or other contact content. It is cleared after successful delivery. If delivery fails, it remains
+          available until its original expiry so you can retry without repeating the security check.
         </p>
       </section>
 
@@ -81,13 +91,23 @@ export default function PrivacyPage() {
         <p>
           The contact form collects your first name, last name, email address, optional phone number, message, and your
           confirmation of each of the three required acknowledgments shown during review. It also processes a Cloudflare
-          Turnstile response and limited request information needed to validate the submission, prevent abuse, and apply rate
-          limits. The information is used to review your inquiry, send a receipt, and respond to you.
+          Turnstile response, an opaque submission identifier, and limited request information needed to validate the
+          submission, prevent abuse, and apply rate limits. The information is used to review your inquiry, send a receipt,
+          and respond to you.
         </p>
         <p>
-          Values remain in your browser while you complete and review the form. They are transmitted over HTTPS to a
-          narrowly scoped Cloudflare Pages Function only when you choose <em>Send request</em>. The endpoint verifies the
-          Turnstile response and validates the submitted fields and acknowledgments before accepting the request.
+          Turnstile is visibly completed before the data-entry form opens. At that first step, the browser transmits the
+          Turnstile response and opaque submission identifier over HTTPS to <code>/api/contact/verify</code>. That narrowly
+          scoped Cloudflare Pages Function verifies the response with Cloudflare and establishes the short-lived verification
+          cookie. The form should advance automatically when verification succeeds; Continue is available only as a fallback.
+        </p>
+        <p>
+          Your contact-field values remain in your browser while you complete and review the form. They are transmitted over
+          HTTPS to <code>/api/contact</code> only when you choose <em>Send request</em>. That endpoint validates the signed
+          verification ticket, submitted fields, and acknowledgments. It does not send the Turnstile response through
+          Cloudflare verification a second time. After the first delivery attempt, your reviewed fields are locked so a
+          failed or uncertain attempt can be retried with the same submission identifier and byte-equivalent delivery
+          payload.
         </p>
         <p>
           After acceptance, Resend delivers a transactional confirmation to the email address you supplied and a private
@@ -125,9 +145,11 @@ export default function PrivacyPage() {
           service provider, mailbox setting, backup cycle, or legitimate operational need.
         </p>
         <p>
-          The local theme preference remains in your browser until you remove it. Reasonable measures are used to maintain
-          the portfolio and limit unnecessary collection, but no internet transmission, browser storage mechanism, hosting
-          service, bot-protection service, or email system can be guaranteed completely secure.
+          The local theme preference remains in your browser until you remove it. The contact-verification cookie is cleared
+          after successful delivery or expires after 30 minutes; a failed delivery leaves it available only for a retry during
+          that original period. Reasonable measures are used to maintain the portfolio and limit unnecessary collection, but
+          no internet transmission, browser storage mechanism, hosting service, bot-protection service, or email system can
+          be guaranteed completely secure.
         </p>
       </section>
 
