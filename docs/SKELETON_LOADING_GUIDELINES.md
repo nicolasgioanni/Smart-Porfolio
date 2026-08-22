@@ -1,18 +1,16 @@
-# Skeleton Loading Guidelines
+# Skeleton loading guidelines
 
-## Purpose
-
-Skeletons are perceived loading states. They make route transitions and deferred UI feel stable while real static content is loading.
+Skeletons are route-transition loading states. They reserve familiar geometry while Next.js resolves a statically generated route; they do not hide runtime content fetching.
 
 ## Static-first rule
 
-The site should render generated static content whenever it is available. Skeletons must not hide real content or require client-side fetching.
+Render generated static content whenever it is available. Do not fetch portfolio content in a client component to justify a skeleton.
 
-The `enable_skeletons` setting controls whether route loading files render skeleton components. Keep skeletons available for polish, but do not rely on them to hide slow runtime data fetching.
+The generated `enable_skeletons` setting controls whether route loading files return their skeleton component. No route adds an artificial delay.
 
-## Component list
+## Components
 
-Reusable skeleton components:
+Reusable primitives and compositions include:
 
 - `SkeletonBlock`
 - `SkeletonText`
@@ -26,35 +24,50 @@ Reusable skeleton components:
 - `ResearchPageSkeleton`
 - `ProjectsPageSkeleton`
 - `ExperiencePageSkeleton`
-- `ResumePageSkeleton`
+- `RecommendationsPageSkeleton`
 
-## Page skeleton behavior
+## Route behavior
 
-- Home skeleton mirrors the profile overview, the four core content sections, three Skills cards, and the three-card Recommendations section, including its enabled empty-state footprint.
-- Research and Projects skeletons mirror card grids.
-- Experience skeleton mirrors the timeline.
-- Resume skeleton mirrors the single private-access panel and its two request actions; it does not imply that resume details or a file will load.
+| Route group | Loading composition |
+| --- | --- |
+| Home | Profile shell, core content sections, three skills cards, and recommendation footprint. |
+| Research and Projects | Page introduction and card grids shaped like the evidence routes. |
+| Experience | Page introduction and timeline entries. |
+| Recommendations | Page introduction and recommendation cards. |
+| Contact | Generic page skeleton while the static form shell resolves. |
 
-## Route loading behavior
+Each route `loading.tsx` calls `shouldRenderSkeletons()` before returning the page-specific composition. The setting changes loading polish, not route content.
 
-App Router `loading.tsx` files render the page-specific skeletons. No artificial delay is added just to show them.
+## Layout matching
 
-## Reduced-motion behavior
-
-Skeleton shimmer is disabled when `prefers-reduced-motion: reduce` is active. Motion classes also become static under reduced motion.
-
-## Layout shift prevention
-
-Skeletons use the same grid, radius, spacing, and approximate heights as final glass layouts. They should reserve similar space before content appears.
+- Use the same grids, radii, spacing tokens, and approximate block heights as the destination.
+- Reserve image, heading, paragraph, metadata, and action geometry without copying real content.
+- Update a skeleton when its route changes enough to create a noticeable layout jump.
+- Keep responsive column changes aligned with the destination style sheet.
 
 ## Accessibility
 
-Primitive skeleton blocks use `aria-hidden`. Page skeletons expose a loading region with `aria-busy=true`. Skeletons must not contain real content text or fake interactive controls.
+Primitive blocks use `aria-hidden="true"`. `PageSkeleton` exposes a labelled region with `aria-busy="true"`. Skeletons contain no fake text, links, buttons, form controls, or announcements about content that may not exist.
 
-## When to use skeletons
+The page-level busy region is sufficient. Do not add a live region for every placeholder.
 
-Use skeletons for route-level loading, Suspense boundaries, deferred components, image placeholders, and future optional client refreshes.
+## Reduced motion
 
-## When not to use skeletons
+`prefers-reduced-motion: reduce` disables shimmer. Placeholder geometry remains visible so the loading state still reserves space.
 
-Do not use skeletons for static content that is already available. Do not fetch generated content on the client just to justify loading states. Do not use skeletons as a substitute for performance.
+## Use skeletons for
+
+- App Router route transitions;
+- a real Suspense boundary with deferred UI;
+- image placeholders when final geometry is known;
+- future optional refresh behavior that does not replace initial static delivery.
+
+## Do not use skeletons for
+
+- static content already present in route output;
+- hiding a slow browser request for portfolio data;
+- replacing error or honest empty states;
+- simulating interactive controls;
+- forcing a loading animation to appear for a minimum time.
+
+See [Design system](DESIGN_SYSTEM.md), [Accessibility](ACCESSIBILITY.md), and [Performance budget](PERFORMANCE_BUDGET.md).

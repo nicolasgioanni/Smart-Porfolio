@@ -1,46 +1,59 @@
-﻿# Content Sheet Schema
+# Content Sheet Schema
 
-This portfolio uses public-safe spreadsheet content as the source of truth. One public Google Sheets workbook supplies nine logical tabs as CSV and is converted into typed JSON during the build.
+This document defines the exact CSV and XLSX row contract accepted by the content generator. It is a field reference, not an editing procedure. See [Content Pipeline](CONTENT_PIPELINE.md) for source modes and failure behavior, [Content Mapping](CONTENT_MAPPING.md) for UI consumers, and [Local Content Editing](LOCAL_CONTENT_EDITING.md) for the author workflow.
 
-## Required public workbook tabs
+## Source layout
 
-- `profile`: global key-value profile facts.
-- `links`: external and local links used across the site.
-- `research`: research work and research context.
-- `projects`: project summaries and detail content.
-- `experience`: professional, research, teaching, internship, leadership, or volunteer experience.
-- `recommendations`: professional recommendations and verification links.
-- `education`: education entries used across portfolio surfaces.
-- `skills`: grouped skills used across portfolio surfaces.
-- `site_settings`: safe UI and selection configuration.
+The public workbook must contain exactly nine visible tabs:
 
-Tab-name matching is case-insensitive and tab order does not matter. Do not create or publish a `resume` tab. `src/content/templates/resume.csv` remains an empty, header-only local compatibility source while the Resume route is private.
+1. `profile`
+2. `links`
+3. `research`
+4. `projects`
+5. `experience`
+6. `recommendations`
+7. `education`
+8. `skills`
+9. `site_settings`
 
-## Field rules
+The local template directory contains matching CSV files for the nine public sheets plus `resume.csv`, a required header-only compatibility template. The generator reads that local file in both source modes and fails if it contains a data row. It is never imported into the public workbook.
 
-- Required profile keys are `full_name`, `headline`, `location`, `email`, and `short_bio`.
-- Collection sheets with an `id` field require unique non-empty IDs.
-- Optional fields may be blank.
-- Invalid URLs fail validation.
-- Accepted URL values are `http`, `https`, valid `mailto`, and safe root-relative paths such as `/images/profile/portrait.png`.
-- Root-relative paths must not contain traversal segments such as `..`.
-- URL validation is not access control. Every referenced file under `public/` is deployed for anonymous access.
-- Date values should use `YYYY`, `YYYY-MM`, `YYYY-MM-DD`, or clear text such as `Present`.
+Workbook titles are matched with `title.trim().toLowerCase()`. Case, surrounding whitespace, and physical order do not matter. Internal spaces, hyphens, punctuation, and spelling are not aliases. Every tab must be visible, and the workbook must contain no extra tabs. A `resume` worksheet is explicitly invalid even though the application has a `/resume` request route.
 
-## Boolean formatting
+## Shared rules
 
-Accepted boolean values are:
+### Exact headers
 
-- `true`
-- `false`
-- `yes`
-- `no`
-- `1`
-- `0`
+Each sheet must contain its exact header set. Header order may change, but names are trimmed, case-sensitive, unique, and lowercase. A missing, duplicate, or extra header fails generation.
 
-Booleans are normalized to real `true` and `false` values in generated JSON.
+### Required values and IDs
 
-## List formatting
+- Required fields must contain non-whitespace text after trimming.
+- IDs are case-sensitive and must be unique within their collection.
+- Profile reference values must exactly match an ID in the target collection.
+- Blank optional text is omitted from generated JSON.
+- Blank list fields become empty arrays.
+
+### Booleans
+
+Boolean fields accept these case-insensitive values:
+
+```text
+true
+false
+yes
+no
+1
+0
+```
+
+A blank collection-row boolean defaults to `false`. Any other non-blank value fails generation.
+
+### Numbers
+
+Numeric fields accept any finite JavaScript number, including decimals and negative values. Blank values become absent. The normalizer does not enforce integers, non-negative values, or maximum values, so authors must use sensible positive integers for display limits and ordering.
+
+### Lists
 
 Pipe-delimited fields use this form:
 
@@ -48,280 +61,365 @@ Pipe-delimited fields use this form:
 Python|TypeScript|Django|Next.js
 ```
 
-Blank list fields become empty arrays.
+Each item is trimmed and empty items are removed. Duplicate list values are not removed during normalization.
 
-## Link list formatting
+### Link lists
 
-List-style link fields support simple URLs or label and URL pairs:
+Research and project `links` fields accept bare URLs or `label=url` pairs separated by pipes:
 
 ```text
-https://example.com|GitHub=https://github.com/example|Live site=https://cytocv.uwb.edu
+https://example.com|Source code=https://github.com/example/project|Live site=https://example.com/demo
 ```
 
-Simple URLs receive a generic label. Label and URL pairs preserve the label.
+Only the first `=` separates the label from the URL. A bare URL receives an inferred label: `Email` for `mailto`, the final segment for a root-relative path, the hostname for a valid absolute URL, or `Link` as the final fallback.
+
+### URL policy
+
+The general content URL validator accepts:
+
+- `http://` and `https://` absolute URLs;
+- a valid `mailto:name@example.com` value;
+- a safe root-relative path beginning with one `/`.
+
+Values cannot contain whitespace. Root-relative paths cannot contain backslashes, null bytes, protocol-relative `//`, or decoded `..` path segments.
 
-## Sheet details
-
-### profile
-
-Fields:
-
-- `key`: required profile key.
-- `value`: profile value.
-
-Example keys include `full_name`, `preferred_name`, `headline`, `role_engineer_prefixes`, `role_engineer_suffix`, `role_alternate`, `current_title`, `current_company`, `current_experience_id`, `previous_experience_id`, `featured_research_id`, `primary_education_id`, `location`, `timezone`, `email`, `pronouns`, `university`, `degree`, `field_of_study`, `graduation`, `short_bio`, `long_bio`, `portrait_image`, `favicon_image`, `resume_url`, `resume_download_label`, `primary_cta_label`, and `secondary_cta_label`.
-
-`resume_url` and `resume_download_label` remain supported optional fields for an intentionally public resume. For this private-resume configuration, keep both values blank in local and remote profile sources and do not place a resume file under `public/`.
-
-The Home role configuration is an optional complete set:
-
-- `role_engineer_prefixes`: pipe-delimited non-empty prefixes such as `Software|AI|Security`.
-- `role_engineer_suffix`: the shared suffix, such as `Engineer`.
-- `role_alternate`: the complete alternate role, such as `Research Scientist`.
-
-When all three keys are omitted or blank, Home displays the required `headline` as its static role and older sheets remain compatible. If any role key is populated, all three must be present and non-empty, and `role_engineer_prefixes` must produce at least one non-empty item; partial configurations fail content generation. Keep `headline` accurate because it remains the static fallback and a general metadata-safe role.
-
-The four Home profile-overview reference keys point to exact IDs in their matching sheets:
-
-- `current_experience_id`: an `experience.id`.
-- `previous_experience_id`: an `experience.id`.
-- `featured_research_id`: a `research.id`.
-- `primary_education_id`: an `education.id`.
-
-Blank or omitted `current_experience_id`, `featured_research_id`, and `primary_education_id` values use the deterministic current/featured/first fallback. Previous Work is intentionally explicit-only: a blank or omitted `previous_experience_id` hides that section. Any populated reference that does not match a row is a content error and must fail generation rather than silently choosing different content.
-
-### links
-
-Fields:
-
-- `id`: required unique ID.
-- `label`: required display label.
-- `url`: required URL.
-- `icon`: optional icon key.
-- `kind`: optional kind such as `github`, `linkedin`, `email`, `resume`, `website`, `portfolio`, `publication`, or `external`.
-- `is_primary`: boolean.
-- `show_on_home`: boolean.
-- `show_in_header`: boolean.
-- `show_in_footer`: boolean.
-- `order`: numeric display order.
-
-The `resume` kind remains valid for intentionally public deployments. Omit resume-kind file rows from local and remote link sources while the resume is private.
-
-### research
-
-Fields:
-
-- `id`: required unique ID.
-- `title`: required title.
-- `home_title`: optional concise title used everywhere the row appears on Home. When blank, Home falls back to `title`; the Research detail route continues to use `title`.
-- `role`, `organization`, `location`, `start_date`, `end_date`: optional context.
-- `organization_logo`: optional static path or URL for the organization mark.
-- `organization_logo_alt`: optional alt text. If blank, the UI derives text from `organization`.
-- `home_summary`: short summary for the larger Home Research card.
-- `profile_summary`: optional legacy summary used only by the Home profile-overview Research panel when both `profile_byline` and `profile_labs` are blank. In that legacy mode, a blank value falls back to `home_summary`, then `detail_summary`.
-- `profile_byline`: optional compact text displayed directly below the Research title, such as `Lead Engineer & First Author`.
-- `profile_labs`: optional pipe-delimited lab affiliations for the Home profile-overview Research panel.
-- `detail_summary`: longer Research page summary.
-- `impact`: optional impact statement.
-- `bullets`: pipe-delimited detail bullets.
-- `skills`: pipe-delimited skills.
-- `links`: pipe-delimited links.
-- `pending_links`: pipe-delimited display labels for resources that are not published yet. They do not accept URLs. The compact profile-overview Research panel may render them as disabled unpublished controls; the separate Home Research cards omit them.
-- `image`: optional static path or URL.
-- `featured`, `show_on_home`: booleans.
-- `home_order`, `detail_order`: numeric ordering fields.
-
-The Home profile-overview Research panel uses `home_title` with `title` as its fallback, plus verified links, `organization_logo`, and pending resource labels. When `profile_byline` or `profile_labs` is populated, the panel places the unlabelled byline directly below the title and presents the lab affiliations as a single labelled Labs list. Structured mode omits the narrative summary and does not display `role`. When both structured fields are blank, the legacy summary resolves in the order `profile_summary`, `home_summary`, then `detail_summary`. Role, organization text, and dates remain available to detail contexts but are not shown in this compact panel. Its resource row is centered. Published resources use button-like link controls that are transparent at rest, reveal their surface and border on hover or keyboard focus, and never underline their labels. Pending resources such as `Manuscript` remain native disabled buttons and are non-interactive until published.
-
-The separate Home Research section shows up to `max_home_research_items` enabled rows in `home_order`. Its cards display `home_title` with `title` fallback, organization, formatted dates, location, and a one-line `home_summary` with `detail_summary` fallback; they do not consume `profile_summary`, `profile_byline`, or `profile_labs`, display Featured, or add a `Learn more` action. Verified `links` are categorized in the fixed order `Source code`, `Manuscript`, `Live demo`; resources listed only in `pending_links` are omitted until they have a public URL. Use descriptive verified-link labels such as `Live site`, `Source code`, or `Manuscript`.
-
-### projects
-
-Fields:
-
-- `id`: required unique ID.
-- `title`: required title.
-- `subtitle`, `home_summary`, `detail_summary`, `problem`, `solution`, and `impact`: optional content.
-- `home_skills`: up to three `Skill name=icon-key` pairs separated by pipes, for example `Next.js=nextdotjs|TypeScript=typescript|OpenAI API=openai`. Generation rejects rows with more than three entries.
-- `home_skill_1_summary` through `home_skill_3_summary`: optional plain first-sentence descriptions for the corresponding ordered `home_skills` entry.
-- `home_skill_1_details` through `home_skill_3_details`: optional technical paragraphs explaining how the corresponding tool is used in that project.
-- `stack`: pipe-delimited technologies.
-- `links`: pipe-delimited links.
-- `image`: optional static path or URL.
-- `featured`, `show_on_home`: booleans.
-- `home_order`, `detail_order`: numeric ordering fields.
-
-Each skill's summary and details form an optional pair: provide both fields for that position or leave both blank. Generation rejects partial pairs and explanation fields whose numbered position has no matching `home_skills` entry. Legacy rows with neither field remain valid.
-
-Home project cards render the title, plain-text subtitle, product-focused `home_summary`, the first three `home_skills`, and verified actions in the order `Source code`, then `Live demo`. Each normalized Home skill can also expose its spreadsheet-owned summary and technical details in an interactive explanation. Featured and subtitle chips are intentionally omitted. The Projects detail route retains the longer summary, problem/solution context, complete stack, and all links.
-
-### experience
-
-Fields:
-
-- `id`: required unique ID.
-- `title`: required title.
-- `organization`: required organization.
-- `organization_logo`: optional static path or URL for the organization mark.
-- `organization_logo_alt`: optional alt text. If blank, the UI derives text from `organization`.
-- `type`: optional type such as `professional`, `research`, `teaching`, `internship`, `leadership`, or `volunteer`.
-- `location`, `start_date`, `end_date`: optional context.
-- `home_summary`: Home page summary.
-- `detail_summary`: detail page summary.
-- `bullets`: pipe-delimited bullets.
-- `skills`: pipe-delimited skills.
-- `featured`, `show_on_home`: booleans.
-- `home_order`, `detail_order`: numeric ordering fields.
-
-The Home Experience section renders every row with `show_on_home=true`, grouped by the exact `organization` text. It displays only `title`, `organization`, `organization_logo`, `start_date`, `end_date`, and `location`. Keep organization spelling consistent across rows that should share one company group. Blank logo fields use derived initials.
-
-### recommendations
-
-Fields:
-
-- `id`: required unique ID.
-- `recommender_name`: required display name.
-- `recommender_title`: optional recommender title.
-- `recommender_organization`: optional recommender organization.
-- `relationship`: optional relationship context.
-- `recommendation_date`: optional display-safe date.
-- `source`: optional source label such as `LinkedIn`, `Email`, `Letter`, `Professor`, `Manager`, `Peer`, or `Other`.
-- `source_url`: optional HTTPS source URL.
-- `linkedin_url`: optional HTTPS LinkedIn recommendation/profile URL.
-- `home_quote`: legacy optional short quote; current recommendation cards use `full_quote` on both surfaces.
-- `full_quote`: required full recommendation text.
-- `full_quote_link_label`: optional visible label for one inline link within `full_quote`.
-- `full_quote_link_url`: optional HTTPS destination paired with `full_quote_link_label`.
-- `context`: optional context note.
-- `skills`: pipe-delimited skills or tags.
-- `featured`, `show_on_home`: booleans.
-- `home_order`, `detail_order`: numeric ordering fields.
-
-The spreadsheet is the source of truth for recommendation text. Leave both inline-link fields blank, or populate both. The label is case-sensitive and must occur exactly once in `full_quote`; generation rejects partial pairs, non-HTTPS destinations, and labels that are missing or repeated. Content normalizes the pair as `fullQuoteLink`, and rendering replaces only that exact plain-text occurrence with an accessible link. Do not put HTML or Markdown in `full_quote`. LinkedIn links are only verification/navigation links; the site does not scrape LinkedIn, use the LinkedIn API, or fetch recommendation content at runtime.
-
-When enabled, Home places Recommendations after the Skills cards and links to the detail route with a compact top-right button. Home selects the first configured rows through `show_on_home`, `home_order`, and `max_home_recommendation_items`; the detail page includes all rows. Both surfaces show the unchanged `full_quote` and provide an accessible `Show more`/`Show less` control with reduced-motion support. Detail cards and single-card Home rows clamp long text to four lines; a taller header in a multi-card Home row may use three quote lines so the collapsed row remains level. If no rows are published and empty display is enabled, both surfaces show an honest empty state rather than fabricated recommendation content.
-
-### education
-
-Fields:
-
-- `id`: required unique ID.
-- `institution`: required institution.
-- `institution_logo`: optional static path or URL for an institution mark.
-- `institution_logo_alt`: optional alt text for the institution logo. If blank, the UI may derive safe alt text from the institution name.
-- `degree`: required degree.
-- `field`, `concentration`, `location`, `start_date`, `end_date`: optional context.
-- `home_summary`, `detail_summary`: optional summaries.
-- `bullets`: pipe-delimited bullets.
-- `featured`, `show_on_home`: booleans.
-- `home_order`, `detail_order`: numeric ordering fields.
-
-Use `concentration` for a formal concentration or specialization instead of appending it to `field`. A non-blank `location` remains an optional rendered line; leave it blank to hide location from the profile overview.
-
-The compact profile-overview Education panel uses the profile `degree` and `field_of_study` overrides when present. The shared formatter joins both values with `in`; the current compact values therefore render as `Degree: Bachelor of Science in Computer Science` and `Concentration: Information Assurance & Cybersecurity`. The larger Home Education card applies the same formatting to its selected education row.
-
-On Home, every Education row selected by `show_on_home` and the standard Home ordering is rendered in the Education list. The list shows the circular institution logo or initials fallback, institution, degree and field, concentration directly beneath the degree, dates, optional location, and each `bullets` entry as a visible bullet list. `home_summary` remains available to other renderers but is omitted from this Home list. Put GPA, activities, honors, Dean's List, relevant coursework, or other concise supporting facts in `bullets`; those facts are never hard-coded by the component.
-
-Place organization and institution marks in the shared `public/images/organizations/` directory and reference them with root-relative paths such as `/images/organizations/uw-logo.svg`. Leave logo fields blank when no approved asset is available; the Hero renders compact organization initials instead. The older `public/images/education/` path remains valid for existing assets.
-
-### skills
-
-Fields:
-
-- `id`: required unique ID.
-- `category`: required category.
-- `category_order`: numeric order for the broad category card.
-- `name`: required skill name.
-- `icon`: lowercase icon key used by the shared brand/semantic icon renderer.
-- `proficiency`: optional concise level such as `Advanced`, `Proficient`, `Applied proficiency`, or `Working proficiency`.
-- `summary`: optional one-sentence explanation of what the skill is.
-- `where_used`: optional concise evidence describing where and how the skill was applied.
-- `priority`: numeric priority.
-- `featured`, `show_on_home`: booleans.
-- `order`: numeric display order.
-
-Provide `proficiency`, `summary`, and `where_used` together to make a skill interactive; partial popup copy is rejected during content validation. Home renders three recruiter-focused category cards in a three-column desktop grid, with exactly four primary skills per category in the published template. Selecting a skill opens a concise dialog with its proficiency, definition, and evidence of use. Skill names, icon keys, and popup copy remain spreadsheet-owned; the component does not hard-code Nicolas-specific tools.
-
-### resume
-
-Fields:
-
-- `section`: required resume section key.
-- `key`: required item key.
-- `value`: required text value.
-- `order`: numeric order.
-
-The resume schema is retained only for generator compatibility. `src/content/templates/resume.csv` must remain header-only: do not add rows, a remote source, a private resume file, a private access URL, or sensitive resume-only information. There is intentionally no remote-source environment variable, so content generation always uses this empty local template.
-
-### site_settings
-
-Fields:
-
-- `key`: setting key.
-- `value`: setting value.
-
-Supported defaults include `site_title`, `site_description`, `default_theme`, `enable_skeletons`, `enable_scroll_motion`, `enable_glass_effects`, `enable_recommendations`, `show_empty_recommendations`, `max_home_research_items`, `max_home_project_items`, `max_home_experience_items`, `max_home_recommendation_items`, `max_home_skill_items`, `recommendations_nav_label`, `license_name`, `license_url`, `copyright_owner`, `repository_url`, `legal_contact_email`, `legal_effective_date`, `hosting_provider_name`, and `hosting_privacy_url`.
-
-Footer/legal settings:
-
-- `legal_contact_email`: valid public contact email used by the footer and all notices.
-- `legal_effective_date`: real calendar date rendered in long form on each notice. ISO `YYYY-MM-DD` is preferred; a valid Google Sheets display value in `M/D/YYYY` or `MM/DD/YYYY` form is normalized to ISO before validation.
-- `hosting_provider_name`: public host name used by the Privacy Notice.
-- `hosting_privacy_url`: HTTPS privacy-notice URL for the hosting provider.
-- `repository_url`: HTTPS public source repository. Leave blank until an exposure audit passes and anonymous access succeeds.
-- `license_name` and `license_url`: software license label and HTTPS repository license URL. The footer emits a license link only when both are present.
-
-The progressive footer behavior is functional and does not depend on `enable_scroll_motion`; that setting continues to control decorative content reveals only.
-
-`max_home_experience_items` remains accepted for compatibility with existing sheets, but the Home work-history list intentionally displays every experience row enabled with `show_on_home`.
-
-Recommendation visibility settings:
-
-- `enable_recommendations=false` hides recommendation selections and removes the navigation item.
-- `show_empty_recommendations=false` keeps the navigation item hidden when the sheet has no rows.
-- `show_empty_recommendations=true` keeps the Home Recommendations card, navigation item, and static Recommendations page discoverable with honest empty states even when the sheet has no rows.
-
-## Ordering behavior
-
-- `home_order` controls Home page ordering.
-- `detail_order` controls deeper page ordering.
-- `order` controls generic ordering.
-- Featured Home items appear before non-featured Home items.
-- Missing order values are safe and sort after ordered items.
-
-## Home page versus detail pages
-
-The Home page is the complete high-level overview. After the profile overview, it presents full-width Experience, Education, Research, and Projects sections, then three spreadsheet-driven Skills category cards and Recommendations before the global footer. Experience, Research, Projects, and Recommendations use compact top-right buttons to open their detail routes.
-
-Detail pages contain longer explanations, full bullets, technical context, impact details, and supporting links.
-
-## How `featured` and `show_on_home` work
-
-- `show_on_home=true` makes an item eligible for the Home page.
-- `featured=true` prioritizes an eligible item above non-featured items.
-- Home page item counts are limited by `site_settings` values.
-
-## Sharing one workbook for anonymous XLSX download
-
-1. In your own browser, create one blank Google Sheets workbook. This project does not need or request access to your Drive account.
-2. Manually import each of the nine matching files from `src/content/templates` into its own named tab. Do not import `resume.csv`.
-3. Preserve the documented field names as row one, and review every value for anonymous public release.
-4. After reviewing the workbook, use `Share` > `General access`, select `Anyone with the link`, and keep the role at `Viewer`. Do not authorize a connector, Google API credential, OAuth application, or service account.
-5. Configure an anonymous HTTPS XLSX export URL in `PORTFOLIO_WORKBOOK_URL`. The generator downloads the complete workbook once, matches worksheet titles with `trim().toLowerCase()`, and rejects missing, duplicate, unexpected, `resume`, hidden, or very-hidden worksheets. No per-tab URL, Google API, or account credential is used.
-
-## Environment variables
-
-- `PORTFOLIO_WORKBOOK_URL`
-- `PORTFOLIO_REQUIRE_REMOTE_CONTENT`
-
-Put local values in the ignored `.env` created from the tracked, placeholder-only `.env.example`. Configure `PORTFOLIO_WORKBOOK_URL` as a GitHub Actions secret for production so GitHub automatically redacts the anonymous URL from runner logs; this does not turn it into a Google credential or grant account access. Cloudflare does not build or fetch spreadsheet content.
-
-When `PORTFOLIO_REQUIRE_REMOTE_CONTENT=true`, a missing or invalid workbook source fails content generation. The empty local resume template is intentionally exempt because it has no remote source. GitHub Actions hard-codes this setting for production candidates to prevent fallback-content deployments without reopening the private resume surface.
-
-## Updating the portfolio
-
-1. Edit the local CSV templates or one of the nine published Google Sheet tabs.
-2. Keep the configured workbook public and anonymously readable.
-3. Run `npm run generate:content`; validation and normalization write `src/content/generated/portfolio.generated.json`.
-4. For local template work, review and commit the source and regenerated JSON together. For production workbook edits, let the daily or manual GitHub workflow verify and deploy the exact tested artifact; do not commit generated deployment state.
-5. Static pages render from generated JSON with no runtime spreadsheet request. Never maintain generated JSON by hand.
+Field-specific restrictions are stricter:
+
+- Recommendation `source_url`, `linkedin_url`, and `full_quote_link_url` require HTTPS.
+- `license_url`, `repository_url`, and `hosting_privacy_url` require HTTPS.
+- Organization and institution logo fields allow root-relative or HTTP(S) values, but not `mailto`.
+- Workbook download configuration has its own anonymous HTTPS-only rule.
+
+Profile email is required as non-empty text but is not syntax-validated by the content validator. Use a valid public email address. Image fields use the general validator, so authors must still use an actual root-relative or HTTP(S) image destination rather than another technically accepted URL form.
+
+### Dates
+
+Most date fields remain trimmed strings. The UI formats `YYYY`, `YYYY-MM`, and `YYYY-MM-DD` values and otherwise displays the supplied text. These general date fields are not calendar-validated during generation.
+
+`legal_effective_date` is the exception. It must normalize to a real ISO `YYYY-MM-DD` date. A valid displayed `M/D/YYYY` or `MM/DD/YYYY` value is converted to ISO first.
+
+## `profile`
+
+Canonical header:
+
+```csv
+key,value
+```
+
+Each row maps one snake-case key to its string value. Required keys are:
+
+- `full_name`
+- `headline`
+- `location`
+- `email`
+- `short_bio`
+
+Both source modes require those key rows to exist, and normalization requires each value to be non-empty. Use these documented public authoring keys:
+
+| Key | Normalized field | Rule or consumer |
+| --- | --- | --- |
+| `full_name` | `fullName` | Required identity and metadata fallback. |
+| `preferred_name` | `preferredName` | Optional Home greeting and header initial. |
+| `headline` | `headline` | Required static role fallback. |
+| `role_engineer_prefixes` | `roleEngineerPrefixes` | Optional pipe-delimited role prefixes. Requires the complete role set. |
+| `role_engineer_suffix` | `roleEngineerSuffix` | Optional shared suffix. Requires the complete role set. |
+| `role_alternate` | `roleAlternate` | Optional alternate role. Requires the complete role set. |
+| `current_title` | `currentTitle` | Current-work fallback when no current experience row is available. |
+| `current_company` | `currentCompany` | Current-work fallback when no current experience row is available. |
+| `current_experience_id` | `currentExperienceId` | Must reference an `experience.id` when populated. |
+| `previous_experience_id` | `previousExperienceId` | Must reference an `experience.id`; compatibility metadata with no current UI consumer. |
+| `featured_research_id` | `featuredResearchId` | Must reference a `research.id` when populated. |
+| `primary_education_id` | `primaryEducationId` | Must reference an `education.id` when populated. |
+| `location` | `location` | Required profile location. |
+| `timezone` | `timezone` | Optional timezone label. |
+| `time_zone` | `timezone` | Accepted alias for `timezone`. Do not provide both. |
+| `email` | `email` | Required public contact fallback. |
+| `pronouns` | `pronouns` | Optional profile identity text. |
+| `university` | `university` | Optional compact education override. |
+| `degree` | `degree` | Optional compact education override. |
+| `field_of_study` | `fieldOfStudy` | Optional compact education override. |
+| `graduation` | `graduation` | Optional compact graduation override. |
+| `short_bio` | `shortBio` | Required Home About copy. |
+| `long_bio` | `longBio` | Optional extended biography. |
+| `portrait_image` | `portraitImage` | Optional public image path or URL. |
+| `favicon_image` | `faviconImage` | Optional favicon and header mark path or URL. |
+| `primary_cta_label` | `primaryCtaLabel` | Compatibility field with no current UI consumer. |
+| `secondary_cta_label` | `secondaryCtaLabel` | Compatibility field with no current UI consumer. |
+
+The three role fields are all-or-nothing. If any is non-empty, all three must be non-empty and `role_engineer_prefixes` must contain at least one non-empty pipe-delimited item.
+
+Workbook profile rows reject duplicate keys and keys outside the generator allowlist. The local CSV parser currently permits unknown or duplicate profile keys, but authors should not rely on that difference because strict remote generation rejects them.
+
+## `links`
+
+Canonical header:
+
+```csv
+id,label,url,icon,kind,is_primary,show_on_home,show_in_header,show_in_footer,order
+```
+
+| Field | Required | Rule |
+| --- | --- | --- |
+| `id` | Yes | Unique row ID. |
+| `label` | Yes | Display and accessible label. |
+| `url` | Yes | General supported URL. |
+| `icon` | No | Compatibility field with no current component consumer. |
+| `kind` | No | Defaults to `external`; used for icon and destination classification. |
+| `is_primary` | No | Boolean used by Home link candidate selection. |
+| `show_on_home` | No | Boolean used by Home link candidate selection. |
+| `show_in_header` | No | Boolean controlling compact header and mobile links. |
+| `show_in_footer` | No | Normalized compatibility field; the current footer does not select by it. |
+| `order` | No | Generic numeric order. |
+
+Header links are selected only by `show_in_header`; see [Content Mapping](CONTENT_MAPPING.md) for the separate Home and footer selectors.
+
+## `research`
+
+Canonical header:
+
+```csv
+id,title,home_title,role,organization,organization_logo,organization_logo_alt,location,start_date,end_date,home_summary,profile_summary,profile_byline,profile_labs,detail_summary,impact,bullets,skills,links,pending_links,image,featured,show_on_home,home_order,detail_order
+```
+
+| Field | Required | Rule |
+| --- | --- | --- |
+| `id` | Yes | Unique row ID. |
+| `title` | Yes | Formal detail title and Home fallback title. |
+| `home_title` | No | Concise title for both Home research surfaces. |
+| `role` | No | Detail-card role chip. |
+| `organization` | No | Research affiliation text. |
+| `organization_logo` | No | Root-relative or HTTP(S) mark for the compact profile panel. |
+| `organization_logo_alt` | No | Normalized alt text; the compact profile mark is currently decorative. |
+| `location` | No | Home card and detail metadata. |
+| `start_date` | No | Display string and selection tie-breaker. |
+| `end_date` | No | Display string. |
+| `home_summary` | No | Home card summary and fallback copy. |
+| `profile_summary` | No | Legacy compact-profile summary fallback. |
+| `profile_byline` | No | Structured compact-profile byline. |
+| `profile_labs` | No | Pipe-delimited compact-profile lab list. |
+| `detail_summary` | No | Research detail summary and Home fallback. |
+| `impact` | No | Detail impact statement. |
+| `bullets` | No | Pipe-delimited detail bullets. |
+| `skills` | No | Pipe-delimited detail skill chips. |
+| `links` | No | Pipe-delimited general content links. |
+| `pending_links` | No | Pipe-delimited labels without destinations. |
+| `image` | No | Validated compatibility field with no current research renderer. |
+| `featured` | No | Boolean selection and sort priority. |
+| `show_on_home` | No | Boolean Home eligibility. |
+| `home_order` | No | Numeric Home order. |
+| `detail_order` | No | Numeric detail order. |
+
+The compact profile panel removes pending labels that duplicate a published link label, case-insensitively, and deduplicates repeated pending labels for that view. Generated JSON preserves the original normalized list.
+
+## `projects`
+
+Canonical header:
+
+```csv
+id,title,subtitle,home_summary,home_skills,home_skill_1_summary,home_skill_1_details,home_skill_2_summary,home_skill_2_details,home_skill_3_summary,home_skill_3_details,detail_summary,problem,solution,impact,stack,links,image,featured,show_on_home,home_order,detail_order
+```
+
+| Field | Required | Rule |
+| --- | --- | --- |
+| `id` | Yes | Unique row ID. |
+| `title` | Yes | Home and detail title. |
+| `subtitle` | No | Home and detail subtitle. |
+| `home_summary` | No | Home summary and detail fallback. |
+| `home_skills` | No | Up to three pipe-delimited `name=icon-key` entries. |
+| `home_skill_1_summary` | No | Popup summary for Home skill position 1. |
+| `home_skill_1_details` | No | Popup details for Home skill position 1. |
+| `home_skill_2_summary` | No | Popup summary for Home skill position 2. |
+| `home_skill_2_details` | No | Popup details for Home skill position 2. |
+| `home_skill_3_summary` | No | Popup summary for Home skill position 3. |
+| `home_skill_3_details` | No | Popup details for Home skill position 3. |
+| `detail_summary` | No | Detail summary and Home fallback. |
+| `problem` | No | Detail problem statement. |
+| `solution` | No | Detail solution statement. |
+| `impact` | No | Detail impact statement. |
+| `stack` | No | Pipe-delimited detail technologies. |
+| `links` | No | Pipe-delimited general content links. |
+| `image` | No | Detail-card image path or URL. |
+| `featured` | No | Boolean selection and sort priority. |
+| `show_on_home` | No | Boolean Home eligibility. |
+| `home_order` | No | Numeric Home order. |
+| `detail_order` | No | Numeric detail order. |
+
+Each `home_skills` entry is split at its first `=`. The name is required. An icon key is optional, lowercased, and must match `^[a-z0-9][a-z0-9-]*$`.
+
+For each numbered position, summary and details must both be present or both blank. Popup copy cannot exist for a missing skill position. More than three Home skills fails generation.
+
+## `experience`
+
+Canonical header:
+
+```csv
+id,title,organization,organization_logo,organization_logo_alt,type,location,start_date,end_date,home_summary,detail_summary,bullets,skills,featured,show_on_home,home_order,detail_order
+```
+
+| Field | Required | Rule |
+| --- | --- | --- |
+| `id` | Yes | Unique row ID. |
+| `title` | Yes | Role title. |
+| `organization` | Yes | Organization display and Home grouping value. |
+| `organization_logo` | No | Root-relative or HTTP(S) mark. |
+| `organization_logo_alt` | No | Explicit alt text for Home organization logos. |
+| `type` | No | Detail-card type chip. |
+| `location` | No | Home and detail metadata. |
+| `start_date` | No | Display string and sort tie-breaker. |
+| `end_date` | No | Display string and current-work classification. |
+| `home_summary` | No | Compact current-work and detail fallback summary. |
+| `detail_summary` | No | Detail summary. |
+| `bullets` | No | Pipe-delimited detail bullets. |
+| `skills` | No | Pipe-delimited detail skill chips. |
+| `featured` | No | Boolean selection and sort priority. |
+| `show_on_home` | No | Boolean Home eligibility. |
+| `home_order` | No | Numeric Home order. |
+| `detail_order` | No | Numeric detail order. |
+
+An experience is considered current only when `end_date` is blank, `Present`, or `Current`, after trim and case normalization.
+
+## `recommendations`
+
+Canonical header:
+
+```csv
+id,recommender_name,recommender_title,recommender_organization,relationship,recommendation_date,source,source_url,linkedin_url,home_quote,full_quote,full_quote_link_label,full_quote_link_url,context,skills,featured,show_on_home,home_order,detail_order
+```
+
+| Field | Required | Rule |
+| --- | --- | --- |
+| `id` | Yes | Unique row ID. |
+| `recommender_name` | Yes | Recommender display name. |
+| `recommender_title` | No | Position metadata. |
+| `recommender_organization` | No | Organization metadata. |
+| `relationship` | No | Relationship metadata. |
+| `recommendation_date` | No | Display string and sort tie-breaker. |
+| `source` | No | Label for a distinct source link. |
+| `source_url` | No | HTTPS source destination. |
+| `linkedin_url` | No | HTTPS LinkedIn destination. |
+| `home_quote` | No | Compatibility field; current cards use `full_quote`. |
+| `full_quote` | Yes | Full plain-text quote on both surfaces. |
+| `full_quote_link_label` | No | One exact inline label within `full_quote`. |
+| `full_quote_link_url` | No | HTTPS destination paired with the inline label. |
+| `context` | No | Normalized compatibility field with no current card consumer. |
+| `skills` | No | Normalized compatibility list with no current card consumer. |
+| `featured` | No | Boolean selection and sort priority. |
+| `show_on_home` | No | Boolean Home eligibility. |
+| `home_order` | No | Numeric Home order. |
+| `detail_order` | No | Numeric detail order. |
+
+The two inline-link fields must both be blank or both be present. The label match is case-sensitive and must occur exactly once in `full_quote`. Quotes remain plain text; the renderer replaces only that exact label with a link.
+
+## `education`
+
+Canonical header:
+
+```csv
+id,institution,institution_logo,institution_logo_alt,degree,field,concentration,location,start_date,end_date,home_summary,detail_summary,bullets,featured,show_on_home,home_order,detail_order
+```
+
+| Field | Required | Rule |
+| --- | --- | --- |
+| `id` | Yes | Unique row ID. |
+| `institution` | Yes | Institution name. |
+| `institution_logo` | No | Root-relative or HTTP(S) mark. |
+| `institution_logo_alt` | No | Explicit alt text for the Home education list. |
+| `degree` | Yes | Degree label. |
+| `field` | No | Field of study. |
+| `concentration` | No | Concentration or specialization. |
+| `location` | No | Home education-list metadata. |
+| `start_date` | No | Home display and sort tie-breaker. |
+| `end_date` | No | Home and compact graduation display. |
+| `home_summary` | No | Normalized but excluded from the current hash and UI. |
+| `detail_summary` | No | Normalized but excluded from the current hash and UI. |
+| `bullets` | No | Pipe-delimited Home education details. |
+| `featured` | No | Boolean selection and sort priority. |
+| `show_on_home` | No | Boolean Home eligibility. |
+| `home_order` | No | Numeric Home order. |
+| `detail_order` | No | Normalized but excluded from the current hash and UI. |
+
+The compact profile panel can use the row for identity, concentration, dates, and its decorative mark. Profile-level university, degree, field, and graduation values override the corresponding compact values when non-empty. The larger Home education list displays row location; the compact profile panel does not.
+
+## `skills`
+
+Canonical header:
+
+```csv
+id,category,category_order,name,icon,proficiency,summary,where_used,priority,featured,show_on_home,order
+```
+
+| Field | Required | Rule |
+| --- | --- | --- |
+| `id` | Yes | Unique row ID. |
+| `category` | Yes | Group key and displayed category source. |
+| `category_order` | No | Numeric category order. |
+| `name` | Yes | Skill label. |
+| `icon` | No | Lowercase icon key matching `^[a-z0-9][a-z0-9-]*$`. |
+| `proficiency` | No | Dialog context. Requires the complete popup set. |
+| `summary` | No | Dialog summary. Requires the complete popup set. |
+| `where_used` | No | Dialog evidence. Requires the complete popup set. |
+| `priority` | No | Primary generic sort key. |
+| `featured` | No | Boolean Home fallback selection. |
+| `show_on_home` | No | Boolean Home eligibility. |
+| `order` | No | Secondary generic sort key. |
+
+If any popup field is present, all three must be present. The schema does not require a fixed number of categories or skills per category.
+
+## `site_settings`
+
+Canonical header:
+
+```csv
+key,value
+```
+
+Required key rows in both source modes are:
+
+- `site_title`
+- `site_description`
+- `default_theme`
+
+These rows must exist, but blank values leave the built-in defaults in place. The complete workbook key allowlist is:
+
+| Key | Normalized field | Built-in default or rule |
+| --- | --- | --- |
+| `site_title` | `siteTitle` | `Portfolio` |
+| `site_description` | `siteDescription` | Generic professional portfolio description. |
+| `default_theme` | `defaultTheme` | `navy`; unsupported values resolve to `navy` in the theme resolver. |
+| `enable_skeletons` | `enableSkeletons` | `true` |
+| `enable_scroll_motion` | `enableScrollMotion` | `false` |
+| `enable_glass_effects` | `enableGlassEffects` | `true` |
+| `enable_recommendations` | `enableRecommendations` | `true` |
+| `show_empty_recommendations` | `showEmptyRecommendations` | `false` |
+| `max_home_research_items` | `maxHomeResearchItems` | `2` |
+| `max_home_project_items` | `maxHomeProjectItems` | `3` |
+| `max_home_experience_items` | `maxHomeExperienceItems` | `3`; compatibility setting ignored by current Home selection. |
+| `max_home_recommendation_items` | `maxHomeRecommendationItems` | `3` |
+| `max_home_skill_items` | `maxHomeSkillItems` | `12` |
+| `recommendations_nav_label` | `recommendationsNavLabel` | `Recommendations`; changes the navigation label only. |
+| `license_name` | `licenseName` | Optional text. |
+| `license_url` | `licenseUrl` | Optional HTTPS URL. |
+| `copyright_owner` | `copyrightOwner` | Optional text; footer falls back to profile name. |
+| `repository_url` | `repositoryUrl` | Optional HTTPS URL. |
+| `legal_contact_email` | `legalContactEmail` | Optional validated email address. |
+| `legal_effective_date` | `legalEffectiveDate` | Optional real ISO date after normalization. |
+| `hosting_provider_name` | `hostingProviderName` | Optional text. |
+| `hosting_privacy_url` | `hostingPrivacyUrl` | Optional HTTPS URL. |
+
+Workbook setting keys are unique and restricted to this table. The local CSV parser currently permits unknown or duplicate setting keys, but strict remote generation does not.
+
+The maximum-item settings use positive values as limits. A zero, negative, missing, or otherwise non-positive normalized value does not mean "show none" in the selectors. It activates that selector's fallback count. Use the relevant enable setting to hide an optional surface.
+
+## Validation checklist
+
+Before publishing a workbook change, confirm:
+
+- exactly nine visible tabs with normalized names matching the required set;
+- exact headers with no extra columns;
+- required profile and setting key rows;
+- unique workbook profile and setting keys;
+- unique collection IDs and valid profile references;
+- complete grouped role, project-skill, skill-popup, and quote-link fields;
+- only public-safe values and destinations;
+
+Run `npm run generate:content`, review the generated diff, then run `npm run verify`. See [Content Replacement Checklist](CONTENT_REPLACEMENT_CHECKLIST.md) for the broader editorial review.

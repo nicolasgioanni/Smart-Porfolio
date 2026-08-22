@@ -1,53 +1,86 @@
 # Local Development
 
+Smart Portfolio uses Node.js, npm, Next.js App Router, a build-time CSV or XLSX content generator, and Cloudflare Pages Functions. The core portfolio routes render as a static export. The complete contact flow requires Wrangler because Next.js development mode does not run Pages Functions.
+
 ## Prerequisites
 
-- Node.js 22.13 or newer is required. Node.js 22 LTS matches GitHub Actions and `.nvmrc`.
-- npm is required.
-- PowerShell is recommended on Windows.
+- Node.js 22.13 or newer. Node.js 22 matches `.nvmrc` and GitHub Actions.
+- npm.
+- PowerShell for the Windows convenience commands, or Node.js for the cross-platform equivalents.
 
-The project uses npm, Next.js App Router, static export, a build-time CSV/XLSX content generator, and one Cloudflare Pages Function for contact delivery. Core pages need no runtime server, database, authentication, or runtime Google Sheets request. Run Wrangler when testing the complete `/contact` flow.
-
-## Clone and enter the project
+Clone the repository with its current slug:
 
 ```powershell
-git clone <repository-url>
-cd <repository-folder>
+git clone https://github.com/nicolasgioanni/Smart-Porfolio.git
+cd Smart-Porfolio
 ```
 
-If the folder is not a Git repository, the local scripts still work as long as `package.json` is present.
+## Automated setup
 
-## Smart Windows setup
+### Windows
 
 ```powershell
 npm run setup:local
 ```
 
-This command:
-
-- Finds the project root.
-- Checks Node and npm.
-- Prints detected versions.
-- Stops before installation when Node is older than 22.13.
-- Uses `npm ci` when `package-lock.json` exists.
-- Uses `npm install` when `package-lock.json` is missing.
-- Skips install when dependencies and setup hashes are current.
-- Creates `.env` from `.env.example` only when safe.
-- Generates content when generated JSON is missing or stale.
-
-Cross-platform Node alias:
+### Cross-platform
 
 ```bash
 npm run setup:local:node
 ```
 
-## Smart dev startup
+Setup performs the following work:
+
+1. Finds the project root and checks Node.js and npm.
+2. Stops when Node.js is older than 22.13.
+3. Creates `.env` from `.env.example` only when `.env` does not exist.
+4. Reuses a valid dependency installation when the package and setup hashes match.
+5. Runs `npm ci` when the lockfile exists and installation is required.
+6. Generates content when the generated JSON is missing or older than a template.
+
+An existing `.env` is never overwritten.
+
+Useful setup flags:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup-local.ps1 -ForceInstall
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup-local.ps1 -ForceGenerate
+```
+
+The Node entry point accepts the equivalent `--force-install` and `--force-generate` flags.
+
+## Environment configuration
+
+`.env.example` is the complete placeholder reference. Copy only development values into the ignored `.env` file.
+
+| Group | Variables | Used by |
+| --- | --- | --- |
+| Content | `PORTFOLIO_WORKBOOK_URL`, `PORTFOLIO_REQUIRE_REMOTE_CONTENT` | Content generator |
+| Browser build | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Contact page bundle |
+| Preview build reference | `NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY` | GitHub preview build selection, not local fallback |
+| Turnstile runtime | `TURNSTILE_SECRET_KEY`, `TURNSTILE_ALLOWED_HOSTNAMES` | Verification Function |
+| Delivery runtime | `RESEND_API_KEY`, `CONTACT_RECIPIENT_EMAIL`, `CONTACT_FROM_EMAIL`, `CONTACT_REPLY_TO_EMAIL` | Delivery Function |
+| Origin control | `CONTACT_ALLOWED_ORIGINS` | Both contact Functions |
+
+Leave `PORTFOLIO_WORKBOOK_URL` blank and `PORTFOLIO_REQUIRE_REMOTE_CONTENT=false` to use checked-in templates. A configured workbook URL is still an anonymous public download. Do not place production provider credentials or production contact secrets in the local file.
+
+## Static UI development
+
+### Smart startup
+
+Windows:
 
 ```powershell
 npm run dev:smart
 ```
 
-This starts the dev server after checking dependencies and generated content. It prints the local URL before starting.
+Cross-platform:
+
+```bash
+npm run dev:smart:node
+```
+
+The startup helper checks dependencies and generated content, chooses the requested port or the next available port, prints the URL, and starts `next dev`.
 
 PowerShell options:
 
@@ -59,73 +92,119 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-dev.ps1 -Force
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-dev.ps1 -NoOpen
 ```
 
-`-NoOpen` is accepted for compatibility. The script prints the URL and does not open a browser by default.
+`-NoOpen` is accepted for compatibility. The helper prints the URL and does not open a browser. With the default port request, it searches through port `3010` when necessary.
 
-If the requested port is busy, the script tries the next available port up to `3010` for the default range.
-
-Cross-platform Node alias:
+For direct Next.js development:
 
 ```bash
-npm run dev:smart:node
+npm run dev
 ```
 
-`npm run dev:smart` serves the exported-page application through Next.js development mode. It is useful for UI work, but it does not run `functions/api/contact.ts`; submissions to `/api/contact` will not work in that mode.
+These Next.js modes support portfolio UI work, navigation, themes, motion, and client-side form rendering. Requests to `/api/contact/verify` and `/api/contact` require the Wrangler mode below.
 
-## Full contact-flow development
+## Content generation
 
-Local development uses one ignored `.env` file for both the browser build and the Pages Function. `.env.example` is the tracked, placeholder-only reference and enumerates every supported content, Turnstile, Resend, recipient, hostname, and origin variable.
+Templates live under `src/content/templates`. Generate normalized content with:
 
-1. Copy `.env.example` to `.env` if setup has not already done so, then replace the placeholders needed for the flow you are testing. Never commit `.env`.
-2. Set `NEXT_PUBLIC_TURNSTILE_SITE_KEY` to a separate development widget's public key. It is the only value intentionally compiled into browser code; every other key and recipient remains server-only.
-3. Configure that development Turnstile widget for the exact local hostname you will use. Keep production widget credentials separate and do not allow `localhost` on the production widget.
-4. Use a restricted development Resend key and a controlled inbox for `CONTACT_RECIPIENT_EMAIL`. Never use a visitor's address as the recipient setting.
-5. Build and serve both the static output and Pages Function:
+```bash
+npm run generate:content
+```
 
-```powershell
-npm run setup:local
+The command validates the selected source and writes `src/content/generated/portfolio.generated.json`. Edit the templates or workbook, not the generated JSON.
+
+`npm run build` has a `prebuild` lifecycle step and therefore regenerates content before Next.js runs. `npm run build:generated` skips that lifecycle fetch and consumes the existing generated JSON. The latter is the CI build command after the workflow has already fetched and validated its one candidate snapshot.
+
+See [Local Content Editing](LOCAL_CONTENT_EDITING.md), [Content Pipeline](CONTENT_PIPELINE.md), and [Content Sheet Schema](CONTENT_SHEET_SCHEMA.md) for authoring rules.
+
+## Complete contact-flow development
+
+The full flow needs a development Turnstile widget, development provider credentials, an exact local origin, and Wrangler.
+
+1. Set `NEXT_PUBLIC_TURNSTILE_SITE_KEY` before building. Next.js compiles it into the browser bundle.
+2. Configure the matching development widget for the exact local hostname. Do not add local hosts to the production widget.
+3. Set `TURNSTILE_SECRET_KEY` and `TURNSTILE_ALLOWED_HOSTNAMES` for that widget.
+4. Set both local origins in `CONTACT_ALLOWED_ORIGINS` only if both are used. Scheme and port are part of the comparison.
+5. Use restricted development delivery credentials and a controlled test destination.
+6. Build and serve the static output plus Functions:
+
+```bash
 npm run dev:pages
 ```
 
-The equivalent direct Wrangler command is:
+The package command runs:
 
-```powershell
+```bash
 npm run build
 npx --no-install wrangler pages dev out --env-file .env
 ```
 
-Wrangler serves the project at `http://localhost:8788` by default. The checked-in example therefore allows `localhost` and `127.0.0.1` as Turnstile hostnames and lists both matching port-8788 origins. Remove any origin you do not use. Rebuild after changing `NEXT_PUBLIC_TURNSTILE_SITE_KEY` because Next.js compiles public values into the browser bundle.
+Wrangler normally serves at `http://localhost:8788`. It reads local Function values from `.env`; Next.js and the content generator use the same file during the preceding build.
 
-Cloudflare's dummy Turnstile response uses the action `test`. This application deliberately requires `portfolio_contact`, so use a development widget that returns the configured action for end-to-end local testing; do not weaken production action validation to accommodate a dummy token. A Pages preview with its own `NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY`, hostname, origin, and runtime secret is another safe end-to-end option. When that preview key is blank, the preview contact form remains unavailable rather than using production credentials.
+The flow is split across two same-origin endpoints:
 
-Wrangler receives local Function values explicitly through `--env-file .env`; Next.js and the build-time content generator read the same file. The package script pins the Wrangler version for reproducible local behavior. This consolidation is local-only. Production build-time public values normally use GitHub repository variables; the anonymous workbook URL uses an Actions secret solely for automatic runner-log redaction. The direct-upload credential is also held in GitHub Actions secrets, and Pages Function runtime values are configured separately in Cloudflare with sensitive values stored as encrypted secrets. See Cloudflare's [Pages local-development](https://developers.cloudflare.com/pages/functions/local-development/) and [bindings/secrets](https://developers.cloudflare.com/pages/functions/bindings/) documentation.
+1. The browser sends a fresh Turnstile token and opaque submission ID to `/api/contact/verify`.
+2. The Function verifies the exact `portfolio_contact` action and allowed hostname, then sets a 30-minute signed, `HttpOnly`, `Secure`, `SameSite=Strict`, host-only ticket cookie bound to the submission ID.
+3. The browser submits the reviewed contact fields and the same ID to `/api/contact`.
+4. The delivery Function validates the signed ticket and does not call Siteverify again.
+5. Successful delivery clears the ticket. A delivery failure retains a still-valid ticket for a safe retry.
+
+Cloudflare dummy tokens report the action `test`, while the application requires `portfolio_contact`. Use a development widget that returns the configured action. Do not weaken action validation for local convenience.
+
+Wrangler local mode exercises the checked-in `_routes.json` and `_headers` files. It does not prove production WAF, custom-domain, provider-secret, or email-delivery configuration.
 
 ## Verification
+
+Run the normal local quality gate:
+
+```bash
+npm run verify
+```
+
+`verify` runs documentation integrity, lint, typecheck, the full Vitest suite, and a production build. The build regenerates content through `prebuild`.
+
+The smart local wrapper prepares dependencies when needed, explicitly regenerates content, and then runs the same gate:
 
 ```powershell
 npm run verify:local
 ```
 
-This prepares dependencies if needed, regenerates content, and runs `npm run verify`.
+Cross-platform:
 
-Regular quality commands:
-
-```powershell
-npm run lint
-npm run typecheck
-npm run test
-npm run build
-npm run verify
+```bash
+npm run verify:local:node
 ```
+
+Because `verify` ends with the normal build, the wrapper's explicit generation is followed by the build lifecycle generation. CI avoids a second remote fetch by using `build:generated` instead.
+
+Use [Testing](TESTING.md) for the command matrix, test inventory, and CI coverage.
+
+## Inspecting the static export
+
+Build the export:
+
+```bash
+npm run build
+```
+
+Next.js writes static HTML, route payloads, assets, `_headers`, `_routes.json`, and `content-version.json` to `out/`. A plain static server is sufficient for page-only inspection. Use `npm run dev:pages` when the test includes either contact Function.
+
+Do not treat ignored local `out/` files as a verified deployment artifact. CI creates and validates `artifact-integrity.json` only for deployable candidates.
 
 ## Cleaning local artifacts
 
-Default cleanup removes `.next` and `out` if present:
+Default cleanup removes `.next` and `out`:
 
 ```powershell
 npm run clean:local
 ```
 
-PowerShell options:
+Cross-platform:
+
+```bash
+npm run clean:local:node
+```
+
+Optional PowerShell commands:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/clean-local.ps1 -GeneratedContent
@@ -134,109 +213,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/clean-local.ps1 -All
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/clean-local.ps1 -All -Force
 ```
 
-The cleanup script never deletes:
+Removing `node_modules` requires confirmation unless `-Force` is supplied. Cleanup preserves templates, public assets, and `.env`.
 
-- `src/content/templates`
-- `public` assets
-- `.env`
+## Next steps
 
-It asks for confirmation before deleting `node_modules` unless `-Force` is used.
-
-## Editing local CSV templates
-
-Templates live in `src/content/templates`. After editing templates, run:
-
-```powershell
-npm run generate:content
-```
-
-Then start the app:
-
-```powershell
-npm run dev:smart
-```
-
-## Testing the production static export locally
-
-Build the static export:
-
-```powershell
-npm run build
-```
-
-The static output is written to `out/` by Next.js. A plain static file server is sufficient for page-only inspection. Use `npm run dev:pages` (or `npx --no-install wrangler pages dev out --env-file .env`) when the test must include `/api/contact`; it also exercises the checked-in `_routes.json` and `_headers` deployment files.
-
-## Troubleshooting
-
-### node not found
-
-Install Node.js 22.13 or newer and open a new terminal. Node.js 22 LTS matches GitHub Actions.
-
-### npm not found
-
-Install npm with Node.js or repair the Node installation.
-
-### node_modules missing
-
-Run `npm run setup:local`.
-
-### package-lock changed
-
-Run `npm run setup:local`. The script detects hash changes and reinstalls.
-
-### port 3000 in use
-
-Run `npm run dev:smart`. The script automatically tries the next available port in the default range.
-
-### generated content missing
-
-Run `npm run generate:content` or `npm run setup:local`.
-
-### invalid CSV value
-
-Read the error from `npm run generate:content`. It usually identifies the sheet and field.
-
-### duplicate IDs
-
-Each collection sheet requires unique `id` values. Update the relevant CSV row.
-
-### invalid URL
-
-Use `https://`, `http://`, `mailto:`, or a safe root-relative path such as `/images/profile/portrait.png`. A valid root-relative path under `public/` is still publicly retrievable; keep private resume files and URLs out of public assets and content sources.
-
-### build failure
-
-Run `npm run verify:local` and inspect the first failing command.
-
-### contact verification never becomes ready
-
-Confirm `NEXT_PUBLIC_TURNSTILE_SITE_KEY` was present before the most recent build, that the development widget permits the browser hostname, and that `https://challenges.cloudflare.com` is not blocked by the browser, an extension, or a locally modified CSP.
-
-### contact endpoint returns 400
-
-Use a fresh token and confirm the Turnstile key pair, exact `portfolio_contact` action, and `TURNSTILE_ALLOWED_HOSTNAMES` value agree. Tokens are single-use and expire quickly. Cloudflare dummy tokens report the action `test` and therefore intentionally fail this application's production-equivalent action check.
-
-### contact endpoint returns 403
-
-Make the browser origin match one exact entry in `CONTACT_ALLOWED_ORIGINS`, including scheme and port. Do not add a wildcard to bypass the check.
-
-### contact endpoint returns 503 or 502
-
-`503` indicates missing or invalid required Function configuration. `502` indicates delivery failed after validation; verify the Resend key, verified sending domain, and controlled recipient without printing secret values or message bodies.
-
-### PowerShell execution policy
-
-Use the package scripts or run scripts with:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup-local.ps1
-```
-
-## What scripts do not do
-
-- They do not start the Cloudflare Pages Function unless you run Wrangler explicitly.
-- They do not create Cloudflare Turnstile widgets, Resend credentials, Pages secrets, or WAF rules.
-- They do not fetch Google Sheets at runtime.
-- They do not overwrite an existing `.env`.
-- They do not delete templates, public assets, or `.env`.
-- They do not modify portfolio content except by running the existing generator.
+- [Troubleshooting](TROUBLESHOOTING.md)
+- [Testing](TESTING.md)
+- [Deployment](DEPLOYMENT.md)
+- [Operations](OPERATIONS.md)

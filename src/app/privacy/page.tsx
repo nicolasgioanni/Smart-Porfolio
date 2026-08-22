@@ -92,8 +92,9 @@ export default function PrivacyPage() {
           The contact form collects your first name, last name, email address, optional phone number, message, and your
           confirmation of each of the three required acknowledgments shown during review. It also processes a Cloudflare
           Turnstile response, an opaque submission identifier, and limited request information needed to validate the
-          submission, prevent abuse, and apply rate limits. The information is used to review your inquiry, send a receipt,
-          and respond to you.
+          submission and prevent abuse. Cloudflare may additionally process request information for edge rate limiting when
+          the site operator configures that control. The information is used to review your inquiry, send a receipt, and
+          respond to you.
         </p>
         <p>
           Turnstile is visibly completed before the data-entry form opens. At that first step, the browser transmits the

@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "next dev",
     "dev:pages": "npm run build && npx --no-install wrangler pages dev out --env-file .env",
+    "docs:check": "node scripts/validateDocumentation.mjs",
     "generate:content": "tsx scripts/fetchPortfolioContent.ts",
     "prebuild": "npm run generate:content",
     "build": "next build && node scripts/writeContentVersion.mjs",
@@ -17,7 +18,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:footer": "vitest run src/components/layout/InteractiveBlobFooter.test.tsx src/components/layout/footerStyles.test.ts",
-    "verify": "npm run lint && npm run typecheck && npm run test && npm run build",
+    "verify": "npm run docs:check && npm run lint && npm run typecheck && npm run test && npm run build",
     "setup:local": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup-local.ps1",
     "dev:smart": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-dev.ps1",
     "verify:local": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-local.ps1",

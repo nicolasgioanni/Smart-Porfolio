@@ -1,114 +1,211 @@
 # Security
 
-## Static-first architecture with an isolated endpoint
+The portfolio is a static-first site with a deliberately narrow dynamic boundary. Core pages are exported as static files. Cloudflare Pages invokes Functions only for the two contact endpoints listed in `public/_routes.json`.
 
-Portfolio content is fetched by one anonymous HTTPS XLSX download at build time, normalized into generated JSON, and rendered as a static Next.js export. Core pages do not need a database, authentication service, runtime Next.js server, Google authentication, or a runtime Google Sheets request.
+This document separates controls that the repository enforces from controls that an operator must configure in external services. For the exact contact request and response contract, use [Contact System](CONTACT_SYSTEM.md). For environment activation and deployment checks, use [Deployment](DEPLOYMENT.md). Use [Security Checklist](SECURITY_CHECKLIST.md) when reviewing a change or release.
 
-The sole request-handling boundary is the Cloudflare Pages Function at `/api/contact`. `public/_routes.json` limits Function invocation to that exact path. Do not broaden the include rule or introduce another endpoint without documenting its data, abuse cases, validation, logging, and rate limits first.
+## Control status
 
-## Contact trust boundary
+| Status | Meaning |
+| --- | --- |
+| Repository-enforced | Source code, generated configuration, or tests implement the control in this repository. |
+| External operator requirement | Cloudflare, Resend, DNS, mailbox, or account configuration must be set and checked outside the repository. |
+| Live state unverified | Repository inspection cannot establish whether the external control is enabled or effective in the deployed environment. |
 
-The browser presents Turnstile before the data-entry steps to reduce automated traffic early, but placement is not the security boundary. Client validation, disabled controls, consent-card state, and a successful widget animation can all be bypassed. The Pages Function must independently enforce every rule before delivery.
+Documentation is not evidence that an external control is active. Treat the implementation and generated deployment files as authoritative for repository behavior, and verify external state in the relevant provider.
 
-The Function accepts only POST requests with `application/json`, applies a 16 KiB body limit while streaming the request, rejects malformed or unknown fields, and validates required first name, last name, email, message, three acknowledgements, timing metadata, and a submission identifier. Phone is optional and is validated when present. A hidden honeypot and minimum-completion-time check add low-cost abuse signals without replacing Turnstile or rate limiting.
+## Authoritative sources
 
-Requests must carry an exact allowed `Origin`; production `CONTACT_ALLOWED_ORIGINS` must list only the canonical HTTPS origin. Responses use generic error codes so configuration, address, provider, and validation details are not exposed to visitors.
+| Concern | Source |
+| --- | --- |
+| Function route boundary | `public/_routes.json` |
+| Static response headers | `public/_headers` |
+| Contact request validation, tickets, provider calls, and Function headers | `functions/_shared/contact.ts` |
+| Contact endpoint order and responses | `functions/api/contact/verify.ts`, `functions/api/contact.ts` |
+| Browser request and retry behavior | `src/components/contact/ContactForm.tsx` |
+| Turnstile widget configuration | `src/components/contact/TurnstileWidget.tsx` |
+| Production and preview non-secret Function values | `wrangler.jsonc` |
+| Build-time public values and deployment flow | `.github/workflows/ci.yml` |
+| Contact behavior reference | `docs/CONTACT_SYSTEM.md` |
 
-## Turnstile verification
+## Threat model
 
-Every accepted request requires a fresh Turnstile token. The Function sends it to Cloudflare Siteverify with `TURNSTILE_SECRET_KEY`, the request's Cloudflare-provided remote IP when available, and the submission ID as the verification idempotency key. Delivery proceeds only when Siteverify returns all of the following:
+Assume that a visitor can bypass all browser controls, construct arbitrary requests, replay cookies, alter JSON, omit headers, and send traffic directly to a Function. Also assume that public static files, browser bundles, repository contents, response headers, and client-visible environment values can be inspected.
 
-- `success: true`;
-- action exactly `portfolio_contact`;
-- hostname in the exact `TURNSTILE_ALLOWED_HOSTNAMES` list.
+Primary risks are:
 
-Missing, invalid, expired, duplicated, action-mismatched, hostname-mismatched, malformed, timed-out, or unverifiable tokens fail closed. The public `NEXT_PUBLIC_TURNSTILE_SITE_KEY` may appear in the client bundle; the matching secret must exist only in Pages Function secrets. Production widget credentials must not authorize local-development hostnames.
+- disclosure of credentials, the private contact destination, or other non-public data;
+- automated form abuse, unsolicited delivery, and provider-cost exhaustion;
+- header injection, malformed input, oversized bodies, or unsafe rendered content;
+- cross-origin submission and misuse of a verification result for another submission;
+- duplicate or uncertain email delivery during retries;
+- a deployment or external-service configuration that differs from repository assumptions;
+- expansion of the runtime surface without equivalent validation, privacy, and abuse controls.
 
-## Email delivery and personal data
+Client validation, disabled controls, consent state, and a successful widget animation improve usability but are never the server security boundary.
 
-After all checks pass, the Function uses Resend's batch endpoint to send an owner notification to the private `CONTACT_RECIPIENT_EMAIL` and a receipt to the visitor's required email address. It uses a submission-scoped Resend idempotency key to reduce duplicate sends. The `CONTACT_FROM_EMAIL` runtime value must belong to a verified sending domain. Owner notifications reply to the visitor's validated email; confirmation messages reply to the separately configured public `CONTACT_REPLY_TO_EMAIL`.
+## Trust boundaries
 
-`CONTACT_RECIPIENT_EMAIL`, `RESEND_API_KEY`, and `TURNSTILE_SECRET_KEY` are encrypted runtime secrets. `CONTACT_FROM_EMAIL` and `CONTACT_REPLY_TO_EMAIL` are reviewed, non-secret Wrangler variables; they still must not be confused with the private destination inbox. Never expose the recipient through `NEXT_PUBLIC_` values, examples, generated JSON, source maps, response bodies, analytics, or logs.
+### Public static surface
 
-The site does not persist contact submissions in a database. Resend and email providers still process and retain delivery data under their own policies. Do not log request bodies, Turnstile tokens, email addresses, phone numbers, message content, API responses containing provider identifiers, or the recipient secret. Operational logs should be limited to coarse outcome codes, timings, and non-sensitive aggregate counts.
+The Next.js application exports static HTML, JavaScript, CSS, images, and public generated content. Core pages do not require a runtime Next.js server, database, user authentication, or runtime spreadsheet request. Every file emitted under `out/` is public.
 
-## Rate limiting and abuse controls
+The build downloads one anonymous HTTPS XLSX source, validates it, and turns it into public generated content. Treat that workbook as untrusted public input. The generator applies download, archive, worksheet, row, field, and URL checks before static rendering. Spreadsheet text renders as ordinary React text. Do not add raw HTML or `dangerouslySetInnerHTML` for content-source text.
 
-Production activation requires a Cloudflare WAF rate-limiting rule matching only:
+### Build and deployment boundary
 
-```text
-http.request.uri.path eq "/api/contact"
+Build-time inputs and deploy credentials belong in GitHub Actions configuration, not browser code. `PORTFOLIO_WORKBOOK_URL` is an anonymous read-only source URL stored as an Actions secret for runner-log masking. The Pages direct-upload credential is also an Actions secret. Neither value is a Cloudflare Function binding.
+
+Generated JSON is a build input. The exported artifact and its integrity metadata are deployment outputs, not private storage. Review all build inputs as public-safe before publication.
+
+### Contact boundary
+
+`public/_routes.json` contains exactly:
+
+```json
+{
+  "version": 1,
+  "include": ["/api/contact/verify", "/api/contact"],
+  "exclude": []
+}
 ```
 
-Count by source IP. The Free-plan-compatible baseline is 5 requests per 10 seconds with a 10-second block; plans that support the Method field and longer periods may narrow the rule to POST and use a longer window. Tune only from non-sensitive aggregate evidence. Rate limiting is defense in depth alongside exact-origin checks, the body limit, strict schema validation, timing/honeypot checks, mandatory Siteverify validation, and Resend idempotency. None of those controls is sufficient alone.
+No other route invokes a Pages Function. The first endpoint exchanges a validated Turnstile result for a short-lived signed ticket. The second validates the contact payload and ticket before attempting email delivery. See [Contact System](CONTACT_SYSTEM.md) for the complete sequence, schemas, status codes, and timing rules.
 
-## Browser security headers
+### External providers
 
-`public/_headers` applies a Content Security Policy and baseline protections to static Pages responses. Turnstile requires `https://challenges.cloudflare.com` in `script-src` and `frame-src`; the current policy also allows that origin in `connect-src`. The exported Next.js app currently needs inline script and style allowances. Prefer nonces or hashes if the delivery architecture later supports per-response CSP values, and do not add broader third-party origins without review.
+Cloudflare Pages and Turnstile process request and verification metadata. Resend and downstream mail systems process the delivered messages and delivery metadata. Provider-side authentication, retention, logging, domain verification, quotas, and abuse controls exist outside this repository and require separate review.
 
-Cloudflare Pages `_headers` rules do not apply to Function-generated responses. `/api/contact` therefore sets its own `Cache-Control: no-store`, JSON content type, referrer policy, and content-type-sniffing protection.
+## Repository-enforced contact controls
 
-## Spreadsheet data rules
+Both handlers:
 
-The workbook URL and all nine worksheets are intentionally public content sources. The downloaded workbook must contain exactly the expected visible worksheets and no hidden, unexpected, duplicate, or `resume` sheet. Do not store secrets, private recommendation text, credentials, unpublished contact details, private resume files or access links, or sensitive personal data in worksheet cells or workbook metadata.
+- accept only `POST` and return `405` with `Allow: POST` for other methods;
+- require the base media type `application/json`, while accepting media-type parameters;
+- require an exact configured `Origin` and do not implement wildcard CORS;
+- limit the streamed body to 16,384 bytes before JSON parsing completes;
+- require strict UTF-8 and valid JSON;
+- reject invalid configuration instead of falling back to permissive values;
+- return generic JSON responses with non-cacheable Function headers.
 
-Treat the XLSX file as untrusted input even though its URL is configured by the repository owner. The generator enforces HTTPS, a fixed timeout and byte limit, HTML/login-page rejection, XLSX ZIP validation, exact worksheet structure, cached formula results, headers, row shape, and the existing content schema before build. It does not log the workbook URL, Google identifiers, or response metadata. GitHub Actions registers the configured workbook URL for masking before the strict generation step so later runner output redacts it.
+`POST /api/contact/verify` accepts a plain object with exactly `submissionId` and `turnstileToken`. It sends one JSON Siteverify request with a 5-second timeout, uses the UUID as the provider idempotency key, and includes `CF-Connecting-IP` only after bounded control-character validation. A ticket is issued only for `success: true`, action exactly `portfolio_contact`, and an exact allowed hostname.
 
-Generated JSON is a transient build input in deployment workflows. The tested `out/` artifact carries a digest and a public-safe `/content-version.json`; no generated snapshot or deployment state is committed to `main`.
+`POST /api/contact` allows only its documented fields, rejects unknown keys and unsafe values, requires three acknowledgments to be boolean `true`, and validates the names, email, optional phone, message, timing fields, and submission UUID. The hidden honeypot and minimum-completion check are evaluated during payload parsing, before ticket validation. A non-empty honeypot or completion under 1,200 milliseconds returns a silent generic success without calling Resend. This order avoids making the low-cost bot signals an oracle. Normal provider delivery cannot begin until the signed ticket and its submission binding have been validated.
 
-## URL rules
+The application code does not implement a request-body timeout, whole-request timeout, client fetch timeout, or application rate limiter. Its explicit outbound timeouts are 5 seconds for Siteverify and 8 seconds for Resend. Platform limits still apply.
 
-Accepted general content URLs are:
+## Verification ticket
 
-- `https://`
-- `http://`
-- valid `mailto:`
-- safe root-relative paths such as `/images/profile/portrait.png`
+A successful verification sets `__Host-portfolio_contact_ticket` with `Path=/`, `Max-Age=1800`, `Secure`, `HttpOnly`, `SameSite=Strict`, and no `Domain` attribute. The ticket is host-only and available to the Functions through the browser's same-origin credentials mode.
 
-Root-relative paths must not contain traversal segments such as `..`. Recommendation `source_url`, `linkedin_url`, and `full_quote_link_url` values must be HTTPS URLs.
+The signed payload contains only version `1`, the submission UUID, issue time, and expiry time. It contains no contact fields. It is signed, not encrypted. The signing key is derived from `TURNSTILE_SECRET_KEY` with domain-separated HKDF-SHA-256 and used for HMAC-SHA-256.
 
-Every root-relative file under `public/` is publicly retrievable. URL validation does not make an asset private.
+The delivery handler rejects missing, duplicated, oversized, malformed, non-canonical, incorrectly signed, wrongly versioned, future-issued, lifetime-altered, expired, or submission-mismatched tickets. Successful delivery clears the cookie. A provider failure retains the still-valid cookie so the same delivery can be retried.
 
-## Private resume handling
+There is no server-side ticket database, consumed-ticket record, or revocation list. Ticket lifetime, exact origin, submission binding, the locked client retry body, and provider idempotency reduce replay and duplicate-delivery risk. They do not make the ticket a database-backed single-use credential. Rotating the Turnstile secret invalidates outstanding tickets.
 
-A resume is private only when the file and every access URL are absent from the deployed public surface. Hiding the link or replacing the `/resume` page is not sufficient if a PDF remains under `public/`.
+## Email delivery, idempotency, and header safety
 
-For the private-resume configuration:
+The delivery handler sends one two-message Resend batch with an 8-second timeout and `Idempotency-Key: portfolio-contact/<submissionId>`. The application does not keep a delivery ledger. The browser locks reviewed fields and acknowledgments after the first delivery attempt so a retry uses the same UUID, start time, consent values, and byte-equivalent JSON body.
 
-- Keep `profile.resume_url` and `profile.resume_download_label` blank in both local templates and remote content sources.
-- Keep `src/content/templates/resume.csv` empty except for its header. The resume sheet has no remote-source environment variable and must never be populated.
-- Remove resume-kind link rows that point to a file, and do not place a resume PDF under `public/resume/` or any other public directory.
-- Regenerate content after source changes and verify that built HTML, generated JSON, and the exported `out/` tree contain no resume-file URL.
-- Check prior deployments, CDN caches, repository history, and published source archives separately. Removing the current file does not retract copies that were already published or committed.
+The owner notification goes to the private configured destination and uses the validated visitor email as `reply_to`. The visitor receipt goes to the validated visitor email and uses the fixed public reply-to. Both messages use a fixed configured sender and fixed subjects. User-controlled values are validated, escaped in HTML, and also placed in plain-text alternatives.
 
-Repository-history rewriting and cache-purge operations are separate, potentially destructive actions that require an explicit review and authorization.
+Of the owner notification headers, the visitor controls only the validated `reply_to` value. Validated contact fields populate the message body. The sender, private destination, subject, and remaining message headers are fixed by server code and configuration. A provider timeout, network error, or non-success response becomes generic `502 delivery_failed`. Provider response bodies and message identifiers are not parsed, logged, or returned by the handlers.
 
-## External links
+Resend documents idempotent batch requests and requires an identical payload when the same key is reused. Provider behavior and retention windows remain external dependencies. See [Resend idempotency keys](https://resend.com/docs/dashboard/emails/idempotency-keys).
 
-External links that open in a new tab must use:
+## Privacy, storage, and logging
+
+The contact draft stays in browser memory. It is not written by the form to local storage or session storage and is not sent in the verification request. The ticket contains only the UUID and timing metadata.
+
+The site has no first-party contact database or storage binding. Full contact details are sent to Resend and then to the owner and visitor mail systems only after normal payload and ticket validation. The visitor receipt repeats the submitted details. Cloudflare may process network metadata, the Turnstile token, and the optional connecting IP supplied to Siteverify. Provider and mailbox retention remains governed outside this repository.
+
+The two Function handlers contain no explicit request or provider logging. Do not add logs containing bodies, contact fields, tokens, cookie contents, provider responses, private recipient values, or credentials. If operational telemetry is added, restrict it to coarse outcomes, bounded timings, and non-sensitive aggregates.
+
+The private recipient is a server-only encrypted binding. It is not returned in endpoint responses or compiled into the browser. The configured sender and public reply-to are intentionally public identities and must not be confused with the private destination.
+
+The direct email link bypasses the Function-specific verification, ticket, validation, and delivery path. Messages sent through that link are handled directly by the visitor's and recipient's mail systems.
+
+## Abuse protection and rate limiting
+
+### Enforced in the repository
+
+- exact Function route allowlisting;
+- POST-only JSON handlers;
+- exact-origin checks;
+- streaming body-size, strict UTF-8, JSON, and schema validation;
+- required acknowledgments and bounded field grammar;
+- honeypot and timing signals;
+- server-side Turnstile verification with exact action and hostname;
+- a short-lived, signed, submission-bound ticket;
+- locked same-payload retries and a provider idempotency key;
+- generic, non-cacheable Function responses.
+
+### Required external configuration
+
+The repository contains no application rate limiter, rate-limit binding, `429` response path, or deployable WAF ruleset. An operator must configure and maintain a Cloudflare WAF rate-limiting rule for both exact paths, normally counted by source IP:
 
 ```text
-target="_blank"
-rel="noopener noreferrer"
+http.request.uri.path in {"/api/contact/verify" "/api/contact"}
 ```
 
-LinkedIn recommendation links are verification/navigation links only. Do not scrape LinkedIn, call the LinkedIn API, or fetch recommendation content from LinkedIn at runtime.
+The repository cannot verify the live rule, threshold, counting characteristic, mitigation timeout, action, plan capabilities, or current effectiveness. Check those values in Cloudflare and through a controlled deployed test. A WAF rule is defense in depth and does not replace the application controls above.
 
-## Rendering spreadsheet content
+Do not place an interactive Managed Challenge on either JSON endpoint. It would return an HTML challenge to a client that expects JSON and would add another interactive gate after the form's visible Turnstile step.
 
-Spreadsheet text should render as plain React text. Do not use `dangerouslySetInnerHTML` for spreadsheet-provided content. A recommendation's optional inline link is the only structured exception: generation validates its paired label and HTTPS URL, and the component composes ordinary text nodes with one escaped anchor. Do not parse HTML or Markdown, and do not auto-link raw URLs from recommendation copy.
+Cloudflare documents custom JSON rate-limit block responses as a Pro-plan-or-higher feature. If the API contract requires a JSON edge response, confirm that the active plan and selected action support it. Do not describe a custom JSON block body as a Free-plan guarantee. See [Cloudflare rate-limit custom responses](https://developers.cloudflare.com/waf/rate-limiting-rules/create-zone-dashboard/#configure-a-custom-response-for-blocked-requests).
+
+## Response headers and browser policy
+
+`public/_headers` adds the following protections to static Pages responses:
+
+- a Content Security Policy with `default-src 'self'`, no objects, no framing, and same-origin form actions;
+- the minimum `challenges.cloudflare.com` script, frame, and connection allowances used by Turnstile;
+- disabled camera, geolocation, microphone, payment, and USB permissions;
+- `Referrer-Policy: strict-origin-when-cross-origin`;
+- one-year HSTS;
+- content-type sniffing protection and `X-Frame-Options: DENY`.
+
+The exported application currently needs inline script and style allowances. Do not broaden third-party origins without review. Prefer nonce or hash based policies if a future delivery architecture can provide per-response CSP values.
+
+Cloudflare Pages does not apply `_headers` rules to Function-generated responses. Both contact handlers therefore set their own `Cache-Control: no-store, max-age=0`, JSON content type, `Referrer-Policy: no-referrer`, and `X-Content-Type-Options: nosniff`. They do not currently add the static CSP, Permissions Policy, HSTS, or framing headers.
+
+## URL and rendering rules
+
+Accepted general content URLs are HTTPS, HTTP, valid `mailto:` links, or safe root-relative paths. Root-relative paths must reject traversal segments. Recommendation source and professional-profile links have stricter HTTPS requirements. Every accepted root-relative file under `public/` remains publicly retrievable.
+
+External links opened in a new tab must include `rel="noopener noreferrer"`. Content-source text must remain escaped React text. An optional validated inline recommendation link may be composed from ordinary text nodes and one HTTPS anchor; do not parse content-source HTML or Markdown and do not auto-link arbitrary text.
 
 ## Environment separation
 
-`PORTFOLIO_WORKBOOK_URL` identifies one anonymous XLSX download, not a Google credential. GitHub Actions stores it as an encrypted Actions secret solely for automatic runner-log redaction. It grants no Google account or Drive access; the build performs one ordinary HTTPS request and never uses a connector, Google API, API key, OAuth grant, or service account. Local development uses one Git-ignored `.env` file for build-time values and Pages Function values. Create it from the tracked `.env.example`, which must contain placeholders only, and pass it to Wrangler with `npm run dev:pages` or `wrangler pages dev out --env-file .env`.
+Only `NEXT_PUBLIC_TURNSTILE_SITE_KEY` is read by browser application code. It is public by design. CI maps the preview repository variable into that application variable for `develop`; the application does not read the preview variable name directly. Pull-request builds receive neither deployment key, and preview does not fall back to production.
 
-The consolidated local file does not change the production trust boundary. Build-time public values normally belong in GitHub repository variables; the anonymous workbook URL is the narrow exception because Actions secret storage guarantees automatic log redaction. The restricted direct-upload credential also belongs in GitHub Actions secrets. Cloudflare Pages encrypted secrets hold the server-only Turnstile, Resend, and recipient values; reviewed hostnames, origins, sender, and reply-to identities live as non-secret production/preview Wrangler variables. Never upload `.env` to either service or copy local credentials into production. `NEXT_PUBLIC_TURNSTILE_SITE_KEY` is client-visible; a `develop` build receives only `NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY`, with no production-key fallback. Keep preview and production site keys, server secrets, allowed hostnames, allowed origins, Resend keys, and recipient values separated by environment.
+Server-only values belong in Cloudflare Pages encrypted secrets:
 
-## Repository publication
+- `TURNSTILE_SECRET_KEY`;
+- `RESEND_API_KEY`;
+- `CONTACT_RECIPIENT_EMAIL`.
 
-Before changing repository visibility, scan tracked files and every reachable Git object for credentials, private contact information, unpublished assets, oversized artifacts, and unsafe configuration. Commit author and committer metadata is part of the public history and must use only approved addresses. Do not expose repository or license links in production until the audit passes and both anonymous HTTPS destinations resolve successfully. Rewriting published history and force-pushing are separate destructive operations that require explicit authorization.
+Reviewed non-secret Function values belong in the correct `wrangler.jsonc` environment:
 
-## Dependency audit workflow
+- `TURNSTILE_ALLOWED_HOSTNAMES`;
+- `CONTACT_ALLOWED_ORIGINS`;
+- `CONTACT_FROM_EMAIL`;
+- `CONTACT_REPLY_TO_EMAIL`.
+
+Production and preview use separate exact hostnames, origins, and appropriate credentials. The tracked local example contains placeholders only. The ignored local environment file does not cross into GitHub Actions or Cloudflare automatically. Follow [Local development](LOCAL_DEVELOPMENT.md#complete-contact-flow-development) and do not use production credentials locally.
+
+Repository configuration can prove the intended non-secret values, but not the presence, correctness, or separation of live encrypted secrets. Verify those bindings in each Cloudflare environment without printing their values.
+
+## Deployment security
+
+Every production artifact must contain the exact `_routes.json` and `_headers` files. Deployment smoke testing sends unauthenticated `GET` requests to both Function paths and requires `405` JSON responses. This establishes that both routes are deployed and reject the wrong method.
+
+The smoke test does not establish successful POST handling, exact-origin behavior, live Turnstile validation, ticket cookie acceptance, WAF state, Resend delivery, sender-domain verification, recipient correctness, or mailbox receipt. Those items require controlled deployed checks. See [Deployment](DEPLOYMENT.md) for the activation sequence.
+
+Before publishing a build or changing repository visibility, scan tracked files, reachable Git objects, generated content, and exported artifacts for credentials, non-public contact data, unpublished assets, oversized artifacts, and unsafe configuration. Commit author and committer metadata is part of repository history. History rewriting and force-pushing are destructive operations that require separate authorization and review.
+
+## Dependency review
 
 Run:
 
@@ -116,4 +213,17 @@ Run:
 npm audit
 ```
 
-Classify findings as production runtime, static-build, or development tooling risk. Do not run `npm audit fix --force` without explicit approval because it can introduce major dependency upgrades.
+Classify findings as production runtime, static-build, or development-tooling risk. Do not run forced major upgrades without reviewing compatibility and generated artifact changes.
+
+## Adding or changing an endpoint
+
+Before broadening the runtime surface:
+
+1. Document the route, methods, media types, schema, body limits, trust boundaries, retention, logging, abuse cases, and failure contract.
+2. Add the narrow route to `public/_routes.json` intentionally and verify the exported file.
+3. Enforce server-side validation independently of the browser.
+4. Set Function response headers explicitly.
+5. Define secret ownership and environment separation.
+6. Define repository-enforced and external rate-limit controls separately.
+7. Add unit, integration, deployment-smoke, and controlled live checks appropriate to the risk.
+8. Update [Contact System](CONTACT_SYSTEM.md), [Deployment](DEPLOYMENT.md), and [Security Checklist](SECURITY_CHECKLIST.md) where applicable.
