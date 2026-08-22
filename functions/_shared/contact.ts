@@ -1,5 +1,7 @@
 export const CONTACT_ACTION = "portfolio_contact";
 export const MAX_REQUEST_BYTES = 16_384;
+export const CONTACT_TICKET_COOKIE_NAME = "__Host-portfolio_contact_ticket";
+export const CONTACT_TICKET_MAX_AGE_SECONDS = 30 * 60;
 
 const TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 const RESEND_BATCH_URL = "https://api.resend.com/emails/batch";
@@ -8,6 +10,11 @@ const RESEND_TIMEOUT_MS = 8_000;
 const MIN_COMPLETION_TIME_MS = 1_200;
 const MAX_FORM_AGE_MS = 2 * 60 * 60 * 1_000;
 const MAX_CLOCK_SKEW_MS = 30_000;
+const CONTACT_TICKET_VERSION = 1;
+const CONTACT_TICKET_MAX_LENGTH = 768;
+const CONTACT_TICKET_SIGNATURE_BYTES = 32;
+const TICKET_HKDF_SALT = "portfolio-contact-ticket:v1:hkdf-salt";
+const TICKET_HKDF_INFO = "portfolio-contact-ticket:v1:hmac-key";
 
 const CONTACT_KEYS = new Set([
   "submissionId",
@@ -19,10 +26,10 @@ const CONTACT_KEYS = new Set([
   "contactConsent",
   "legalConsent",
   "legitimateConsent",
-  "turnstileToken",
   "startedAt",
   "website"
 ]);
+const TURNSTILE_VERIFICATION_KEYS = new Set(["submissionId", "turnstileToken"]);
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const EMAIL_LOCAL_PATTERN = /^[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+$/i;
@@ -48,14 +55,22 @@ export interface ContactPayload {
   contactConsent: true;
   legalConsent: true;
   legitimateConsent: true;
-  turnstileToken: string;
   startedAt: number;
   website: string;
+}
+
+export interface TurnstileVerificationPayload {
+  submissionId: string;
+  turnstileToken: string;
 }
 
 type PayloadResult =
   | { kind: "valid"; payload: ContactPayload }
   | { kind: "spam" }
+  | { kind: "invalid" };
+
+type TurnstileVerificationPayloadResult =
+  | { kind: "valid"; payload: TurnstileVerificationPayload }
   | { kind: "invalid" };
 
 type ReadBodyResult =
@@ -67,6 +82,13 @@ interface TurnstileResponse {
   success?: boolean;
   hostname?: string;
   action?: string;
+}
+
+interface ContactTicketPayload {
+  v: 1;
+  submissionId: string;
+  iat: number;
+  exp: number;
 }
 
 interface EmailMessage {
@@ -88,10 +110,17 @@ export function jsonResponse(status: number, body: Record<string, boolean | stri
   return new Response(JSON.stringify(body), { status, headers });
 }
 
-export function hasRequiredConfiguration(env: ContactEnv): boolean {
+export function hasRequiredTurnstileConfiguration(env: ContactEnv): boolean {
   return Boolean(
     env.TURNSTILE_SECRET_KEY?.trim() &&
       parseHostnames(env.TURNSTILE_ALLOWED_HOSTNAMES).length > 0 &&
+      parseOrigins(env.CONTACT_ALLOWED_ORIGINS).length > 0
+  );
+}
+
+export function hasRequiredDeliveryConfiguration(env: ContactEnv): boolean {
+  return Boolean(
+    env.TURNSTILE_SECRET_KEY?.trim() &&
       parseOrigins(env.CONTACT_ALLOWED_ORIGINS).length > 0 &&
       env.RESEND_API_KEY?.trim() &&
       isValidEmail(env.CONTACT_RECIPIENT_EMAIL?.trim() ?? "") &&
@@ -177,16 +206,12 @@ export function parseContactPayload(value: unknown, now = Date.now()): PayloadRe
   if (value.phone !== undefined && typeof value.phone !== "string") return { kind: "invalid" };
   const phone = normalizedString(value.phone) ?? "";
   const message = normalizedMultilineString(value.message);
-  const turnstileToken = stringValue(value.turnstileToken)?.trim();
 
   if (!submissionId || !UUID_PATTERN.test(submissionId)) return { kind: "invalid" };
   if (!isValidHumanText(firstName, 80) || !isValidHumanText(lastName, 80)) return { kind: "invalid" };
   if (!email || !isValidEmail(email)) return { kind: "invalid" };
   if (!isValidPhone(phone)) return { kind: "invalid" };
   if (!message || message.length > 3_000 || hasUnsafeControlCharacters(message)) return { kind: "invalid" };
-  if (!turnstileToken || turnstileToken.length > 2_048 || hasUnsafeControlCharacters(turnstileToken)) {
-    return { kind: "invalid" };
-  }
   if (value.contactConsent !== true || value.legalConsent !== true || value.legitimateConsent !== true) {
     return { kind: "invalid" };
   }
@@ -203,14 +228,36 @@ export function parseContactPayload(value: unknown, now = Date.now()): PayloadRe
       contactConsent: true,
       legalConsent: true,
       legitimateConsent: true,
-      turnstileToken,
       startedAt,
       website: ""
     }
   };
 }
 
-export async function verifyTurnstile(payload: ContactPayload, request: Request, env: ContactEnv): Promise<boolean> {
+export function parseTurnstileVerificationPayload(value: unknown): TurnstileVerificationPayloadResult {
+  if (!isPlainObject(value)) return { kind: "invalid" };
+  if (
+    Object.keys(value).length !== TURNSTILE_VERIFICATION_KEYS.size ||
+    Object.keys(value).some((key) => !TURNSTILE_VERIFICATION_KEYS.has(key))
+  ) {
+    return { kind: "invalid" };
+  }
+
+  const submissionId = normalizedString(value.submissionId);
+  const turnstileToken = stringValue(value.turnstileToken)?.trim();
+  if (!submissionId || !UUID_PATTERN.test(submissionId)) return { kind: "invalid" };
+  if (!turnstileToken || turnstileToken.length > 2_048 || hasUnsafeControlCharacters(turnstileToken)) {
+    return { kind: "invalid" };
+  }
+
+  return { kind: "valid", payload: { submissionId, turnstileToken } };
+}
+
+export async function verifyTurnstile(
+  payload: TurnstileVerificationPayload,
+  request: Request,
+  env: ContactEnv
+): Promise<boolean> {
   const secret = env.TURNSTILE_SECRET_KEY?.trim();
   const allowedHostnames = parseHostnames(env.TURNSTILE_ALLOWED_HOSTNAMES);
   if (!secret || allowedHostnames.length === 0) return false;
@@ -249,6 +296,81 @@ export async function verifyTurnstile(payload: ContactPayload, request: Request,
     typeof result.hostname === "string" &&
     allowedHostnames.includes(result.hostname.trim().toLowerCase())
   );
+}
+
+export async function createContactTicket(
+  submissionId: string,
+  env: ContactEnv,
+  now = Date.now()
+): Promise<string | undefined> {
+  const secret = env.TURNSTILE_SECRET_KEY?.trim();
+  if (!secret || !UUID_PATTERN.test(submissionId)) return undefined;
+
+  const issuedAt = Math.floor(now / 1_000);
+  if (!Number.isSafeInteger(issuedAt) || issuedAt < 0) return undefined;
+
+  const payload: ContactTicketPayload = {
+    v: CONTACT_TICKET_VERSION,
+    submissionId,
+    iat: issuedAt,
+    exp: issuedAt + CONTACT_TICKET_MAX_AGE_SECONDS
+  };
+  const payloadBytes = new TextEncoder().encode(JSON.stringify(payload));
+
+  try {
+    const key = await deriveContactTicketKey(secret, ["sign"]);
+    const signature = new Uint8Array(await crypto.subtle.sign("HMAC", key, payloadBytes));
+    return `${encodeBase64Url(payloadBytes)}.${encodeBase64Url(signature)}`;
+  } catch {
+    return undefined;
+  }
+}
+
+export async function hasValidContactTicket(
+  request: Request,
+  submissionId: string,
+  env: ContactEnv,
+  now = Date.now()
+): Promise<boolean> {
+  const secret = env.TURNSTILE_SECRET_KEY?.trim();
+  if (!secret || !UUID_PATTERN.test(submissionId)) return false;
+
+  const ticket = readCookie(request, CONTACT_TICKET_COOKIE_NAME);
+  if (!ticket || ticket.length > CONTACT_TICKET_MAX_LENGTH) return false;
+
+  const segments = ticket.split(".");
+  if (segments.length !== 2) return false;
+
+  const payloadBytes = decodeBase64Url(segments[0] ?? "");
+  const signatureBytes = decodeBase64Url(segments[1] ?? "");
+  if (!payloadBytes || !signatureBytes || signatureBytes.byteLength !== CONTACT_TICKET_SIGNATURE_BYTES) return false;
+
+  try {
+    const key = await deriveContactTicketKey(secret, ["verify"]);
+    if (!(await crypto.subtle.verify("HMAC", key, signatureBytes, payloadBytes))) return false;
+
+    const decoded = new TextDecoder("utf-8", { fatal: true }).decode(payloadBytes);
+    const parsed = JSON.parse(decoded) as unknown;
+    if (!isContactTicketPayload(parsed)) return false;
+
+    const nowSeconds = Math.floor(now / 1_000);
+    return (
+      parsed.submissionId === submissionId &&
+      parsed.iat <= nowSeconds + Math.floor(MAX_CLOCK_SKEW_MS / 1_000) &&
+      parsed.exp === parsed.iat + CONTACT_TICKET_MAX_AGE_SECONDS &&
+      parsed.exp > nowSeconds
+    );
+  } catch {
+    return false;
+  }
+}
+
+export function serializeContactTicketCookie(ticket: string): string {
+  return `${CONTACT_TICKET_COOKIE_NAME}=${ticket}; Path=/; Max-Age=${CONTACT_TICKET_MAX_AGE_SECONDS}; Secure; HttpOnly; SameSite=Strict`;
+}
+
+export function serializeClearedContactTicketCookie(): string {
+  return `${CONTACT_TICKET_COOKIE_NAME}=; Path=/; Max-Age=0; Secure; HttpOnly; SameSite=Strict`;
 }
 
 export async function sendContactEmails(payload: ContactPayload, env: ContactEnv): Promise<boolean> {
@@ -386,6 +508,90 @@ export function escapeHtml(value: string): string {
         return "&#39;";
     }
   });
+}
+
+function isContactTicketPayload(value: unknown): value is ContactTicketPayload {
+  if (!isPlainObject(value)) return false;
+  const keys = Object.keys(value);
+  if (
+    keys.length !== 4 ||
+    !keys.includes("v") ||
+    !keys.includes("submissionId") ||
+    !keys.includes("iat") ||
+    !keys.includes("exp")
+  ) {
+    return false;
+  }
+
+  return Boolean(
+    value.v === CONTACT_TICKET_VERSION &&
+      typeof value.submissionId === "string" &&
+      UUID_PATTERN.test(value.submissionId) &&
+      typeof value.iat === "number" &&
+      Number.isSafeInteger(value.iat) &&
+      value.iat >= 0 &&
+      typeof value.exp === "number" &&
+      Number.isSafeInteger(value.exp) &&
+      value.exp > value.iat
+  );
+}
+
+async function deriveContactTicketKey(secret: string, keyUsages: KeyUsage[]): Promise<CryptoKey> {
+  const encoder = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey("raw", encoder.encode(secret), "HKDF", false, ["deriveKey"]);
+
+  return crypto.subtle.deriveKey(
+    {
+      name: "HKDF",
+      hash: "SHA-256",
+      salt: encoder.encode(TICKET_HKDF_SALT),
+      info: encoder.encode(TICKET_HKDF_INFO)
+    },
+    keyMaterial,
+    { name: "HMAC", hash: "SHA-256", length: 256 },
+    false,
+    keyUsages
+  );
+}
+
+function readCookie(request: Request, name: string): string | undefined {
+  const cookieHeader = request.headers.get("Cookie");
+  if (!cookieHeader) return undefined;
+
+  let found = false;
+  let value: string | undefined;
+  for (const segment of cookieHeader.split(";")) {
+    const separatorIndex = segment.indexOf("=");
+    if (separatorIndex < 0) continue;
+    const cookieName = segment.slice(0, separatorIndex).trim();
+    if (cookieName !== name) continue;
+    if (found) return undefined;
+    found = true;
+    value = segment.slice(separatorIndex + 1).trim();
+  }
+
+  return value;
+}
+
+function encodeBase64Url(bytes: Uint8Array): string {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function decodeBase64Url(value: string): Uint8Array<ArrayBuffer> | undefined {
+  if (!value || !/^[A-Za-z0-9_-]+$/.test(value) || value.length % 4 === 1) return undefined;
+  const standard = value.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = standard.padEnd(Math.ceil(standard.length / 4) * 4, "=");
+
+  try {
+    const binary = atob(padded);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+    return encodeBase64Url(bytes) === value ? bytes : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

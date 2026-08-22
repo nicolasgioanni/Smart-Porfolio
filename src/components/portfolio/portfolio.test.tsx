@@ -680,7 +680,12 @@ describe("portfolio UI helpers", () => {
       />
     );
 
-    expect(screen.getByRole("heading", { level: 1, name: "Hi, I’m Nicolas" })).toBeInTheDocument();
+    const heroHeading = screen.getByRole("heading", { level: 1, name: "Hi, I’m Nicolas" });
+    const hero = heroHeading.closest("section.portfolio-hero");
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+    expect(hero).toHaveAttribute("aria-labelledby", "portfolio-hero-title");
+    expect(heroHeading).toHaveAttribute("id", "portfolio-hero-title");
+    expect(screen.getAllByText("Nicolas Gioanni")).toHaveLength(1);
     expect(screen.getByText("Nicolas Gioanni")).toHaveClass("profile-overview__identity-name");
     expect(screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent)).toEqual([
       "About",
@@ -733,7 +738,8 @@ describe("portfolio UI helpers", () => {
     const content = createFooterContent();
     const profile = {
       ...content.profile,
-      portraitImage: "/images/profile/nicolas.png"
+      portraitImage: "/images/profile/nicolas.png",
+      pronouns: "he/him"
     };
     const overview: ProfileOverviewContent = {
       greetingName: "Nico",
@@ -785,21 +791,49 @@ describe("portfolio UI helpers", () => {
     );
 
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+    const shell = container.querySelector<HTMLElement>(".profile-overview__shell");
+    const introduction = container.querySelector<HTMLElement>(".profile-overview__introduction");
+    const photoColumn = container.querySelector<HTMLElement>(".profile-overview__photo-column");
+    const portraitColumn = container.querySelector<HTMLElement>(".profile-overview__portrait-column");
     const details = container.querySelector<HTMLElement>(".profile-overview__details");
+    expect(shell).not.toBeNull();
+    expect(introduction).not.toBeNull();
+    expect(photoColumn).not.toBeNull();
+    expect(portraitColumn).not.toBeNull();
     expect(details).not.toBeNull();
-    expect(Array.from(details!.querySelectorAll("h1, h2")).map((element) => element.textContent)).toEqual([
-      "Hi, I’m Nico",
+    expect(Array.from(shell!.children).map((element) => element.className)).toEqual([
+      "profile-overview__introduction",
+      "profile-overview__photo-column",
+      "profile-overview__details"
+    ]);
+    expect(introduction?.parentElement).toBe(shell);
+    expect(photoColumn?.parentElement).toBe(shell);
+    expect(details?.parentElement).toBe(shell);
+    expect(introduction).toHaveAttribute("data-has-about", "true");
+    expect(photoColumn).toHaveAttribute("data-has-identity-items", "true");
+    expect(portraitColumn?.parentElement).toBe(photoColumn);
+    expect(Array.from(details!.querySelectorAll("h2")).map((element) => element.textContent)).toEqual([
       "About",
       "Current Work",
       "Education",
       "Research"
     ]);
+    expect(details!.querySelector("h1")).not.toBeInTheDocument();
+    expect(within(introduction!).getByRole("heading", { level: 1, name: "Hi, I’m Nico" })).toHaveAttribute(
+      "id",
+      "portfolio-hero-title"
+    );
     expect(screen.queryByRole("heading", { name: "Headline" })).not.toBeInTheDocument();
     expect(container.querySelector(".profile-role__accessible")).toHaveTextContent(
       "Profile role supplied through the overview prop."
     );
     expect(screen.queryByRole("heading", { name: "Previous Work" })).not.toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Nicolas Gioanni" })).toHaveAttribute("src", "/images/profile/nicolas.png");
+    const profileName = screen.getByText("Nicolas Gioanni");
+    expect(screen.getAllByText("Nicolas Gioanni")).toHaveLength(1);
+    expect(profileName.parentElement).toBe(portraitColumn?.querySelector(".profile-overview__identity"));
+    expect(profileName.nextElementSibling).toHaveClass("profile-overview__identity-subtitle");
+    expect(profileName.nextElementSibling).toHaveTextContent("he/him");
     expect(screen.getByText("City State")).toBeInTheDocument();
     expect(screen.getByText("About copy supplied through the overview prop.")).toBeInTheDocument();
     expect(screen.getByText("Pacific Time (UTC-07:00)")).toBeInTheDocument();
@@ -951,6 +985,16 @@ describe("portfolio UI helpers", () => {
     expect(screen.getByRole("link", { name: "in/example" })).toHaveAttribute("rel", "noopener noreferrer");
     expect(screen.getByRole("link", { name: "nicolas@example.com" })).toHaveAttribute("href", "mailto:nicolas@example.com");
     expect(screen.getByRole("link", { name: "https://example.com" })).toHaveAttribute("rel", "noopener noreferrer");
+    const identityList = screen.getByRole("list", { name: "Profile contact details" });
+    expect(identityList.parentElement).toBe(photoColumn);
+    expect(Array.from(identityList.querySelectorAll("li")).map((item) => item.textContent)).toEqual([
+      "City State",
+      "Pacific Time (UTC-07:00)",
+      "nicolas@example.com",
+      "https://example.com",
+      "in/example",
+      "@example"
+    ]);
   });
 
   it("omits optional profile blocks and logo containers without crashing", () => {
@@ -976,6 +1020,31 @@ describe("portfolio UI helpers", () => {
     expect(container.querySelector(".profile-overview__affiliation-mark")).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "View experience" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "View research" })).not.toBeInTheDocument();
+  });
+
+  it("centers the portrait identity structure when optional contact details are absent", () => {
+    const content = createFooterContent();
+    const profile = {
+      ...content.profile,
+      email: "",
+      location: "",
+      timezone: undefined
+    };
+
+    const { container } = render(
+      <PortfolioHero
+        links={[]}
+        motionEnabled={false}
+        overview={{ greetingName: "Nicolas", role: { kind: "static", label: "Software engineer" } }}
+        profile={profile}
+      />
+    );
+
+    const photoColumn = container.querySelector(".profile-overview__photo-column");
+    expect(photoColumn).toHaveAttribute("data-has-identity-items", "false");
+    expect(photoColumn?.querySelector(".profile-overview__portrait-column")).not.toBeNull();
+    expect(screen.getAllByText("Nicolas Gioanni")).toHaveLength(1);
+    expect(screen.queryByRole("list", { name: "Profile contact details" })).not.toBeInTheDocument();
   });
 
   it("renders a quiet portrait placeholder when no portrait image is configured", () => {

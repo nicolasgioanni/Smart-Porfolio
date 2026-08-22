@@ -135,8 +135,8 @@ export function TurnstileWidget({ onStatusChange, onTokenChange, siteKey }: Turn
   }, [clearToken, onTokenChange, scriptReady, siteKey, theme, updateStatus]);
 
   const statusMessage: Record<TurnstileStatus, string> = {
-    loading: "Loading secure verification…",
-    ready: "Verification complete. You can continue.",
+    loading: "Loading secure verification...",
+    ready: "Security check complete. Confirming with the server...",
     expired: "Verification expired. Run the check again to continue.",
     error: "Verification could not complete. Run the check again or refresh the page.",
     unavailable: "Secure verification is temporarily unavailable. Please refresh the page or use the email link below."

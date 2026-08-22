@@ -59,9 +59,17 @@ describe("legal document routes", () => {
 
     expect(screen.getByRole("heading", { level: 1, name: "Privacy Notice" })).toBeInTheDocument();
     expect(screen.getByText("portfolio-theme")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Browser storage and essential verification cookie" })).toBeInTheDocument();
+    expect(screen.getByText(/sets a signed contact-verification cookie for up to 30 minutes/)).toBeInTheDocument();
+    expect(screen.getByText(/not your name, email address, phone number, message/)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Contact requests and email communications" })).toBeInTheDocument();
     expect(screen.getByText(/first name, last name, email address, optional phone number, message/)).toBeInTheDocument();
-    expect(screen.getByText(/transmitted over HTTPS to a narrowly scoped Cloudflare Pages Function only when/)).toBeInTheDocument();
+    expect(screen.getByText(/Turnstile is visibly completed before the data-entry form opens/)).toBeInTheDocument();
+    expect(screen.getByText(/form should advance automatically when verification succeeds/)).toBeInTheDocument();
+    expect(screen.getByText(/contact-field values remain in your browser while you complete and review/)).toBeInTheDocument();
+    expect(screen.getByText(/does not send the Turnstile response through Cloudflare verification a second time/)).toBeInTheDocument();
+    expect(screen.getByText(/reviewed fields are locked so a failed or uncertain attempt/)).toBeInTheDocument();
+    expect(screen.getByText(/Cloudflare may additionally process request information for edge rate limiting/)).toBeInTheDocument();
     expect(screen.getByText(/Resend delivers a transactional confirmation/)).toBeInTheDocument();
     expect(screen.getByText(/does not intentionally add contact submissions to a first-party contact database/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Privacy Notice$/ })).toHaveAttribute(
@@ -77,10 +85,16 @@ describe("legal document routes", () => {
     expect(screen.getByRole("heading", { level: 1, name: "Security & Responsible Disclosure" })).toBeInTheDocument();
     expect(screen.getByText(/public portfolio pages are statically generated/)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Contact submission safeguards" })).toBeInTheDocument();
-    expect(screen.getByText(/verifies the Turnstile token with Cloudflare on the server/)).toBeInTheDocument();
-    expect(screen.getByText(/noreply@nicolasmgioanni\.dev/)).toBeInTheDocument();
+    expect(screen.getByText(/server verifies that token once through Cloudflare Siteverify/)).toBeInTheDocument();
+    expect(screen.getByText(/signing key is derived with domain-separated HKDF/)).toBeInTheDocument();
+    expect(screen.getByText(/without calling Siteverify a second time/)).toBeInTheDocument();
+    expect(screen.getByText(/byte-equivalent Resend payload required by idempotency/)).toBeInTheDocument();
+    expect(screen.getByText(/application handlers do not implement request rate limiting/)).toBeInTheDocument();
+    expect(screen.getByText(/live configuration is not represented in this repository/)).toBeInTheDocument();
+    expect(screen.getByText(/noreply@mail\.nicolasmgioanni\.dev/)).toBeInTheDocument();
     expect(screen.getByText(/private owner destination and all provider secrets remain server-side/)).toBeInTheDocument();
-    expect(screen.getByText(/fails closed when required Turnstile/)).toBeInTheDocument();
+    expect(screen.getByText(/validated visitor address receives the confirmation and is used as the reply-to address/)).toBeInTheDocument();
+    expect(screen.getByText(/fail closed when required Turnstile, ticket, validation/)).toBeInTheDocument();
     expect(screen.getByText("The affected portfolio URL or asset.")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "No authorization, safe harbor, reward, or bug bounty" })).toBeInTheDocument();
   });

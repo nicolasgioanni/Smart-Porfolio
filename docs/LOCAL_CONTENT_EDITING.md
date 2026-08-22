@@ -1,252 +1,192 @@
 # Local Content Editing
 
-## Source files
+Use this guide to edit portfolio content, regenerate the checked-in local snapshot, and test a public workbook before deployment. See [Content Sheet Schema](CONTENT_SHEET_SCHEMA.md) for exact headers and field rules, [Content Mapping](CONTENT_MAPPING.md) for what the UI consumes, and [Content Pipeline](CONTENT_PIPELINE.md) for source selection, hashing, and CI behavior.
 
-Local CSV templates are in:
+## Files to edit
 
-```text
-src/content/templates
+Local CSV sources live in `src/content/templates/`:
+
+| File | Purpose |
+| --- | --- |
+| `profile.csv` | Key/value identity and profile data. |
+| `links.csv` | Public contact and external links. |
+| `research.csv` | Research summaries and detail evidence. |
+| `projects.csv` | Project summaries, deep dives, skills, and links. |
+| `experience.csv` | Work, research, teaching, and leadership experience. |
+| `recommendations.csv` | Approved recommendation copy and verification links. |
+| `education.csv` | Education history. |
+| `skills.csv` | Skill categories and evidence-dialog copy. |
+| `site_settings.csv` | Metadata, feature flags, Home limits, and legal/footer settings. |
+| `resume.csv` | Header-only compatibility guard. Do not add data rows or import it into the public workbook. |
+
+Generation writes `src/content/generated/portfolio.generated.json`. Do not edit that JSON by hand. It is a derived, tracked snapshot of the local templates so a clean clone can build without remote configuration.
+
+The public `/resume` page is a private-request route, not workbook-backed resume content. The generator requires local `resume.csv` to remain header-only and rejects any remote workbook containing a `resume` sheet.
+
+## Choose a source mode
+
+For ordinary local CSV work, leave `PORTFOLIO_WORKBOOK_URL` blank and keep `PORTFOLIO_REQUIRE_REMOTE_CONTENT` unset or false. The generator reads every local template.
+
+To test the production-style workbook locally, put its anonymous HTTPS XLSX download URL in `PORTFOLIO_WORKBOOK_URL` inside the ignored root `.env` file, then enable strict mode:
+
+```dotenv
+PORTFOLIO_REQUIRE_REMOTE_CONTENT=true
 ```
 
-Generated JSON is written to:
+Only the exact value `true` enables strict mode. A configured workbook URL selects remote mode even when strict mode is false. Any invalid or unavailable configured workbook fails generation without falling back to templates.
 
-```text
-src/content/generated/portfolio.generated.json
-```
+See [Content Pipeline: Source modes](CONTENT_PIPELINE.md#source-modes) for the complete behavior table.
 
-Do not edit generated JSON directly unless debugging. Edit CSV templates or the Google Sheet source, then regenerate content.
+## Edit local templates
 
-Production uses one public Google Sheets workbook. To seed it without granting Drive access to this project, create the workbook yourself in the Google Sheets UI and manually import these checked-in templates as nine separate tabs:
+1. Open the relevant CSV in a spreadsheet editor or a text editor that preserves CSV quoting.
+2. Keep the exact header set. Header order can change, but names are lowercase, case-sensitive, and cannot be added, removed, or duplicated.
+3. Keep collection IDs unique and update profile references when a referenced row ID changes.
+4. Use pipe-delimited lists and `label=url` link entries as documented in [Content Sheet Schema](CONTENT_SHEET_SCHEMA.md#shared-rules).
+5. Keep only content and destinations approved for anonymous publication.
+6. Regenerate immediately so normalization and validation catch mistakes close to the edit.
 
-- `profile.csv` as `profile`
-- `links.csv` as `links`
-- `research.csv` as `research`
-- `projects.csv` as `projects`
-- `experience.csv` as `experience`
-- `recommendations.csv` as `recommendations`
-- `education.csv` as `education`
-- `skills.csv` as `skills`
-- `site_settings.csv` as `site_settings`
+Do not add a fixed number of rows merely to match the current snapshot. The schema does not require fixed counts for collections, skill categories, or Home cards. Use selection flags, ordering fields, and positive Home limits to control presentation.
 
-Tab-name matching is case-insensitive and tab order does not matter. Do not import `resume.csv` or create a `resume` tab. The local header-only file exists solely for compatibility with the private Resume route.
+## Regenerate
 
-## Regenerate content
+Run:
 
 ```powershell
 npm run generate:content
 ```
 
-Generation validates and normalizes the content, then rewrites `src/content/generated/portfolio.generated.json`. For local template work, review and commit the source CSV and regenerated JSON together; never maintain the generated file by hand. For a production workbook edit, GitHub Actions uses generated JSON only as a transient candidate, then verifies and deploys the exact tested artifact. The active deployment manifest records success; no generated-content commit is made.
+The command parses all selected sources, normalizes them, validates cross-references and invariants, computes `contentHash`, and rewrites the generated JSON.
 
-Then view changes locally:
+For local-template changes, review and commit the source CSV and generated JSON together. A useful review sequence is:
+
+```powershell
+git diff -- src/content/templates src/content/generated/portfolio.generated.json
+git status --short
+```
+
+Review normalized output rather than only the CSV cells. In particular, confirm:
+
+- optional blanks disappeared as intended;
+- list fields became the expected arrays;
+- boolean and number values normalized correctly;
+- date display is correct;
+- profile references point to the intended rows;
+- source metadata says `templates` for local work;
+- the hash changed only when the included normalized content changed.
+
+`generatedAt` is preserved when the hash of the new canonical normalized content subset matches the existing valid hash. See [Content Pipeline: Content hash](CONTENT_PIPELINE.md#content-hash) for exact exclusions and timestamp behavior.
+
+## Run the site
+
+Start the development server after successful generation:
 
 ```powershell
 npm run dev:smart
 ```
 
-## Required profile fields
+Check at least:
 
-The profile sheet must provide:
+- Home selection, ordering, empty states, and responsive layout;
+- profile Current Work, Education, and Research fallbacks;
+- header external links and conditional Recommendations navigation;
+- Experience, Research, Projects, and Recommendations detail routes;
+- skill and project-skill dialogs;
+- image and logo paths with no 404 responses;
+- footer resources and contact email fallbacks;
+- metadata title, description, favicon, and initial theme.
 
-- `full_name`
-- `headline`
-- `location`
-- `email`
-- `short_bio`
+Use [Content Mapping](CONTENT_MAPPING.md) when a valid field does not appear where expected. Several accepted compatibility fields intentionally have no current UI consumer.
 
-## Home profile overview
+## Build a public workbook
 
-The Home profile card is driven by generated content:
+Create one XLSX workbook with exactly these nine visible tabs:
 
-- Greeting: `Hi, I’m {greetingName}`, where `greetingName` comes from `profile.preferred_name` or the first word of `profile.full_name`
-- Animated role source keys: `role_engineer_prefixes`, `role_engineer_suffix`, and `role_alternate`
-- Static role and resume fallback: `profile.headline`
-- About: `profile.short_bio`, with a concise `profile.long_bio` fallback
-- Current work: a current `experience.csv` row, optionally identified by `profile.current_experience_id`; `profile.current_title` and `profile.current_company` are used only when no suitable current row exists
-- Research: one `research.csv` row selected from `show_on_home`, `featured`, and `home_order`; a valid `profile.featured_research_id` is the explicit fallback when no row is marked for Home
-- Education row: `profile.primary_education_id`, with deterministic education fallback when blank
-- Location: `profile.location`
-- Timezone: `profile.timezone`
-- Portrait: `profile.portrait_image`
-- Contact links: GitHub, LinkedIn, Email, and Portfolio or Website rows from `links.csv`. Omit resume-file rows for the private-resume configuration.
-- Education display overrides and fallbacks: `profile.university`, `profile.degree`, `profile.field_of_study`, and `profile.graduation`
+1. `profile`
+2. `links`
+3. `research`
+4. `projects`
+5. `experience`
+6. `recommendations`
+7. `education`
+8. `skills`
+9. `site_settings`
 
-Use `location` for the final wording you want shown, such as `Greater Seattle Area` or `Bothell, WA`. Use `timezone` for a stable display string such as `Pacific Time (UTC-07:00)`.
+Import the matching nine CSV templates as a starting point. Do not add notes, instructions, archive tabs, hidden tabs, or other worksheets to the downloadable workbook.
 
-The three animated-role fields are an optional complete set. Use a pipe-delimited prefix value such as `Software|AI|Security`, a shared suffix such as `Engineer`, and a complete alternate such as `Research Scientist`. Leave all three blank or omit them to show `profile.headline` statically. If any one is populated, all three must be non-empty or generation fails; a prefix value containing only empty pipe segments also fails. Generated JSON stores these as `roleEngineerPrefixes`, `roleEngineerSuffix`, and `roleAlternate`. Keep `headline` concise and accurate because the static fallback and general metadata still use it.
+Tab order and capitalization do not matter because titles are trimmed and lowercased for matching. Internal punctuation, spaces, hyphens, and spelling still must match the canonical names. Every worksheet must contain the exact header set from [Content Sheet Schema](CONTENT_SHEET_SCHEMA.md).
 
-Keep the right-side detail hierarchy in this order: greeting H1, role, About, Current Work, then a coordinated Education and Research row. Current Work is full width; its `View experience` link sits in the panel header. Research owns `View research` in its header. These links use an overlaid action slot so their hit areas do not make Current Work or Research headers taller than Education. Do not add a detached supporting-link row below the panels. On desktop, Education and Research split the row evenly, stretch to the same outer height, and align their bottom graduation/resource footer rows. Center the Research resources within that footer. On mobile, Education stacks before Research. The inner summaries use subtle surfaces without timeline dots, vertical rails, repeated organization badges, or heavy nested glass effects.
+If Google Sheets is the authoring tool, configure an anonymously downloadable XLSX export URL. The build does not use Drive API access, OAuth, a service account, or browser cookies. Test the exact URL in a signed-out browser or with a direct download client before using it in CI.
 
-Current Work accepts a row as current when its `end_date` is blank, `Present`, or `Current` according to normalization. When multiple current rows are available, keep the intended row Home-visible and use `featured` plus `home_order` to make its priority clear. The selected row supplies title, organization, dates, `home_summary`, and optional `organization_logo`. Use `current_title` and `current_company` as fallback text only when there is no suitable current experience row.
+Workbook formula cells require cached displayed results. When reliability matters, paste finalized values instead of formulas. Keep the workbook under 5 MiB and within the worksheet dimension limits in [Content Pipeline: Workbook structure checks](CONTENT_PIPELINE.md#workbook-structure-checks).
 
-Previous experience data stays in `experience.csv` and continues to appear on the Experience page. The Home profile card intentionally ignores `previous_experience_id` and never renders a Previous Work block, even if that reference remains populated for compatibility or editorial bookkeeping.
+## Test the workbook locally
 
-The Education panel prefers `primary_education_id`, then the Home-visible/featured/ordered education fallback. Non-blank profile university, degree, field, and graduation values override the corresponding row display values; the row still supplies concentration, dates, and optional `institution_logo`. Keep `profile.degree=Bachelor of Science` and `profile.field_of_study=Computer Science`; the shared formatter presents them as `Degree: Bachelor of Science in Computer Science`. Keep the row's concentration as `Concentration: Information Assurance & Cybersecurity`. The panel presents the completion date compactly as `Graduated Jun 2025` rather than repeating the full enrollment range. Education location is not repeated because the left profile rail already supplies geographic context.
+1. Create `.env` from `.env.example` if needed.
+2. Set `PORTFOLIO_WORKBOOK_URL` to the exact anonymous HTTPS XLSX URL.
+3. Set `PORTFOLIO_REQUIRE_REMOTE_CONTENT=true` so a missing URL cannot silently select templates.
+4. Run `npm run generate:content`.
+5. Confirm `metadata.sourceMode` is `remote` and all nine public entries in `metadata.sources` are `remote`.
+6. Run the focused tests and a generated-content build.
 
-For Research, mark intended candidates with `show_on_home=true`; featured candidates sort first, followed by `home_order`. If none are marked for Home, `featured_research_id` is used when it resolves to a research row, followed by the established featured/ordered fallback. Use optional `home_title` for a concise display title on both the profile-overview panel and the separate Home Research card; leave it blank to use `title`. The Research detail route continues to use the formal `title`. For a compact profile panel, put a short unlabelled descriptor such as `Lead Engineer & First Author` in `profile_byline` and pipe-delimited affiliations in `profile_labs`. The compact panel does not display `role`. When both fields are blank, legacy copy resolves from `profile_summary`, then `home_summary`, then `detail_summary`. The larger Home Research card continues to use `home_summary` and never consumes the profile-only fields. The compact panel also consumes valid `links`, `organization_logo`, and `pending_links`; it does not repeat organization text or dates. Published resource links are centered button-like controls with no underline: they remain transparent while idle and reveal a surface and border on hover or keyboard focus. A pending resource may appear there only as a native disabled, non-interactive button. The separate Home Research cards omit label-only pending resources.
-
-All displayed personal facts remain spreadsheet-derived. Component code owns only the greeting format, stable section labels, the two internal route destinations, and decorative structure. It must not duplicate names, roles, organizations, titles, programs, dates, summaries, external URLs, or asset paths. Content is normalized into generated JSON before the static build; the browser never requests Google Sheets at runtime.
-
-## Pipe-delimited lists
-
-Use pipe characters for list fields:
-
-```text
-Python|TypeScript|Next.js
+```powershell
+npm run typecheck
+npm run test -- scripts/portfolioContentGeneration.test.ts src/lib/content/content.test.ts
+npm run build:generated
 ```
 
-The recommendations sheet uses pipe-delimited `skills` in the same format.
+Do not commit a generated remote workbook snapshot as the repository's local baseline. Restore the normal local environment and run `npm run generate:content` from templates before preparing a local content commit.
 
-Project `home_skills` entries pair a visible label with a lowercase icon key:
+## Full verification
 
-```text
-Next.js=nextdotjs|TypeScript=typescript|OpenAI API=openai
+Before merge, run:
+
+```powershell
+npm run verify
 ```
 
-Keep exactly three verified `home_skills` on every published Home project; content validation rejects a fourth entry. The Skills sheet stores one recruiter-focused skill per row; use `category_order` for the three broad-card order and `icon` for the shared brand or semantic icon key. The published Home layout expects four skills in each of three categories. Fill `proficiency`, `summary`, and `where_used` together so every published skill opens a complete evidence-based dialog.
+When changing generator contracts, workbook handling, selectors, or hashing, also run the focused tests explicitly:
 
-Project tool explanations use ordered column pairs that match the `home_skills` positions:
-
-```text
-home_skill_1_summary: Next.js powers the project's web interface and routing.
-home_skill_1_details: The precise technical paragraph describing how Next.js is used.
+```powershell
+npm run test -- scripts/portfolioContentGeneration.test.ts src/lib/content/content.test.ts
 ```
 
-Repeat the pattern through `home_skill_3_summary` and `home_skill_3_details`. Fill both fields for a position or leave both blank; a one-sided pair fails content validation. A numbered pair also fails when there is no skill at that position in `home_skills`. Existing rows with no explanation fields remain compatible.
+`npm run build` regenerates through `prebuild`. `npm run build:generated` consumes the generated snapshot without downloading or regenerating it. Use the latter only after deliberate generation when testing the exact candidate snapshot.
 
-## Link formatting
+## Assets
 
-Use either simple URLs or label and URL pairs:
+Store only anonymously publishable assets under `public/`. Common locations are:
 
-```text
-https://example.com|GitHub=https://github.com/username|Live site=https://cytocv.uwb.edu
-```
+- `public/images/profile/`
+- `public/images/organizations/`
+- `public/images/education/`
+- `public/images/projects/`
+- `public/images/research/`
+- `public/favicon/`
 
-Research `pending_links` is a separate pipe-delimited list of labels without URLs:
+Reference them from content with a safe root-relative path such as `/images/projects/example.png`. A file in `public/` is copied into the static export and is reachable without authentication.
 
-```text
-Manuscript|Dataset
-```
+Use the relevant `_logo_alt` column when a logo needs meaningful alternative text. Current compact overview logos are decorative, while Home history lists use the supplied alt text or generate a label from the organization or institution name.
 
-Pending resources have no URL. The compact Home profile Research panel may expose one as a native disabled, non-interactive unpublished button, such as `Manuscript`, while the separate Home Research cards omit it. Do not emulate this state with an actionable link or click handler. When a resource is published, remove its label from `pending_links` and add a labelled verified URL to `links`; never leave both entries populated for the same resource.
+## Common failures
 
-## Boolean formatting
+| Failure | Check |
+| --- | --- |
+| Missing or unexpected header | Compare the complete header row with the canonical header in the schema reference. |
+| Missing, duplicate, hidden, or unexpected tab | Keep exactly nine visible canonical workbook tabs. |
+| Duplicate ID | Make each collection `id` unique; IDs are case-sensitive. |
+| Invalid profile reference | Update the profile ID value or restore the referenced row. |
+| Invalid boolean | Use `true`, `false`, `yes`, `no`, `1`, `0`, or blank. |
+| Invalid number | Use a finite number; for display limits and order, use a sensible positive integer. |
+| Invalid URL | Remove whitespace and use an allowed absolute or safe root-relative destination. Check field-specific HTTPS requirements. |
+| Incomplete grouped fields | Complete or clear all role fields, project skill explanation pairs, skill popup fields, or quote inline-link fields. |
+| Workbook response is HTML | Fix sharing/export configuration and test the exact signed-out download URL. |
+| Formula has no cached result | Replace it with a value or export a workbook containing a displayed cached result. |
+| Remote edit is not visible locally | Regenerate; the browser never reads the workbook directly. |
+| Valid field is not rendered | Check [Content Mapping](CONTENT_MAPPING.md), including the compatibility field list. |
 
-Accepted values:
+## Deployment handoff
 
-- `true`
-- `false`
-- `yes`
-- `no`
-- `1`
-- `0`
+Pull requests use local templates. Strict remote candidates for configured branches and scheduled or manual checks download the workbook once, then test and build that generated snapshot. Deployment consumes the exact verified artifact without a second fetch or build.
 
-## Ordering fields
-
-- `home_order` controls Home page order.
-- `detail_order` controls detail page order.
-- `order` controls generic display order.
-
-Missing order values are allowed and sort after ordered items.
-
-## show_on_home and featured
-
-Home selection uses this priority:
-
-1. Rows with `show_on_home=true`.
-2. If none exist, featured rows.
-3. If none exist, first sorted rows.
-
-Featured rows sort before non-featured rows.
-
-## Asset placement
-
-Place assets in these folders:
-
-- Portrait images: `public/images/profile/`
-- Shared organization and institution logos: `public/images/organizations/`
-- Education logos: `public/images/education/`
-- Project images: `public/images/projects/`
-- Research images: `public/images/research/`
-- Favicon files: `public/favicon/`
-
-Every file under `public/` is deployed for anonymous access. Do not place a private resume in `public/resume/` or any other public asset folder.
-
-## Valid local paths
-
-```text
-/images/profile/portrait.png
-/images/organizations/uw-logo.svg
-/images/education/uw-logo.svg
-/favicon/favicon.ico
-```
-
-## Valid external links
-
-```text
-https://github.com/username
-https://www.linkedin.com/in/username
-mailto:name@example.com
-```
-
-Recommendation `source_url` and `linkedin_url` values must be HTTPS URLs. Do not paste private LinkedIn data into the app; the spreadsheet text is the source of truth and links are only for verification/navigation.
-
-## Private resume configuration
-
-Keep `resume_url` and `resume_download_label` blank in `profile.csv` and in any configured remote profile sheet. Remove resume-kind file rows from `links.csv` and its remote equivalent, and keep the resume PDF outside the repository, `public/`, generated content, and deployment artifacts.
-
-Keep `src/content/templates/resume.csv` empty except for its header. The resume sheet is deliberately local-only and has no remote-source environment variable; do not add a remote source or populate the local rows while the resume is private.
-
-Safe root-relative URL validation is not access control. After regeneration, search generated JSON, built HTML, and `out/` for prior resume filenames or URLs. Review prior deployments, caches, source archives, and repository history separately because removing the current asset does not retract an already published copy.
-
-Experience and research `organization_logo` values and education `institution_logo` values should point to approved real local public assets when possible. Prefer the shared `/images/organizations/` path for new marks, then place that validated root-relative path in the corresponding CSV field. Leave the field blank until an approved asset is available; compact Home panels omit the mark rather than inventing a placeholder. Use the corresponding `_logo_alt` field when the asset needs explicit alternative text.
-
-Keep education `degree`, `field`, and `concentration` separate. For the current row, use `Bachelor of Science` as the degree, `Computer Science` as the field, and `Information Assurance & Cybersecurity` as the concentration. The shared formatter produces `Bachelor of Science in Computer Science` wherever the Home program is shown. Education `location` is optional: populate it to show a separate location line, or leave it blank to hide it.
-
-## Google Sheets versus local templates
-
-Local templates are enough for local development. To test the public workbook locally, put its anonymous HTTPS XLSX export URL in `PORTFOLIO_WORKBOOK_URL` in the ignored `.env` created from `.env.example`. The generator downloads the workbook once, matches required titles case-insensitively and independent of order, and parses displayed cell text locally; there are no per-tab URL variables.
-
-No Google Drive connector, API credential, OAuth token, service account, or owner account access is needed. The URL exposes deliberately public content only. Review every tab before making the workbook anonymously readable, and keep private resume content, credentials, recipient addresses, and unpublished personal data out of it.
-
-When `PORTFOLIO_REQUIRE_REMOTE_CONTENT=true`, a missing workbook URL, inaccessible or oversized response, timeout, HTML/login response, invalid XLSX, missing/invalid/hidden tab, malformed row, invalid header, or schema failure stops generation without falling back to templates. GitHub Actions uses this strict mode for `main`, `develop`, scheduled, and manual deployment candidates. The empty local resume template is intentionally exempt because it has no workbook tab.
-
-Published spreadsheet tabs are build-time sources, not live browser data. The scheduled workflow checks them daily at `13:17 UTC`. It compares the normalized candidate hash with the active `/content-version.json`, so formatting-only edits are no-ops; a meaningful change must pass the complete CI gate before GitHub Actions deploys the tested artifact. Use the manual workflow when an immediate check is required.
-
-## Recommendations
-
-Local recommendations live in `src/content/templates/recommendations.csv`. Keep template rows blank unless there is explicit public-safe recommendation text to include. Required fields are `id`, `recommender_name`, and `full_quote`.
-
-Both Home and the Recommendations page display the unchanged `full_quote`. Home shows the first three rows selected by `show_on_home` and `home_order`; the detail route shows all rows by `detail_order`. Detail cards and single-card Home rows use a four-line `Show more`/`Show less` preview. Multi-card Home rows automatically reduce a taller-header card to three quote lines when needed for a level collapsed row; this is a display treatment and does not shorten the stored quote. `home_quote` remains accepted only for compatibility and is not the current display source.
-
-To link one phrase inside a quote, set both `full_quote_link_label` and `full_quote_link_url`. For example, use `CytoCV` and `https://github.com/BrentLagesse/CytoCV`; the case-sensitive label must occur exactly once in `full_quote`, and the URL must use HTTPS. Leave both fields blank when no inline link is needed. Keep `full_quote` as plain text rather than adding a raw URL, HTML, or Markdown link syntax.
-
-Use `show_empty_recommendations=false` in `site_settings` when the navigation should hide the Recommendations route until there is at least one recommendation row.
-
-## Footer and legal settings
-
-Footer identity, legal, hosting, license, and repository data come from `site_settings`:
-
-```text
-copyright_owner
-license_name
-license_url
-repository_url
-legal_contact_email
-legal_effective_date
-hosting_provider_name
-hosting_privacy_url
-```
-
-Use an ISO `YYYY-MM-DD` legal effective date when possible and HTTPS repository, license, and hosting privacy URLs. Valid dates displayed by Google Sheets as `M/D/YYYY` or `MM/DD/YYYY` are normalized to ISO during generation; other date formats remain invalid. `license_name=MIT` records the software license choice, but leave `repository_url` and `license_url` blank until the repository passes its exposure audit, is publicly accessible, and both anonymous links have been verified. Blank repository resources are omitted cleanly. The compact copyright statement reserves portfolio content except where another notice, such as the software license, states otherwise.
-
-## Demo placeholder assets
-
-The local templates reference demo-safe placeholder files so a fresh clone can render without 404s:
-
-- `/images/profile/portrait-placeholder.png`
-- `/images/projects/project-placeholder.png`
-- `/images/research/research-placeholder.png`
-- `/favicon/favicon.png`
-
-These files are generic local development assets. Replace them with approved public files later by either overwriting the public files or by updating the matching CSV values to new root-relative paths. Keep only intentionally public assets under `public`; private resume files must remain outside the static export.
+For an immediate workbook release check, dispatch the repository workflow rather than editing generated JSON. Confirm the deployed `/content-version.json` has the expected content hash and candidate commit after the workflow succeeds. See [Deployment](DEPLOYMENT.md) for branch and rollback operations.

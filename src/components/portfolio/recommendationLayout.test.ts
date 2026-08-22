@@ -58,6 +58,11 @@ describe("Home recommendation row layout", () => {
 
     expect(Object.values(twoColumnLayout).map((item) => item.collapsedLineCount)).toEqual([4, 4, 4]);
     expect(Object.values(singleColumnLayout).map((item) => item.collapsedLineCount)).toEqual([4, 4, 4]);
+    expect(Object.values(singleColumnLayout).map((item) => item.collapsedMinHeight)).toEqual([
+      350,
+      350,
+      371
+    ]);
   });
 
   it("does not shorten a quote that already fits within four lines", () => {

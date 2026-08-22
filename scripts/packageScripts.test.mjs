@@ -31,6 +31,10 @@ describe("package and CI deployment automation", () => {
       "next build && node scripts/writeContentVersion.mjs"
     );
     expect(packageJson.scripts["dev:pages"]).toContain("npx --no-install wrangler");
+    expect(packageJson.scripts["docs:check"]).toBe("node scripts/validateDocumentation.mjs");
+    expect(packageJson.scripts.verify).toBe(
+      "npm run docs:check && npm run lint && npm run typecheck && npm run test && npm run build"
+    );
     expect(packageJson.devDependencies.wrangler).toBe("4.127.0");
     expect(packageJson.devDependencies.vitest).toBe("4.1.11");
     expect(packageJson.scripts["test:footer"]).toBe(
@@ -175,7 +179,7 @@ describe("package and CI deployment automation", () => {
     expect(verifyJob).toContain('"${FORCE_DEPLOY:-false}" == "true"');
     expect(verifyJob).toContain('"${DEPLOYED_CONTENT_MATCHES:-false}" != "true"');
 
-    for (const stepName of ["Lint", "Typecheck", "Footer regression tests", "Full test suite"]) {
+    for (const stepName of ["Documentation integrity", "Lint", "Typecheck", "Footer regression tests", "Full test suite"]) {
       expect(verifyJob).toMatch(
         new RegExp(`- name: ${stepName}\\s+if: steps\\.decision\\.outputs\\.should_verify == 'true'`)
       );
@@ -281,11 +285,17 @@ describe("package and CI deployment automation", () => {
     expect(wranglerConfig.vars.CONTACT_ALLOWED_ORIGINS).toBe(
       "https://smart-portfolio-bds.pages.dev,https://nicolasmgioanni.dev,https://www.nicolasmgioanni.dev"
     );
+    expect(wranglerConfig.vars.CONTACT_FROM_EMAIL).toBe(
+      "Nicolas Gioanni <noreply@mail.nicolasmgioanni.dev>"
+    );
     expect(wranglerConfig.env.preview.vars.TURNSTILE_ALLOWED_HOSTNAMES).toBe(
       "develop.smart-portfolio-bds.pages.dev"
     );
     expect(wranglerConfig.env.preview.vars.CONTACT_ALLOWED_ORIGINS).toBe(
       "https://develop.smart-portfolio-bds.pages.dev"
+    );
+    expect(wranglerConfig.env.preview.vars.CONTACT_FROM_EMAIL).toBe(
+      "Nicolas Gioanni <noreply@mail.nicolasmgioanni.dev>"
     );
   });
 

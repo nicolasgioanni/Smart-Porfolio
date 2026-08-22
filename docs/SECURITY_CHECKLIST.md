@@ -1,86 +1,132 @@
 # Security Checklist
 
-## Runtime surface
+Use this checklist with [Contact System](CONTACT_SYSTEM.md), [Security](SECURITY.md), and [Deployment](DEPLOYMENT.md). Check source and generated artifacts for repository behavior. Check provider dashboards and controlled deployed requests for external behavior.
 
-- Confirm core pages still build through Next.js static export with no route handlers, server actions, middleware, or runtime content fetches.
-- Confirm the only Pages Function route is POST `/api/contact` and `out/_routes.json` includes only that exact path.
-- Confirm static routes and assets do not invoke the Function.
-- Document the data, validation, abuse cases, logging, and rate-limit plan before adding or broadening any endpoint.
+## Evidence and control status
 
-## Contact request validation
+- Label each control as repository-enforced, an external operator requirement, or live state unverified.
+- Do not treat documentation, Wrangler variables, or unit tests as proof that secrets, DNS, WAF rules, sender verification, or delivery settings are active in production.
+- Resolve prose conflicts against the current implementation and generated deployment files, then update the conflicting prose.
+- Keep public Privacy and Security statements within behavior that source or deployed evidence can support.
 
-- Treat all client checks as usability behavior, never as the security boundary.
-- Accept only POST with `application/json`; reject other methods and media types.
-- Enforce the 16 KiB streaming body limit before JSON parsing completes.
-- Reject malformed payloads, unknown keys, unsafe control characters, excessive lengths, invalid email/phone formats, stale or implausibly fast submissions, and failed honeypot checks.
-- Require first name, last name, email, message, and all three acknowledgements; validate the optional phone number when supplied.
-- Require an exact allowed Origin and keep `CONTACT_ALLOWED_ORIGINS` limited to intended HTTPS origins.
-- Return generic errors and `no-store` response headers without exposing configuration, provider details, recipient values, or validation internals.
+## Runtime surface and routing
 
-## Turnstile
+- Confirm core routes still use Next.js static export without route handlers, server actions, middleware, or runtime content fetches.
+- Confirm `public/_routes.json` includes exactly `/api/contact/verify` and `/api/contact`, with no broader pattern.
+- Confirm the exported `out/_routes.json` matches the reviewed source file.
+- Confirm unauthenticated deployment smoke checks require a `405` JSON response from both Function paths.
+- Document data, validation, retention, logging, abuse controls, and response behavior before adding or broadening an endpoint.
 
-- Render the widget with the public `NEXT_PUBLIC_TURNSTILE_SITE_KEY`; never expose `TURNSTILE_SECRET_KEY` to the client.
-- Use the fixed action `portfolio_contact` in both widget and verifier.
-- Verify every token server-side through Siteverify before delivery.
-- Require `success: true`, exact action match, and a hostname in `TURNSTILE_ALLOWED_HOSTNAMES`.
-- Fail closed on missing, invalid, expired, duplicate, malformed, timed-out, hostname-mismatched, action-mismatched, or unverifiable tokens.
-- Keep production credentials separate from development/preview and do not authorize local hostnames on the production widget.
+## Shared request envelope
 
-## Delivery and privacy
+- Accept only `POST` on both endpoints and include `Allow: POST` on `405` responses.
+- Require base media type `application/json`; permit parameters only through the existing normalized media-type check.
+- Enforce the 16,384-byte limit on both streamed request bodies before JSON parsing completes, including when `Content-Length` is absent or misleading.
+- Require strict UTF-8 and valid JSON.
+- Require an exact configured `Origin`; reject missing, `null`, malformed, non-HTTP(S), path-bearing, or unlisted origins.
+- Fail configuration closed if any comma-separated origin or hostname entry is invalid.
+- Keep errors generic and do not add CORS headers.
+- Keep every Function response non-cacheable JSON with the handler-owned referrer and content-type-sniffing headers.
 
-- Keep `TURNSTILE_SECRET_KEY`, `RESEND_API_KEY`, and `CONTACT_RECIPIENT_EMAIL` in Cloudflare Pages encrypted secrets.
-- Keep reviewed `CONTACT_FROM_EMAIL` and `CONTACT_REPLY_TO_EMAIL` values in non-secret Wrangler environment variables; never substitute them for the encrypted destination inbox.
-- Confirm `CONTACT_RECIPIENT_EMAIL` never appears in tracked files, build output, response bodies, client variables, analytics, or logs.
-- Verify the fixed Resend From address belongs to a verified `nicolasmgioanni.dev` domain.
-- Use the submission-scoped Resend idempotency key and test both owner notification and visitor receipt.
-- Do not log request bodies, message text, visitor contact details, Turnstile tokens, provider response bodies, or recipient-secret values.
-- Keep retention statements accurate for Cloudflare, Resend, and downstream email providers even though the site has no contact database.
+## Turnstile verification
 
-## Abuse controls
+- Render the visible widget with public `NEXT_PUBLIC_TURNSTILE_SITE_KEY`; never expose `TURNSTILE_SECRET_KEY` to the client.
+- Keep action `portfolio_contact`, explicit token handling, and the gate before contact data entry.
+- Accept a plain verification object with exactly `submissionId` and `turnstileToken`.
+- Require a valid bounded UUID and a non-empty token of at most 2,048 characters without unsafe controls.
+- Send one server-side Siteverify request per new verified session with a 5-second timeout.
+- Use the UUID as Siteverify `idempotency_key`.
+- Include `CF-Connecting-IP` as `remoteip` only after the existing length and control-character checks.
+- Require an HTTP-success JSON response, `success: true`, action exactly `portfolio_contact`, and an exact allowed hostname.
+- Fail closed on missing configuration, provider failure, timeout, invalid JSON, failed verification, action mismatch, or hostname mismatch.
+- Keep production and preview site keys, secrets, allowed hostnames, and allowed origins separated.
 
-- Enable a Cloudflare WAF rate-limiting rule matching only the `/api/contact` path, counted by source IP; non-POST requests are rejected by the Function.
-- On Cloudflare Free, start with 5 requests per 10 seconds and a 10-second block. Use method matching or longer windows only when the active plan supports them, then tune from non-sensitive aggregate evidence.
-- Keep origin, body-size, schema, timing, honeypot, Turnstile, and idempotency controls enabled; the WAF rule does not replace them.
+## Verification ticket
 
-## Browser and routing configuration
+- Set `__Host-portfolio_contact_ticket` with `Path=/`, `Max-Age=1800`, `Secure`, `HttpOnly`, `SameSite=Strict`, and no `Domain` attribute.
+- Store only version, submission UUID, issue time, and expiry time in the signed ticket. Store no contact fields.
+- Derive the signing key from `TURNSTILE_SECRET_KEY` with the existing domain-separated HKDF-SHA-256 construction and sign with HMAC-SHA-256.
+- Reject an absent or duplicate cookie name, oversized or non-canonical encoding, malformed payload, wrong signature size, invalid signature, wrong version, future issue time beyond allowance, altered lifetime, expiry, or UUID mismatch.
+- Clear the ticket only after successful provider delivery. Retain a still-valid ticket after delivery failure for retry.
+- Do not describe the ticket as encrypted, database-backed, revoked, or server-enforced single-use.
 
-- Confirm `out/_headers` and `out/_routes.json` exist after every production build.
-- Validate `_routes.json` as JSON and ensure its include surface has not broadened.
-- Confirm CSP permits `https://challenges.cloudflare.com` only where Turnstile requires it and has no unexplained third-party origins.
-- Confirm static responses include CSP, permissions, referrer, HSTS, content-type, and framing protections.
-- Confirm Function responses set their own `no-store`, content-type, referrer, and content-type-sniffing headers because Pages `_headers` does not apply to them.
+## Delivery schema and ordering
 
-## Content safety
+- Allow only `submissionId`, `firstName`, `lastName`, `email`, optional `phone`, `message`, `contactConsent`, `legalConsent`, `legitimateConsent`, `startedAt`, and `website`.
+- Reject unknown keys, invalid types, unsafe control characters, excessive lengths, malformed email or phone values, and any acknowledgment other than boolean `true`.
+- Require trimmed first and last names, a valid email, a message, all three acknowledgments, a safe integer start time, and the required honeypot string.
+- Keep names at 80 characters each, email at 254, phone at 40 with 7 to 20 digits when non-empty, message at 3,000, and honeypot at 200.
+- Preserve line-feed normalization for the message and the documented timing bounds: 1,200-millisecond minimum, 30-second future allowance, and two-hour maximum age.
+- Preserve the actual handler order: honeypot and timing signals are evaluated while parsing the payload before ticket validation.
+- Return silent `200 {"ok":true}` for a non-empty honeypot or completion under 1,200 milliseconds, with no Resend call.
+- Require a valid ticket and matching submission UUID before normal provider delivery. Do not claim the ticket is checked before all field parsing.
 
-- Spreadsheet data is public-safe.
-- Generated JSON is not used for secrets.
-- Spreadsheet text renders as plain React text.
-- `dangerouslySetInnerHTML` is not used for spreadsheet content.
-- Private resume files and access URLs are absent from templates, remote sheets, generated JSON, `public/`, and the exported site.
-- `src/content/templates/resume.csv` remains header-only, and no remote resume-sheet environment variable exists.
+## Client retry and email delivery
 
-## URL safety
+- Send no contact fields to `/api/contact/verify` and do not send the Turnstile token to `/api/contact`.
+- Keep the contact draft in React memory and use same-origin credentials for both requests.
+- After the first delivery attempt starts, lock review navigation and acknowledgments.
+- Require same-ticket retries to reuse the same UUID, start time, acknowledgment values, and byte-equivalent JSON body.
+- On `verification_required`, return to the gate, preserve the draft, unlock it for a new session, and create a new UUID after verification.
+- Use one Resend batch request with an 8-second timeout and `Idempotency-Key: portfolio-contact/<submissionId>`.
+- Send the owner notification to the private configured recipient with only the validated visitor email as `reply_to`.
+- Send the visitor receipt to the validated visitor email with the fixed public reply-to.
+- Keep the sender and subjects fixed, escape user-controlled HTML, and include plain-text alternatives.
+- Treat provider timeout, network failure, and non-success status as generic `502 delivery_failed` without returning or logging provider details.
 
-- General links are limited to `https://`, `http://`, valid `mailto:`, or safe root-relative paths.
-- Root-relative paths reject traversal such as `..`.
-- Treat every accepted root-relative `public/` asset as public; validation does not provide access control.
-- Recommendation `source_url` and `linkedin_url` values are HTTPS only.
-- LinkedIn links are outbound verification links only.
+## Privacy, storage, and logging
 
-## Environment and repository
+- Keep the contact draft out of local storage and session storage.
+- Keep contact fields out of the ticket and the verification request.
+- Confirm there is no first-party contact database, storage binding, delivery ledger, or consumed-ticket store unless the documentation and privacy disclosures are updated first.
+- Account for Cloudflare, Turnstile, Resend, receiving mailboxes, and the visitor's mailbox as processors or retention locations outside the repository.
+- Keep `TURNSTILE_SECRET_KEY`, `RESEND_API_KEY`, and `CONTACT_RECIPIENT_EMAIL` server-only.
+- Confirm the private recipient never appears in browser variables, generated content, build output, responses, analytics, or application logs.
+- Do not log request bodies, contact fields, tokens, cookie contents, provider responses, message identifiers, recipient values, or credentials.
+- If telemetry is added, limit it to coarse outcomes, bounded timings, and non-sensitive aggregates.
 
-- `.env` remains local-only and ignored by Git.
-- The tracked `.env.example` contains placeholders only and no private recipient, credential, or usable secret.
-- Local Pages Function testing uses `npm run dev:pages` or `wrangler pages dev out --env-file .env`; no second local secret file is required.
-- Only `NEXT_PUBLIC_TURNSTILE_SITE_KEY` is exposed publicly; no private value uses a `NEXT_PUBLIC_` name.
-- Build-time public values are normally configured as GitHub repository variables, the restricted Pages upload credential uses GitHub Actions secrets, and Pages Function runtime values are configured separately in Cloudflare with sensitive values encrypted. Neither environment imports the local `.env` file. `develop` receives only the optional preview Turnstile site key and never falls back to the production key.
-- Treat `PORTFOLIO_WORKBOOK_URL` as public-read-only configuration stored in a GitHub Actions secret solely for automatic log redaction. Use one anonymous HTTPS XLSX download and never introduce Drive/Sheets API access, OAuth, a service account, or a Google API key.
-- Keep generated deployment state out of `main`; verify the `out/` artifact digest and use the active `/content-version.json` hash as the successful-deployment record.
-- Production and preview have separate exact hostname/origin lists and appropriate credentials.
-- Scan the tracked tree, reachable Git history, and `out/` for secrets, the private recipient, private resume artifacts, and stale URLs before publishing.
+## Abuse controls and WAF
 
-## Dependencies
+- Keep repository-enforced origin, body-size, schema, acknowledgment, honeypot, timing, Turnstile, ticket, and idempotency controls enabled.
+- Confirm the repository still has no application rate limiter, rate-limit binding, `429` response path, or deployable WAF ruleset before describing rate limiting as code-enforced.
+- Configure an external Cloudflare rate-limiting rule for both exact contact paths and review its counting characteristic, threshold, mitigation timeout, and action.
+- Treat live WAF state as unverified until checked in Cloudflare and through a controlled deployed test.
+- Do not place an interactive Managed Challenge on either JSON endpoint.
+- Do not promise a custom JSON rate-limit block response unless the active Cloudflare plan and selected action support it. Cloudflare documents that feature for Pro plans and higher, not as a Free-plan guarantee.
+- Tune external thresholds only from non-sensitive aggregate evidence and keep the WAF rule as defense in depth.
 
-- Run `npm audit`.
-- Classify advisories as production runtime, build-time, or development-tooling risk.
-- Do not force major dependency upgrades without checking compatibility.
+## Static headers and Function headers
+
+- Confirm `out/_headers` exists and matches the reviewed `public/_headers` policy.
+- Keep the static CSP limited to reviewed origins and the Turnstile allowances needed in `script-src`, `connect-src`, and `frame-src`.
+- Confirm static responses receive CSP, Permissions Policy, referrer policy, HSTS, content-type-sniffing, and framing protections.
+- Remember that Pages `_headers` rules do not apply to Function-generated responses.
+- Confirm both handlers set `Cache-Control: no-store, max-age=0`, JSON content type, `Referrer-Policy: no-referrer`, and `X-Content-Type-Options: nosniff` themselves.
+
+## Content, rendering, and URL safety
+
+- Treat workbook and generated site content as public and untrusted input.
+- Keep credentials, private contact values, and unpublished sensitive data out of content sources, generated JSON, and public assets.
+- Render content-source text as escaped React text and do not add raw HTML or Markdown parsing.
+- Keep general links limited to HTTP(S), valid `mailto:`, or safe root-relative paths, with stricter HTTPS rules where the schema requires them.
+- Reject root-relative traversal and treat every accepted file under `public/` as publicly retrievable.
+- Require `rel="noopener noreferrer"` for external links opened in a new tab.
+
+## Environment and publication
+
+- Keep the local environment file ignored and the tracked example placeholder-only.
+- Expose only values deliberately named for the browser. No server secret may use a `NEXT_PUBLIC_` name.
+- Keep GitHub Actions build inputs and upload credentials separate from Cloudflare Function bindings.
+- Keep production and preview site keys, server secrets, hostnames, origins, provider keys, and recipient settings separate.
+- Verify live encrypted bindings without printing their values. Do not infer them from `wrangler.jsonc`.
+- Keep the build source as one anonymous HTTPS XLSX download without adding an OAuth grant, service account, or Google API credential.
+- Verify artifact integrity metadata and active content-version evidence during deployment.
+- Scan tracked files, reachable Git objects, generated output, and exported artifacts for secrets, non-public personal data, stale URLs, and unsafe configuration before publication.
+- Treat history rewriting, force-pushing, and provider-side deletion as separate destructive operations that require explicit authorization and review.
+
+## Dependencies and future endpoints
+
+- Run `npm audit` and classify advisories as runtime, static-build, or development-tooling risk.
+- Do not force major dependency upgrades without compatibility and artifact review.
+- For every new endpoint, document and test methods, media types, schema, body and time limits, origins, authentication or verification, privacy, retention, logs, abuse controls, error responses, headers, and deployment checks.
+- Update [Contact System](CONTACT_SYSTEM.md), [Security](SECURITY.md), and [Deployment](DEPLOYMENT.md) when the runtime or operator contract changes.

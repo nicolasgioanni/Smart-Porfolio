@@ -56,6 +56,7 @@ const originalPreviewSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KE
 beforeEach(() => {
   process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY = "test-site-key";
   process.env.NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY = "preview-only-test-key";
+  installFetchMock();
 });
 
 afterEach(() => {
@@ -73,16 +74,45 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function completeVerification() {
+type FetchMockOptions = {
+  contact?: (attempt: number) => Promise<Response> | Response;
+  verify?: (attempt: number) => Promise<Response> | Response;
+};
+
+function requestUrl(input: RequestInfo | URL): string {
+  return typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+}
+
+function installFetchMock(options: FetchMockOptions = {}) {
+  let contactAttempt = 0;
+  let verifyAttempt = 0;
+  const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+    const url = requestUrl(input);
+    if (url === "/api/contact/verify") {
+      verifyAttempt += 1;
+      return options.verify?.(verifyAttempt) ?? Response.json({ ok: true });
+    }
+    if (url === "/api/contact") {
+      contactAttempt += 1;
+      return options.contact?.(contactAttempt) ?? Response.json({ ok: true });
+    }
+    throw new Error(`Unexpected fetch request: ${url}`);
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
+}
+
+function callsFor(fetchMock: ReturnType<typeof vi.fn>, url: string) {
+  return fetchMock.mock.calls.filter(([input]) => requestUrl(input as RequestInfo | URL) === url);
+}
+
+async function completeVerification() {
   const continueButton = screen.getByRole("button", { name: "Continue" });
   expect(continueButton).toBeDisabled();
   expect(screen.getByTestId("turnstile-mock")).toHaveAttribute("data-site-key", "test-site-key");
 
   fireEvent.click(screen.getByRole("button", { name: "Complete human verification" }));
-  expect(continueButton).toBeEnabled();
-  fireEvent.click(continueButton);
-
-  expect(screen.getByRole("heading", { level: 2, name: "Tell me your name" })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { level: 2, name: "Tell me your name" })).toBeInTheDocument();
 }
 
 function completeName(firstName = "Avery", lastName = "Nguyen") {
@@ -110,8 +140,8 @@ function completeDetails({
   expect(screen.getByRole("heading", { level: 2, name: "Review your request" })).toBeInTheDocument();
 }
 
-function reachReview(details?: Parameters<typeof completeDetails>[0]) {
-  completeVerification();
+async function reachReview(details?: Parameters<typeof completeDetails>[0]) {
+  await completeVerification();
   completeName();
   completeDetails(details);
 }
@@ -160,9 +190,55 @@ describe("contact route", () => {
     expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
   });
 
-  it("gates all four steps and shows accessible name and contact errors", () => {
+  it("verifies on the server and automatically advances after a successful security check", async () => {
+    const fetchMock = installFetchMock();
     render(<ContactPage />);
-    completeVerification();
+
+    await completeVerification();
+
+    const verifyCalls = callsFor(fetchMock, "/api/contact/verify");
+    expect(verifyCalls).toHaveLength(1);
+    const [, request] = verifyCalls[0] as [string, RequestInit];
+    expect(request).toMatchObject({ method: "POST", credentials: "same-origin" });
+    expect(new Headers(request.headers).get("Accept")).toBe("application/json");
+    expect(new Headers(request.headers).get("Content-Type")).toBe("application/json");
+    expect(JSON.parse(String(request.body))).toEqual({
+      submissionId: expect.stringMatching(/^[0-9a-f-]{36}$/i),
+      turnstileToken: "test-turnstile-token"
+    });
+  });
+
+  it("keeps Continue as a fallback while automatic advancement is pending", async () => {
+    render(<ContactPage />);
+    const continueButton = screen.getByRole("button", { name: "Continue" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Complete human verification" }));
+    await waitFor(() => expect(continueButton).toBeEnabled());
+    expect(screen.getByText("Verification confirmed. Continuing...")).toBeInTheDocument();
+    fireEvent.click(continueButton);
+
+    expect(screen.getByRole("heading", { level: 2, name: "Tell me your name" })).toBeInTheDocument();
+  });
+
+  it("stays at the gate and permits another check when server verification fails", async () => {
+    const fetchMock = installFetchMock({
+      verify: () => Response.json({ error: "verification_failed", ok: false }, { status: 403 })
+    });
+    render(<ContactPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Complete human verification" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/security check could not be confirmed/i);
+    expect(screen.getByRole("heading", { level: 2, name: "Verify you are human" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Complete human verification" })).toBeInTheDocument();
+    expect(callsFor(fetchMock, "/api/contact/verify")).toHaveLength(1);
+    expect(callsFor(fetchMock, "/api/contact")).toHaveLength(0);
+  });
+
+  it("gates all four steps and shows accessible name and contact errors", async () => {
+    render(<ContactPage />);
+    await completeVerification();
 
     expect(screen.getByRole("progressbar", { name: "Step 1 of 4" })).toHaveAttribute("aria-valuenow", "1");
     const firstName = screen.getByLabelText(/First name/i);
@@ -223,9 +299,9 @@ describe("contact route", () => {
     expect(within(review).getByText("Please contact me about my resume.")).toBeInTheDocument();
   });
 
-  it("renders three clickable required acknowledgment cards and locks submission until all are accepted", () => {
+  it("renders three clickable required acknowledgment cards and locks submission until all are accepted", async () => {
     render(<ContactPage />);
-    reachReview({ phone: "+44 20 7946 0958" });
+    await reachReview({ phone: "+44 20 7946 0958" });
 
     const submit = screen.getByRole("button", { name: "Send request" });
     const checkboxes = screen.getAllByRole("checkbox");
@@ -254,12 +330,11 @@ describe("contact route", () => {
   });
 
   it("posts the exact trimmed contract without using local storage and renders the confirmation state", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(Response.json({ ok: true }));
+    const fetchMock = installFetchMock();
     const getItemMock = vi.spyOn(Storage.prototype, "getItem");
     const setItemMock = vi.spyOn(Storage.prototype, "setItem");
-    vi.stubGlobal("fetch", fetchMock);
     render(<ContactPage />);
-    completeVerification();
+    await completeVerification();
     completeName("  Avery  ", "  Nguyen  ");
     completeDetails({
       email: "  avery@example.com  ",
@@ -269,9 +344,13 @@ describe("contact route", () => {
     acceptAcknowledgments();
 
     fireEvent.click(screen.getByRole("button", { name: "Send request" }));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(callsFor(fetchMock, "/api/contact")).toHaveLength(1));
+    expect(fetchMock.mock.calls.map(([input]) => requestUrl(input as RequestInfo | URL))).toEqual([
+      "/api/contact/verify",
+      "/api/contact"
+    ]);
 
-    const [url, request] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const [url, request] = callsFor(fetchMock, "/api/contact")[0] as [string, RequestInit];
     expect(url).toBe("/api/contact");
     expect(request).toMatchObject({ method: "POST", credentials: "same-origin" });
     expect(new Headers(request.headers).get("Accept")).toBe("application/json");
@@ -290,7 +369,6 @@ describe("contact route", () => {
         "phone",
         "startedAt",
         "submissionId",
-        "turnstileToken",
         "website"
       ].sort()
     );
@@ -303,7 +381,6 @@ describe("contact route", () => {
       contactConsent: true,
       legalConsent: true,
       legitimateConsent: true,
-      turnstileToken: "test-turnstile-token",
       website: ""
     });
     expect(body.submissionId).toMatch(/^[0-9a-f-]{36}$/i);
@@ -316,26 +393,82 @@ describe("contact route", () => {
     expect(screen.getByText(/review your message as soon as possible/i)).toBeInTheDocument();
   });
 
-  it("returns to verification after a failed request and preserves the completed form", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(Response.json({ ok: false }, { status: 400 }));
-    vi.stubGlobal("fetch", fetchMock);
+  it("keeps the verified review and submission identifier after a delivery failure so retry is safe", async () => {
+    const fetchMock = installFetchMock({
+      contact: (attempt) =>
+        attempt === 1
+          ? Response.json({ error: "delivery_failed", ok: false }, { status: 502 })
+          : Response.json({ ok: true })
+    });
     render(<ContactPage />);
-    reachReview({ email: "recruiter@example.com", phone: "+1 425 555 0123", message: "Recruiting inquiry" });
+    await reachReview({ email: "recruiter@example.com", phone: "+1 425 555 0123", message: "Recruiting inquiry" });
+    acceptAcknowledgments();
+
+    fireEvent.click(screen.getByRole("button", { name: "Send request" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/could not be delivered.*verification remains complete/i);
+    expect(screen.getByRole("alert")).toHaveTextContent(/reviewed details are locked for a safe retry/i);
+    expect(screen.getByRole("heading", { name: "Review your request" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Verify you are human" })).not.toBeInTheDocument();
+    expect(within(containerFromClass("contact-review")).getByText("Recruiting inquiry")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Back" })).toBeDisabled();
+    screen.getAllByRole("checkbox").forEach((checkbox) => expect(checkbox).toBeDisabled());
+
+    const firstRequest = callsFor(fetchMock, "/api/contact")[0][1] as RequestInit;
+    const firstSubmissionId = (JSON.parse(String(firstRequest.body)) as { submissionId: string }).submissionId;
+    fireEvent.click(screen.getByRole("button", { name: "Send request" }));
+
+    expect(await screen.findByRole("heading", { name: "Thank you for reaching out." })).toBeInTheDocument();
+    const contactCalls = callsFor(fetchMock, "/api/contact");
+    expect(contactCalls).toHaveLength(2);
+    const retryRequest = contactCalls[1][1] as RequestInit;
+    expect((JSON.parse(String(retryRequest.body)) as { submissionId: string }).submissionId).toBe(firstSubmissionId);
+    expect(String(retryRequest.body)).toBe(String(firstRequest.body));
+    expect(callsFor(fetchMock, "/api/contact/verify")).toHaveLength(1);
+  });
+
+  it("keeps the verified review and draft after a network failure", async () => {
+    const fetchMock = installFetchMock({
+      contact: () => Promise.reject(new Error("network unavailable"))
+    });
+    render(<ContactPage />);
+    await reachReview({ email: "recruiter@example.com", message: "Network retry inquiry" });
+    acceptAcknowledgments();
+
+    fireEvent.click(screen.getByRole("button", { name: "Send request" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/could not reach the delivery service.*verification remains complete/i);
+    expect(screen.getByRole("alert")).toHaveTextContent(/reviewed details are locked for a safe retry/i);
+    expect(screen.getByRole("heading", { name: "Review your request" })).toBeInTheDocument();
+    expect(within(containerFromClass("contact-review")).getByText("Network retry inquiry")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Back" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Send request" })).toBeEnabled();
+    expect(callsFor(fetchMock, "/api/contact/verify")).toHaveLength(1);
+    expect(callsFor(fetchMock, "/api/contact")).toHaveLength(1);
+  });
+
+  it("returns only verification_required responses to the gate and preserves the completed draft", async () => {
+    const fetchMock = installFetchMock({
+      contact: () => Response.json({ error: "verification_required", ok: false }, { status: 401 })
+    });
+    render(<ContactPage />);
+    await reachReview({ email: "recruiter@example.com", phone: "+1 425 555 0123", message: "Recruiting inquiry" });
     acceptAcknowledgments();
 
     fireEvent.click(screen.getByRole("button", { name: "Send request" }));
 
     expect(await screen.findByRole("heading", { name: "Verify you are human" })).toBeInTheDocument();
-    expect(screen.getByRole("alert")).toHaveTextContent(/could not be sent.*fresh security check/i);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("alert")).toHaveTextContent(/verification session expired.*form details are still here/i);
+    expect(callsFor(fetchMock, "/api/contact")).toHaveLength(1);
 
-    completeVerification();
+    await completeVerification();
     expect(screen.getByLabelText(/First name/i)).toHaveValue("Avery");
     expect(screen.getByLabelText(/Last name/i)).toHaveValue("Nguyen");
     fireEvent.click(screen.getByRole("button", { name: "Next" }));
     expect(screen.getByLabelText(/Email address/i)).toHaveValue("recruiter@example.com");
     expect(screen.getByLabelText(/Phone number/i)).toHaveValue("+1 425 555 0123");
     expect(screen.getByRole("textbox", { name: /Message/i })).toHaveValue("Recruiting inquiry");
+    expect(callsFor(fetchMock, "/api/contact/verify")).toHaveLength(2);
   });
 
   it("keeps noindex metadata while allowing legal-link discovery", () => {
