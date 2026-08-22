@@ -14,6 +14,8 @@ Smart-Porfolio/
 |   `-- api/
 |       |-- contact.ts
 |       `-- contact/verify.ts
+|-- migrations/
+|   `-- 0001_contact_rate_reservations.sql
 |-- public/
 |   |-- _headers
 |   |-- _routes.json
@@ -26,6 +28,8 @@ Smart-Porfolio/
 |   |-- checkDeployedContent.mjs
 |   |-- writeContentVersion.mjs
 |   `-- local automation and tests
+|-- tests/
+|   `-- e2e/
 |-- src/
 |   |-- app/
 |   |-- components/
@@ -36,6 +40,7 @@ Smart-Porfolio/
 |   `-- styles/
 |-- next.config.mjs
 |-- package.json
+|-- playwright.config.ts
 |-- vitest.config.ts
 `-- wrangler.jsonc
 ```
@@ -47,12 +52,15 @@ Smart-Porfolio/
 | `.github/workflows/ci.yml` | Candidate selection, content generation, verification, artifact transfer, Cloudflare Direct Upload, smoke tests, and schedule heartbeat. |
 | `docs/` | Guides, references, checklists, and README assets. |
 | `functions/` | Cloudflare Pages Functions for contact verification and delivery. These are not Next.js route handlers. |
+| `migrations/` | Append-only Cloudflare D1 schema changes applied before the corresponding Pages deployment. |
 | `public/` | Public images, favicons, Pages security headers, and the exact Function route allowlist copied into the static export. |
 | `scripts/` | Content ingestion, local automation, deployment manifests, artifact integrity, deployment smoke checks, and script-level tests. |
+| `tests/e2e/` | Playwright Chromium regressions for responsive navigation plus footer first-render, route, restoration, and scroll behavior. |
 | `src/` | Next.js routes, React components, typed content, selectors, validation, theme helpers, and CSS. |
 | `next.config.mjs` | Static export and unoptimized image configuration. |
 | `package.json` | Supported Node.js range, dependencies, and executable project commands. |
-| `wrangler.jsonc` | Pages output directory plus reviewed production and preview runtime variables. Encrypted secrets are configured outside the repository. |
+| `playwright.config.ts` | Chromium navigation and footer regression configuration plus the local Next.js web server. |
+| `wrangler.jsonc` | Pages output directory plus reviewed production and preview runtime variables and isolated D1 bindings. Encrypted secrets are configured outside the repository. |
 
 ## Documented application routes
 
@@ -77,7 +85,7 @@ The recommendation route and navigation item remain discoverable only when recom
 
 ### Layout and navigation
 
-`src/app/layout.tsx` loads generated content, resolves the initial theme, creates metadata, and renders `SiteShell`. The shell composes the floating header, route content, and progressive footer.
+`src/app/layout.tsx` loads generated content, resolves the initial theme, creates metadata, and renders `SiteShell`. The shell composes the desktop top header or mobile bottom dock, route content, and progressive footer.
 
 - `src/components/layout/` owns page containers, header and footer composition, profile preview, and structural primitives.
 - `src/components/navigation/` owns the route registry, desktop and mobile navigation, external-link handling, active-route state, and social links.
@@ -133,7 +141,7 @@ The principal responsive thresholds are 980, 860, 720, 620, 520, 480, and 380 CS
 
 ## Cloudflare runtime boundary
 
-`functions/api/contact/verify.ts` verifies a Turnstile response and issues a short-lived signed verification ticket. `functions/api/contact.ts` validates that ticket and the contact payload before Resend delivery. Shared validation, response construction, cryptography, configuration parsing, and delivery helpers live in `functions/_shared/contact.ts`.
+`functions/api/contact/verify.ts` verifies a Turnstile response and issues a short-lived signed verification ticket. `functions/api/contact.ts` validates that ticket and the contact payload, checks mail-domain routing, reserves a pseudonymous D1 quota slot, and sends two sequential idempotent Resend requests. Shared validation, response construction, cryptography, configuration parsing, and delivery helpers live in `functions/_shared/contact.ts`; the minimal reservation schema lives under `migrations/`.
 
 `public/_routes.json` is the deployment allowlist for those exact Function paths. Broadening it changes the runtime and security boundary and requires tests plus updates to [Contact system](CONTACT_SYSTEM.md) and [Security](SECURITY.md).
 
@@ -159,7 +167,7 @@ Vitest discovers the complete suite. ESLint, TypeScript, the static build, docum
 | Change a theme token | `src/styles/tokens.css` | All themes, focus states, contrast, design system, theme tests |
 | Add a glass primitive | `src/components/glass/` and `glass.css` | Hover Base state, semantics, reduced motion, design system |
 | Change navigation or footer behavior | layout and navigation components plus CSS | Keyboard behavior, route tests, footer regressions, accessibility |
-| Change contact behavior | contact components, Functions, and contact tests | Privacy and security pages, Function routes, WAF review, contact docs |
+| Change contact behavior | contact components, Functions, migrations, and contact tests | Privacy and security pages, Function routes, D1 retention, WAF review, contact docs |
 | Add a runtime endpoint | `functions/` and `public/_routes.json` | Threat model, limits, rate limiting, headers, tests, operations |
 | Change artifact behavior | deployment scripts under `scripts/` | Workflow, package-script tests, deployment and operations docs |
 | Change deployment behavior | workflow, deployment scripts, and `wrangler.jsonc` | Permissions, exact-SHA guard, preview isolation, tests, docs |

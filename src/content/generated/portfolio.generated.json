@@ -1,7 +1,7 @@
 {
   "metadata": {
-    "generatedAt": "2026-08-28T01:29:03.485Z",
-    "contentHash": "a76f944d1a0e7934dc8171ad25c18cea3d6287b880ac232e8083dd99c5d57d34",
+    "generatedAt": "2026-08-30T00:00:00.000Z",
+    "contentHash": "ef9083e790415b4cdac05f8a8ea375f6f8850db6e07a5b2a225dd027ffe229f0",
     "sourceMode": "templates",
     "sources": {
       "profile": "template",
@@ -797,7 +797,7 @@
     "licenseName": "MIT",
     "copyrightOwner": "Nicolas Gioanni",
     "legalContactEmail": "ngioanni@uw.edu",
-    "legalEffectiveDate": "2026-08-22",
+    "legalEffectiveDate": "2026-08-30",
     "hostingProviderName": "Cloudflare",
     "hostingPrivacyUrl": "https://www.cloudflare.com/privacypolicy/"
   }

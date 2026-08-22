@@ -5,8 +5,10 @@ import {
   jsonResponse,
   parseContactPayload,
   readJsonBody,
+  reserveContactSubmission,
   sendContactEmails,
   serializeClearedContactTicketCookie,
+  validateEmailDomain,
   type ContactEnv
 } from "../_shared/contact";
 
@@ -55,7 +57,30 @@ export async function onRequest(context: PagesContext<ContactEnv>): Promise<Resp
     return jsonResponse(401, { ok: false, error: "verification_required" });
   }
 
-  const delivered = await sendContactEmails(parsed.payload, env);
+  const domainValidation = await validateEmailDomain(parsed.payload.email);
+  if (domainValidation.kind === "invalid") {
+    return jsonResponse(422, { ok: false, error: "invalid_email" });
+  }
+  if (domainValidation.kind === "unavailable") {
+    return jsonResponse(503, { ok: false, error: "email_validation_unavailable" });
+  }
+
+  const reservation = await reserveContactSubmission(parsed.payload, env);
+  if (reservation.kind === "unavailable") {
+    return jsonResponse(503, { ok: false, error: "service_unavailable" });
+  }
+  if (reservation.kind === "mismatch") {
+    return jsonResponse(400, { ok: false, error: "invalid_request" });
+  }
+  if (reservation.kind === "rate-limited") {
+    return jsonResponse(
+      429,
+      { ok: false, error: "rate_limited" },
+      { "Retry-After": String(reservation.retryAfterSeconds) }
+    );
+  }
+
+  const delivered = await sendContactEmails(parsed.payload, env, reservation.reservedAt);
   if (!delivered) {
     return jsonResponse(502, { ok: false, error: "delivery_failed" });
   }

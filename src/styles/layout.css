@@ -223,6 +223,10 @@
   max-width: 780px;
 }
 
+.page-container--legal .page-intro--panel {
+  max-width: none;
+}
+
 .legal-document {
   padding: clamp(var(--space-6), 5vw, var(--space-10));
 }
@@ -355,6 +359,12 @@
   .legal-document__body {
     gap: var(--space-6);
     margin-top: var(--space-6);
+  }
+}
+
+@media (max-width: 980px) {
+  .site-shell {
+    padding-bottom: var(--mobile-dock-clearance);
   }
 }
 

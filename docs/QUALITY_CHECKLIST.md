@@ -40,8 +40,9 @@ Run this checklist before shipping meaningful changes.
 - `npm run lint`
 - `npm run typecheck`
 - `npm run test:footer`
+- `npm run test:e2e:footer`
 - `npm run test`
 - `npm run build`
 - `npm run verify`
 
-`npm run verify` includes documentation validation, lint, typecheck, the full test suite, and a normal build. The focused footer command remains a separate named CI gate.
+`npm run verify` includes documentation validation, lint, typecheck, the full test suite, and a normal build. The focused footer command remains a separate named CI gate, while CI also runs the Chromium footer regression after installing the browser.

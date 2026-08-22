@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "@/styles/tokens.css";
 import "@/styles/base.css";
@@ -27,6 +27,12 @@ const inter = Inter({
 export function generateMetadata(): Metadata {
   return createPageMetadata(getPortfolioContent());
 }
+
+export const viewport: Viewport = {
+  initialScale: 1,
+  viewportFit: "cover",
+  width: "device-width"
+};
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const content = getPortfolioContent();

@@ -206,6 +206,16 @@ npm run dev:pages
 
 Confirm `out/_routes.json` includes only `/api/contact/verify` and `/api/contact`.
 
+### Local delivery reports a missing D1 table or binding
+
+Use `npm run dev:pages`, which applies pending migrations to Wrangler's local D1 state before starting Pages. For a focused repair, stop the local server and run:
+
+```powershell
+npm run db:migrate:local
+```
+
+Confirm `wrangler.jsonc` still declares `CONTACT_RATE_LIMIT_DB` and `preview_database_id: contact-rate-limit-local`. Do not repair local development by inserting a remote production or preview database ID into a command.
+
 ## Local contact flow
 
 ### The contact form is unavailable
@@ -245,15 +255,31 @@ The final request must include the signed cookie and exact submission ID used du
 
 Check the exact JSON schema, shared field limits, all acknowledgements, and `startedAt` value. Unknown fields and implausible or expired timestamps are rejected. Honeypot and implausibly fast requests intentionally receive a generic success response without delivery, so they do not explain an HTTP 400.
 
+### `/api/contact` returns `invalid_email`
+
+The address passed syntax checks but its domain explicitly has no usable mail route, reports null MX, or has neither MX nor the allowed A/AAAA fallback. Recheck the domain spelling. Do not claim this proves that any particular mailbox exists; mailbox-level acceptance remains asynchronous.
+
+### `/api/contact` returns `email_validation_unavailable`
+
+The bounded DNS check could not reach a determinate result. Retry later and inspect only coarse resolver availability or status. Do not log the submitted address or DNS response payload. This failure occurs before quota reservation or Resend delivery.
+
+### `/api/contact` returns `service_unavailable`
+
+Required delivery configuration or the D1 binding is missing, malformed, or unavailable. Confirm the correct environment has `CONTACT_RATE_LIMIT_DB`, the tracked migration is applied, and the encrypted secrets and reviewed variables exist. Keep raw database rows, credentials, and contact payloads out of diagnostics.
+
 ### Either endpoint returns HTTP 403
 
 Both Functions apply the exact same origin allowlist. Match the browser origin, including scheme and port, and keep production, preview, and local origins separated.
 
 ### `/api/contact` returns HTTP 502
 
-Validation succeeded but provider delivery failed. Check the restricted Resend key, verified sending identity, fixed sender configuration, and controlled recipient in the provider dashboard. Do not log the message or recipient value. A still-valid ticket is retained so the same submission can be retried with the same idempotency key.
+Validation and quota reservation succeeded but one of the sequential provider requests failed. Check the restricted Resend key, verified sending identity, suppression and bounce state, fixed sender configuration, and controlled recipient in the provider dashboard. Determine whether the visitor confirmation was already accepted before the owner request failed. Do not log the message or recipient value. A still-valid ticket and reservation are retained so the same submission can be retried with separate visitor and owner idempotency keys.
 
-### Either endpoint returns HTTP 429 or an HTML challenge
+### `/api/contact` returns JSON HTTP 429
+
+The application found two active reservations for the normalized address in its rolling 24-hour window. Respect `Retry-After`; do not delete an active production row merely to bypass the policy. A same-submission retry should not consume another slot, so an unexpected 429 on that retry indicates a UUID/address mismatch or reservation-query defect.
+
+### Either endpoint returns an HTML challenge or edge HTTP 429
 
 WAF rate limiting is external Cloudflare configuration, and its live state is unverified by repository tests. Cloudflare custom rate-limit responses require Pro or higher, but plan eligibility alone does not satisfy the prerequisite. On Pro or higher, explicitly configure both endpoint actions with the required JSON response, then verify the live edge status, content type, and body. A Free-plan baseline can rate-limit requests but cannot guarantee the required JSON response, so treat a non-JSON response as a known plan-level compatibility gap and upgrade or use another provider-compatible control. Remove any interactive Managed Challenge from these paths because it violates the client contract and adds an unintended second human-verification step.
 
@@ -310,7 +336,15 @@ The verified SHA is no longer the branch tip. This is an intentional stale-candi
 
 ### Wrangler authentication or project lookup fails
 
-Confirm `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are present in GitHub Actions and that the token has access to the intended Pages project. Confirm the project variable is still `smart-portfolio`. Do not replace the restricted token with a personal token.
+Confirm `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are present in GitHub Actions and that the token has Pages and D1 edit access in the intended account. Confirm the project variable is still `smart-portfolio`. Do not replace the restricted token with a personal token.
+
+### D1 target validation rejects the deployment
+
+The selected binding still uses the all-zero setup sentinel, is absent, or shares a remote ID with the other environment. Create or select the intended database, update only its `database_id`, review the diff, and rerun verification. Never disable the validation step to deploy without quota storage; the contact handler is designed to fail closed.
+
+### A D1 migration fails
+
+The workflow stops before Pages upload. Confirm the failing environment, database name, token permission, migration ledger, and D1 error without printing reservation rows. Cloudflare rolls back the failing migration, but an earlier migration may already be active. Correct the schema with a new numbered migration if the original file has already been applied elsewhere; do not rewrite applied history.
 
 ### Wrangler succeeds but the smoke step fails
 

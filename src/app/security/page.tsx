@@ -30,13 +30,24 @@ export default function SecurityPage() {
           The public portfolio pages are statically generated and do not provide visitor accounts, payments, or a general
           application API. Contact requests are handled by two narrowly scoped Cloudflare Pages Functions. Cloudflare
           Turnstile supplies the initial bot-protection signal, and Resend delivers the visitor confirmation and private owner
-          notification.
-          Hosting, source control, Turnstile, Resend, receiving email systems, linked demonstrations, and other external
-          services are independently operated third-party systems and are outside this site&apos;s testing scope.
+          notification. Hosting, source control, Turnstile, Resend, receiving email systems, linked demonstrations, and other
+          external services are independently operated third-party systems and are outside this site&apos;s testing scope.
         </p>
         <p>
-          A suspected issue should concern the portfolio pages or assets controlled by Nicolas Gioanni. An issue affecting a
-          third-party service must be reported through that provider&apos;s authorized disclosure process.
+          An issue in a portfolio page, asset, or portfolio-owned source code should be reported through this Notice. An issue
+          in a provider&apos;s own platform must instead be handled under that provider&apos;s current authorized process—for example,
+          Cloudflare&apos;s <SmartLink href="https://www.cloudflare.com/disclosure/">Vulnerability Disclosure Policy</SmartLink>,
+          GitHub&apos;s{" "}
+          <SmartLink href="https://docs.github.com/en/site-policy/security-policies/coordinated-disclosure-of-security-vulnerabilities">
+            Coordinated Disclosure Policy
+          </SmartLink>, or Resend&apos;s{" "}
+          <SmartLink href="https://resend.com/security/responsible-disclosure">Responsible Disclosure page</SmartLink>. The
+          provider&apos;s current scope, rules, and reporting availability control.
+        </p>
+        <p>
+          Those provider pages are independently maintained, may change without notice from this portfolio, and govern only
+          the systems and conduct within the scope they identify. They do not authorize testing of this portfolio or extend a
+          provider&apos;s safe harbor, reward, or bounty terms to it.
         </p>
       </section>
 
@@ -54,23 +65,42 @@ export default function SecurityPage() {
           Browser-side field checks improve usability but are not treated as a security boundary. The final
           <code>/api/contact</code> endpoint validates the signed ticket and matching submission identifier without calling
           Siteverify a second time. It independently performs schema, type, length, email, required-acknowledgment, timing,
-          and honeypot validation, and returns generic JSON errors that do not expose provider responses or private
-          configuration. Successful delivery clears the cookie. A delivery failure
-          retains the still-valid ticket for retry until its original expiry. After the first delivery attempt, reviewed
-          fields remain locked so any failed or uncertain retry uses the same submission identifier and byte-equivalent
-          Resend payload required by idempotency.
+          honeypot, and bounded mail-domain DNS validation, and returns generic JSON errors that do not expose provider
+          responses or private configuration. Successful delivery clears the cookie. A delivery failure retains the
+          still-valid ticket for retry until its original expiry. After the first delivery attempt, reviewed fields remain
+          locked so any failed or uncertain retry uses the same submission identifier and the same separately idempotent
+          Resend payloads.
         </p>
         <p>
           Email delivery uses a fixed, verified sender identity. Automated confirmation mail is sent from
-          noreply@mail.nicolasmgioanni.dev and directs follow-up to the public ngioanni@uw.edu address. The validated visitor
-          address receives the confirmation and is used as the reply-to address on the private owner notification, but it
-          cannot control the sender, private destination, or other mail headers. The private owner destination and all provider
-          secrets remain server-side and are not returned to the browser. The application handlers do not implement request
-          rate limiting. Edge rate limiting is an operator-managed Cloudflare WAF control whose live configuration is not
-          represented in this repository. If enabled, it should use a non-interactive response rather than repeat the visible
-          human check. The handlers minimize sensitive logging and fail closed when required Turnstile, ticket, validation,
-          email, or private-recipient configuration is unavailable. A browser widget or client-side success state alone never
-          authorizes delivery.
+          noreply@mail.nicolasmgioanni.dev and directs follow-up to the public ngioanni@uw.edu address. The submitted visitor
+          address that passes format and mail-domain routing checks receives the confirmation and is used as the reply-to
+          address on the private owner notification, but it cannot control the sender, private destination, or other mail
+          headers. The private owner destination and all provider secrets remain server-side and are not returned to the
+          browser. The confirmation is submitted to Resend first; the private owner notification is submitted only after that
+          request is accepted. Separate submission-scoped idempotency keys make a partial-failure retry safe without
+          duplicating an already accepted confirmation.
+        </p>
+        <p>
+          The application enforces at most two reservations per normalized email address in a rolling 24-hour window. It
+          stores only an opaque submission identifier, a domain-separated keyed HMAC-SHA-256 of the normalized address, and
+          reservation and expiry times in Cloudflare D1. It does not store the raw address, name, phone number, or message in
+          D1. A same-identifier retry for the same address does not consume another slot. The handler fails closed when the D1
+          binding or query is unavailable. Operator-managed Cloudflare WAF rate limiting remains defense in depth and should
+          use a non-interactive response rather than repeat the visible human check. The application code does not
+          intentionally log request bodies or contact fields; Cloudflare and other providers may maintain request, delivery,
+          and security metadata under their own practices. The handlers fail closed when required Turnstile, ticket, DNS
+          validation, quota storage, email, or private-recipient configuration is unavailable. A browser widget or client-side
+          success state alone never authorizes delivery.
+        </p>
+        <p>
+          Cloudflare&apos;s{" "}
+          <SmartLink href="https://developers.cloudflare.com/d1/reference/data-security/">
+            D1 data-security documentation
+          </SmartLink>{" "}
+          and Resend&apos;s <SmartLink href="https://resend.com/security">security overview</SmartLink> describe safeguards those
+          providers state they apply to their services. Those descriptions are provider representations rather than an
+          independent portfolio audit, certification, warranty, or guarantee.
         </p>
       </section>
 
@@ -107,9 +137,9 @@ export default function SecurityPage() {
           </li>
         </ul>
         <p>
-          Stop immediately if an action may affect another person, expose sensitive information, or impair a system. Obtain
-          written authorization from the relevant system owner before conducting any testing not already permitted by law and
-          the owner&apos;s published policies.
+          Stop immediately if an action may affect another person, expose sensitive information, or impair a system. Do not
+          treat this Notice as authorization. If scope or authorization is uncertain, stop and obtain written authorization
+          from the relevant system owner and, where appropriate, independent legal advice before proceeding.
         </p>
       </section>
 
@@ -125,7 +155,7 @@ export default function SecurityPage() {
       <section>
         <h2>No authorization, safe harbor, reward, or bug bounty</h2>
         <p>
-          This notice provides a reporting channel and requested disclosure process only. It does not create or imply
+          This Notice provides a reporting channel and requested disclosure process only. It does not create or imply
           authorization to test any system, a safe harbor from legal or contractual obligations, a promise not to pursue
           available remedies, a reward, compensation, or a bug-bounty program. Submission of a report does not create a
           contractual, agency, employment, fiduciary, or confidential relationship.
@@ -135,7 +165,7 @@ export default function SecurityPage() {
       <section>
         <h2>Contact</h2>
         <p>
-          Questions about the scope of this notice should be sent to{" "}
+          Questions about the scope of this Notice should be sent to{" "}
           <SmartLink href={`mailto:${contactEmail}`}>{contactEmail}</SmartLink> before any testing is considered.
         </p>
       </section>
