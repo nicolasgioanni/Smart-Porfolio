@@ -1,12 +1,17 @@
 import type { Metadata } from "next";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { siteRoutes } from "@/components/navigation/siteRoutes";
 import { RecommendationsList } from "@/components/portfolio/RecommendationsList";
 import { createPageMetadata } from "@/lib/content/createPageMetadata";
 import { getPortfolioContent } from "@/lib/content/getPortfolioContent";
 import { selectRecommendationDetailContent } from "@/lib/content/selectHomeContent";
 
 export function generateMetadata(): Metadata {
-  return createPageMetadata(getPortfolioContent(), "Recommendations", "Professional recommendations and social proof with source links when available.");
+  return createPageMetadata(getPortfolioContent(), {
+    pathname: siteRoutes.recommendations,
+    title: "Recommendations",
+    description: "Professional recommendations and social proof with source links when available."
+  });
 }
 
 export default function RecommendationsPage() {

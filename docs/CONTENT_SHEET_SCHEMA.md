@@ -168,7 +168,7 @@ id,label,url,icon,kind,is_primary,show_on_home,show_in_header,show_in_footer,ord
 | `is_primary` | No | Boolean used by Home link candidate selection. |
 | `show_on_home` | No | Boolean used by Home link candidate selection. |
 | `show_in_header` | No | Boolean controlling compact header and mobile links. |
-| `show_in_footer` | No | Normalized compatibility field; the current footer does not select by it. |
+| `show_in_footer` | No | Boolean controlling GitHub and LinkedIn profile links in footer resources. |
 | `order` | No | Generic numeric order. |
 
 Header links are selected only by `show_in_header`; see [Content Mapping](CONTENT_MAPPING.md) for the separate Home and footer selectors.

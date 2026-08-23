@@ -72,6 +72,47 @@ describe("ExpandableRecommendationText", () => {
     expect(root).toHaveAttribute("data-expanded", "false");
   });
 
+  it("supports controlled expansion without diverging from the supplied state", () => {
+    const onExpandedChange = vi.fn();
+    const { container, rerender } = render(
+      <ExpandableRecommendationText
+        expanded={false}
+        id="controlled"
+        onExpandedChange={onExpandedChange}
+        quote={longQuote}
+        recommenderName="Taylor Collaborator"
+      />
+    );
+    const root = container.querySelector(".recommendation-expandable");
+    const toggle = screen.getByRole("button", {
+      name: /show more recommendation from taylor collaborator/i
+    });
+
+    fireEvent.click(toggle);
+
+    expect(onExpandedChange).toHaveBeenLastCalledWith(true);
+    expect(root).toHaveAttribute("data-expanded", "false");
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+
+    rerender(
+      <ExpandableRecommendationText
+        expanded
+        id="controlled"
+        onExpandedChange={onExpandedChange}
+        quote={longQuote}
+        recommenderName="Taylor Collaborator"
+      />
+    );
+
+    expect(root).toHaveAttribute("data-expanded", "true");
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(toggle).toHaveTextContent("Show less");
+
+    fireEvent.click(toggle);
+    expect(onExpandedChange).toHaveBeenLastCalledWith(false);
+    expect(root).toHaveAttribute("data-expanded", "true");
+  });
+
   it("renders the configured quote label once as a safe external link without changing the quote text", () => {
     const quote =
       "Nicolas has worked with me on an open source project, CytoCV, in collaboration with biologists at the University of Utah.";
@@ -127,7 +168,7 @@ describe("ExpandableRecommendationText", () => {
 
     await waitFor(() => {
       expect(root).toHaveAttribute("data-collapsed-lines", "3");
-      expect(root?.style.getPropertyValue("--recommendation-collapsed-height")).toBe("72px");
+      expect(root?.style.getPropertyValue("--recommendation-collapsed-height")).toBe("66px");
     });
 
     rerender(
@@ -141,7 +182,7 @@ describe("ExpandableRecommendationText", () => {
 
     await waitFor(() => {
       expect(root).toHaveAttribute("data-collapsed-lines", "4");
-      expect(root?.style.getPropertyValue("--recommendation-collapsed-height")).toBe("96px");
+      expect(root?.style.getPropertyValue("--recommendation-collapsed-height")).toBe("88px");
     });
   });
 

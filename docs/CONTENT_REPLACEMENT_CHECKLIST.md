@@ -34,7 +34,7 @@ Use this checklist when replacing local sample content or preparing a public wor
 - [ ] Add only verified public destinations and use a meaningful `kind`.
 - [ ] Use `is_primary`, `show_on_home`, and `show_in_header` deliberately. Header output is capped at four and general Home selection at six before identity filtering.
 - [ ] Confirm profile identity links appear in the intended fixed order: location, timezone, email, portfolio or website, LinkedIn, GitHub.
-- [ ] Do not rely on `show_in_footer` or `icon` for current rendering; neither has a current component consumer.
+- [ ] Set `show_in_footer=true` for the GitHub and LinkedIn profile links that should appear in footer resources. Do not rely on `icon` for footer rendering.
 - [ ] Set `repository_url` in `site_settings` when the footer must use an exact repository destination. Otherwise, understand the footer's repository-kind link fallback.
 
 ## Experience and education
@@ -99,7 +99,7 @@ Use this checklist when replacing local sample content or preparing a public wor
 - [ ] Set `copyright_owner` if it should differ from `profile.full_name`.
 - [ ] Set and verify `legal_contact_email`, `legal_effective_date`, `hosting_provider_name`, and the provider's HTTPS `hosting_privacy_url`.
 - [ ] Keep the footer-only Contact form link pointed at `/contact`, and keep the public direct-email link available as a fallback.
-- [ ] Confirm the Privacy and Security notices accurately describe the visible initial Turnstile gate, the `/api/contact/verify` ticket endpoint, the `/api/contact` delivery endpoint, the short-lived essential cookie, Resend delivery, required email/optional phone fields, provider processing, and the lack of a contact database.
+- [ ] Confirm the Privacy and Security notices accurately describe the visible initial Turnstile gate, the `/api/contact/verify` ticket endpoint, the `/api/contact` delivery endpoint, the short-lived essential cookie, bounded mail-domain DNS validation, the pseudonymous D1 quota reservation, sequential Resend delivery, required email/optional phone fields, and provider processing.
 - [ ] Confirm the software license separately from the rights reserved in portfolio content.
 - [ ] Set `repository_url` and `license_url` only after anonymous access to both destinations succeeds. Leave them blank to omit unavailable footer resources.
 

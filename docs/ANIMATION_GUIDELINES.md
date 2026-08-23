@@ -4,11 +4,15 @@ Motion is restrained, legible, and tied to comprehension or state. It must not d
 
 ## Preferred properties
 
-Animate `transform` and `opacity` first. Recommendation disclosure, footer grid rows, and the small header island are explicit bounded exceptions. Do not introduce layout animation elsewhere without documenting why it communicates state better than an immediate change.
+Animate `transform` and `opacity` first. Experience disclosure, recommendation disclosure, footer grid rows, and the small header island are explicit bounded exceptions. Do not introduce layout animation elsewhere without documenting why it communicates state better than an immediate change.
 
 ## Reduced motion
 
 Always respect `prefers-reduced-motion`. Disable or simplify shimmer, entrance motion, scroll effects, disclosure transitions, and decorative travel for motion-sensitive users. State, content, focus, and controls must remain available.
+
+## Form validation feedback
+
+After each invalid Next or Review attempt, shake each invalid control and its validation message for `180ms` with `ease-in-out`, two iterations, and no more than `2px` of horizontal travel in either direction. Replay the shake for every invalid attempt even when the validation text has not changed. Under `prefers-reduced-motion: reduce`, disable the shake while preserving the error message, red field treatment, and focus behavior.
 
 ## Home role rotation
 
@@ -28,7 +32,9 @@ Recommendation quotes display four lines while collapsed by default. Within a mu
 
 Overflowing quotes use a true alpha mask over the lower half of the final visible line. `Show more` and `Show less` animate the clipped viewport over `520ms` and lightly fade the quote over `320ms`, both with `cubic-bezier(0.22, 1, 0.36, 1)`.
 
-The button retains `aria-expanded` and `aria-controls`; quote text is not duplicated into a live region. Above `980px`, only the selected Home card protrudes beyond the fixed desktop panel and an invisible reserve keeps later rows and the footer in normal document flow. At `max-width: 980px`, the fixed-panel sizing and reserve are removed so the recommendation card and containing surface grow together in natural flow. Reduced motion applies the open or closed state immediately.
+The button retains `aria-expanded` and `aria-controls`; quote text is not duplicated into a live region. Above `980px`, a selected Home card may protrude beyond its fixed panel while an invisible reserve keeps later sections in normal document flow. On the detail route, the expanded card becomes an opaque overlay while every collapsed grid slot retains its measured height, so later recommendation rows do not move. Recalculate overlap during expansion and dim only cards physically covered by the overlay to approximately `0.58` opacity; add trailing reserve only when a bottom-row overlay would otherwise cover the footer.
+
+At `max-width: 980px`, remove fixed-slot, overlay, reserve, and overlap-dimming behavior so the recommendation card and containing surface grow together in natural flow. Reduced motion applies open, closed, and overlap states immediately without height or opacity transitions.
 
 ## Hover Base 1
 
@@ -42,15 +48,17 @@ Reduced motion disables sheen, lift, arrow travel, and route-indicator travel wh
 
 ## Header and theme disclosure
 
-Above `980px`, header expansion and compaction are state-driven, not continuously scroll-linked. Scroll input changes state only after the implemented direction and distance thresholds. Header pieces share the centralized `460ms` transition token. Keep the property list explicit and confined to the header island. At `max-width: 980px`, the header remains expanded and its scroll/pointer geometry transitions are disabled; Theme and Menu disclosures keep their own motion.
+Above `980px`, header expansion and compaction are state-driven, not continuously scroll-linked. Scroll input changes state only after the implemented direction and distance thresholds. Header pieces share the centralized `460ms` transition token. Keep the property list explicit and confined to the header island. At `max-width: 980px`, the header becomes a fixed bottom dock, remains expanded, and disables scroll and pointer geometry transitions.
 
-The theme disclosure fades and settles over `200ms` with opacity and transform. Its shell provides pointer grace, and one cancellable `240ms` leave delay prevents accidental dismissal. Re-entry cancels the close. The header holds its current geometry while the disclosure is open so the trigger does not move away from the pointer.
+The theme disclosure fades and settles over `200ms` with opacity and transform. Its shell provides pointer grace, and one cancellable `240ms` leave delay prevents accidental dismissal. Re-entry cancels the close. The header holds its current geometry while the disclosure is open so the trigger does not move away from the pointer. The panel settles below its trigger on desktop and above it in the mobile dock.
 
 Theme selection updates colors without closing the panel. Reduced motion preserves visibility and selection without settle transitions.
 
-## Mobile navigation disclosure
+## Mobile navigation rail
 
-The mobile navigation panel remains mounted so it can fade both in and out over `160ms` using opacity and a `3px` vertical settle. Closed state also uses `visibility`, `pointer-events`, `aria-hidden`, and `inert`, so transparent links are never clickable, focusable, or announced. Outside pointer interaction, Escape, route selection, pathname changes, and leaving the mobile breakpoint all close through the same state. Reduced motion applies visibility immediately without translation or transition.
+At `max-width: 980px`, route links remain in one native horizontal rail. After each pathname loads, automatic motion waits exactly `3000ms`. If the rail overflows and has not been touched, it returns to the Home edge over `420ms`, then drifts at approximately `20px` per second and reverses at each boundary. Links are never cloned or reordered, and the motion has no live announcement.
+
+Pointer, swipe, wheel, keyboard, or focus interaction inside the rail permanently stops automatic motion for the current pathname. A new pathname enables the initial idle behavior again. Pause while the document is hidden, and cancel timers and animation frames when the mobile breakpoint exits or the component unmounts. Reduced motion disables the automatic return and drift while preserving manual horizontal scrolling. Edge fades reflect the current overflow boundary without animating content opacity.
 
 ## Scroll reveal
 
@@ -58,9 +66,15 @@ Use `IntersectionObserver` as the baseline for reveal and compression behavior. 
 
 Scroll motion must not blur text. The `enable_scroll_motion` setting gates scroll reveals and section motion. When false, those elements render immediately. It does not disable role rotation; the operating-system reduced-motion preference does.
 
+## Experience disclosure
+
+The Experience audience lens translates over `260ms`; selected text changes immediately through `aria-pressed`. Switching views settles the new card copy with a short opacity and vertical-transform transition. Opening a chapter uses one bounded `300ms` grid-row transition, while its refraction line, copy, and chevron use opacity or transform. Only one chapter per role can be open, which bounds layout work. Fine-pointer card lift and logo-highlight movement are decorative and never required to find content.
+
+Reduced motion removes audience, card, highlight, chapter, and chevron transitions while preserving selected and expanded state. The global scroll-motion setting controls only the optional staggered card entrance; user-triggered audience and disclosure behavior remains available regardless of that setting.
+
 ## Footer disclosure
 
-The footer expands into reserved normal-flow space. Its transition may animate width, padding, grid-row height, opacity, and a small vertical translation over roughly `420ms`. It must not animate blur or scale, change total document length, block native scrolling, or hide focused details. Reduced motion applies compact or expanded state immediately.
+The footer expands into reserved normal-flow space. Each pathname owns a fresh compact disclosure, and automatic expansion requires new user scroll intent on that route plus a fully visible runway activation band. Observer callbacks, loading-layout changes, scroll restoration, and programmatic scrolling must not initiate the transition. The transition may animate width, padding, grid-row height, opacity, and a small vertical translation over roughly `420ms`. It must not animate blur or scale, change total document length, block native scrolling, or hide focused details. Reduced motion applies compact or expanded state immediately.
 
 ## Glass and blur
 

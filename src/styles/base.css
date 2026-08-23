@@ -32,6 +32,21 @@ body::before {
   background-size: cover;
 }
 
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-bold);
+}
+
+strong,
+b {
+  font-weight: var(--font-weight-bold);
+}
+
 a {
   color: inherit;
   text-decoration: none;
@@ -70,4 +85,14 @@ img {
 ::selection {
   color: var(--color-selection-text);
   background: var(--color-selection-bg);
+}
+
+@media (max-width: 980px) {
+  html {
+    scroll-padding-bottom: var(--mobile-dock-clearance);
+  }
+
+  [id] {
+    scroll-margin-bottom: var(--mobile-dock-clearance);
+  }
 }

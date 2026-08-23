@@ -3,6 +3,15 @@
   "name": "smart-portfolio",
   "pages_build_output_dir": "./out",
   "compatibility_date": "2026-08-27",
+  "d1_databases": [
+    {
+      "binding": "CONTACT_RATE_LIMIT_DB",
+      "database_name": "smart-portfolio-contact-rate-limit-production",
+      "database_id": "8ae31be3-092e-4a86-86ed-c0729f27c61c",
+      "preview_database_id": "contact-rate-limit-local",
+      "migrations_dir": "migrations"
+    }
+  ],
   "vars": {
     "TURNSTILE_ALLOWED_HOSTNAMES": "smart-portfolio-bds.pages.dev,nicolasmgioanni.dev,www.nicolasmgioanni.dev",
     "CONTACT_ALLOWED_ORIGINS": "https://smart-portfolio-bds.pages.dev,https://nicolasmgioanni.dev,https://www.nicolasmgioanni.dev",
@@ -11,6 +20,14 @@
   },
   "env": {
     "preview": {
+      "d1_databases": [
+        {
+          "binding": "CONTACT_RATE_LIMIT_DB",
+          "database_name": "smart-portfolio-contact-rate-limit-preview",
+          "database_id": "963d761b-6055-4adb-9ac8-0bd8f14efad4",
+          "migrations_dir": "migrations"
+        }
+      ],
       "vars": {
         "TURNSTILE_ALLOWED_HOSTNAMES": "develop.smart-portfolio-bds.pages.dev",
         "CONTACT_ALLOWED_ORIGINS": "https://develop.smart-portfolio-bds.pages.dev",

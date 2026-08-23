@@ -8,7 +8,8 @@
   },
   "scripts": {
     "dev": "next dev",
-    "dev:pages": "npm run build && npx --no-install wrangler pages dev out --env-file .env",
+    "dev:pages": "npm run build && npm run db:migrate:local && npx --no-install wrangler pages dev out --env-file .env",
+    "db:migrate:local": "npx --no-install wrangler d1 migrations apply CONTACT_RATE_LIMIT_DB --local",
     "docs:check": "node scripts/validateDocumentation.mjs",
     "generate:content": "tsx scripts/fetchPortfolioContent.ts",
     "prebuild": "npm run generate:content",
@@ -18,6 +19,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:footer": "vitest run src/components/layout/InteractiveBlobFooter.test.tsx src/components/layout/footerStyles.test.ts",
+    "test:navigation": "vitest run src/components/navigation/MobileNavigation.test.tsx src/components/navigation/navigation.test.tsx src/components/navigation/navigationStyles.test.ts src/components/responsive/useMediaQuery.test.tsx src/components/theme/ThemeSwitcher.test.tsx",
+    "test:e2e:navigation": "playwright test navigation.spec.ts --project=chromium",
+    "test:e2e:footer": "playwright test footer.spec.ts --project=chromium",
     "verify": "npm run docs:check && npm run lint && npm run typecheck && npm run test && npm run build",
     "setup:local": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup-local.ps1",
     "dev:smart": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-dev.ps1",
@@ -38,6 +42,7 @@
   "devDependencies": {
     "@eslint/js": "^9.18.0",
     "@next/eslint-plugin-next": "^14.2.0",
+    "@playwright/test": "^1.62.1",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
     "@types/node": "^22.10.7",

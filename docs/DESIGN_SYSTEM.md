@@ -19,7 +19,7 @@ Smart Portfolio uses a restrained glass-inspired visual language to organize evi
 | Shell, pages, header, and footer | `src/styles/layout.css` |
 | Glass primitives and controls | `src/styles/glass.css` and `src/components/glass/` |
 | Navigation and theme disclosure | `src/styles/navigation.css` and navigation components |
-| Portfolio pages and cards | `src/styles/portfolio.css` and portfolio components |
+| Portfolio pages and cards | `src/styles/portfolio.css`, `src/styles/experience.css`, and portfolio components |
 | Interaction states | `src/styles/interactions.css` |
 | Motion | `src/styles/motion.css` and motion components |
 | Loading states | `src/styles/skeletons.css` and loading components |
@@ -55,19 +55,25 @@ Aliases such as `--color-canvas`, `--color-ink`, `--color-surface`, and `--color
 
 ## Typography
 
-Inter is loaded through `next/font` with Segoe UI, Arial, and sans-serif fallbacks. The token scale ranges from eyebrow and caption text through body, card, section, page, and hero titles.
+Space Grotesk is loaded through `next/font` with Segoe UI and sans-serif fallbacks. The 16px root remains the conversion basis, while user-facing text follows a compact semantic ladder derived from the CytoCV interface.
 
-| Use | Token |
-| --- | --- |
-| Eyebrow labels | `--font-size-eyebrow` |
-| Supporting metadata | `--font-size-caption` and `--font-size-small` |
-| Primary copy | `--font-size-body` and `--font-size-body-large` |
-| Card headings | `--font-size-card-title` |
-| Section headings | `--font-size-section-title` |
-| Route titles | `--font-size-page-title` |
-| Home greeting | `--font-size-hero-title` |
+| Use | Token | Size |
+| --- | --- | --- |
+| Eyebrow and step labels | `--font-size-eyebrow` | `0.6875rem` (11px) |
+| Captions, validation errors, and utility footer text | `--font-size-caption` | `0.75rem` (12px) |
+| Supporting metadata | `--font-size-small` | `0.8125rem` (13px) |
+| Primary copy, navigation, and form controls | `--font-size-body` | `0.875rem` (14px) |
+| Prominent copy and quotation emphasis | `--font-size-body-large`, `--font-size-quote` | `0.9375rem` (15px) |
+| Feature leads | `--font-size-lead` | `1.0625rem` (17px) |
+| Card headings | `--font-size-card-title` | `1.25rem` (20px) |
+| Section headings | `--font-size-section-title` | `1.375rem` (22px) |
+| Resume and compact flow titles | `--font-size-resume-title` | `1.625rem` (26px) |
+| Route and form titles | `--font-size-page-title` | 24-26px, responsive |
+| Home greeting | `--font-size-hero-title` | Fluid 30-44px |
 
-Body copy uses normal or relaxed line height. Keep paragraph width and spacing readable instead of shrinking type to fit a card. Heading levels express document structure; visual size comes from classes and tokens.
+Use four supported font weights: `--font-weight-regular` at 400, `--font-weight-medium` at 500, `--font-weight-semibold` and `--font-weight-bold` at 600, and `--font-weight-heavy` at 700. Do not introduce fractional intermediate weights.
+
+Body copy uses normal or relaxed line height. Keep paragraph width and spacing readable instead of shrinking type to fit a card. Heading levels express document structure; visual size comes from classes and tokens. Decorative or icon-sized text must not replace a semantic text token for readable content.
 
 ## Spacing and radii
 
@@ -84,9 +90,9 @@ Do not create a unique radius or near-duplicate spacing value for one component 
 
 ## Layout
 
-`--container-width` is 1180px. The header has separate full and compact widths, while `--header-offset` and `--scroll-margin-top` keep sticky navigation from covering anchored content.
+`--container-width` is 1180px. The desktop header has separate full and compact widths, while `--header-offset` and `--scroll-margin-top` keep sticky navigation from covering anchored content. Mobile uses `--mobile-dock-clearance` plus safe-area insets to reserve room below route content and anchored targets.
 
-`PageContainer`, `PageIntro`, `SectionHeader`, and `FeaturedGrid` own common route geometry. Home uses full-width top-level rows inside `home-overview-grid`; detail routes use evidence-specific lists and timelines.
+`PageContainer`, `PageIntro`, `SectionHeader`, and `FeaturedGrid` own common route geometry. Home uses full-width top-level rows inside `home-overview-grid`; detail routes use evidence-specific lists and showcases.
 
 The implemented Home order is:
 
@@ -121,11 +127,11 @@ Keep nested Home cards quieter than their outer section. A nested card should no
 
 ## Header and navigation
 
-The header is a sticky `GlassBlob` that server-renders expanded. Client behavior compacts it after downward scroll beyond the threshold, restores it on upward scroll or pointer proximity, and keeps it expanded while keyboard focus or the mobile menu requires the controls.
+Above `980px`, the header is a sticky `GlassBlob` that server-renders expanded. Client behavior compacts it after downward scroll beyond the threshold, restores it on upward scroll or pointer proximity, and keeps it expanded while keyboard focus or the theme disclosure requires stable controls.
 
-Desktop navigation uses a persistent animated route indicator plus `aria-current="page"`. Mobile navigation uses a button with `aria-expanded`, a hidden panel, the same route list, and up to four configured social links.
+Desktop navigation uses a persistent animated route indicator plus `aria-current="page"`. At `980px` and below, the glass island becomes a fixed bottom dock. The profile mark and name are hidden, while the left side presents the same route list as a native swipeable rail with scroll snapping, padded ends, hidden scrollbars, and dynamic edge fades. The non-scrolling right side keeps the configured GitHub, LinkedIn, Email, and theme controls visible.
 
-The profile mark opens an image preview only when an image exists. The theme disclosure and mobile menu close each other so their panels do not overlap. Header motion uses the centralized duration and easing tokens.
+The desktop profile mark opens an image preview only when an image exists. The theme disclosure opens below the desktop trigger and above the mobile dock trigger. The shell reserves safe-area-aware bottom clearance so neither route content nor anchored targets end beneath the dock. Header motion uses centralized duration and easing tokens.
 
 ## Profile overview
 
@@ -159,6 +165,12 @@ Research and project Home cards use concise copy and bottom-aligned verified act
 
 Home section route actions use compact buttons aligned with the section heading. They remain visually subordinate to primary page actions.
 
+### Experience showcase
+
+The dedicated Experience route uses one logo-led glass card per position. Identity metadata remains stable while a page-wide `For everyone` or `Technical` control swaps the narrative depth for every role. Each collapsed evidence chapter already communicates its central fact; expansion adds context and tools tied to that chapter. Only one chapter per role remains open.
+
+The segmented selector uses one translated glass lens, and role cards use bounded logo highlights rather than pointer-following effects. On small screens, evidence returns to the full card width and result signals move below their chapter summaries.
+
 ## Skills
 
 Home groups selected skills by `category` and `category_order`. The published content currently produces three cards with four skills each. A skill with the complete proficiency, summary, and evidence set renders as a button that opens the shared dialog. Incomplete legacy detail sets render as static badges.
@@ -175,7 +187,7 @@ Quote links remain part of the prose. They become brighter and underlined on hov
 
 ## Footer
 
-The footer is a normal-flow progressive disclosure, not a fixed overlay. Its compact copyright row appears before the page reaches the end. Continued scrolling into a reserved runway can expand details into already-reserved space. The `Details` and `Collapse` button remains the device-independent control.
+The footer is a normal-flow progressive disclosure, not a fixed overlay. Every pathname starts with a fresh compact copyright row. New user downward-scroll intent can expand details when the reserved runway is reached; layout shifts, route restoration, and programmatic scroll changes cannot. The `Details` and `Collapse` button remains the device-independent control.
 
 Expanded details use identity, notices, and resources columns. Automatic collapse is deferred while focus remains inside. Manual collapse suppresses immediate reopening until the interaction region is exited. Route changes reset the disclosure state.
 
@@ -205,9 +217,9 @@ Use `aria-current`, `aria-pressed`, `aria-expanded`, or native disabled state to
 
 ## Motion
 
-Motion supports state and orientation. Prefer opacity and transform. Recommendation disclosure and footer grid rows are documented exceptions where a bounded layout transition communicates state.
+Motion supports state and orientation. Prefer opacity and transform. Experience chapters, recommendation disclosure, and footer grid rows are documented exceptions where a bounded layout transition communicates state.
 
-The role rotation, route indicator, header state, theme disclosure, recommendation expansion, footer disclosure, scroll reveals, and skeleton shimmer have explicit reduced-motion behavior. See [Animation guidelines](ANIMATION_GUIDELINES.md) for exact timing and constraints.
+The role rotation, route indicator, header state, mobile rail drift, theme disclosure, experience chapters, recommendation expansion, footer disclosure, scroll reveals, and skeleton shimmer have explicit reduced-motion behavior. See [Animation guidelines](ANIMATION_GUIDELINES.md) for exact timing and constraints.
 
 ## Loading states
 
@@ -219,7 +231,8 @@ See [Skeleton loading guidelines](SKELETON_LOADING_GUIDELINES.md).
 
 The style system uses focused thresholds at 980, 860, 720, 620, 520, 480, and 380 CSS pixels.
 
-- Desktop navigation yields to mobile navigation below 980px.
+- Desktop navigation yields to the fixed mobile bottom dock at `980px` and below.
+- The mobile route rail owns horizontal overflow without creating document-level overflow, while the action cluster never scrolls away.
 - Profile and academic grids collapse as available width narrows.
 - Skills and featured grids reduce columns without changing content order.
 - Expanded footer columns become one column below 720px.

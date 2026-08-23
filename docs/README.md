@@ -52,7 +52,7 @@ This documentation explains how Smart Portfolio is authored, built, tested, depl
 | Document | Purpose |
 | --- | --- |
 | [Local development](LOCAL_DEVELOPMENT.md) | Supported Node.js version, setup commands, development servers, local content, and Pages Function testing. |
-| [Testing](TESTING.md) | Test layers, focused commands, the full quality gate, CI behavior, and test-extension guidance. |
+| [Testing](TESTING.md) | Test layers, focused commands, Playwright navigation and footer coverage, the full quality gate, CI behavior, and test-extension guidance. |
 | [Engineering standards](ENGINEERING_STANDARDS.md) | Concise architecture, component, styling, test, and dependency rules. |
 | [Quality checklist](QUALITY_CHECKLIST.md) | General pre-merge verification checklist. |
 | [Performance budget](PERFORMANCE_BUDGET.md) | Runtime, JavaScript, asset, glass, motion, and build constraints. |

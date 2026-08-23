@@ -37,8 +37,18 @@ describe("package and CI deployment automation", () => {
     );
     expect(packageJson.devDependencies.wrangler).toBe("4.127.0");
     expect(packageJson.devDependencies.vitest).toBe("4.1.11");
+    expect(packageJson.devDependencies["@playwright/test"]).toMatch(/^\^1\./);
     expect(packageJson.scripts["test:footer"]).toBe(
       "vitest run src/components/layout/InteractiveBlobFooter.test.tsx src/components/layout/footerStyles.test.ts"
+    );
+    expect(packageJson.scripts["test:navigation"]).toBe(
+      "vitest run src/components/navigation/MobileNavigation.test.tsx src/components/navigation/navigation.test.tsx src/components/navigation/navigationStyles.test.ts src/components/responsive/useMediaQuery.test.tsx src/components/theme/ThemeSwitcher.test.tsx"
+    );
+    expect(packageJson.scripts["test:e2e:navigation"]).toBe(
+      "playwright test navigation.spec.ts --project=chromium"
+    );
+    expect(packageJson.scripts["test:e2e:footer"]).toBe(
+      "playwright test footer.spec.ts --project=chromium"
     );
   });
 
@@ -91,6 +101,10 @@ describe("package and CI deployment automation", () => {
     expect(verifyJob).toContain("run: npm run lint");
     expect(verifyJob).toContain("run: npm run typecheck");
     expect(verifyJob).toContain("run: npm run test:footer");
+    expect(verifyJob).toContain("run: npm run test:navigation");
+    expect(verifyJob).toContain("run: npx playwright install --with-deps chromium");
+    expect(verifyJob).toContain("run: npm run test:e2e:navigation");
+    expect(verifyJob).toContain("run: npm run test:e2e:footer");
     expect(verifyJob).toContain("run: npm run test");
     expect(pullRequestBuild).toContain("run: npm run build:generated");
     expect(pullRequestGeneration).not.toContain("secrets.");
@@ -179,7 +193,17 @@ describe("package and CI deployment automation", () => {
     expect(verifyJob).toContain('"${FORCE_DEPLOY:-false}" == "true"');
     expect(verifyJob).toContain('"${DEPLOYED_CONTENT_MATCHES:-false}" != "true"');
 
-    for (const stepName of ["Documentation integrity", "Lint", "Typecheck", "Footer regression tests", "Full test suite"]) {
+    for (const stepName of [
+      "Documentation integrity",
+      "Lint",
+      "Typecheck",
+      "Footer regression tests",
+      "Navigation regression tests",
+      "Full test suite",
+      "Install Chromium for browser regressions",
+      "Browser navigation regression tests",
+      "Browser footer regression tests"
+    ]) {
       expect(verifyJob).toMatch(
         new RegExp(`- name: ${stepName}\\s+if: steps\\.decision\\.outputs\\.should_verify == 'true'`)
       );

@@ -32,7 +32,7 @@ Reusable primitives and compositions include:
 | --- | --- |
 | Home | Profile shell, core content sections, three skills cards, and recommendation footprint. |
 | Research and Projects | Page introduction and card grids shaped like the evidence routes. |
-| Experience | Page introduction and timeline entries. |
+| Experience | Page introduction, audience selector, and logo-led role cards with evidence-row footprints. |
 | Recommendations | Page introduction and recommendation cards. |
 | Contact | Generic page skeleton while the static form shell resolves. |
 

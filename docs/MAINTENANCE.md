@@ -10,6 +10,7 @@ Smart Portfolio changes safely when each update follows the full path from sourc
 - Home is the summary layer; focused routes are the evidence layer.
 - Runtime requests remain limited to explicitly allowed Cloudflare Pages Functions.
 - Public configuration and encrypted secrets stay separated.
+- Production and preview D1 quota data remain isolated, minimal, pseudonymous, and migration-controlled.
 - The deployed artifact is the exact artifact that passed verification.
 - Keyboard, focus, reduced-motion, and static-content behavior are part of every UI change.
 
@@ -26,7 +27,7 @@ Smart Portfolio changes safely when each update follows the full path from sourc
 | Add a card variant | `PortfolioCard`, glass and portfolio CSS | Semantics, responsive behavior, tests, design system |
 | Add a theme token | `tokens.css` | All themes, component usage, contrast and focus review, tests |
 | Change navigation | route registry and navigation components | Active state, mobile behavior, keyboard checks, tests, docs |
-| Change contact behavior | contact components and Functions | Legal copy, Function tests, WAF review, security and contact docs |
+| Change contact behavior | contact components, Functions, and migrations | Legal copy, Function tests, D1 retention, WAF review, security and contact docs |
 | Add a runtime endpoint | `functions/`, `_routes.json` | Threat model, limits, headers, rate limiting, tests, operations |
 | Change CI | workflow and script tests | Permissions, branch conditions, no-op behavior, operations docs |
 | Change deployment provider | workflow, scripts, configuration | Static and Function compatibility, secrets, DNS, rollback, all operations docs |
@@ -163,7 +164,7 @@ Review:
 - `aria-current`, `aria-expanded`, focus, Escape, and outside-click behavior;
 - navigation tests and responsive CSS.
 
-Footer changes must preserve normal document flow, the reserved runway, explicit disclosure control, focus-safe collapse, manual-collapse suppression, route reset, and reduced-motion behavior. Run `npm run test:footer` after any footer or surrounding layout change.
+Footer changes must preserve normal document flow, the reserved runway, explicit disclosure control, focus-safe collapse, manual-collapse suppression, route-scoped compact initialization, user-intent gating, and reduced-motion behavior. Run `npm run test:footer` and `npm run test:e2e:footer` after any footer or surrounding layout change.
 
 ## Change contact behavior
 
@@ -174,6 +175,7 @@ Review together:
 - `ContactForm.tsx`, `TurnstileWidget.tsx`, and client validation;
 - verification and delivery Functions;
 - shared field limits, allowed keys, timing, ticket, and response behavior;
+- mail-domain validation, D1 reservation schema, rolling-window behavior, cleanup, and separate email idempotency;
 - exact origin and hostname configuration;
 - privacy, terms, and public security route copy;
 - Function, contact component, legal, and static-security tests;
@@ -211,6 +213,7 @@ The stable required job is `verify`. Preserve:
 - semantic no-op behavior where allowed;
 - documentation validation, lint, typecheck, focused footer tests, full tests, and static build;
 - exact artifact and commit binding;
+- environment-specific D1 target validation and migration-before-upload ordering;
 - per-target concurrency and latest-branch-head guards for both production and stable preview;
 - smoke testing after upload;
 - isolated heartbeat writes only.
@@ -225,6 +228,7 @@ A provider change is an architecture migration. Confirm the replacement supports
 - deployment of the two isolated contact handlers or an equivalent reviewed runtime;
 - exact route allowlisting;
 - encrypted runtime secrets and separate preview values;
+- isolated production and preview quota storage plus a migration mechanism;
 - immutable artifact upload without rebuilding;
 - content and integrity manifests;
 - preview and production isolation;
