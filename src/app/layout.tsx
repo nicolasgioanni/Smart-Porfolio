@@ -6,6 +6,7 @@ import "@/styles/layout.css";
 import "@/styles/glass.css";
 import "@/styles/navigation.css";
 import "@/styles/portfolio.css";
+import "@/styles/experience.css";
 import "@/styles/motion.css";
 import "@/styles/skeletons.css";
 import "@/styles/contact.css";
