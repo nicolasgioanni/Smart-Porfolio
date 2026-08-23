@@ -103,7 +103,7 @@ General Home links first select rows where any of `is_primary`, `show_on_home`, 
 
 Header links use only `show_in_header=true`, use generic ordering, and are capped at four. The same selected set appears as persistent desktop header actions and mobile dock actions outside the route-navigation landmarks.
 
-`show_in_footer` and `icon` are normalized but have no current component consumer. Footer resource links come from `site_settings`, with one exception: if `repository_url` is blank, the footer can use the first link whose kind is `repository`, `source`, or `github_repository`. That fallback does not consult `show_in_footer`.
+Footer resources include GitHub and LinkedIn rows whose `show_in_footer` value is true, preserving generic link order. Other footer resource links come from `site_settings`, with one exception: if `repository_url` is blank, the footer can use the first link whose kind is `repository`, `source`, or `github_repository`. That repository fallback does not consult `show_in_footer`. `icon` is normalized but has no current footer consumer.
 
 ## Experience
 

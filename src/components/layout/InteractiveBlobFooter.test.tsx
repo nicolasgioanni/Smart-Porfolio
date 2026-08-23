@@ -57,7 +57,7 @@ const footerProps = {
   closingStatement:
     "Original portfolio content and media are protected. Site source code is licensed under the MIT License. Third-party names, marks, and materials remain the property of their respective owners.",
   compactCopyright: "© 2026 Nicolas Gioanni. All rights reserved except where otherwise stated.",
-  identityDescription: "Software engineering, research, and cybersecurity portfolio.",
+  identityDescription: "Software Engineer",
   noticeLinks: [
     { href: "/terms", label: "Site Terms & Accuracy" },
     { href: "/privacy", label: "Privacy Notice" },
@@ -65,6 +65,8 @@ const footerProps = {
   ],
   owner: "Nicolas Gioanni",
   resourceLinks: [
+    { href: "https://github.com/nicolasgioanni", label: "GitHub" },
+    { href: "https://www.linkedin.com/in/nicolas-gioanni", label: "LinkedIn" },
     { href: "https://github.com/nicolasgioanni/Portfolio-New", label: "Source Code" },
     { href: "https://github.com/nicolasgioanni/Portfolio-New/blob/main/LICENSE", label: "MIT License" },
     { href: "mailto:ngioanni@uw.edu", label: "ngioanni@uw.edu" },

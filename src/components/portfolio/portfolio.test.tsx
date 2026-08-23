@@ -1157,6 +1157,22 @@ describe("portfolio UI helpers", () => {
     expect(screen.getByText(/Nicolas Gioanni\. All rights reserved except where otherwise stated\./)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Details" })).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(screen.getByRole("button", { name: "Details" }));
+    const resources = screen.getByRole("navigation", { name: "Resources" });
+    expect(screen.getByText("Software engineer")).toBeInTheDocument();
+    expect(within(resources).getAllByRole("link").map((link) => link.textContent)).toEqual([
+      "GitHub",
+      "LinkedIn",
+      "nicolas@example.com",
+      "Contact Form"
+    ]);
+    expect(within(resources).getByRole("link", { name: "GitHub" })).toHaveAttribute(
+      "href",
+      "https://github.com/example"
+    );
+    expect(within(resources).getByRole("link", { name: "LinkedIn" })).toHaveAttribute(
+      "href",
+      "https://www.linkedin.com/in/example"
+    );
     expect(screen.queryByRole("link", { name: "Source Code" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Site Terms & Accuracy" })).toHaveAttribute("href", "/terms");
     const emailLink = screen.getByRole("link", { name: "nicolas@example.com" });
