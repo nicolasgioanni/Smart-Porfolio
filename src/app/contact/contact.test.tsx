@@ -172,7 +172,8 @@ describe("contact route", () => {
     expect(container.querySelector("form")).not.toHaveAttribute("action");
     expect(container.querySelector("form")).toHaveAttribute("novalidate");
     expect(container.textContent).not.toMatch(/preview|not enabled|coming soon|nothing entered/i);
-    expect(screen.getByText(/This form is the quickest way to reach me\. Need another option\?/i)).toBeInTheDocument();
+    expect(screen.getByText(/Need another option\?/i)).toBeInTheDocument();
+    expect(screen.queryByText(/This form is the quickest way to reach me/i)).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Email ngioanni@uw.edu" })).toHaveAttribute(
       "href",
       "mailto:ngioanni@uw.edu?subject=Portfolio%20Contact"
