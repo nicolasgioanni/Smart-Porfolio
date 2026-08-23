@@ -7,7 +7,7 @@ import { SmartLink } from "@/components/navigation/SmartLink";
 import type { PortfolioContentLink } from "@/content/types";
 
 const defaultCollapsedLineCount = 4;
-const fallbackLineHeight = 24;
+const fallbackLineHeight = 22;
 const fallbackCharactersPerLine = 52;
 
 type QuoteMeasurement = {
@@ -21,8 +21,10 @@ type QuoteMeasurement = {
 
 type ExpandableRecommendationTextProps = {
   collapsedLineCount?: number;
+  expanded?: boolean;
   fullQuoteLink?: PortfolioContentLink;
   id: string;
+  onExpandedChange?: (expanded: boolean) => void;
   quote: string;
   recommenderName: string;
 };
@@ -83,14 +85,19 @@ function renderQuoteWithLink(quote: string, link: PortfolioContentLink | undefin
 
 export function ExpandableRecommendationText({
   collapsedLineCount,
+  expanded: controlledExpanded,
   fullQuoteLink,
   id,
+  onExpandedChange,
   quote,
   recommenderName
 }: ExpandableRecommendationTextProps) {
   const quoteRef = useRef<HTMLQuoteElement>(null);
-  const [expanded, setExpanded] = useState(false);
+  const toggleRef = useRef<HTMLButtonElement>(null);
+  const [internalExpanded, setInternalExpanded] = useState(false);
   const [measurement, setMeasurement] = useState<QuoteMeasurement | null>(null);
+  const expanded = controlledExpanded ?? internalExpanded;
+  const isControlled = controlledExpanded !== undefined;
   const prefersReducedMotion = useReducedMotionPreference();
   const resolvedLineCount = normalizeCollapsedLineCount(collapsedLineCount);
   const fallbackMeasurement = useMemo(
@@ -101,6 +108,17 @@ export function ExpandableRecommendationText({
     measurement?.quote === quote && measurement.lineCount === resolvedLineCount ? measurement : fallbackMeasurement;
   const renderedQuote = useMemo(() => renderQuoteWithLink(quote, fullQuoteLink), [quote, fullQuoteLink]);
   const controlledId = `recommendation-${sanitizeDomId(id)}-quote`;
+
+  const updateExpanded = useCallback(
+    (nextExpanded: boolean) => {
+      if (!isControlled) {
+        setInternalExpanded(nextExpanded);
+      }
+
+      onExpandedChange?.(nextExpanded);
+    },
+    [isControlled, onExpandedChange]
+  );
 
   const measureQuote = useCallback(() => {
     const quoteElement = quoteRef.current;
@@ -157,10 +175,26 @@ export function ExpandableRecommendationText({
   }, [measureQuote]);
 
   useEffect(() => {
-    if (!resolvedMeasurement.canExpand) {
-      setExpanded(false);
+    if (!resolvedMeasurement.canExpand && expanded) {
+      updateExpanded(false);
     }
-  }, [resolvedMeasurement.canExpand]);
+  }, [expanded, resolvedMeasurement.canExpand, updateExpanded]);
+
+  useEffect(() => {
+    if (!expanded) return;
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      updateExpanded(false);
+      toggleRef.current?.focus();
+    };
+
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [expanded, updateExpanded]);
 
   const style = {
     "--recommendation-collapsed-height": `${resolvedMeasurement.collapsedHeight}px`,
@@ -190,7 +224,8 @@ export function ExpandableRecommendationText({
           aria-expanded={expanded}
           aria-label={`${toggleLabel} recommendation from ${recommenderName}`}
           className="recommendation-expandable__toggle"
-          onClick={() => setExpanded((currentExpanded) => !currentExpanded)}
+          onClick={() => updateExpanded(!expanded)}
+          ref={toggleRef}
           type="button"
         >
           {toggleLabel}

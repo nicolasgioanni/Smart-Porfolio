@@ -42,7 +42,7 @@ describe("recommendation styles", () => {
     expect(portfolioStyles).toMatch(/\.home-recommendations__grid\s*\{[\s\S]*align-items: start/);
   });
 
-  it("uses an opaque theme-matched surface for Home recommendation cards", () => {
+  it("uses one opaque theme-matched surface for summary cards and expanded detail overlays", () => {
     const themeSurfaces = [
       [/:root,\s*\[data-theme="navy"\]\s*\{([^}]*)\}/s, "#081627"],
       [/\[data-theme="light"\]\s*\{([^}]*)\}/s, "#fefeff"],
@@ -53,15 +53,57 @@ describe("recommendation styles", () => {
       const themeTokens = tokenStyles.match(themePattern)?.[1] ?? "";
 
       expect(themeTokens).toMatch(
-        new RegExp(`--color-home-recommendation-card-solid:\\s*${expectedSurface}`, "i")
+        new RegExp(`--color-recommendation-card-solid:\\s*${expectedSurface}`, "i")
       );
     }
 
     expect(portfolioStyles).toMatch(
-      /\.home-section--recommendations \.recommendation-card--summary\s*\{[^}]*background:\s*var\(--color-home-recommendation-card-solid\);[^}]*backdrop-filter:\s*none/
+      /\.home-section--recommendations \.recommendation-card--summary\s*\{[^}]*background:\s*var\(--color-recommendation-card-solid\);[^}]*backdrop-filter:\s*none/
+    );
+    expect(portfolioStyles).toMatch(
+      /\.recommendations-list\[data-layout-mode="overlay"\]\[data-overlay-ready="true"\][\s\S]*\.recommendation-card--detail\s*\{[^}]*position:\s*absolute;[^}]*background:\s*var\(--color-recommendation-card-solid\);[^}]*box-shadow:[^}]*backdrop-filter:\s*none/
     );
     expect(portfolioStyles).toMatch(
       /\.home-section__surface \.portfolio-card\s*\{[^}]*background:\s*var\(--color-surface-soft\)/
+    );
+  });
+
+  it("wraps long recommendation identities while keeping verification visually quiet until interaction", () => {
+    const identityRule = portfolioStyles.match(/\.recommendation-card__identity-row\s*\{[^}]*}/s)?.[0] ?? "";
+    const nameRule = portfolioStyles.match(/\.recommendation-card__name\s*\{[^}]*}/s)?.[0] ?? "";
+    const verificationRule = portfolioStyles.match(/\.recommendation-verification-link\s*\{[^}]*}/s)?.[0] ?? "";
+    const verificationTextRule =
+      portfolioStyles.match(/\.recommendation-verification-link__text\s*\{[^}]*}/s)?.[0] ?? "";
+    const verificationInteractionRule =
+      portfolioStyles.match(
+        /\.recommendation-verification-link:hover \.recommendation-verification-link__text,\s*\.recommendation-verification-link:focus-visible \.recommendation-verification-link__text\s*\{[^}]*}/s
+      )?.[0] ?? "";
+
+    expect(identityRule).toMatch(/flex-wrap:\s*wrap/);
+    expect(identityRule).toMatch(/justify-content:\s*space-between/);
+    expect(nameRule).toMatch(/flex:\s*1 1 12rem/);
+    expect(nameRule).toMatch(/min-width:\s*0/);
+    expect(verificationRule).toMatch(/font-weight:\s*var\(--font-weight-regular\)/);
+    expect(verificationRule).toMatch(/text-decoration:\s*none/);
+    expect(verificationTextRule).toMatch(/font-weight:\s*var\(--font-weight-regular\)/);
+    expect(verificationTextRule).toMatch(/text-decoration-line:\s*none/);
+    expect(verificationInteractionRule).toMatch(/font-weight:\s*var\(--font-weight-bold\)/);
+    expect(verificationInteractionRule).toMatch(/text-decoration-line:\s*underline/);
+    expect(verificationInteractionRule).not.toContain("recommendation-verification-link__icon");
+  });
+
+  it("keeps detail rows fixed while elevating the active card and dimming only measured overlaps", () => {
+    expect(portfolioStyles).toMatch(
+      /\.recommendations-list\s*\{[^}]*padding-bottom:\s*var\(--recommendations-overlay-reserve, 0px\)/
+    );
+    expect(portfolioStyles).toMatch(
+      /@media \(min-width: 981px\)[\s\S]*\.recommendations-list\[data-layout-mode="overlay"\]\[data-overlay-ready="true"\] \.recommendations-list__item\s*\{[^}]*height:\s*var\(--recommendation-detail-collapsed-height\)/
+    );
+    expect(portfolioStyles).toMatch(
+      /@media \(min-width: 981px\)[\s\S]*\.recommendations-list\[data-layout-mode="overlay"\] \.recommendations-list__item\[data-expanded="true"\]\s*\{[^}]*z-index:\s*3/
+    );
+    expect(portfolioStyles).toMatch(
+      /@media \(min-width: 981px\)[\s\S]*\.recommendations-list\[data-layout-mode="overlay"\] \.recommendations-list__item\[data-overlapped="true"\]\s*\{[^}]*opacity:\s*0\.58/
     );
   });
 
@@ -90,11 +132,17 @@ describe("recommendation styles", () => {
     expect(portfolioStyles).toMatch(
       /@media \(max-width: 720px\)[\s\S]*\.home-recommendations__item \.recommendation-card--summary\s*\{[^}]*min-height:\s*0/
     );
+    expect(portfolioStyles).toMatch(
+      /@media \(max-width: 980px\)[\s\S]*\.recommendations-list\s*\{[^}]*padding-bottom:\s*0/
+    );
+    expect(portfolioStyles).toMatch(
+      /@media \(max-width: 980px\)[\s\S]*\.recommendations-list__item\s*\{[^}]*height:\s*auto;[^}]*opacity:\s*1/
+    );
   });
 
   it("still removes recommendation expansion transitions for reduced motion", () => {
     expect(portfolioStyles).toMatch(
-      /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.recommendation-expandable__viewport,\s*\.recommendation-expandable__quote,\s*\.recommendation-expandable__inline-link\s*\{[^}]*transition: none/
+      /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.recommendation-expandable__viewport,\s*\.recommendation-expandable__quote,\s*\.recommendation-expandable__inline-link,\s*\.recommendations-list,\s*\.recommendations-list__item\s*\{[^}]*transition: none/
     );
   });
 });

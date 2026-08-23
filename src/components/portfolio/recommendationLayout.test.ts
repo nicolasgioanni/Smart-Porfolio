@@ -15,7 +15,7 @@ function createMetric(
     headerHeight: 90,
     id,
     naturalCollapsedHeightAtFourLines: 350,
-    quoteLineHeight: 24,
+    quoteLineHeight: 22,
     top: 0,
     ...overrides
   };

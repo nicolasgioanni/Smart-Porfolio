@@ -136,7 +136,7 @@ Primary navigation is assembled by [navigationItems.ts](src/components/navigatio
 | --- | --- | --- |
 | Application | Next.js App Router and React | Build route components into a static export and hydrate focused interactions. |
 | Language | TypeScript | Define content, component, script, and test contracts under strict checking. |
-| Typography | Inter through `next/font` | Self-manage the primary font with system fallbacks. |
+| Typography | Space Grotesk through `next/font` | Self-manage the primary font with system fallbacks. |
 | Workbook parsing | ExcelJS | Parse the complete anonymous XLSX snapshot and inspect worksheet state and cells. |
 | Local source parsing | `csv-parse` | Read checked-in content templates through the same row model. |
 | Content safety | Custom normalizers and validators | Enforce required data, exact references, URL rules, grouped fields, and UI invariants. |

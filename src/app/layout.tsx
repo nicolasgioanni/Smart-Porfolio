@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Space_Grotesk } from "next/font/google";
 import "@/styles/tokens.css";
 import "@/styles/base.css";
 import "@/styles/layout.css";
@@ -17,11 +17,12 @@ import { createPageMetadata } from "@/lib/content/createPageMetadata";
 import { getPortfolioContent } from "@/lib/content/getPortfolioContent";
 import { resolveThemeName } from "@/lib/theme/resolveThemeName";
 
-const inter = Inter({
+const spaceGrotesk = Space_Grotesk({
   fallback: ["Segoe UI", "Arial", "sans-serif"],
   display: "swap",
   subsets: ["latin"],
-  variable: "--font-inter"
+  variable: "--font-space-grotesk",
+  weight: ["400", "500", "600", "700"]
 });
 
 export function generateMetadata(): Metadata {
@@ -40,7 +41,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
 
   return (
     <html lang="en" data-theme={initialTheme}>
-      <body className={`${inter.className} ${inter.variable}`}>
+      <body className={`${spaceGrotesk.className} ${spaceGrotesk.variable}`}>
         <ThemePreferenceScript initialTheme={initialTheme} />
         <SiteShell content={content} initialTheme={initialTheme}>
           {children}

@@ -70,7 +70,9 @@ The header profile image opens a labelled modal preview with a close button, Esc
 
 ### Recommendations
 
-Long recommendations expose a native button with `aria-expanded`, `aria-controls`, and a recommender-specific label. The quote stays in one blockquote and is not duplicated into a live region. Reduced-motion mode changes expansion state without height and opacity transitions.
+Each available provenance link opens the recommendation source, and the separate `View profile` and `View recommendation` actions expose recommender-specific accessible names. The shield-check and any LinkedIn icons that accompany visible labels are decorative. External links opened in a new tab retain `noopener noreferrer`; provenance hover and focus emphasize only the visible verification text without making the icon the sole cue.
+
+Long recommendations expose a native button with `aria-expanded`, `aria-controls`, and a recommender-specific label. The quote stays in one blockquote and is not duplicated into a live region. The detail route permits only one expanded card at a time; Escape collapses it and returns focus to its toggle, and moving focus into another card collapses the open overlay. Above `980px`, only cards physically covered by the opaque expanded card are visually dimmed, without hiding them from the accessibility tree. At `980px` and below, cards expand in natural flow with no dimming. Reduced-motion mode changes expansion and overlap state without height or opacity transitions.
 
 ### Footer disclosure
 
