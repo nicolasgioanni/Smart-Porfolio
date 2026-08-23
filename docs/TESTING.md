@@ -93,7 +93,7 @@ The Function tests call exported handlers with web-standard `Request` and `Respo
 
 | Area | Test files | Main contracts |
 | --- | --- | --- |
-| Navigation and links | Tests under `src/components/navigation/`, plus responsive-query and theme tests | Route registry, active indicator, fixed mobile dock, direct rail order, overflow state, idle motion, interaction lockout, responsive transitions, external-link safety, and cleanup |
+| Navigation and links | Tests under `src/components/navigation/`, plus responsive-query and theme tests | Route registry, active indicator, fixed mobile dock, unified route-and-action rail order, overflow state, idle motion, five-second interaction pause and resume, responsive transitions, external-link safety, and cleanup |
 | Themes | `src/components/theme/ThemeSwitcher.test.tsx`, `src/lib/theme/resolveThemeName.test.ts` | Supported themes, persistence, keyboard and pointer behavior, fallback, and cleanup |
 | Motion | `src/components/motion/motion.test.tsx`, `src/components/portfolio/AnimatedRole.test.tsx` | Reveal persistence, animation timing, static fallback, reduced motion, and cleanup |
 | Footer | `src/components/layout/InteractiveBlobFooter.test.tsx`, `src/components/layout/footerStyles.test.ts` | Server fallback, route-scoped compact state, user-scroll activation, layout-shift resistance, focus safety, responsive layout, motion, and cleanup |
@@ -109,7 +109,7 @@ Many accessibility assertions verify semantic roles, names, focus behavior, keyb
 
 `tests/e2e/navigation.spec.ts` runs against Chromium through `playwright.config.ts`. The configuration starts Next.js on `127.0.0.1:3100`, reuses an existing local server outside CI, captures screenshots only on failure, and retains traces for failed attempts.
 
-The suite verifies the fixed bottom dock at 320, 390, and 768 CSS pixels; persistent social and theme actions; canonical route links; native rail overflow and edge fades; viewport-bottom persistence while the document scrolls; upward theme placement; document-level overflow protection; idle drift and interaction lockout; and the reduced-motion fallback. A desktop case protects the sticky top header, identity, route list, and compact-on-scroll behavior.
+The suite verifies the fixed bottom dock at 320, 390, and 768 CSS pixels; canonical route links followed by social and theme actions in one moving rail; native overflow and edge fades; viewport-bottom persistence while the document scrolls; upward unclipped theme placement; document-level overflow protection; initial idle drift; five-second interaction pause and resume from the current position; and the reduced-motion fallback. A desktop case protects the sticky top header, identity, route list, and compact-on-scroll behavior.
 
 ## Browser footer coverage
 

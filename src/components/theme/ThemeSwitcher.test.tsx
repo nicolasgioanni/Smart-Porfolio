@@ -1,6 +1,10 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ThemeSwitcher, themeMenuCloseDelayMs } from "@/components/theme/ThemeSwitcher";
+import {
+  ThemeSwitcher,
+  themeMenuCloseDelayMs,
+  themeMenuPortalViewportGutterPx
+} from "@/components/theme/ThemeSwitcher";
 import { themeStorageKey } from "@/lib/theme/themePreference";
 
 function setFinePointer(matches: boolean) {
@@ -40,6 +44,8 @@ describe("ThemeSwitcher", () => {
     expect(trigger).toHaveClass("glass-icon-button", "hover-base-1", "hover-base-1--compact");
     expect(trigger).toHaveAttribute("aria-expanded", "false");
     expect(trigger).toHaveAttribute("aria-controls", popover?.id);
+    expect(popover?.parentElement).toHaveClass("theme-switcher");
+    expect(popover).not.toHaveClass("theme-switcher__popover--portal");
     expect(popover).toHaveAttribute("aria-hidden", "true");
     expect(popover).toHaveAttribute("data-state", "closed");
     expect(options).toHaveLength(3);
@@ -144,6 +150,149 @@ describe("ThemeSwitcher", () => {
     fireEvent.keyDown(lightOption, { key: "Escape" });
     expect(trigger).toHaveAttribute("aria-expanded", "false");
     expect(trigger).toHaveFocus();
+  });
+
+  it("portals the popover above its trigger and refreshes fixed placement on resize", () => {
+    vi.spyOn(window, "innerWidth", "get").mockReturnValue(390);
+    vi.spyOn(window, "innerHeight", "get").mockReturnValue(844);
+    render(<ThemeSwitcher initialTheme="navy" portalPopover />);
+    const trigger = screen.getByRole("button", { name: /choose color theme/i });
+    const triggerRect = vi.spyOn(trigger, "getBoundingClientRect").mockReturnValue({
+      bottom: 808,
+      height: 38,
+      left: 312,
+      right: 350,
+      top: 770,
+      width: 38,
+      x: 312,
+      y: 770,
+      toJSON: vi.fn()
+    });
+
+    fireEvent.click(trigger);
+
+    const popover = document.querySelector<HTMLDivElement>(".theme-switcher__popover--portal");
+    expect(popover).not.toBeNull();
+    expect(popover?.parentElement).toBe(document.body);
+    expect(trigger).toHaveAttribute("aria-controls", popover?.id);
+    expect(popover).toHaveAttribute("aria-hidden", "false");
+    expect(popover).toHaveStyle({
+      bottom: "74px",
+      left: "auto",
+      position: "fixed",
+      right: "40px",
+      top: "auto"
+    });
+
+    triggerRect.mockReturnValue({
+      bottom: 748,
+      height: 38,
+      left: 365,
+      right: 403,
+      top: 710,
+      width: 38,
+      x: 365,
+      y: 710,
+      toJSON: vi.fn()
+    });
+    fireEvent(window, new Event("resize"));
+
+    expect(popover).toHaveStyle({
+      bottom: "134px",
+      right: `${themeMenuPortalViewportGutterPx}px`
+    });
+  });
+
+  it("treats the portaled panel as part of the disclosure for pointer and focus interactions", () => {
+    vi.useFakeTimers();
+    const { container } = render(<ThemeSwitcher initialTheme="navy" portalPopover />);
+    const root = container.querySelector(".theme-switcher");
+    const trigger = screen.getByRole("button", { name: /choose color theme/i });
+
+    fireEvent.pointerEnter(root as Element, { pointerType: "mouse" });
+    const popover = document.querySelector(".theme-switcher__popover--portal");
+    const lightOption = screen.getByRole("button", { name: "Light" });
+
+    fireEvent.pointerLeave(root as Element, { pointerType: "mouse" });
+    fireEvent.pointerEnter(popover as Element, { pointerType: "mouse" });
+    act(() => vi.advanceTimersByTime(themeMenuCloseDelayMs));
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+
+    fireEvent.blur(trigger, { relatedTarget: lightOption });
+    fireEvent.focus(lightOption, { relatedTarget: trigger });
+    act(() => vi.advanceTimersByTime(themeMenuCloseDelayMs));
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+
+    fireEvent.pointerDown(lightOption);
+    fireEvent.click(lightOption);
+    expect(document.documentElement.dataset.theme).toBe("light");
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+
+    fireEvent.keyDown(lightOption, { key: "Escape" });
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect(trigger).toHaveFocus();
+  });
+
+  it("preserves controlled state and dismisses a portaled popover only through callbacks", () => {
+    setFinePointer(false);
+    const onOpenChange = vi.fn();
+    const { rerender } = render(
+      <ThemeSwitcher
+        initialTheme="navy"
+        onOpenChange={onOpenChange}
+        open={false}
+        portalPopover
+      />
+    );
+    const trigger = screen.getByRole("button", { name: /choose color theme/i });
+
+    fireEvent.click(trigger);
+    expect(onOpenChange).toHaveBeenLastCalledWith(true);
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+
+    rerender(
+      <ThemeSwitcher
+        initialTheme="navy"
+        onOpenChange={onOpenChange}
+        open
+        portalPopover
+      />
+    );
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Dark" }));
+    expect(onOpenChange).toHaveBeenCalledTimes(1);
+
+    fireEvent.pointerDown(document.body);
+    expect(onOpenChange).toHaveBeenLastCalledWith(false);
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+
+    rerender(
+      <ThemeSwitcher
+        initialTheme="navy"
+        onOpenChange={onOpenChange}
+        open={false}
+        portalPopover
+      />
+    );
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("removes portal placement listeners when the disclosure closes and unmounts", () => {
+    const addWindowListener = vi.spyOn(window, "addEventListener");
+    const removeWindowListener = vi.spyOn(window, "removeEventListener");
+    const addDocumentListener = vi.spyOn(document, "addEventListener");
+    const removeDocumentListener = vi.spyOn(document, "removeEventListener");
+    const { unmount } = render(<ThemeSwitcher initialTheme="navy" open portalPopover />);
+
+    expect(addWindowListener).toHaveBeenCalledWith("resize", expect.any(Function));
+    expect(addDocumentListener).toHaveBeenCalledWith("scroll", expect.any(Function), true);
+
+    unmount();
+
+    expect(removeWindowListener).toHaveBeenCalledWith("resize", expect.any(Function));
+    expect(removeDocumentListener).toHaveBeenCalledWith("scroll", expect.any(Function), true);
+    expect(document.querySelector(".theme-switcher__popover--portal")).not.toBeInTheDocument();
   });
 
   it("cleans up a pending close without notifying after unmount", () => {

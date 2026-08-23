@@ -129,7 +129,7 @@ Keep nested Home cards quieter than their outer section. A nested card should no
 
 Above `980px`, the header is a sticky `GlassBlob` that server-renders expanded. Client behavior compacts it after downward scroll beyond the threshold, restores it on upward scroll or pointer proximity, and keeps it expanded while keyboard focus or the theme disclosure requires stable controls.
 
-Desktop navigation uses a persistent animated route indicator plus `aria-current="page"`. At `980px` and below, the glass island becomes a fixed bottom dock. The profile mark and name are hidden, while the left side presents the same route list as a native swipeable rail with scroll snapping, padded ends, hidden scrollbars, and dynamic edge fades. The non-scrolling right side keeps the configured GitHub, LinkedIn, Email, and theme controls visible.
+Desktop navigation uses a persistent animated route indicator plus `aria-current="page"`. At `980px` and below, the glass island becomes a fixed bottom dock. The profile mark and name are hidden, while one native swipeable rail presents the route list followed by the configured GitHub, LinkedIn, Email, and theme controls. The rail uses scroll snapping, padded ends, hidden scrollbars, and dynamic edge fades across the complete control sequence.
 
 The desktop profile mark opens an image preview only when an image exists. The theme disclosure opens below the desktop trigger and above the mobile dock trigger. The shell reserves safe-area-aware bottom clearance so neither route content nor anchored targets end beneath the dock. Header motion uses centralized duration and easing tokens.
 
@@ -232,7 +232,7 @@ See [Skeleton loading guidelines](SKELETON_LOADING_GUIDELINES.md).
 The style system uses focused thresholds at 980, 860, 720, 620, 520, 480, and 380 CSS pixels.
 
 - Desktop navigation yields to the fixed mobile bottom dock at `980px` and below.
-- The mobile route rail owns horizontal overflow without creating document-level overflow, while the action cluster never scrolls away.
+- The mobile rail owns horizontal overflow without creating document-level overflow, and its route and action controls move as one continuous sequence.
 - Profile and academic grids collapse as available width narrows.
 - Skills and featured grids reduce columns without changing content order.
 - Expanded footer columns become one column below 720px.

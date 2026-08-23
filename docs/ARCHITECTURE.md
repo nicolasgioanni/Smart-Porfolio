@@ -128,7 +128,7 @@ The default theme is resolved from generated site settings. `ThemePreferenceScri
 
 Semantic values in `tokens.css` isolate components from theme-specific colors. Glass surfaces, cards, blobs, controls, navigation, motion, loading states, and the Hover Base interaction system compose those values through focused style sheets. The application remains usable when generated settings disable glass effects or scroll motion.
 
-Above `980px`, the sticky header owns profile identity, desktop routes, social links, theme selection, and compact-on-scroll behavior. At `980px` and below, the identity and desktop route list are hidden and the same glass island becomes a fixed bottom dock. Its left side is a native horizontal route rail; its non-scrolling right side keeps the configured GitHub, LinkedIn, Email, and theme controls available. Safe-area insets and shell bottom clearance prevent the dock from covering route content.
+Above `980px`, the sticky header owns profile identity, desktop routes, social links, theme selection, and compact-on-scroll behavior. At `980px` and below, the identity and desktop route list are hidden and the same glass island becomes a fixed bottom dock. One native horizontal rail contains the canonical route navigation followed by the configured GitHub, LinkedIn, Email, and theme controls. The route links retain their own navigation landmark, while the action controls remain outside that landmark. The theme popover is positioned above its moving trigger without being clipped by the rail. Safe-area insets and shell bottom clearance prevent the dock from covering route content.
 
 See [Design system](DESIGN_SYSTEM.md), [Accessibility](ACCESSIBILITY.md), and [Animation guidelines](ANIMATION_GUIDELINES.md).
 

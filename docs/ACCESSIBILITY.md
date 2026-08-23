@@ -46,7 +46,7 @@ Theme changes must preserve readable text, visible focus, borders, disabled stat
 
 Interactive controls use shared focus-visible styles and semantic tokens. Do not remove outlines without providing an equally visible replacement. Hover-only behavior must have a keyboard equivalent, and selected state must not rely on color alone when an ARIA state is available.
 
-The desktop header expands when focus enters it so compact visual behavior does not hide keyboard controls. Focusing or otherwise interacting with the mobile rail permanently stops its automatic motion for the current pathname. The footer defers automatic collapse while focus remains inside expanded details, except that a route transition replaces the old disclosure with a fresh compact instance.
+The desktop header expands when focus enters it so compact visual behavior does not hide keyboard controls. Focusing or otherwise interacting with the mobile rail pauses its automatic motion. Five seconds without another rail interaction resumes drift from the current position, while an open theme menu keeps the rail paused until it closes. The footer defers automatic collapse while focus remains inside expanded details, except that a route transition replaces the old disclosure with a fresh compact instance.
 
 ## Dialogs and disclosures
 
