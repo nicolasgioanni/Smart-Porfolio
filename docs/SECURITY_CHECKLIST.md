@@ -121,7 +121,7 @@ Use this checklist with [Contact System](CONTACT_SYSTEM.md), [Security](SECURITY
 - Expose only values deliberately named for the browser. No server secret may use a `NEXT_PUBLIC_` name.
 - Keep GitHub Actions build inputs and upload credentials separate from Cloudflare Function bindings.
 - Keep production and preview site keys, server secrets, hostnames, origins, provider keys, and recipient settings separate.
-- Keep production and preview `CONTACT_RATE_LIMIT_DB` IDs distinct, reject the all-zero setup sentinel, and apply tracked migrations before deploying each environment.
+- Keep the pinned production and preview `CONTACT_RATE_LIMIT_DB` IDs distinct, reject missing or all-zero IDs, and apply tracked migrations before deploying each environment.
 - Verify live encrypted bindings without printing their values. Do not infer them from `wrangler.jsonc`.
 - Keep the build source as one anonymous HTTPS XLSX download without adding an OAuth grant, service account, or Google API credential.
 - Verify artifact integrity metadata and active content-version evidence during deployment.

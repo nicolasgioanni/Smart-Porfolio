@@ -119,14 +119,14 @@ The top-level values cover production. `env.preview.vars` narrows the preview en
 - top-level `smart-portfolio-contact-rate-limit-production` for production;
 - `env.preview` `smart-portfolio-contact-rate-limit-preview` for every Pages preview deployment.
 
-The tracked all-zero `database_id` values are deliberate non-deployable sentinels. Create both resources, then replace each sentinel with the distinct UUID printed by its command:
+The tracked `database_id` values identify the reviewed live resources. Initial setup or a deliberate database replacement uses these commands, after which the matching UUID must be reviewed and committed before deployment:
 
 ```powershell
-npx --no-install wrangler d1 create smart-portfolio-contact-rate-limit-production
-npx --no-install wrangler d1 create smart-portfolio-contact-rate-limit-preview
+npx --no-install wrangler d1 create smart-portfolio-contact-rate-limit-production --location wnam
+npx --no-install wrangler d1 create smart-portfolio-contact-rate-limit-preview --location wnam
 ```
 
-Do not commit a shared ID for both environments. `preview_database_id: contact-rate-limit-local` is a local-emulation identifier, not a remote database. The deploy job validates the selected binding, rejects either sentinel and any shared remote ID, then applies tracked migrations to the selected database before uploading Pages.
+Do not commit a shared ID for both environments. `preview_database_id: contact-rate-limit-local` is a local-emulation identifier, not a remote database. The deploy job rejects missing, all-zero, or shared remote IDs, then applies tracked migrations to the selected database before uploading Pages.
 
 ## Initial environment setup
 
@@ -135,7 +135,7 @@ The tracked workflow is configured to use Cloudflare Pages Direct Upload. The cu
 1. Use a Pages Direct Upload project named `smart-portfolio` with production branch `main`. Do not create a second project to match the assigned `smart-portfolio-bds.pages.dev` hostname.
 2. Keep Cloudflare Git integration disconnected. GitHub Actions owns the content fetch, quality gate, build, and upload.
 3. Add the four repository variables and three Actions secrets listed above. Restrict the Cloudflare token to the target account with Pages edit and D1 edit; do not grant unrelated zone or account authority.
-4. Create distinct production and preview D1 databases, replace the all-zero IDs in `wrangler.jsonc`, and commit the reviewed configuration. Keep the binding name exactly `CONTACT_RATE_LIMIT_DB` in both environments.
+4. Confirm the tracked production and preview D1 UUIDs resolve to the intended distinct databases. If provisioning replacements, update and commit the reviewed configuration. Keep the binding name exactly `CONTACT_RATE_LIMIT_DB` in both environments.
 5. Apply the reviewed non-secret values from `wrangler.jsonc` and configure encrypted runtime secrets separately for production and preview.
 6. Configure the Turnstile widgets for their exact production or preview hostnames. Production credentials must not authorize local-development hosts.
 7. Verify the Resend sending identity, check its suppression and bounce state, and keep the owner recipient value server-only.

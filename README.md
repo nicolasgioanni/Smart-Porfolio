@@ -248,7 +248,7 @@ Never copy real values into tracked documentation or `.env.example`.
 | `CONTACT_FROM_EMAIL` | Local `.env`; reviewed Wrangler variable | Verified Resend sender identity. |
 | `CONTACT_REPLY_TO_EMAIL` | Local `.env`; reviewed Wrangler variable | Fixed public reply-to for visitor confirmations. |
 
-`CONTACT_RATE_LIMIT_DB` is a Wrangler D1 binding rather than an environment variable. Production and preview use distinct remote databases; local Pages development uses the `contact-rate-limit-local` emulation identifier. The all-zero remote IDs in the tracked configuration must be replaced with the created database UUIDs before deployment.
+`CONTACT_RATE_LIMIT_DB` is a Wrangler D1 binding rather than an environment variable. Production and preview use distinct remote databases whose reviewed UUIDs are pinned in `wrangler.jsonc`; local Pages development uses the `contact-rate-limit-local` emulation identifier.
 
 Deployment credentials and immutable Cloudflare target variables are documented in [Deployment](docs/DEPLOYMENT.md). Secret placement and logging rules are documented in [Security](docs/SECURITY.md).
 

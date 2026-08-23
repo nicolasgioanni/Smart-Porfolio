@@ -14,7 +14,7 @@ function bindingFrom(bindings) {
 }
 
 describe("contact D1 configuration", () => {
-  it("declares isolated production and preview bindings with safe setup placeholders", async () => {
+  it("declares isolated production and preview bindings with pinned remote UUIDs", async () => {
     const config = await readWranglerConfig();
     const production = bindingFrom(config.d1_databases);
     const preview = bindingFrom(config.env.preview.d1_databases);
@@ -32,11 +32,9 @@ describe("contact D1 configuration", () => {
 
     for (const databaseId of [production.database_id, preview.database_id]) {
       expect(databaseId).toMatch(/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/);
+      expect(databaseId).not.toBe(placeholderId);
     }
-
-    if (production.database_id === preview.database_id) {
-      expect(production.database_id).toBe(placeholderId);
-    }
+    expect(production.database_id).not.toBe(preview.database_id);
   });
 
   it("tracks the minimal reservation schema and its quota-cleanup indexes", async () => {
