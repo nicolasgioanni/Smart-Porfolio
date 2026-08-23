@@ -19,7 +19,7 @@ Smart Portfolio uses a restrained glass-inspired visual language to organize evi
 | Shell, pages, header, and footer | `src/styles/layout.css` |
 | Glass primitives and controls | `src/styles/glass.css` and `src/components/glass/` |
 | Navigation and theme disclosure | `src/styles/navigation.css` and navigation components |
-| Portfolio pages and cards | `src/styles/portfolio.css` and portfolio components |
+| Portfolio pages and cards | `src/styles/portfolio.css`, `src/styles/experience.css`, and portfolio components |
 | Interaction states | `src/styles/interactions.css` |
 | Motion | `src/styles/motion.css` and motion components |
 | Loading states | `src/styles/skeletons.css` and loading components |
@@ -92,7 +92,7 @@ Do not create a unique radius or near-duplicate spacing value for one component 
 
 `--container-width` is 1180px. The desktop header has separate full and compact widths, while `--header-offset` and `--scroll-margin-top` keep sticky navigation from covering anchored content. Mobile uses `--mobile-dock-clearance` plus safe-area insets to reserve room below route content and anchored targets.
 
-`PageContainer`, `PageIntro`, `SectionHeader`, and `FeaturedGrid` own common route geometry. Home uses full-width top-level rows inside `home-overview-grid`; detail routes use evidence-specific lists and timelines.
+`PageContainer`, `PageIntro`, `SectionHeader`, and `FeaturedGrid` own common route geometry. Home uses full-width top-level rows inside `home-overview-grid`; detail routes use evidence-specific lists and showcases.
 
 The implemented Home order is:
 
@@ -165,6 +165,12 @@ Research and project Home cards use concise copy and bottom-aligned verified act
 
 Home section route actions use compact buttons aligned with the section heading. They remain visually subordinate to primary page actions.
 
+### Experience showcase
+
+The dedicated Experience route uses one logo-led glass card per position. Identity metadata remains stable while a page-wide `For everyone` or `Technical` control swaps the narrative depth for every role. Each collapsed evidence chapter already communicates its central fact; expansion adds context and tools tied to that chapter. Only one chapter per role remains open.
+
+The segmented selector uses one translated glass lens, and role cards use bounded logo highlights rather than pointer-following effects. On small screens, evidence returns to the full card width and result signals move below their chapter summaries.
+
 ## Skills
 
 Home groups selected skills by `category` and `category_order`. The published content currently produces three cards with four skills each. A skill with the complete proficiency, summary, and evidence set renders as a button that opens the shared dialog. Incomplete legacy detail sets render as static badges.
@@ -211,9 +217,9 @@ Use `aria-current`, `aria-pressed`, `aria-expanded`, or native disabled state to
 
 ## Motion
 
-Motion supports state and orientation. Prefer opacity and transform. Recommendation disclosure and footer grid rows are documented exceptions where a bounded layout transition communicates state.
+Motion supports state and orientation. Prefer opacity and transform. Experience chapters, recommendation disclosure, and footer grid rows are documented exceptions where a bounded layout transition communicates state.
 
-The role rotation, route indicator, header state, mobile rail drift, theme disclosure, recommendation expansion, footer disclosure, scroll reveals, and skeleton shimmer have explicit reduced-motion behavior. See [Animation guidelines](ANIMATION_GUIDELINES.md) for exact timing and constraints.
+The role rotation, route indicator, header state, mobile rail drift, theme disclosure, experience chapters, recommendation expansion, footer disclosure, scroll reveals, and skeleton shimmer have explicit reduced-motion behavior. See [Animation guidelines](ANIMATION_GUIDELINES.md) for exact timing and constraints.
 
 ## Loading states
 

@@ -68,6 +68,12 @@ Skills without the complete explanatory field set render as non-interactive badg
 
 The header profile image opens a labelled modal preview with a close button, Escape handling, and backdrop dismissal. The current preview does not implement the same focus trap and trigger-focus restoration used by skill dialogs. Treat that as a known manual-review limitation.
 
+### Experience chapters
+
+The page-level `For everyone` and `Technical` buttons form a labelled group and expose the selected depth with `aria-pressed`. The explanatory sentence is a polite live region, so a depth change is announced without repeating every role.
+
+Each expandable evidence chapter is a native button with `aria-expanded` and `aria-controls`; its panel is a labelled region and is `aria-hidden` while collapsed. Only one chapter per role remains open. Escape closes the focused chapter without moving focus. Organization logos are decorative because the adjacent organization name supplies the same identity in text.
+
 ### Recommendations
 
 Each available provenance link opens the recommendation source, and the separate `View profile` and `View recommendation` actions expose recommender-specific accessible names. The shield-check and any LinkedIn icons that accompany visible labels are decorative. External links opened in a new tab retain `noopener noreferrer`; provenance hover and focus emphasize only the visible verification text without making the icon the sole cue.

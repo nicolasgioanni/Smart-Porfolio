@@ -23,6 +23,7 @@ Current intentional client features include:
 - header and footer state;
 - profile image preview;
 - role rotation and optional scroll reveals;
+- experience depth switching and chapter expansion;
 - skills dialogs and recommendation expansion;
 - contact verification and submission.
 
@@ -33,7 +34,7 @@ Avoid large client-only trees or framework additions when native browser and Rea
 Keep motion CSS-first. Do not add an animation library to the core experience without a measured need.
 
 - Prefer opacity and transform.
-- Keep documented layout transitions bounded to the header, recommendation disclosure, and footer.
+- Keep documented layout transitions bounded to the header, experience disclosure, recommendation disclosure, and footer.
 - Do not blur text.
 - Do not add continuous scroll interpolation.
 - Respect reduced motion for every new effect.
