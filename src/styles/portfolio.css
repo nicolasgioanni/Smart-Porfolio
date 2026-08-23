@@ -1570,6 +1570,11 @@
   min-height: var(--recommendation-row-collapsed-height, auto);
 }
 
+.home-section--recommendations .recommendation-card--summary {
+  background: var(--color-home-recommendation-card-solid);
+  backdrop-filter: none;
+}
+
 .home-recommendations__item .recommendation-expandable {
   grid-template-rows: auto 1fr;
 }
