@@ -206,6 +206,7 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
   const [step, setStep] = useState<ContactStep>(0);
   const [draft, setDraft] = useState<ContactDraft>(initialContactDraft);
   const [errors, setErrors] = useState<ContactFieldErrors>({});
+  const [validationShake, setValidationShake] = useState<"a" | "b">("a");
   const [consents, setConsents] = useState(initialConsents);
   const [, setTurnstileStatus] = useState<TurnstileStatus>(turnstileSiteKey ? "loading" : "unavailable");
   const [verificationGateStatus, setVerificationGateStatus] = useState<VerificationGateStatus>("waiting");
@@ -331,6 +332,10 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
     setErrors((current) => ({ ...current, [field]: nextErrors[field as ContactField] }));
   }
 
+  function replayValidationShake() {
+    setValidationShake((current) => (current === "a" ? "b" : "a"));
+  }
+
   function continueAfterVerification() {
     if (!isHumanVerified) return;
     if (autoAdvanceTimeoutRef.current !== undefined) {
@@ -345,6 +350,7 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
     const nextErrors = validateNameStep(draft);
     setErrors(nextErrors);
     if (hasFieldErrors(nextErrors)) {
+      replayValidationShake();
       focusField(firstInvalidField(nextErrors, ["firstName", "lastName"]));
       return;
     }
@@ -357,6 +363,7 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
     const nextErrors = validateDetailsStep(draft);
     setErrors(nextErrors);
     if (hasFieldErrors(nextErrors)) {
+      replayValidationShake();
       focusField(firstInvalidField(nextErrors, ["email", "phone", "message"]));
       return;
     }
@@ -569,6 +576,7 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
       ) : null}
       <form
         className="contact-form"
+        data-validation-shake={validationShake}
         noValidate
         onSubmit={(event) => {
           event.preventDefault();
