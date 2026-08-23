@@ -248,11 +248,13 @@ After Wrangler returns, `scripts/checkDeployedContent.mjs` tests the stable assi
 
 Each successful attempt proves:
 
-1. `/` returns a successful response whose content type includes `text/html`.
-2. `/content-version.json` contains the expected content hash and candidate commit SHA.
-3. `/artifact-integrity.json` exactly matches the verified local manifest.
-4. `GET /api/contact/verify` returns HTTP `405`, an `application/json` content type, and `{ "ok": false, "error": "method_not_allowed" }`.
-5. `GET /api/contact` returns the same exact method-rejection contract.
+1. `/` returns a successful response whose content type includes `text/html` and whose canonical link resolves to `https://nicolasmgioanni.dev/` without a query string or fragment.
+2. `/robots.txt` returns a successful response whose content type includes `text/plain`, and its text exactly matches `robots.txt` in the verified local artifact.
+3. `/sitemap.xml` returns a successful response with an XML-compatible content type, and its text exactly matches `sitemap.xml` in the verified local artifact.
+4. `/content-version.json` contains the expected content hash and candidate commit SHA.
+5. `/artifact-integrity.json` exactly matches the verified local manifest.
+6. `GET /api/contact/verify` returns HTTP `405`, an `application/json` content type, and `{ "ok": false, "error": "method_not_allowed" }`.
+7. `GET /api/contact` returns the same exact method-rejection contract.
 
 The automated smoke test does not request every static route, test the custom domain, inspect the static security headers, submit a valid Turnstile token, inspect D1 rows, exercise DNS validation, send email, exercise WAF rules, or prove end-to-end contact delivery. Those checks remain part of release and operations verification.
 

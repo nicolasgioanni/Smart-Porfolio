@@ -1,12 +1,17 @@
 import type { Metadata } from "next";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { siteRoutes } from "@/components/navigation/siteRoutes";
 import { ExperienceShowcase } from "@/components/portfolio/ExperienceShowcase";
 import { createPageMetadata } from "@/lib/content/createPageMetadata";
 import { getPortfolioContent } from "@/lib/content/getPortfolioContent";
 import { selectExperienceDetailContent } from "@/lib/content/selectHomeContent";
 
 export function generateMetadata(): Metadata {
-  return createPageMetadata(getPortfolioContent(), "Experience", "Professional, research, teaching, and leadership experience with detailed context.");
+  return createPageMetadata(getPortfolioContent(), {
+    pathname: siteRoutes.experience,
+    title: "Experience",
+    description: "Professional, research, teaching, and leadership experience with detailed context."
+  });
 }
 
 export default function ExperiencePage() {

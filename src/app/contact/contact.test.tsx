@@ -694,6 +694,16 @@ describe("contact route", () => {
 
     expect(metadata.title).toEqual({ absolute: "Contact | Nicolas Gioanni Portfolio" });
     expect(metadata.description).toBe("Send Nicolas Gioanni a prioritized professional contact request.");
-    expect(metadata.robots).toEqual({ index: false, follow: true });
+    expect(metadata.robots).toEqual({
+      index: false,
+      follow: true,
+      googleBot: {
+        index: false,
+        follow: true,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+        "max-video-preview": -1
+      }
+    });
   });
 });

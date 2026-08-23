@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LegalDocument, resolveLegalContactEmail, resolveLegalEffectiveDate } from "@/components/legal/LegalDocument";
+import { siteRoutes } from "@/components/navigation/siteRoutes";
 import { SmartLink } from "@/components/navigation/SmartLink";
 import { createPageMetadata } from "@/lib/content/createPageMetadata";
 import { getPortfolioContent } from "@/lib/content/getPortfolioContent";
@@ -9,7 +10,11 @@ const pageDescription =
   "Privacy information for this portfolio, including theme storage, hosting request data, contact submissions, email communications, and visitor choices.";
 
 export function generateMetadata(): Metadata {
-  return createPageMetadata(getPortfolioContent(), pageTitle, pageDescription);
+  return createPageMetadata(getPortfolioContent(), {
+    pathname: siteRoutes.privacy,
+    title: pageTitle,
+    description: pageDescription
+  });
 }
 
 export default function PrivacyPage() {

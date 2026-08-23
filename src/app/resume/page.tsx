@@ -1,16 +1,17 @@
 import type { Metadata } from "next";
 import { GlassButton } from "@/components/glass/GlassButton";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { siteRoutes } from "@/components/navigation/siteRoutes";
 import { ResumePanel } from "@/components/portfolio/ResumePanel";
 import { createPageMetadata } from "@/lib/content/createPageMetadata";
 import { getPortfolioContent } from "@/lib/content/getPortfolioContent";
 
 export function generateMetadata(): Metadata {
-  return createPageMetadata(
-    getPortfolioContent(),
-    "Resume",
-    "Request Nicolas Gioanni's private resume by email or through the priority contact form."
-  );
+  return createPageMetadata(getPortfolioContent(), {
+    pathname: siteRoutes.resume,
+    title: "Resume",
+    description: "Request Nicolas Gioanni's private resume by email or through the priority contact form."
+  });
 }
 
 export default function ResumePage() {
