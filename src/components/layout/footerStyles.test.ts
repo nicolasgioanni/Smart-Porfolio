@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 const navigationStyles = readFileSync(path.join(process.cwd(), "src", "styles", "navigation.css"), "utf8");
 const layoutStyles = readFileSync(path.join(process.cwd(), "src", "styles", "layout.css"), "utf8");
+const interactionStyles = readFileSync(path.join(process.cwd(), "src", "styles", "interactions.css"), "utf8");
 
 describe("progressive footer styles", () => {
   it("reserves a stable overlay runway with a non-interactive activation band", () => {
@@ -42,12 +43,13 @@ describe("progressive footer styles", () => {
     expect(navigationStyles).not.toMatch(/\.blob-footer(?:--expanded)?(?: \.blob-footer__island)?\s*\{[^}]*scale\(/);
   });
 
-  it("keeps the disclosure control's idle color unchanged when expanded", () => {
-    expect(navigationStyles).toMatch(
-      /\.blob-footer__toggle\.hover-base-1\s*\{(?=[^}]*--hover-base-1-control-selected-shadow: none)(?=[^}]*--hover-base-1-selected-layer-opacity: 0)(?=[^}]*--hover-base-1-selected-text: var\(--color-ink-strong\))[^}]*\}/
-    );
+  it("uses the shared selected treatment to signal the expanded disclosure", () => {
     expect(navigationStyles).toMatch(
       /\.blob-footer__toggle\s*\{[\s\S]*background: var\(--color-control-surface-soft\)/
+    );
+    expect(navigationStyles).not.toMatch(/\.blob-footer__toggle\.hover-base-1\s*\{/);
+    expect(interactionStyles).toMatch(
+      /\.hover-base-1:is\([\s\S]*\[aria-expanded="true"\][\s\S]*\)\s*\{[\s\S]*box-shadow: var\(--hover-base-1-control-selected-shadow\)[\s\S]*color: var\(--hover-base-1-selected-text\)/
     );
   });
 

@@ -62,7 +62,8 @@ const footerProps = {
   resourceLinks: [
     { href: "https://github.com/nicolasgioanni/Portfolio-New", label: "Source Code" },
     { href: "https://github.com/nicolasgioanni/Portfolio-New/blob/main/LICENSE", label: "MIT License" },
-    { href: "mailto:ngioanni@uw.edu", label: "ngioanni@uw.edu" }
+    { href: "mailto:ngioanni@uw.edu", label: "ngioanni@uw.edu" },
+    { href: "/contact", label: "Contact Form" }
   ]
 };
 
@@ -98,6 +99,14 @@ function makeRect({ bottom, height, top }: { bottom: number; height: number; top
   };
 }
 
+function setRunwayRect({ bottom, top }: { bottom: number; top: number }) {
+  const sentinel = document.querySelector<HTMLElement>(".blob-footer__runway-sentinel");
+  if (!sentinel) throw new Error("Missing runway sentinel.");
+
+  const height = Math.max(bottom - top, 1);
+  sentinel.getBoundingClientRect = vi.fn(() => makeRect({ bottom, height, top }));
+}
+
 function reportIntersection(
   selector: string,
   {
@@ -113,6 +122,10 @@ function reportIntersection(
 
   const height = Math.max(bottom - top, 1);
   const intersectionHeight = isIntersecting ? height * ratio : 0;
+
+  if (target.matches(".blob-footer__runway-sentinel")) {
+    setRunwayRect({ bottom, top });
+  }
 
   act(() => {
     record.callback(
@@ -143,16 +156,19 @@ function scrollTo(scrollY: number) {
 
 function renderFooter() {
   const view = render(<InteractiveBlobFooter {...footerProps} />);
+  setRunwayRect({ bottom: 696, top: 648 });
   reportIntersection(".blob-footer__island", { ratio: 1 });
   return view;
 }
 
 function enterRunwayDownward() {
+  setRunwayRect({ bottom: 588, top: 540 });
   scrollTo(window.scrollY + 40);
   reportIntersection(".blob-footer__runway-sentinel", { bottom: 588, ratio: 1, top: 540 });
 }
 
 function retreatRunwayUpward() {
+  setRunwayRect({ bottom: 658, top: 610 });
   scrollTo(window.scrollY - 40);
   reportIntersection(".blob-footer__runway-sentinel", {
     bottom: 658,
@@ -232,18 +248,26 @@ describe("InteractiveBlobFooter", () => {
     expect(screen.getByRole("button", { name: "Details" })).toHaveAttribute("aria-expanded", "false");
   });
 
-  it("waits for downward scrolling and the full activation band", () => {
+  it("expands on downward scroll when the activation band was already fully visible", () => {
     const { container } = renderFooter();
 
     reportIntersection(".blob-footer__runway-sentinel", { bottom: 588, ratio: 1, top: 540 });
     expectFooterState(container, "compact");
 
+    setRunwayRect({ bottom: 588, top: 540 });
     scrollTo(440);
-    reportIntersection(".blob-footer__runway-sentinel", { bottom: 588, ratio: 0.99, top: 540 });
-    expectFooterState(container, "compact");
-
-    reportIntersection(".blob-footer__runway-sentinel", { bottom: 588, ratio: 1, top: 540 });
     expectFooterState(container, "expanded");
+  });
+
+  it("stays compact on downward scroll while the activation band is only partially visible", () => {
+    const { container } = renderFooter();
+
+    reportIntersection(".blob-footer__runway-sentinel", { bottom: 624, ratio: 0.5, top: 576 });
+    setRunwayRect({ bottom: 624, top: 576 });
+    scrollTo(440);
+
+    expectFooterState(container, "compact");
+    expect(screen.getByRole("button", { name: "Details" })).toHaveAttribute("aria-expanded", "false");
   });
 
   it("expands when collapsing page content moves the full runway sentinel into view without scrolling", () => {
@@ -351,10 +375,13 @@ describe("InteractiveBlobFooter", () => {
     const { container } = renderFooter();
     enterRunwayDownward();
 
+    setRunwayRect({ bottom: 600, top: 552 });
     scrollTo(420);
     reportIntersection(".blob-footer__runway-sentinel", { bottom: 600, ratio: 0.01, top: 552 });
     expectFooterState(container, "expanded");
 
+    setRunwayRect({ bottom: 648, top: 600 });
+    scrollTo(400);
     reportIntersection(".blob-footer__runway-sentinel", {
       bottom: 648,
       isIntersecting: false,
@@ -440,7 +467,7 @@ describe("InteractiveBlobFooter", () => {
     expectFooterState(container, "compact");
   });
 
-  it("resets on route changes and reevaluates visibility on the new route", () => {
+  it("expands on the next downward scroll after a route reset when the sentinel is already fully visible", () => {
     const view = renderFooter();
     enterRunwayDownward();
     expectFooterState(view.container, "expanded");
@@ -452,7 +479,8 @@ describe("InteractiveBlobFooter", () => {
     reportIntersection(".blob-footer__runway-sentinel", { bottom: 588, ratio: 1, top: 540 });
     expectFooterState(view.container, "compact");
 
-    enterRunwayDownward();
+    setRunwayRect({ bottom: 588, top: 540 });
+    scrollTo(window.scrollY + 40);
     expectFooterState(view.container, "expanded");
   });
 
