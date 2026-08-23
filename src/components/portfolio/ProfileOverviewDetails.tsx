@@ -76,7 +76,7 @@ export function ProfileOverviewDetails({ overview }: ProfileOverviewDetailsProps
   const educationProgram = formatEducationProgram(overview.education?.degree, overview.education?.field);
   const educationTitle = overview.education?.institution ?? educationProgram;
   const hasStructuredResearchDetails = Boolean(
-    overview.research?.position || overview.research?.contributions?.length || overview.research?.labs?.length
+    overview.research?.byline || overview.research?.labs?.length
   );
 
   return (
@@ -178,40 +178,24 @@ export function ProfileOverviewDetails({ overview }: ProfileOverviewDetailsProps
                 <AffiliationLogo logo={overview.research.logo} />
                 <div className="profile-overview__entity-copy profile-overview__research-copy">
                   <h3 className="profile-overview__entity-title">{overview.research.title}</h3>
-                  {hasStructuredResearchDetails ? (
+                  {overview.research.byline ? (
+                    <p className="profile-overview__entity-subtitle">{overview.research.byline}</p>
+                  ) : null}
+                  {overview.research.labs?.length ? (
                     <dl className="profile-overview__academic-details profile-overview__research-details">
-                      {overview.research.position ? (
-                        <div className="profile-overview__academic-detail">
-                          <dt>Position</dt>
-                          <dd>{overview.research.position}</dd>
-                        </div>
-                      ) : null}
-                      {overview.research.contributions?.length ? (
-                        <div className="profile-overview__academic-detail">
-                          <dt>Contributions</dt>
-                          <dd>
-                            <ul className="profile-overview__research-fact-list">
-                              {overview.research.contributions.map((contribution) => (
-                                <li key={contribution}>{contribution}</li>
-                              ))}
-                            </ul>
-                          </dd>
-                        </div>
-                      ) : null}
-                      {overview.research.labs?.length ? (
-                        <div className="profile-overview__academic-detail">
-                          <dt>Labs</dt>
-                          <dd>
-                            <ul className="profile-overview__research-fact-list">
-                              {overview.research.labs.map((lab) => (
-                                <li key={lab}>{lab}</li>
-                              ))}
-                            </ul>
-                          </dd>
-                        </div>
-                      ) : null}
+                      <div className="profile-overview__academic-detail">
+                        <dt>Labs</dt>
+                        <dd>
+                          <ul className="profile-overview__research-fact-list">
+                            {overview.research.labs.map((lab) => (
+                              <li key={lab}>{lab}</li>
+                            ))}
+                          </ul>
+                        </dd>
+                      </div>
                     </dl>
-                  ) : overview.research.summary ? (
+                  ) : null}
+                  {!hasStructuredResearchDetails && overview.research.summary ? (
                     <p className="profile-overview__summary">{overview.research.summary}</p>
                   ) : null}
                 </div>

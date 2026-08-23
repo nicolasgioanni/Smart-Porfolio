@@ -273,9 +273,9 @@ function createResearchOverview(profile: ProfileContent, research: ResearchItem[
 
   if (!selectedResearch) return undefined;
 
-  const contributions = (selectedResearch.profileContributions ?? []).map(clean).filter(Boolean) as string[];
+  const byline = clean(selectedResearch.profileByline);
   const labs = (selectedResearch.profileLabs ?? []).map(clean).filter(Boolean) as string[];
-  const hasStructuredProfileDetails = contributions.length > 0 || labs.length > 0;
+  const hasStructuredProfileDetails = Boolean(byline || labs.length > 0);
 
   const links = selectedResearch.links.filter((link) => Boolean(clean(link.label)) && isSupportedUrl(link.url));
   const publishedLabels = new Set(links.map((link) => link.label.trim().toLowerCase()));
@@ -293,8 +293,7 @@ function createResearchOverview(profile: ProfileContent, research: ResearchItem[
     title: clean(selectedResearch.homeTitle) ?? selectedResearch.title,
     ...(hasStructuredProfileDetails
       ? {
-          position: clean(selectedResearch.role),
-          contributions,
+          byline,
           labs
         }
       : {

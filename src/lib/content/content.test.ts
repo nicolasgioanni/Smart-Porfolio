@@ -321,7 +321,7 @@ describe("portfolio normalization", () => {
     expect(content.research[0]?.bullets).toEqual(["Read papers", "Wrote summary"]);
     expect(content.research[0]?.organizationLogo).toBe("/images/research/lab.svg");
     expect(content.research[0]?.organizationLogoAlt).toBe("Lab mark");
-    expect(content.research[0]?.profileContributions).toEqual([]);
+    expect(content.research[0]?.profileByline).toBeUndefined();
     expect(content.research[0]?.profileLabs).toEqual([]);
     expect(content.research[0]?.pendingLinks).toEqual(["Manuscript"]);
     expect(content.projects[0]?.stack).toEqual(["TypeScript", "Next.js"]);
@@ -499,7 +499,7 @@ describe("portfolio normalization", () => {
     );
     sheets.research[0]!.home_title = "Research A Home";
     sheets.research[0]!.role = "Graduate Research Assistant";
-    sheets.research[0]!.profile_contributions = "Lead Developer|First Author";
+    sheets.research[0]!.profile_byline = "Lead Engineer & First Author";
     sheets.research[0]!.profile_labs = "SEE Lab|Miller Lab";
 
     const content = normalizePortfolioContent(sheets, metadata);
@@ -518,15 +518,24 @@ describe("portfolio normalization", () => {
       alternate: "Research Scientist"
     });
     expect(content.research[0]?.homeTitle).toBe("Research A Home");
-    expect(content.research[0]?.profileContributions).toEqual(["Lead Developer", "First Author"]);
+    expect(content.research[0]?.profileByline).toBe("Lead Engineer & First Author");
     expect(content.research[0]?.profileLabs).toEqual(["SEE Lab", "Miller Lab"]);
     expect(overview.research?.title).toBe("Research A Home");
     expect(overview.research).toMatchObject({
-      position: "Graduate Research Assistant",
-      contributions: ["Lead Developer", "First Author"],
+      byline: "Lead Engineer & First Author",
       labs: ["SEE Lab", "Miller Lab"]
     });
+    expect(overview.research).not.toHaveProperty("position");
     expect(overview.research).not.toHaveProperty("summary");
+  });
+
+  it("normalizes the legacy profile contributions column as a compact research byline", () => {
+    const sheets = createSheets();
+    sheets.research[0]!.profile_contributions = "Lead Engineer|First Author";
+
+    const content = normalizePortfolioContent(sheets, metadata);
+
+    expect(content.research[0]?.profileByline).toBe("Lead Engineer & First Author");
   });
 
   it.each([
@@ -706,12 +715,12 @@ describe("portfolio normalization", () => {
           alt: featuredResearch!.organizationLogoAlt
         }
       });
-      if (featuredResearch!.profileContributions?.length || featuredResearch!.profileLabs?.length) {
+      if (featuredResearch!.profileByline || featuredResearch!.profileLabs?.length) {
         expect(overview.research).toMatchObject({
-          position: featuredResearch!.role,
-          contributions: featuredResearch!.profileContributions,
+          byline: featuredResearch!.profileByline,
           labs: featuredResearch!.profileLabs
         });
+        expect(overview.research).not.toHaveProperty("position");
         expect(overview.research).not.toHaveProperty("summary");
       } else {
         expect(overview.research?.summary).toBe(
@@ -854,10 +863,7 @@ describe("portfolio normalization", () => {
       role: "Graduate Research Assistant",
       homeSummary:
         "Built by UW Bothell School of STEM’s SEE Lab for the University of Utah Miller Lab, CytoCV is a Django platform using Mask R-CNN to segment yeast microscopy stacks and export per-cell fluorescence measurements.",
-      profileContributions: [
-        "Lead Developer for CytoCV software",
-        "First Author of the CytoCV manuscript"
-      ],
+      profileByline: "Lead Engineer & First Author",
       profileLabs: [
         "SEE Lab, UW Bothell School of STEM",
         "Miller Lab, University of Utah"
@@ -873,11 +879,7 @@ describe("portfolio normalization", () => {
     const profileOverview = createProfileOverviewContent(content);
     expect(profileOverview.research).toMatchObject({
       title: "CytoCV",
-      position: "Graduate Research Assistant",
-      contributions: [
-        "Lead Developer for CytoCV software",
-        "First Author of the CytoCV manuscript"
-      ],
+      byline: "Lead Engineer & First Author",
       labs: [
         "SEE Lab, UW Bothell School of STEM",
         "Miller Lab, University of Utah"
@@ -888,6 +890,7 @@ describe("portfolio normalization", () => {
         alt: "UW Bothell School of STEM logo"
       }
     });
+    expect(profileOverview.research).not.toHaveProperty("position");
     expect(profileOverview.research).not.toHaveProperty("summary");
     expect(profileOverview.education).toMatchObject({
       degree: "Bachelor of Science",

@@ -758,8 +758,7 @@ describe("portfolio UI helpers", () => {
       research: {
         id: "research-sentinel",
         title: "Research Project Sentinel",
-        position: "Graduate Research Assistant",
-        contributions: ["Lead Developer for the software", "First Author of the manuscript"],
+        byline: "Lead Engineer & First Author",
         labs: ["SEE Lab, UW Bothell School of STEM", "Miller Lab, University of Utah"],
         logo: { src: "/images/organizations/research-sentinel.svg", alt: "Research Organization Sentinel mark" },
         links: [
@@ -860,20 +859,16 @@ describe("portfolio UI helpers", () => {
     expect(research.getAllByRole("heading", { level: 3, name: "Research Project Sentinel" })).toHaveLength(1);
     const researchDetails = researchSection!.querySelector("dl.profile-overview__research-details");
     expect(researchDetails).not.toBeNull();
-    expect(Array.from(researchDetails!.querySelectorAll("dt")).map((term) => term.textContent)).toEqual([
-      "Position",
-      "Contributions",
-      "Labs"
-    ]);
-    expect(research.getByText("Graduate Research Assistant")).toBeInTheDocument();
+    expect(Array.from(researchDetails!.querySelectorAll("dt")).map((term) => term.textContent)).toEqual(["Labs"]);
+    expect(research.queryByText("Graduate Research Assistant")).not.toBeInTheDocument();
+    expect(research.queryByText("Position")).not.toBeInTheDocument();
+    expect(research.queryByText("Contributions")).not.toBeInTheDocument();
+    expect(research.getByText("Lead Engineer & First Author")).toHaveClass("profile-overview__entity-subtitle");
     expect(
-      Array.from(researchDetails!.querySelectorAll("ul.profile-overview__research-fact-list")).map((list) =>
-        Array.from(list.querySelectorAll("li")).map((item) => item.textContent)
+      Array.from(researchDetails!.querySelectorAll("ul.profile-overview__research-fact-list li")).map(
+        (item) => item.textContent
       )
-    ).toEqual([
-      ["Lead Developer for the software", "First Author of the manuscript"],
-      ["SEE Lab, UW Bothell School of STEM", "Miller Lab, University of Utah"]
-    ]);
+    ).toEqual(["SEE Lab, UW Bothell School of STEM", "Miller Lab, University of Utah"]);
     expect(researchSection!.querySelector(".profile-overview__summary")).not.toBeInTheDocument();
     expect(screen.getAllByText("Current Organization Sentinel")).toHaveLength(1);
 
