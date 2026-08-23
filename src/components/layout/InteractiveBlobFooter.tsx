@@ -19,16 +19,18 @@ type InteractiveBlobFooterProps = {
   resourceLinks: ProgressiveFooterLink[];
 };
 
-const FOOTER_EXPAND_VISIBILITY_RATIO = 0.5;
-const FOOTER_COLLAPSE_VISIBILITY_RATIO = 0.15;
-const FOOTER_OBSERVER_THRESHOLDS = [0, FOOTER_COLLAPSE_VISIBILITY_RATIO, FOOTER_EXPAND_VISIBILITY_RATIO, 1];
+const FOOTER_RUNWAY_OBSERVER_THRESHOLDS = [0, 1];
 
 type ScrollDirection = "down" | "idle" | "up";
 
-function isRetreatingBelowViewport(entry: IntersectionObserverEntry): boolean {
+function isBelowViewport(entry: IntersectionObserverEntry): boolean {
   const viewportBottom = entry.rootBounds?.bottom ?? window.innerHeight;
 
-  return entry.boundingClientRect.top >= 0 && entry.boundingClientRect.bottom >= viewportBottom;
+  return entry.boundingClientRect.top >= viewportBottom;
+}
+
+function isAboveViewport(entry: IntersectionObserverEntry): boolean {
+  return entry.boundingClientRect.bottom <= 0;
 }
 
 function FooterLinkList({ label, links }: { label: string; links: ProgressiveFooterLink[] }) {
@@ -60,13 +62,14 @@ export function InteractiveBlobFooter({
   const detailsId = useId();
   const detailsRef = useRef<HTMLDivElement>(null);
   const footerRef = useRef<HTMLElement>(null);
-  const viewportTriggerRef = useRef<HTMLSpanElement>(null);
+  const runwaySentinelRef = useRef<HTMLSpanElement>(null);
   const toggleRef = useRef<HTMLButtonElement>(null);
   const expandedRef = useRef(false);
   const isVisibleRef = useRef(false);
   const lastScrollYRef = useRef(0);
   const manualCollapseSuppressedRef = useRef(false);
   const pendingCollapseRef = useRef(false);
+  const runwayApproachedFromBelowRef = useRef(false);
   const scrollDirectionRef = useRef<ScrollDirection>("idle");
   const pathname = usePathname();
   const previousPathnameRef = useRef(pathname);
@@ -98,6 +101,7 @@ export function InteractiveBlobFooter({
     previousPathnameRef.current = pathname;
     lastScrollYRef.current = window.scrollY;
     manualCollapseSuppressedRef.current = false;
+    runwayApproachedFromBelowRef.current = false;
     scrollDirectionRef.current = "idle";
     collapseUnlessDetailsFocused();
   }, [collapseUnlessDetailsFocused, pathname]);
@@ -123,6 +127,8 @@ export function InteractiveBlobFooter({
   useEffect(() => {
     const footer = footerRef.current;
     if (!footer || typeof IntersectionObserver === "undefined") return;
+    const island = footer.querySelector<HTMLElement>(".blob-footer__island");
+    if (!island) return;
 
     const observer = new IntersectionObserver((entries) => {
       const entry = entries[entries.length - 1];
@@ -135,22 +141,33 @@ export function InteractiveBlobFooter({
       }
     }, { threshold: 0 });
 
-    observer.observe(footer);
+    observer.observe(island);
     return () => observer.disconnect();
   }, [collapseUnlessDetailsFocused]);
 
   useEffect(() => {
-    const viewportTrigger = viewportTriggerRef.current;
-    if (!viewportTrigger || typeof IntersectionObserver === "undefined") return;
+    const runwaySentinel = runwaySentinelRef.current;
+    if (!runwaySentinel || typeof IntersectionObserver === "undefined") return;
 
     const observer = new IntersectionObserver(
       (entries) => {
         const entry = entries[entries.length - 1];
         if (!entry) return;
 
+        if (!entry.isIntersecting && isBelowViewport(entry)) {
+          runwayApproachedFromBelowRef.current = true;
+        } else if (!entry.isIntersecting && isAboveViewport(entry)) {
+          runwayApproachedFromBelowRef.current = false;
+        }
+
+        const isFullyVisible = entry.isIntersecting && entry.intersectionRatio >= 1;
+        const approachedFromBelow = runwayApproachedFromBelowRef.current;
+
+        if (isFullyVisible) runwayApproachedFromBelowRef.current = false;
+
         if (
-          entry.isIntersecting &&
-          entry.intersectionRatio >= FOOTER_EXPAND_VISIBILITY_RATIO &&
+          isFullyVisible &&
+          (scrollDirectionRef.current === "down" || approachedFromBelow) &&
           !manualCollapseSuppressedRef.current &&
           !pendingCollapseRef.current
         ) {
@@ -161,16 +178,16 @@ export function InteractiveBlobFooter({
         if (
           expandedRef.current &&
           scrollDirectionRef.current === "up" &&
-          entry.intersectionRatio <= FOOTER_COLLAPSE_VISIBILITY_RATIO &&
-          isRetreatingBelowViewport(entry)
+          entry.intersectionRatio <= 0 &&
+          isBelowViewport(entry)
         ) {
           collapseUnlessDetailsFocused();
         }
       },
-      { threshold: FOOTER_OBSERVER_THRESHOLDS }
+      { threshold: FOOTER_RUNWAY_OBSERVER_THRESHOLDS }
     );
 
-    observer.observe(viewportTrigger);
+    observer.observe(runwaySentinel);
 
     return () => {
       observer.disconnect();
@@ -204,7 +221,9 @@ export function InteractiveBlobFooter({
       onBlurCapture={handleBlur}
       ref={footerRef}
     >
-      <span aria-hidden="true" className="blob-footer__viewport-trigger" ref={viewportTriggerRef} />
+      <div aria-hidden="true" className="blob-footer__runway">
+        <span aria-hidden="true" className="blob-footer__runway-sentinel" ref={runwaySentinelRef} />
+      </div>
       <GlassBlob className="blob-footer__island" tone="footer">
         <div className="blob-footer__compact">
           <p className="blob-footer__copyright">{compactCopyright}</p>
