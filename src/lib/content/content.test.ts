@@ -327,6 +327,20 @@ describe("CSV parsing and field normalization", () => {
 });
 
 describe("portfolio normalization", () => {
+  it("normalizes the spreadsheet-backed Experience summary", () => {
+    const sheets = createSheets();
+    sheets.profile.push({
+      key: "experience_summary",
+      value: "Experience across public-sector engineering, university research, and computer science teaching."
+    });
+
+    const content = normalizePortfolioContent(sheets, metadata);
+
+    expect(content.profile.experienceSummary).toBe(
+      "Experience across public-sector engineering, university research, and computer science teaching."
+    );
+  });
+
   it("creates the generated content shape", () => {
     const content = normalizePortfolioContent(createSheets(), metadata);
 

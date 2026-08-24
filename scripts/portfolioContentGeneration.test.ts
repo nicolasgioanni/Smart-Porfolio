@@ -265,6 +265,9 @@ describe("strict XLSX download boundary", () => {
     expect(requestHeaders.has("authorization")).toBe(false);
     expect(requestHeaders.has("cookie")).toBe(false);
     expect(generated.metadata.sourceMode).toBe("remote");
+    expect(generated.profile.experienceSummary).toBe(
+      "My experience spans AI engineering at the U.S. Treasury, research software and machine learning at the University of Washington, and teaching core computer science courses."
+    );
     expect(generated.metadata.sources.resume).toBe("template");
     expect(logs.join("\n")).not.toContain(workbookUrl);
     expect(logs.join("\n")).not.toContain("private-test-id");
