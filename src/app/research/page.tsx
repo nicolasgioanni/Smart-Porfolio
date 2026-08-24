@@ -15,9 +15,9 @@ export default function ResearchPage() {
 
   return (
     <PageContainer
-      eyebrow="Research"
-      title="Research work"
-      description="Selected research with methods, impact, supporting links, and technical context."
+      title="Research"
+      description="I research computer vision for microscopy, adversarial machine learning, and automated biology workflows—explore it below."
+      introVariant="panel"
       motionEnabled={content.siteSettings.enableScrollMotion}
     >
       <ResearchList items={researchItems} variant="detail" />

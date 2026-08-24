@@ -30,10 +30,10 @@ Reusable skeleton components:
 
 ## Page skeleton behavior
 
-- Home skeleton mirrors the profile overview, skills panel, and four remaining single-row sections.
+- Home skeleton mirrors the profile overview, the four core content sections, three Skills cards, and the three-card Recommendations section, including its enabled empty-state footprint.
 - Research and Projects skeletons mirror card grids.
 - Experience skeleton mirrors the timeline.
-- Resume skeleton mirrors the profile panel and resume sections.
+- Resume skeleton mirrors the single private-access panel and its two request actions; it does not imply that resume details or a file will load.
 
 ## Route loading behavior
 

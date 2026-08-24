@@ -2,9 +2,9 @@
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
-    branches: [main]
+    branches: [main, develop]
 
 jobs:
   verify:
@@ -27,6 +27,9 @@ jobs:
 
       - name: Typecheck
         run: npm run typecheck
+
+      - name: Footer regression tests
+        run: npm run test:footer
 
       - name: Test
         run: npm run test

@@ -2,7 +2,7 @@
 
 ## Runtime Strategy
 
-The portfolio is a static export app. The site should render real content from static HTML and generated data without backend/API/runtime sheet requests.
+The portfolio is a static export app with one isolated Cloudflare Pages Function for contact delivery. The site should render portfolio content from static HTML and generated data without runtime sheet requests.
 
 Keep `output: "export"` unless the hosting and product requirements change.
 
@@ -10,7 +10,7 @@ Keep `output: "export"` unless the hosting and product requirements change.
 
 Do not fetch portfolio content from the browser or from route handlers at request time. Fetch content during generation/build and render from generated files.
 
-Security tests should continue proving there are no API routes, route handlers, server actions, or runtime content fetches.
+Security tests should continue proving there are no Next.js API routes, route handlers, server actions, or runtime content fetches, and that Pages Function routing invokes only `/api/contact`.
 
 ## JavaScript Budget
 
@@ -21,6 +21,7 @@ Current intentional client features:
 - Mobile navigation state.
 - Scroll reveal/compress motion.
 - Footer theme switcher with localStorage persistence.
+- Contact wizard and explicit Turnstile integration.
 
 Avoid large client-only components unless they provide clear portfolio value.
 

@@ -3,8 +3,10 @@ node_modules
 out
 coverage
 .env
-.env*.local
-!.env.local.example
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
 *.tsbuildinfo
 .DS_Store
 .local

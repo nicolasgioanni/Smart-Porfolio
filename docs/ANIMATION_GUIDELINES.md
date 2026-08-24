@@ -12,11 +12,25 @@ Animate `transform` and `opacity` first. Avoid animating layout properties such 
 
 Always respect `prefers-reduced-motion`. Disable or simplify shimmer, entrance motion, and scroll-linked effects for motion-sensitive users.
 
+## Home role swap
+
+The Home role uses a fixed-height, overflow-hidden window sized for the widest configured role so neither the line nor the surrounding layout shifts. Server rendering and initial hydration show the first configured engineer role. A subtle top-and-bottom CSS mask may soften the window edges, but the text itself must remain sharp: do not animate or apply `filter`, backdrop blur, or text blur.
+
+Show each role for `3400ms`, then transition for `640ms` over `8px` with `cubic-bezier(0.22, 1, 0.36, 1)`. The vertical flip rotates through `70deg`: outgoing text tilts upward and fades from fully visible to transparent, while incoming text starts below at the opposing angle, settles upright, and fades in. Keep the perspective shallow and the text sharp so the movement reads as a controlled mechanical flip rather than a carousel effect.
+
+For `Software Engineer` → `AI Engineer` → `Security Engineer`, animate only the right-aligned prefix while one persistent `Engineer` suffix remains stationary. For `Security Engineer` → `Research Scientist` and `Research Scientist` → `Software Engineer`, flip and fade the entire role line. Keep the fixed prefix column and widest-role sizing so neither the suffix nor surrounding layout shifts. Keep all visual animation layers out of the accessibility tree and expose one stable, non-live role label.
+
+Do not substitute typing, letter-by-letter, bounce, large-scale, spinning-carousel, bright-pill, or blur effects. Keep the approved flip limited to the small `70deg` vertical role transition. A static-headline fallback never schedules rotation. When `prefers-reduced-motion` is active, schedule no rotation timers and show the first role statically (`Software Engineer` for the default content). The role rotation is independent of the scroll-reveal setting so disabling entrance effects does not silently freeze the headline.
+
+## Recommendation expansion
+
+Recommendation quotes display four lines while collapsed by default. Within each multi-card Home row, a card whose rendered header occupies an extra line may use a three-line quote preview so every card shares one collapsed row height; single-card Home rows and detail cards remain at four lines. Collapsed overflowing quotes use a true alpha mask over the lower half of the final visible line, without a surface-colored overlay, so the unfinished text is obvious across themes. `Show more` and `Show less` animate the clipped viewport over `520ms` with `cubic-bezier(0.22, 1, 0.36, 1)` and lightly fade the quote over `320ms` with the same easing. The native button retains `aria-expanded` and `aria-controls`; text is never duplicated into a live region. Only the selected recommendation card grows beyond the fixed collapsed Home panel, while siblings remain fixed. An invisible section reserve follows the protruding content so later rows and the footer remain in normal document flow without extending the panel border. Disable expansion and opacity transitions for `prefers-reduced-motion` while preserving the immediate open/closed state.
+
 ## Hover Base 1
 
 Hover Base 1 uses a single low-opacity diagonal sheen that travels left-to-right over `1600ms`. It loops only while a control is genuinely hovered and is limited to devices matching both `(hover: hover)` and `(pointer: fine)`; it never runs for touch-only input. Apply `hover-base-1--no-wave` to imagery or other controls where the sheen would obscure meaningful visual content. The surface lift is limited to one pixel, pressing removes the lift immediately, and state colors remain available without motion.
 
-The persistent desktop route indicator moves only after a pathname commits in the preserved layout. Its `420ms` FLIP animation uses the dedicated symmetric `cubic-bezier(0.65, 0, 0.35, 1)` route easing so it departs gently, accelerates through the middle, and settles softly at the destination. It may animate only `transform` and opacity; resizing and first-page hydration snap directly to the final geometry. Interrupted navigation continues from the current visual position. Under `prefers-reduced-motion`, disable the sheen, lift, arrow travel, and route-indicator travel while preserving the hover, focus, and selected surfaces.
+The persistent desktop route indicator moves after a pathname commits in the preserved layout. Its `420ms` FLIP animation uses the dedicated symmetric `cubic-bezier(0.65, 0, 0.35, 1)` route easing so it departs gently, accelerates through the middle, and settles softly at the destination. It may animate only `transform` and opacity. During the fixed `480ms` route-settlement window, header/link geometry changes retarget from the indicator's current presentation rectangle using only the remaining time; this prevents the compact-to-expanded header morph from cancelling card-initiated navigation motion or extending it indefinitely. Resizing outside that window and first-page hydration snap directly to final geometry. Rapid route changes start a new bounded transition from the current visual position. Under `prefers-reduced-motion`, disable the sheen, lift, arrow travel, and route-indicator travel while preserving the hover, focus, and selected surfaces.
 
 ## Scroll motion
 
@@ -28,7 +42,7 @@ Use `IntersectionObserver` as the reliable baseline for future scroll reveals. A
 
 Scroll motion must not blur text or content. Use opacity and transform for reveal/compress effects, and do not animate `filter` for scrolling sections.
 
-The `enable_scroll_motion` setting gates reveal and section motion. When it is false, content should render statically without entrance or compression effects.
+The `enable_scroll_motion` setting gates scroll reveals and section motion. When it is false, those elements render without entrance or compression effects; it does not disable the Home role rotation.
 
 ## Glass and blur
 

@@ -33,7 +33,7 @@ import {
   getSelectedResearch
 } from "@/lib/content/profileOverview";
 import { sortForDetail, sortForHome, sortRecommendationsForDetail } from "@/lib/content/sortPortfolioContent";
-import { isHttpsUrl, isSupportedUrl } from "@/lib/content/validatePortfolioContent";
+import { isHttpsUrl, isIsoDate, isSupportedUrl } from "@/lib/content/validatePortfolioContent";
 import { formatDateRange } from "@/lib/formatting/formatDateRange";
 
 const metadata: GeneratedContentMetadata = {
@@ -52,6 +52,9 @@ const metadata: GeneratedContentMetadata = {
     site_settings: "template"
   }
 };
+
+const brentFullQuote =
+  "Nicolas has worked with me on an open source project, CytoCV, in collaboration with biologists at the University of Utah. He has excelled in many critical areas on this project including software engineering, web development, UX, computer vision, and the ability to work with biologists and translate their needs into software. Nicolas is proactive in identifying and solving issues and has demonstrated excellent skills in writing, documentation, and collaboration.";
 
 function createSheets(overrides: Partial<RawPortfolioSheets> = {}): RawPortfolioSheets {
   return {
@@ -89,6 +92,7 @@ function createSheets(overrides: Partial<RawPortfolioSheets> = {}): RawPortfolio
         start_date: "2025-01",
         end_date: "Present",
         home_summary: "Home research.",
+        profile_summary: "Profile research.",
         detail_summary: "Detail research.",
         impact: "Useful findings.",
         bullets: "Read papers|Wrote summary",
@@ -225,7 +229,18 @@ function createSheets(overrides: Partial<RawPortfolioSheets> = {}): RawPortfolio
       }
     ],
     skills: [
-      { id: "skill-ts", category: "languages", name: "TypeScript", priority: "1", featured: "true", show_on_home: "true", order: "2" },
+      {
+        id: "skill-ts",
+        category: "languages",
+        name: "TypeScript",
+        proficiency: "Proficient",
+        summary: "Typed JavaScript for maintainable applications.",
+        where_used: "Used to build a production web application.",
+        priority: "1",
+        featured: "true",
+        show_on_home: "true",
+        order: "2"
+      },
       { id: "skill-py", category: "languages", name: "Python", priority: "1", featured: "true", show_on_home: "true", order: "1" },
       { id: "skill-sec", category: "cybersecurity", name: "Security", priority: "2", featured: "false", show_on_home: "true", order: "3" }
     ],
@@ -241,7 +256,14 @@ function createSheets(overrides: Partial<RawPortfolioSheets> = {}): RawPortfolio
       { key: "max_home_experience_items", value: "1" },
       { key: "max_home_recommendation_items", value: "1" },
       { key: "recommendations_nav_label", value: "Recommendations" },
-      { key: "max_home_skill_items", value: "2" }
+      { key: "max_home_skill_items", value: "2" },
+      { key: "license_name", value: "MIT" },
+      { key: "license_url", value: "https://github.com/example/portfolio/blob/main/LICENSE" },
+      { key: "repository_url", value: "https://github.com/example/portfolio" },
+      { key: "legal_contact_email", value: "legal@example.com" },
+      { key: "legal_effective_date", value: "2026-08-07" },
+      { key: "hosting_provider_name", value: "Vercel" },
+      { key: "hosting_privacy_url", value: "https://vercel.com/legal/privacy-notice" }
     ],
     ...overrides
   };
@@ -295,6 +317,9 @@ describe("CSV parsing and field normalization", () => {
     expect(isSupportedUrl("not a url")).toBe(false);
     expect(isHttpsUrl("https://www.linkedin.com/in/example")).toBe(true);
     expect(isHttpsUrl("http://www.linkedin.com/in/example")).toBe(false);
+    expect(isIsoDate("2026-08-07")).toBe(true);
+    expect(isIsoDate("2026-02-30")).toBe(false);
+    expect(isIsoDate("August 7, 2026")).toBe(false);
     expect(formatDateRange("2025-06", "2025-08")).toBe("Jun 2025 to Aug 2025");
   });
 });
@@ -307,19 +332,160 @@ describe("portfolio normalization", () => {
     expect(content.research[0]?.bullets).toEqual(["Read papers", "Wrote summary"]);
     expect(content.research[0]?.organizationLogo).toBe("/images/research/lab.svg");
     expect(content.research[0]?.organizationLogoAlt).toBe("Lab mark");
+    expect(content.research[0]?.profileByline).toBeUndefined();
+    expect(content.research[0]?.profileLabs).toEqual([]);
     expect(content.research[0]?.pendingLinks).toEqual(["Manuscript"]);
     expect(content.projects[0]?.stack).toEqual(["TypeScript", "Next.js"]);
+    expect(content.projects[0]?.homeSkills).toEqual([]);
     expect(content.experience[0]?.organizationLogo).toBe("/images/experience/company.svg");
     expect(content.experience[0]?.organizationLogoAlt).toBe("Company mark");
     expect(content.recommendations[0]?.skills).toEqual(["Communication", "TypeScript"]);
+    expect(content.recommendations[0]?.fullQuoteLink).toBeUndefined();
     expect(content.education[0]?.institutionLogo).toBe("/images/education/university-logo.svg");
     expect(content.education[0]?.institutionLogoAlt).toBe("University logo");
     expect(content.education[0]?.concentration).toBe("Information Assurance");
+    expect(content.skills.find((skill) => skill.id === "skill-ts")).toMatchObject({
+      proficiency: "Proficient",
+      summary: "Typed JavaScript for maintainable applications.",
+      whereUsed: "Used to build a production web application."
+    });
     expect(content.siteSettings.enableRecommendations).toBe(true);
     expect(content.siteSettings.showEmptyRecommendations).toBe(false);
     expect(content.siteSettings.defaultTheme).toBe("navy");
     expect(content.siteSettings.maxHomeRecommendationItems).toBe(1);
     expect(content.siteSettings.recommendationsNavLabel).toBe("Recommendations");
+    expect(content.siteSettings.licenseName).toBe("MIT");
+    expect(content.siteSettings.repositoryUrl).toBe("https://github.com/example/portfolio");
+    expect(content.siteSettings.legalContactEmail).toBe("legal@example.com");
+    expect(content.siteSettings.legalEffectiveDate).toBe("2026-08-07");
+    expect(content.siteSettings.hostingProviderName).toBe("Vercel");
+    expect(content.siteSettings.hostingPrivacyUrl).toBe("https://vercel.com/legal/privacy-notice");
+  });
+
+  it("normalizes a paired recommendation quote label and HTTPS URL", () => {
+    const sheets = createSheets();
+    sheets.recommendations[0]!.full_quote = "Nicolas made CytoCV easier to use.";
+    sheets.recommendations[0]!.full_quote_link_label = "CytoCV";
+    sheets.recommendations[0]!.full_quote_link_url = "https://github.com/BrentLagesse/CytoCV";
+
+    const content = normalizePortfolioContent(sheets, metadata);
+
+    expect(content.recommendations[0]?.fullQuoteLink).toEqual({
+      label: "CytoCV",
+      url: "https://github.com/BrentLagesse/CytoCV"
+    });
+  });
+
+  it.each([
+    ["label only", "CytoCV", ""],
+    ["URL only", "", "https://github.com/BrentLagesse/CytoCV"]
+  ])("rejects a recommendation quote link with %s", (_caseName, label, url) => {
+    const sheets = createSheets();
+    sheets.recommendations[0]!.full_quote = "Nicolas made CytoCV easier to use.";
+    sheets.recommendations[0]!.full_quote_link_label = label;
+    sheets.recommendations[0]!.full_quote_link_url = url;
+
+    expect(() => normalizePortfolioContent(sheets, metadata)).toThrow(
+      /full_quote_link_label and .*full_quote_link_url must both be provided/i
+    );
+  });
+
+  it.each(["http://github.com/BrentLagesse/CytoCV", "javascript:alert(1)"])(
+    "rejects a non-HTTPS recommendation quote link URL: %s",
+    (url) => {
+      const sheets = createSheets();
+      sheets.recommendations[0]!.full_quote = "Nicolas made CytoCV easier to use.";
+      sheets.recommendations[0]!.full_quote_link_label = "CytoCV";
+      sheets.recommendations[0]!.full_quote_link_url = url;
+
+      expect(() => normalizePortfolioContent(sheets, metadata)).toThrow(
+        /full_quote_link_url must be a safe https URL/i
+      );
+    }
+  );
+
+  it.each([
+    ["missing", "A recommendation without the project label.", "CytoCV"],
+    ["case-mismatched", "Nicolas made CytoCV easier to use.", "cytocv"],
+    ["repeated", "CytoCV made CytoCV easier to use.", "CytoCV"]
+  ])("rejects a %s recommendation quote link label", (_caseName, fullQuote, label) => {
+    const sheets = createSheets();
+    sheets.recommendations[0]!.full_quote = fullQuote;
+    sheets.recommendations[0]!.full_quote_link_label = label;
+    sheets.recommendations[0]!.full_quote_link_url = "https://github.com/BrentLagesse/CytoCV";
+
+    expect(() => normalizePortfolioContent(sheets, metadata)).toThrow(
+      /full_quote_link_label must appear exactly once in full_quote/i
+    );
+  });
+
+  it.each([
+    ["repository_url", "http://github.com/example/portfolio", /repositoryUrl has an invalid URL/],
+    ["license_url", "http://github.com/example/portfolio/LICENSE", /licenseUrl has an invalid URL/],
+    ["legal_contact_email", "not-an-email", /legalContactEmail has an invalid email address/],
+    ["legal_effective_date", "2026-02-30", /legalEffectiveDate has an invalid ISO date/],
+    ["hosting_privacy_url", "http://vercel.com/legal/privacy-notice", /hostingPrivacyUrl has an invalid URL/]
+  ])("rejects invalid legal setting %s", (key, value, expectedError) => {
+    const sheets = createSheets();
+    sheets.site_settings = sheets.site_settings.map((row) => (row.key === key ? { ...row, value } : row));
+
+    expect(() => normalizePortfolioContent(sheets, metadata)).toThrow(expectedError);
+  });
+
+  it("maps ordered project skill explanations while preserving optional legacy entries", () => {
+    const sheets = createSheets();
+    const project = sheets.projects[0]!;
+    project.home_skills = "TypeScript=typescript|Next.js=nextdotjs";
+    project.home_skill_1_summary = "TypeScript provides the typed application layer.";
+    project.home_skill_1_details = "Typed project code coordinates data across the application boundary.";
+
+    const content = normalizePortfolioContent(sheets, metadata);
+
+    expect(content.projects[0]?.homeSkills).toEqual([
+      {
+        name: "TypeScript",
+        icon: "typescript",
+        summary: "TypeScript provides the typed application layer.",
+        details: "Typed project code coordinates data across the application boundary."
+      },
+      { name: "Next.js", icon: "nextdotjs" }
+    ]);
+  });
+
+  it.each(["home_skill_1_summary", "home_skill_1_details"])(
+    "rejects a project skill with only %s",
+    (fieldName) => {
+      const sheets = createSheets();
+      const project = sheets.projects[0]!;
+      project.home_skills = "TypeScript=typescript";
+      project[fieldName] = "Incomplete tool explanation.";
+
+      expect(() => normalizePortfolioContent(sheets, metadata)).toThrow(
+        /projects\.project-a\.homeSkills\[0\] must provide summary and details together/
+      );
+    }
+  );
+
+  it("rejects project skill explanation fields without a matching ordered skill", () => {
+    const sheets = createSheets();
+    const project = sheets.projects[0]!;
+    project.home_skills = "TypeScript=typescript";
+    project.home_skill_2_summary = "Orphan summary.";
+    project.home_skill_2_details = "Orphan technical details.";
+
+    expect(() => normalizePortfolioContent(sheets, metadata)).toThrow(
+      /projects row 2\.home_skills has popup copy for missing skill position 2/
+    );
+  });
+
+  it("rejects more than three ordered Home project skills", () => {
+    const sheets = createSheets();
+    sheets.projects[0]!.home_skills =
+      "TypeScript=typescript|Next.js=nextdotjs|Python=python|OpenAI API=openai";
+
+    expect(() => normalizePortfolioContent(sheets, metadata)).toThrow(
+      /projects row 2\.home_skills must contain at most 3 skills/
+    );
   });
 
   it("normalizes typed profile overview row references", () => {
@@ -337,6 +503,110 @@ describe("portfolio normalization", () => {
     expect(content.profile.previousExperienceId).toBe("experience-a");
     expect(content.profile.featuredResearchId).toBe("research-a");
     expect(content.profile.primaryEducationId).toBe("education-a");
+  });
+
+  it("maps and parses the spreadsheet-driven Home role and structured research profile fields", () => {
+    const sheets = createSheets();
+    sheets.profile.push(
+      { key: "preferred_name", value: "Demo Preferred" },
+      { key: "role_engineer_prefixes", value: "Software | AI | Security" },
+      { key: "role_engineer_suffix", value: "Engineer" },
+      { key: "role_alternate", value: "Research Scientist" }
+    );
+    sheets.research[0]!.home_title = "Research A Home";
+    sheets.research[0]!.role = "Graduate Research Assistant";
+    sheets.research[0]!.profile_byline = "Lead Engineer & First Author";
+    sheets.research[0]!.profile_labs = "SEE Lab|Miller Lab";
+
+    const content = normalizePortfolioContent(sheets, metadata);
+    const overview = createProfileOverviewContent(content);
+
+    expect(content.profile).toMatchObject({
+      roleEngineerPrefixes: "Software | AI | Security",
+      roleEngineerSuffix: "Engineer",
+      roleAlternate: "Research Scientist"
+    });
+    expect(overview.greetingName).toBe("Demo Preferred");
+    expect(overview.role).toEqual({
+      kind: "rotating",
+      engineerPrefixes: ["Software", "AI", "Security"],
+      engineerSuffix: "Engineer",
+      alternate: "Research Scientist"
+    });
+    expect(content.research[0]?.homeTitle).toBe("Research A Home");
+    expect(content.research[0]?.profileByline).toBe("Lead Engineer & First Author");
+    expect(content.research[0]?.profileLabs).toEqual(["SEE Lab", "Miller Lab"]);
+    expect(overview.research?.title).toBe("Research A Home");
+    expect(overview.research).toMatchObject({
+      byline: "Lead Engineer & First Author",
+      labs: ["SEE Lab", "Miller Lab"]
+    });
+    expect(overview.research).not.toHaveProperty("position");
+    expect(overview.research).not.toHaveProperty("summary");
+  });
+
+  it("normalizes the legacy profile contributions column as a compact research byline", () => {
+    const sheets = createSheets();
+    sheets.research[0]!.profile_contributions = "Lead Engineer|First Author";
+
+    const content = normalizePortfolioContent(sheets, metadata);
+
+    expect(content.research[0]?.profileByline).toBe("Lead Engineer & First Author");
+  });
+
+  it.each([
+    ["profile summary", "Compact profile research.", "Home research.", "Detail research.", "Compact profile research."],
+    ["legacy Home summary", undefined, "Home research.", "Detail research.", "Home research."],
+    ["legacy detail summary", undefined, undefined, "Detail research.", "Detail research."],
+    ["no available summary", undefined, undefined, undefined, undefined]
+  ] as const)(
+    "uses the %s fallback for compact research",
+    (_label, profileSummary, homeSummary, detailSummary, expectedSummary) => {
+      const content = normalizePortfolioContent(createSheets(), metadata);
+      const selectedResearch = content.research[0]!;
+      content.research = [
+        {
+          ...selectedResearch,
+          profileSummary,
+          homeSummary,
+          detailSummary
+        }
+      ];
+
+      expect(createProfileOverviewContent(content).research?.summary).toBe(expectedSummary);
+    }
+  );
+
+  it.each([
+    [[{ key: "role_engineer_prefixes", value: "Software|AI" }]],
+    [[
+      { key: "role_engineer_prefixes", value: "Software|AI" },
+      { key: "role_engineer_suffix", value: "Engineer" }
+    ]],
+    [[{ key: "role_alternate", value: "Research Scientist" }]]
+  ])("rejects a partial Home role configuration", (roleRows) => {
+    const sheets = createSheets();
+    sheets.profile.push(...roleRows);
+
+    expect(() => normalizePortfolioContent(sheets, metadata)).toThrow(/requires roleEngineerPrefixes, roleEngineerSuffix, and roleAlternate together/);
+  });
+
+  it("rejects a Home role configuration whose parsed prefix list is empty", () => {
+    const sheets = createSheets();
+    sheets.profile.push(
+      { key: "role_engineer_prefixes", value: "| |" },
+      { key: "role_engineer_suffix", value: "Engineer" },
+      { key: "role_alternate", value: "Research Scientist" }
+    );
+
+    expect(() => normalizePortfolioContent(sheets, metadata)).toThrow(/at least one pipe-delimited role prefix/);
+  });
+
+  it("uses the legacy headline as a static role when rotation fields are absent", () => {
+    const overview = createProfileOverviewContent(normalizePortfolioContent(createSheets(), metadata));
+
+    expect(overview.greetingName).toBe("Demo");
+    expect(overview.role).toEqual({ kind: "static", label: "Builder" });
   });
 
   it("validates required profile fields, IDs, duplicates, and URLs", () => {
@@ -409,6 +679,27 @@ describe("portfolio normalization", () => {
     ).toThrow(/institutionLogo URL/);
   });
 
+  it("requires complete popup copy when a skill provides any popup field", () => {
+    expect(() =>
+      normalizePortfolioContent(
+        createSheets({
+          skills: [
+            {
+              id: "skill-python",
+              category: "Core Programming",
+              name: "Python",
+              proficiency: "Advanced",
+              featured: "true",
+              show_on_home: "true",
+              order: "1"
+            }
+          ]
+        }),
+        metadata
+      )
+    ).toThrow(/must provide proficiency, summary, and whereUsed together/);
+  });
+
   it.each([
     ["current_experience_id", "currentExperienceId"],
     ["previous_experience_id", "previousExperienceId"],
@@ -453,11 +744,26 @@ describe("portfolio normalization", () => {
       expect(featuredResearch).toBeDefined();
       expect(overview.research).toMatchObject({
         id: featuredResearch!.id,
-        title: featuredResearch!.title,
-        summary: featuredResearch!.homeSummary ?? featuredResearch!.detailSummary,
-        links: featuredResearch!.links
+        title: featuredResearch!.homeTitle ?? featuredResearch!.title,
+        links: featuredResearch!.links,
+        pendingLinks: featuredResearch!.pendingLinks,
+        logo: {
+          src: featuredResearch!.organizationLogo,
+          alt: featuredResearch!.organizationLogoAlt
+        }
       });
-      expect(overview.research).not.toHaveProperty("pendingLinks");
+      if (featuredResearch!.profileByline || featuredResearch!.profileLabs?.length) {
+        expect(overview.research).toMatchObject({
+          byline: featuredResearch!.profileByline,
+          labs: featuredResearch!.profileLabs
+        });
+        expect(overview.research).not.toHaveProperty("position");
+        expect(overview.research).not.toHaveProperty("summary");
+      } else {
+        expect(overview.research?.summary).toBe(
+          featuredResearch!.profileSummary ?? featuredResearch!.homeSummary ?? featuredResearch!.detailSummary
+        );
+      }
       expect(overview.research).not.toHaveProperty("organization");
     }
 
@@ -476,7 +782,285 @@ describe("portfolio normalization", () => {
       });
     }
 
-    expect(overview.headline).toBe(content.profile.headline);
+    expect(overview.greetingName).toBe("Nicolas");
+    expect(overview.role).toEqual({
+      kind: "rotating",
+      engineerPrefixes: ["Software", "AI", "Security"],
+      engineerSuffix: "Engineer",
+      alternate: "Research Scientist"
+    });
+    expect(content.profile.headline).toBe("Software Engineer");
+    expect(content.profile.shortBio).toBe(
+      "I’m ambitious, relentlessly curious, and always looking for the next hard problem to learn from. I care about moving with urgency, doing things well, and getting better with every project."
+    );
+  });
+
+  it("publishes Treasury as current work and closes the prior research role in August 2026", () => {
+    const content = normalizePortfolioContent(readTemplateSheets(), metadata);
+    const overview = createProfileOverviewContent(content);
+    const homeContent = selectHomeContent(content);
+    const treasuryRole = content.experience.find((item) => item.id === "us-treasury-ai-engineer");
+    const priorResearchRole = content.experience.find(
+      (item) => item.id === "research-assistant-software-engineering"
+    );
+    const cytocvResearch = content.research.find((item) => item.id === "cytocv-miller-lab");
+
+    expect(content.profile).toMatchObject({
+      currentTitle: "AI Engineer",
+      currentCompany: "U.S. Department of the Treasury",
+      currentExperienceId: "us-treasury-ai-engineer",
+      previousExperienceId: "research-assistant-software-engineering"
+    });
+    expect(treasuryRole).toMatchObject({
+      title: "AI Engineer",
+      organization: "U.S. Department of the Treasury",
+      organizationLogo: "/images/organizations/us_treasury_logo.webp",
+      organizationLogoAlt: "U.S. Department of the Treasury logo",
+      startDate: "2026-08",
+      endDate: "Present",
+      homeOrder: 1,
+      detailOrder: 1
+    });
+    expect(treasuryRole?.homeSummary).toBeUndefined();
+    expect(homeContent.experience[0]?.id).toBe("us-treasury-ai-engineer");
+    expect(overview.currentWork).toMatchObject({
+      id: "us-treasury-ai-engineer",
+      title: "AI Engineer",
+      organization: "U.S. Department of the Treasury",
+      startDate: "2026-08",
+      endDate: "Present",
+      dateLabel: "Aug 2026 – Present",
+      logo: {
+        src: "/images/organizations/us_treasury_logo.webp",
+        alt: "U.S. Department of the Treasury logo"
+      }
+    });
+    expect(overview.currentWork?.summary).toBeUndefined();
+    expect(priorResearchRole?.endDate).toBe("2026-08");
+    expect(formatDateRange(priorResearchRole?.startDate, priorResearchRole?.endDate)).toBe(
+      "Aug 2024 to Aug 2026"
+    );
+    expect(cytocvResearch?.endDate).toBe("2026-08");
+  });
+
+  it("associates the approved university logos through template content", () => {
+    const content = normalizePortfolioContent(readTemplateSheets(), metadata);
+    const expectedOrganizationLogos = new Map([
+      [
+        "University of Washington",
+        { organizationLogo: "/images/organizations/uw_logo.png", organizationLogoAlt: "University of Washington logo" }
+      ],
+      [
+        "UW Bothell School of STEM",
+        { organizationLogo: "/images/organizations/uwb_stem_logo.png", organizationLogoAlt: "UW Bothell School of STEM logo" }
+      ],
+      [
+        "U.S. Department of the Treasury",
+        {
+          organizationLogo: "/images/organizations/us_treasury_logo.webp",
+          organizationLogoAlt: "U.S. Department of the Treasury logo"
+        }
+      ]
+    ]);
+
+    expect(content.education.find((item) => item.id === "uw-bscsse")).toMatchObject({
+      institution: "University of Washington",
+      institutionLogo: "/images/education/uw_logo.png",
+      institutionLogoAlt: "University of Washington logo",
+      degree: "Bachelor of Science",
+      field: "Computer Science",
+      concentration: "Information Assurance & Cybersecurity"
+    });
+
+    for (const item of [...content.experience, ...content.research]) {
+      if (!item.organization) continue;
+
+      const expectedLogo = expectedOrganizationLogos.get(item.organization);
+
+      if (expectedLogo) {
+        expect(item).toMatchObject(expectedLogo);
+      }
+    }
+  });
+
+  it("keeps Home recommendations and verified research actions connected to template content", () => {
+    const content = normalizePortfolioContent(readTemplateSheets(), metadata);
+    const cytocv = content.research.find((item) => item.id === "cytocv-miller-lab");
+    const adversarialMl = content.research.find((item) => item.id === "adversarial-machine-learning");
+    const guideDonor = content.research.find((item) => item.id === "yeast-dna-target-selection");
+
+    expect(content.siteSettings).toMatchObject({
+      enableRecommendations: true,
+      showEmptyRecommendations: true,
+      maxHomeRecommendationItems: 3
+    });
+    expect(cytocv).toMatchObject({
+      title: "CytoCV: Web-based platform for reproducible yeast microscopy image analysis",
+      homeTitle: "CytoCV",
+      role: "Graduate Research Assistant",
+      homeSummary:
+        "Built by UW Bothell School of STEM’s SEE Lab for the University of Utah Miller Lab, CytoCV is a Django platform using Mask R-CNN to segment yeast microscopy stacks and export per-cell fluorescence measurements.",
+      profileByline: "Lead Engineer & First Author",
+      profileLabs: [
+        "SEE Lab, UW Bothell School of STEM",
+        "Miller Lab, University of Utah"
+      ]
+    });
+    expect(cytocv?.profileSummary).toBeUndefined();
+    expect(adversarialMl?.homeSummary).toBe(
+      "Experimental study of targeted training-data poisoning against SVMs learning from streams, testing whether attacks can evade loss-based anomaly filtering and whether a feature-space stability metric can detect decision-boundary manipulation."
+    );
+    expect(guideDonor?.homeSummary).toBe(
+      "Python sequence-design pipeline for yeast CRISPR/Cas9 experiments that selects 20-base guides near NGG PAMs, builds 132-base donor sequences around requested mutations, adds silent edits to prevent re-cutting, and exports XLS results."
+    );
+    const profileOverview = createProfileOverviewContent(content);
+    expect(profileOverview.research).toMatchObject({
+      title: "CytoCV",
+      byline: "Lead Engineer & First Author",
+      labs: [
+        "SEE Lab, UW Bothell School of STEM",
+        "Miller Lab, University of Utah"
+      ],
+      pendingLinks: ["Manuscript"],
+      logo: {
+        src: "/images/organizations/uwb_stem_logo.png",
+        alt: "UW Bothell School of STEM logo"
+      }
+    });
+    expect(profileOverview.research).not.toHaveProperty("position");
+    expect(profileOverview.research).not.toHaveProperty("summary");
+    expect(profileOverview.education).toMatchObject({
+      degree: "Bachelor of Science",
+      field: "Computer Science",
+      concentration: "Information Assurance & Cybersecurity"
+    });
+    expect(cytocv?.links).toEqual([
+      { label: "Live site", url: "https://cytocv.uwb.edu" },
+      { label: "Source code", url: "https://github.com/BrentLagesse/CytoCV" }
+    ]);
+    expect(cytocv?.pendingLinks).toEqual(["Manuscript"]);
+    expect(adversarialMl?.links).toEqual([
+      { label: "Source code", url: "https://github.com/nicolasgioanni/Independent-Study" },
+      { label: "Manuscript", url: "https://faculty.washington.edu/lagesse/publications/CausativeSVM.pdf" }
+    ]);
+    expect(guideDonor?.links).toEqual([
+      { label: "Source code", url: "https://github.com/BrentLagesse/GuideDonorScheduler" }
+    ]);
+  });
+
+  it("maps the three Home projects, three focused skill groups, and four recommendations from template content", () => {
+    const content = normalizePortfolioContent(readTemplateSheets(), metadata);
+    const homeProjects = content.projects.filter((item) => item.showOnHome);
+    const skillCounts = new Map<string, number>();
+
+    for (const skill of content.skills) {
+      skillCounts.set(skill.category, (skillCounts.get(skill.category) ?? 0) + 1);
+    }
+
+    expect(content.siteSettings).toMatchObject({
+      maxHomeProjectItems: 3,
+      maxHomeRecommendationItems: 3,
+      maxHomeSkillItems: 12
+    });
+    expect(homeProjects.map((item) => item.title)).toEqual(["NotePal", "Clair", "LeetNotes"]);
+    expect(homeProjects.every((item) => item.homeSkills.length === 3)).toBe(true);
+    expect(content.projects.find((item) => item.id === "notepal")).toMatchObject({
+      subtitle: "Multimodal study workspace",
+      homeSkills: [
+        {
+          name: "Next.js",
+          icon: "nextdotjs",
+          summary: "Next.js powers NotePal's web interface and routing.",
+          details:
+            "The Next.js frontend provides the application interface, route structure, and authenticated study workflow while sending uploaded content to the separate Flask processing API."
+        },
+        {
+          name: "TypeScript",
+          icon: "typescript",
+          summary: "TypeScript gives NotePal's frontend a typed application layer.",
+          details:
+            "TypeScript supports the Next.js component and routing code that coordinates file uploads, generated notes, quizzes, session state, and content-aware chat responses."
+        },
+        {
+          name: "OpenAI API",
+          icon: "openai",
+          summary: "OpenAI API generates NotePal's language-based study features.",
+          details:
+            "Backend requests use OpenAI models for text summarization, multiple-choice and short-answer quiz generation, and chatbot answers based on content extracted from uploaded documents and media."
+        }
+      ]
+    });
+    expect(content.projects.find((item) => item.id === "clair")?.homeSkills).toEqual([
+      {
+        name: "Python",
+        icon: "python",
+        summary: "Python runs Clair's file-organization engine.",
+        details:
+          "Python 3.11 and the standard os module scan selected folders, map file extensions to JSON-defined categories, create destination folders, move files, and optionally remove empty directories."
+      },
+      {
+        name: "Bash",
+        icon: "gnubash",
+        summary: "Bash supports Clair's source-based development workflow.",
+        details:
+          "Shell commands create and activate the development environment, install Python requirements, and launch the application from source; Clair's sorting logic itself remains Python-based."
+      },
+      {
+        name: "PySide6",
+        icon: "qt",
+        summary: "PySide6 provides Clair's cross-platform desktop interface.",
+        details:
+          "Qt for Python renders the dark-mode controls for folder selection, category and extension management, reusable presets, recursive scanning, optional cleanup, and the one-click organization workflow."
+      }
+    ]);
+    expect(content.projects.find((item) => item.id === "leetnotes")?.homeSkills).toEqual([
+      {
+        name: "Python",
+        icon: "python",
+        summary: "Python implements the LeetNotes synchronization CLI.",
+        details:
+          "The package reads published sheet CSVs, normalizes problem titles and LeetCode slugs, generates Markdown study notes, writes solution.py variants, and maintains the repository's indexed problem structure."
+      },
+      {
+        name: "GitHub Actions",
+        icon: "githubactions",
+        summary: "GitHub Actions keeps generated study material synchronized.",
+        details:
+          "The scheduled notes.yml workflow runs the CLI, rebuilds notes and solution files from published sheet data, and commits any repository changes for review."
+      },
+      {
+        name: "Google Sheets",
+        icon: "googlesheets",
+        summary: "Google Sheets serves as LeetNotes' editable content source.",
+        details:
+          "Each list uses paired Notes and Solutions sheets published as CSV: one stores problem metadata, approaches, complexity, and study notes; the other stores plain-text Python solutions."
+      }
+    ]);
+    expect(Array.from(skillCounts.entries())).toEqual([
+      ["Core Programming", 4],
+      ["AI, ML & Data", 4],
+      ["Full-Stack & Systems", 4]
+    ]);
+    expect(content.skills.every((skill) => Boolean(skill.icon))).toBe(true);
+    expect(
+      content.skills.every((skill) => Boolean(skill.proficiency && skill.summary && skill.whereUsed))
+    ).toBe(true);
+    expect(content.recommendations.map((item) => item.recommenderName)).toEqual([
+      "Brent Lagesse",
+      "Annuska Zolyomi, PhD",
+      "Anoop Prasad",
+      "Minh Nhat Huynh"
+    ]);
+    expect(content.recommendations.find((item) => item.id === "brent-lagesse")).toMatchObject({
+      fullQuote: brentFullQuote,
+      fullQuoteLink: {
+        label: "CytoCV",
+        url: "https://github.com/BrentLagesse/CytoCV"
+      }
+    });
+    expect(content.recommendations.find((item) => item.id === "brent-lagesse")?.fullQuote).not.toContain("https://");
+    expect(content.recommendations.find((item) => item.id === "brent-lagesse")?.fullQuote.match(/CytoCV/g)).toHaveLength(1);
+    expect(content.recommendations.filter((item) => item.showOnHome)).toHaveLength(3);
   });
 
   it("rejects mail links used as organization logos", () => {
@@ -617,6 +1201,7 @@ describe("profile overview helpers", () => {
       start_date: "2026-01",
       end_date: "2027-12",
       home_summary: "CSV Research Summary Sentinel.",
+      profile_summary: "CSV Profile Research Summary Sentinel.",
       links: "Live Sentinel=https://example.com/live-sentinel|Source Sentinel=https://github.com/example/source-sentinel",
       pending_links: "Manuscript Sentinel",
       featured: "false",
@@ -627,7 +1212,8 @@ describe("profile overview helpers", () => {
     const overview = createProfileOverviewContent(content);
 
     expect(overview).toEqual({
-      headline: "CSV Headline Sentinel.",
+      greetingName: "Demo",
+      role: { kind: "static", label: "CSV Headline Sentinel." },
       about: "CSV About Sentinel.",
       currentWork: {
         id: "experience-current-sentinel",
@@ -654,18 +1240,26 @@ describe("profile overview helpers", () => {
       research: {
         id: "research-sentinel",
         title: "CSV Research Project Sentinel",
-        summary: "CSV Research Summary Sentinel.",
+        summary: "CSV Profile Research Summary Sentinel.",
         links: [
           { label: "Live Sentinel", url: "https://example.com/live-sentinel" },
           { label: "Source Sentinel", url: "https://github.com/example/source-sentinel" }
-        ]
+        ],
+        pendingLinks: ["Manuscript Sentinel"],
+        logo: {
+          src: "/images/organizations/research-csv-sentinel.svg",
+          alt: "CSV research organization mark"
+        }
       }
     });
     expect(content.profile.previousExperienceId).toBe("experience-previous-sentinel");
     expect(content.experience.some((item) => item.id === content.profile.previousExperienceId)).toBe(true);
-    expect(content.research.find((item) => item.id === "research-sentinel")?.pendingLinks).toEqual(["Manuscript Sentinel"]);
+    expect(content.research.find((item) => item.id === "research-sentinel")).toMatchObject({
+      homeSummary: "CSV Research Summary Sentinel.",
+      profileSummary: "CSV Profile Research Summary Sentinel.",
+      pendingLinks: ["Manuscript Sentinel"]
+    });
     expect(overview).not.toHaveProperty("previousWork");
-    expect(overview.research).not.toHaveProperty("pendingLinks");
     expect(overview.research).not.toHaveProperty("organization");
   });
 
@@ -756,7 +1350,8 @@ describe("profile overview helpers", () => {
 
     const overview = createProfileOverviewContent(content);
 
-    expect(overview.headline).toBe("Profile headline");
+    expect(overview.greetingName).toBe("Demo");
+    expect(overview.role).toEqual({ kind: "static", label: "Profile headline" });
     expect(overview.about).toBe("Short biography.");
     expect(overview.currentWork).toEqual({
       id: "experience-home",
@@ -771,8 +1366,10 @@ describe("profile overview helpers", () => {
     expect(overview.research).toEqual({
       id: "research-home",
       title: baseResearch.title,
-      summary: baseResearch.homeSummary,
-      links: baseResearch.links
+      summary: baseResearch.profileSummary,
+      links: baseResearch.links,
+      pendingLinks: baseResearch.pendingLinks,
+      logo: { src: "/images/research/lab.svg", alt: "Lab mark" }
     });
     expect(overview.education).toEqual({
       id: "education-selected",
@@ -891,7 +1488,7 @@ describe("profile overview helpers", () => {
     expect(formatCompactGraduationDate(undefined)).toBeUndefined();
   });
 
-  it("keeps only valid research links and omits pending or organization metadata from the Home model", () => {
+  it("keeps only valid research links and exposes Home logo and pending resources", () => {
     const content = normalizePortfolioContent(createSheets(), metadata);
     const selectedResearch = content.research[0]!;
     content.research = [
@@ -905,7 +1502,8 @@ describe("profile overview helpers", () => {
         ],
         pendingLinks: ["Manuscript"],
         organization: "Repeated organization",
-        organizationLogo: "/images/organizations/repeated.svg"
+        organizationLogo: "/images/organizations/repeated.svg",
+        organizationLogoAlt: "Repeated organization mark"
       }
     ];
 
@@ -915,9 +1513,12 @@ describe("profile overview helpers", () => {
       { label: "Live site", url: "https://example.com/live" },
       { label: "Codebase", url: "/research/source" }
     ]);
-    expect(researchOverview).not.toHaveProperty("pendingLinks");
+    expect(researchOverview?.pendingLinks).toEqual(["Manuscript"]);
+    expect(researchOverview?.logo).toEqual({
+      src: "/images/organizations/repeated.svg",
+      alt: "Repeated organization mark"
+    });
     expect(researchOverview).not.toHaveProperty("organization");
-    expect(researchOverview).not.toHaveProperty("logo");
   });
 
   it("handles missing optional overview data without crashing", () => {
@@ -934,7 +1535,8 @@ describe("profile overview helpers", () => {
       education: []
     });
 
-    expect(overview.headline).toBe("Systems builder.");
+    expect(overview.greetingName).toBe("Demo");
+    expect(overview.role).toEqual({ kind: "static", label: "Systems builder." });
     expect(overview.about).toBeUndefined();
     expect(overview.currentWork).toBeUndefined();
     expect(overview.education).toBeUndefined();

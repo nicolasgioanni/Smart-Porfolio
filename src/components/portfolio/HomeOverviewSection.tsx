@@ -4,6 +4,8 @@ import { SectionHeader } from "@/components/layout/SectionHeader";
 import { CompressOnScrollSection } from "@/components/motion/CompressOnScrollSection";
 
 type HomeOverviewSectionProps = {
+  actionAriaLabel?: string;
+  actionVariant?: "link" | "button";
   title: string;
   eyebrow?: string;
   description?: string;
@@ -16,6 +18,8 @@ type HomeOverviewSectionProps = {
 };
 
 export function HomeOverviewSection({
+  actionAriaLabel,
+  actionVariant,
   children,
   className,
   description,
@@ -29,7 +33,16 @@ export function HomeOverviewSection({
   return (
     <CompressOnScrollSection className={["home-section", wide ? "home-section--wide" : "", className].filter(Boolean).join(" ")} enabled={motionEnabled}>
       <GlassSurface className="home-section__surface" variant="default">
-        <SectionHeader actionHref={href} actionLabel={linkLabel} className="home-section__header" description={description} eyebrow={eyebrow} title={title} />
+        <SectionHeader
+          actionAriaLabel={actionAriaLabel}
+          actionHref={href}
+          actionLabel={linkLabel}
+          actionVariant={actionVariant}
+          className="home-section__header"
+          description={description}
+          eyebrow={eyebrow}
+          title={title}
+        />
         {children}
       </GlassSurface>
     </CompressOnScrollSection>

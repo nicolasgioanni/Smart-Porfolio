@@ -18,11 +18,8 @@ export function ProjectCard({ item, variant = "summary" }: ProjectCardProps) {
     <PortfolioCard className="project-card" variant={showImage ? "media" : variant}>
       {showImage ? <img alt="" className="project-card__image" height="320" loading="lazy" src={item.image} width="640" /> : null}
       <header className="content-card__header">
-        <div className="content-card__meta-row">
-          {item.featured ? <GlassChip tone="accent">Featured</GlassChip> : null}
-          {item.subtitle ? <GlassChip tone="muted">{item.subtitle}</GlassChip> : null}
-        </div>
         <h3 className="content-card__title">{item.title}</h3>
+        {item.subtitle ? <p className="content-card__meta project-card__subtitle">{item.subtitle}</p> : null}
       </header>
       {summary ? <p className="content-card__summary">{summary}</p> : null}
       {variant === "detail" ? (

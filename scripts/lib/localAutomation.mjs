@@ -179,8 +179,8 @@ export async function findAvailablePort(startPort = 3000, endPort = 3010) {
 }
 
 export async function copyEnvExampleIfMissing(projectRoot) {
-  const envLocalPath = path.join(projectRoot, ".env.local");
-  const envExamplePath = path.join(projectRoot, ".env.local.example");
+  const envLocalPath = path.join(projectRoot, ".env");
+  const envExamplePath = path.join(projectRoot, ".env.example");
 
   if (existsSync(envLocalPath) || !existsSync(envExamplePath)) {
     return false;

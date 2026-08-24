@@ -15,7 +15,7 @@ export function ResearchCard({ item, variant = "summary" }: ResearchCardProps) {
   const visibleSkills = variant === "detail" ? item.skills : limitItems(item.skills, 4);
 
   return (
-    <PortfolioCard className="research-card" variant={variant}>
+    <PortfolioCard className="research-card" id={variant === "detail" ? item.id : undefined} variant={variant}>
       <header className="content-card__header">
         <div className="content-card__meta-row">
           {item.featured ? <GlassChip tone="accent">Featured</GlassChip> : null}
