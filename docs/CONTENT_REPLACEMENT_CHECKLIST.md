@@ -22,6 +22,7 @@ Use this checklist when replacing local sample content or preparing a public wor
 
 - [ ] Populate the required `full_name`, `headline`, `location`, `email`, and `short_bio` values.
 - [ ] Set `preferred_name`, timezone, pronouns, portrait, favicon, and longer profile copy only when they are accurate and approved.
+- [ ] Set `experience_summary` to the concise work overview that should appear above the Experience detail selector.
 - [ ] Populate all three rotating-role fields together, or leave all three blank. Keep at least one non-empty pipe-delimited prefix.
 - [ ] Keep `headline` accurate even when rotating-role copy is enabled because it remains the static and metadata fallback.
 - [ ] Verify `current_experience_id`, `featured_research_id`, and `primary_education_id` exactly match real collection IDs when populated.

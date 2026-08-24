@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { GlassSurface } from "@/components/glass/GlassSurface";
 import { ScrollReveal } from "@/components/motion/ScrollReveal";
 import { SectionHeader } from "@/components/layout/SectionHeader";
@@ -5,6 +6,7 @@ import { SectionHeader } from "@/components/layout/SectionHeader";
 export type PageIntroVariant = "plain" | "panel";
 
 type PageIntroProps = {
+  accessory?: ReactNode;
   className?: string;
   description?: string;
   eyebrow?: string;
@@ -14,6 +16,7 @@ type PageIntroProps = {
 };
 
 export function PageIntro({
+  accessory,
   className,
   description,
   eyebrow,
@@ -30,11 +33,20 @@ export function PageIntro({
       enabled={motionEnabled}
     >
       {variant === "panel" ? (
-        <GlassSurface className="page-intro__surface" variant="strong">
+        <GlassSurface
+          className={["page-intro__surface", accessory ? "page-intro__surface--with-accessory" : null]
+            .filter(Boolean)
+            .join(" ")}
+          variant="strong"
+        >
           {header}
+          {accessory ? <div className="page-intro__accessory">{accessory}</div> : null}
         </GlassSurface>
       ) : (
-        header
+        <>
+          {header}
+          {accessory ? <div className="page-intro__accessory">{accessory}</div> : null}
+        </>
       )}
     </ScrollReveal>
   );
