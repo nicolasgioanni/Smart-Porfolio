@@ -113,7 +113,7 @@ See [Skeleton loading guidelines](SKELETON_LOADING_GUIDELINES.md) for the comple
 
 The Contact route keeps a direct email alternative available when the Turnstile widget or delivery endpoint is unavailable.
 
-The form provides visible labels, required-state cues, `aria-invalid`, error descriptions, focus movement between steps, polite status updates, alert semantics, native acknowledgement checkboxes, and a submit button disabled until verification and acknowledgements are complete. The hidden honeypot is removed from the tab order.
+The three-step form provides visible labels, required-state cues, `aria-invalid`, error descriptions, focus movement between steps, polite status updates, alert semantics, native acknowledgement checkboxes, and a final Send button disabled until the widget is prepared and acknowledgements are complete. Verification, interactive fallback, expiry, retry, and delivery states remain announced while repeated Send actions are blocked. The interaction-only widget may remain visually hidden when no challenge is required. Successful delivery replaces the wizard with a standalone completion view and a clearly named <em>Send another message</em> action. The hidden honeypot is removed from the tab order.
 
 Server validation remains authoritative. Accessible client feedback does not weaken origin, schema, timing, ticket, or delivery checks.
 

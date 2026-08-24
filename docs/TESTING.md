@@ -80,9 +80,9 @@ These are unit and integration-style tests with temporary files and injected fet
 | Layer | Authoritative tests | Coverage |
 | --- | --- | --- |
 | Client field validation | `src/components/contact/contactFormValidation.test.ts` | Required fields, trimming, email, phone, message, and shared limits |
-| Turnstile widget | `src/components/contact/TurnstileWidget.test.tsx` | Rendering, success, expiry, reset, theme, and missing-key failure |
-| Contact route | `src/app/contact/contact.test.tsx` | Four-step gating, acknowledgements, exact payload, success, retries, and noindex metadata |
-| Verification Function | `functions/api/contact/verify.test.ts` | Method, origin, media type, body contract, Siteverify, action, hostname, remote IP, and signed cookie |
+| Turnstile widget | `src/components/contact/TurnstileWidget.test.tsx` | Controlled preparation and execution, interaction-only configuration, submission custom data, success, expiry, reset, theme, and missing-key failure |
+| Contact route | `src/app/contact/contact.test.tsx` | Three-step flow, final-submit execution, interactive fallback, expiry and error recovery, repeated-click blocking, exact payload, standalone success, subsequent messages, retries, and noindex metadata |
+| Verification Function | `functions/api/contact/verify.test.ts` | Method, origin, media type, body contract, Siteverify action, hostname and custom-data binding, operation-scoped bounded retry, transient failure mapping, remote IP, and signed cookie |
 | Delivery Function | `functions/api/contact.test.ts` | Method, origin, media type, body size, schema, honeypot, timing, ticket, DNS, rolling quota, sequential idempotent delivery, and retry |
 | Contact styles | `src/styles/contactStyles.test.ts` | Notice tones, focus, disabled, responsive, wrapping, animation, and reduced-motion contracts |
 | Legal disclosures | `src/components/legal/legal.test.tsx` | Contact processing, pseudonymous reservation storage, DNS validation, retention, and published notices |

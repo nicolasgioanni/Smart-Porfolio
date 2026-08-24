@@ -138,9 +138,11 @@ The Contact page itself is a static route. Runtime work begins only when its cli
 
 ### Verification
 
-The visitor completes the visible Turnstile check before entering contact details. The browser sends the token and a generated submission ID to `/api/contact/verify`. The Function enforces POST, JSON media type, exact origin, a narrow request shape, configuration, Turnstile success, the fixed `portfolio_contact` action, and an allowed hostname.
+The visitor completes the three-step name, contact-details, and review wizard before the browser executes a prepared interaction-only Turnstile widget during the final Send action. The widget remains hidden unless Cloudflare requires interaction. The browser sends the fresh token and generated submission ID to `/api/contact/verify`, and the same ID is supplied as Turnstile custom data. The Function enforces POST, JSON media type, exact origin, a narrow request shape, configuration, Turnstile success, the fixed `portfolio_contact` action, an allowed hostname, and matching `cdata`. One transient Siteverify failure receives one bounded retry with a separate operation UUID that is reused only for that token.
 
 A successful result sets a 30-minute `__Host-portfolio_contact_ticket` cookie. It is `HttpOnly`, `Secure`, `SameSite=Strict`, host-only, path-scoped to `/`, signed with an HMAC key derived from `TURNSTILE_SECRET_KEY`, and bound to the submission ID. It contains no contact fields.
+
+The browser preserves the original form-start time through verification, then continues the locked final Send action to delivery. Every new logical message receives a fresh token and submission identity. A still-valid ticket supports safe retries only for the same locked delivery identity and payload.
 
 ### Delivery
 
