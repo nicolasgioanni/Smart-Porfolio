@@ -389,6 +389,7 @@
 }
 
 .experience-chapter__signal {
+  grid-column: 3;
   max-width: 13rem;
   padding: 0.32rem var(--space-3);
   border: 1px solid var(--color-impact-border);
@@ -404,6 +405,7 @@
 
 .experience-chapter__icon {
   display: grid;
+  grid-column: 4;
   place-items: center;
   width: 30px;
   height: 30px;
