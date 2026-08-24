@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
+    "dev:pages": "npm run build && npx --yes wrangler@4.86.0 pages dev out --env-file .env",
     "generate:content": "tsx scripts/fetchPortfolioContent.ts",
     "prebuild": "npm run generate:content",
     "build": "next build",

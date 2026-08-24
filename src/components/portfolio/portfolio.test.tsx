@@ -1021,6 +1021,10 @@ describe("portfolio UI helpers", () => {
     fireEvent.click(screen.getByRole("button", { name: "Details" }));
     expect(screen.queryByRole("link", { name: "Source Code" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Site Terms & Accuracy" })).toHaveAttribute("href", "/terms");
+    const emailLink = screen.getByRole("link", { name: "nicolas@example.com" });
+    const contactLink = screen.getByRole("link", { name: "Contact Form" });
+    expect(contactLink).toHaveAttribute("href", "/contact");
+    expect(emailLink.closest("li")?.nextElementSibling).toBe(contactLink.closest("li"));
     expect(container.querySelector(".glass-icon-link")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /choose color theme/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/^(Light|Navy|Dark)$/)).not.toBeInTheDocument();
