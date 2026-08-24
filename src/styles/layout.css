@@ -29,6 +29,18 @@
   margin-bottom: var(--space-10);
 }
 
+.page-intro--panel {
+  max-width: none;
+}
+
+.page-intro__surface {
+  padding: clamp(var(--space-6), 4vw, var(--space-10));
+}
+
+.page-intro--panel .page-description {
+  max-width: none;
+}
+
 .section-header {
   display: flex;
   align-items: flex-end;
@@ -321,6 +333,10 @@
 
   .home-section__surface {
     padding: var(--space-5);
+  }
+
+  .page-intro__surface {
+    padding: var(--space-6);
   }
 
   .section-header {

@@ -234,10 +234,10 @@ function createHomeContent(
 
 describe("portfolio UI helpers", () => {
   it("renders reusable page and section headers", () => {
-    render(
+    const { container } = render(
       <>
         <SectionHeader actionHref="/projects" actionLabel="View projects" description="Selected work." eyebrow="Projects" title="Engineering projects" />
-        <PageIntro description="Resume details." eyebrow="Resume" motionEnabled={false} title="Resume" />
+        <PageIntro description="Resume details." motionEnabled={false} title="Resume" variant="panel" />
       </>
     );
 
@@ -245,6 +245,9 @@ describe("portfolio UI helpers", () => {
     expect(screen.getByText("Selected work.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /view projects/i })).toHaveAttribute("href", "/projects");
     expect(screen.getByRole("heading", { level: 1, name: "Resume" })).toBeInTheDocument();
+    expect(screen.getByText("Resume details.")).toBeInTheDocument();
+    expect(container.querySelector(".page-intro .eyebrow")).not.toBeInTheDocument();
+    expect(container.querySelector(".page-intro__surface")).toHaveClass("glass-surface", "glass-surface--strong");
   });
 
   it("renders accessible empty states", () => {

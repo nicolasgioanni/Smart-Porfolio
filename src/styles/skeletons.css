@@ -96,10 +96,15 @@
 }
 
 .skeleton-page__header {
-  max-width: 820px;
   display: grid;
   gap: var(--space-4);
   margin-bottom: var(--space-10);
+  padding: var(--space-10);
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface-strong);
+  box-shadow: var(--shadow-soft), var(--shadow-glow);
+  backdrop-filter: blur(var(--glass-blur-mobile));
 }
 
 .skeleton-page__section {
@@ -143,6 +148,10 @@
   }
 
   .skeleton-hero__main {
+    padding: var(--space-6);
+  }
+
+  .skeleton-page__header {
     padding: var(--space-6);
   }
 

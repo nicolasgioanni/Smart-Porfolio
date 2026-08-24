@@ -15,10 +15,10 @@ export default function RecommendationsPage() {
 
   return (
     <PageContainer
-      eyebrow="Recommendations"
-      title="Professional recommendations"
-      description="Professional social proof with source links and context when available."
+      title="Recommendations"
+      description="Read how professors, managers, and teammates describe my engineering, collaboration, and communication below."
       className="page-container--recommendations"
+      introVariant="panel"
       motionEnabled={content.siteSettings.enableScrollMotion}
     >
       <RecommendationsList items={recommendations} />

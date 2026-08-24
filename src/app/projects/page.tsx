@@ -15,9 +15,9 @@ export default function ProjectsPage() {
 
   return (
     <PageContainer
-      eyebrow="Projects"
-      title="Engineering projects"
-      description="Selected builds with problem framing, decisions, impact, stack, and links."
+      title="Projects"
+      description="I build practical tools for learning, file organization, and developer automation—explore the projects below."
+      introVariant="panel"
       motionEnabled={content.siteSettings.enableScrollMotion}
     >
       <ProjectList items={projectItems} variant="detail" />
