@@ -33,10 +33,11 @@ export function createPageMetadata(
   { pathname, title, description }: CreatePageMetadataOptions
 ): Metadata {
   const siteTitle = content.siteSettings.siteTitle || content.profile.fullName || "Portfolio";
+  const pageTitlePrefix = content.profile.fullName || PREFERRED_SITE_NAME;
   const siteDescription = content.siteSettings.siteDescription || content.profile.shortBio;
   const faviconPath = content.profile.faviconImage;
   const pageDescription = description ?? siteDescription;
-  const resolvedTitle = title ? `${title} | ${siteTitle}` : siteTitle;
+  const resolvedTitle = title ? `${pageTitlePrefix} | ${title}` : siteTitle;
   const canonicalUrl = createCanonicalUrl(pathname);
   const indexable = isIndexableSiteRoutePath(pathname);
   const profileImage = resolveCanonicalProfileImage(content.profile.portraitImage);
@@ -57,7 +58,7 @@ export function createPageMetadata(
         }
       : {
           default: siteTitle,
-          template: `%s | ${siteTitle}`
+          template: `${pageTitlePrefix} | %s`
         },
     description: pageDescription,
     applicationName: PREFERRED_SITE_NAME,
