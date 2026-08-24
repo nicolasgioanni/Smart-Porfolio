@@ -470,25 +470,33 @@ describe("navigation helpers", () => {
     );
     expect(
       container.querySelector(
-        ".blob-header__island > .site-brand + .main-navigation + .mobile-navigation + .blob-header__actions"
+        ".blob-header__island > .site-brand + .main-navigation + .mobile-navigation"
       )
     ).not.toBeNull();
+    const mobileRail = container.querySelector(".mobile-navigation");
+    expect(mobileRail?.querySelector(":scope > .mobile-navigation__routes + .blob-header__actions")).not.toBeNull();
     expect(screen.getByRole("link", { name: /github/i })).toHaveClass("hover-base-1", "hover-base-1--compact");
   });
 
-  it("renders the canonical mobile routes directly before the persistent action cluster", () => {
+  it("renders the canonical routes and actions inside one mobile rail", () => {
     installMediaQueries({ mobileUi: true });
     const { container } = renderHeader();
     const mobileNavigation = screen.getByRole("navigation", { name: /mobile navigation/i });
     const mobileLinks = within(mobileNavigation).getAllByRole("link");
+    const mobileRail = container.querySelector(".mobile-navigation.mobile-navigation__rail");
+    const actionCluster = container.querySelector(".blob-header__actions");
 
     expect(mobileLinks.map((link) => link.textContent)).toEqual(["Home", "Research", "Projects"]);
     expect(mobileLinks[0]).toHaveAttribute("aria-current", "page");
     expect(container.querySelector(".mobile-navigation__panel")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /menu/i })).not.toBeInTheDocument();
-    expect(container.querySelector(".mobile-navigation + .blob-header__actions")).not.toBeNull();
-    expect(within(container.querySelector(".blob-header__actions") as HTMLElement).getByRole("link", { name: /github/i })).toBeInTheDocument();
-    expect(within(container.querySelector(".blob-header__actions") as HTMLElement).getByRole("button", { name: /choose color theme/i })).toBeInTheDocument();
+    expect(mobileRail).not.toBeNull();
+    expect(mobileNavigation.parentElement).toBe(mobileRail);
+    expect(actionCluster?.parentElement).toBe(mobileRail);
+    expect(mobileNavigation.nextElementSibling).toBe(actionCluster);
+    expect(within(mobileNavigation).queryByRole("link", { name: /github/i })).not.toBeInTheDocument();
+    expect(within(actionCluster as HTMLElement).getByRole("link", { name: /github/i })).toBeInTheDocument();
+    expect(within(actionCluster as HTMLElement).getByRole("button", { name: /choose color theme/i })).toBeInTheDocument();
   });
 
   it("opens the profile photo preview and closes when clicking outside the frame", async () => {
@@ -649,6 +657,9 @@ describe("navigation helpers", () => {
 
     fireEvent.click(themeTrigger);
     expect(themeTrigger).toHaveAttribute("aria-expanded", "true");
+    const themePopover = document.body.querySelector(".theme-switcher__popover--portal");
+    expect(themePopover).not.toBeNull();
+    expect(themePopover?.parentElement).toBe(document.body);
     scrollToPosition(180);
     expect(header).toHaveAttribute("data-header-state", "expanded");
 

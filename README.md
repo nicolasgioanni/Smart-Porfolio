@@ -101,7 +101,7 @@ See [Content pipeline](docs/CONTENT_PIPELINE.md), [sheet schema](docs/CONTENT_SH
 The interface uses glass-inspired surfaces as restrained hierarchy, not as a full-screen effect. Text sits on quiet backgrounds, large panels use bounded blur, and nested cards reduce visual weight.
 
 - Navy, Light, and Dark themes share semantic color and interaction tokens.
-- A floating desktop header provides profile preview, navigation, social links, and theme selection. At `980px` and below, a safe-area-aware bottom dock replaces it with a swipeable route rail and persistent GitHub, LinkedIn, Email, and theme controls.
+- A floating desktop header provides profile preview, navigation, social links, and theme selection. At `980px` and below, a safe-area-aware bottom dock replaces it with one swipeable rail containing the routes, GitHub, LinkedIn, Email, and theme controls.
 - Home combines a profile overview with experience, education, research, projects, skills, and recommendations.
 - The role line can rotate through spreadsheet-configured titles while exposing one stable accessible label.
 - Skills with complete evidence open keyboard-managed dialogs; incomplete legacy rows remain static badges.
@@ -130,7 +130,7 @@ Page routes are statically exported. This table covers the visitor flows documen
 | `/terms` | Terms and accuracy notice | Static footer-only legal route. |
 | `/security` | Security and disclosure notice | Static footer-only legal route. |
 
-Primary navigation is assembled by [navigationItems.ts](src/components/navigation/navigationItems.ts) from the central route registry. Resume is always present, Recommendations is included only when configured, and Contact plus legal routes are intentionally available through the footer. Mobile preserves the canonical route order in a native horizontal rail; edge fades expose hidden overflow, and idle drift stops permanently for the current pathname after direct interaction.
+Primary navigation is assembled by [navigationItems.ts](src/components/navigation/navigationItems.ts) from the central route registry. Resume is always present, Recommendations is included only when configured, and Contact plus legal routes are intentionally available through the footer. Mobile preserves the canonical route order, then continues through the configured social and theme controls in one native horizontal rail. Edge fades expose hidden overflow, and direct interaction pauses drift until five seconds of inactivity have elapsed.
 
 ## Technology and project role
 
