@@ -509,6 +509,9 @@ function normalizeSkills(rows: CsvRow[]): SkillItem[] {
       categoryOrder: normalizeNumber(row.category_order, `${location}.category_order`),
       name: requiredText(row, "name", location),
       icon: normalizeIconKey(row.icon, `${location}.icon`),
+      proficiency: text(row, "proficiency"),
+      summary: text(row, "summary"),
+      whereUsed: text(row, "where_used"),
       priority: normalizeNumber(row.priority, `${location}.priority`),
       featured: normalizeBoolean(row.featured, `${location}.featured`),
       showOnHome: normalizeBoolean(row.show_on_home, `${location}.show_on_home`),
@@ -533,7 +536,7 @@ function normalizeResume(rows: CsvRow[]): ResumeEntry[] {
 function normalizeSiteSettings(rows: CsvRow[]): SiteSettings {
   const settings: SiteSettings = {
     siteTitle: "Portfolio",
-    siteDescription: "A professional portfolio with experience, projects, research, and resume highlights.",
+    siteDescription: "A professional portfolio with experience, projects, research, and technical skills.",
     defaultTheme: "navy",
     enableSkeletons: true,
     enableScrollMotion: false,
@@ -545,7 +548,7 @@ function normalizeSiteSettings(rows: CsvRow[]): SiteSettings {
     maxHomeExperienceItems: 3,
     maxHomeRecommendationItems: 3,
     recommendationsNavLabel: "Recommendations",
-    maxHomeSkillItems: 36
+    maxHomeSkillItems: 12
   };
 
   for (const row of rows) {

@@ -1,37 +1,13 @@
-id,category,category_order,name,icon,priority,featured,show_on_home,order
-skill-python,Computer Vision & ML,1,Python,python,1,true,true,1
-skill-tensorflow,Computer Vision & ML,1,TensorFlow,tensorflow,1,true,true,2
-skill-keras,Computer Vision & ML,1,Keras,keras,1,true,true,3
-skill-opencv,Computer Vision & ML,1,OpenCV,opencv,1,true,true,4
-skill-scikit-image,Computer Vision & ML,1,scikit-image,image-processing,1,true,true,5
-skill-numpy,Computer Vision & ML,1,NumPy,numpy,1,true,true,6
-skill-c-cpp,Cybersecurity & Systems,2,C/C++,cplusplus,1,true,true,1
-skill-bash,Cybersecurity & Systems,2,Bash,gnubash,1,true,true,2
-skill-assembly,Cybersecurity & Systems,2,Assembly,cpu,1,true,true,3
-skill-ssh,Cybersecurity & Systems,2,SSH,ssh,1,true,true,4
-skill-tls,Cybersecurity & Systems,2,TLS / Let's Encrypt,letsencrypt,1,true,true,5
-skill-information-assurance,Cybersecurity & Systems,2,Information Assurance,shield-check,1,true,true,6
-skill-typescript,Full-Stack Engineering,3,TypeScript,typescript,1,true,true,1
-skill-javascript,Full-Stack Engineering,3,JavaScript,javascript,1,true,true,2
-skill-react,Full-Stack Engineering,3,React,react,1,true,true,3
-skill-nextjs,Full-Stack Engineering,3,Next.js,nextdotjs,1,true,true,4
-skill-django,Full-Stack Engineering,3,Django,django,1,true,true,5
-skill-flask,Full-Stack Engineering,3,Flask,flask,1,true,true,6
-skill-postgresql,Data & API Engineering,4,PostgreSQL,postgresql,1,true,true,1
-skill-sql,Data & API Engineering,4,SQL,database,1,true,true,2
-skill-firestore,Data & API Engineering,4,Firestore,firebase,1,true,true,3
-skill-firebase-auth,Data & API Engineering,4,Firebase Auth,firebase,1,true,true,4
-skill-rest-apis,Data & API Engineering,4,REST APIs,api,1,true,true,5
-skill-pinecone,Data & API Engineering,4,Pinecone,pinecone,1,true,true,6
-skill-git,Cloud & DevOps,5,Git,git,1,true,true,1
-skill-docker,Cloud & DevOps,5,Docker,docker,1,true,true,2
-skill-linux,Cloud & DevOps,5,Linux,linux,1,true,true,3
-skill-nginx,Cloud & DevOps,5,Nginx,nginx,1,true,true,4
-skill-gunicorn,Cloud & DevOps,5,Gunicorn,gunicorn,1,true,true,5
-skill-azure,Cloud & DevOps,5,Azure,azure,1,true,true,6
-skill-llm-api,Applied AI & Research Computing,6,LLM APIs,llm,1,true,true,1
-skill-whisper,Applied AI & Research Computing,6,Whisper,openai,1,true,true,2
-skill-yolo,Applied AI & Research Computing,6,YOLO,ultralytics,1,true,true,3
-skill-pandas,Applied AI & Research Computing,6,pandas,pandas,1,true,true,4
-skill-biopython,Applied AI & Research Computing,6,Biopython,biopython,1,true,true,5
-skill-matplotlib,Applied AI & Research Computing,6,Matplotlib,matplotlib,1,true,true,6
+id,category,category_order,name,icon,proficiency,summary,where_used,priority,featured,show_on_home,order
+skill-python,Core Programming,1,Python,python,Advanced,"A versatile language for backend services, automation, machine learning, and data workflows.","Used across CytoCV, adversarial-ML research, Guide Donor Scheduler, NotePal, Clair, and LeetNotes to build APIs, ML pipelines, research automation, desktop tooling, and CLIs.",1,true,true,1
+skill-c-cpp,Core Programming,1,C/C++,cplusplus,Working proficiency,"Performance-oriented languages for systems programming, memory management, and core computer-science fundamentals.","Built a foundation through UW data structures, algorithms, operating systems, and software engineering, then reinforced it while tutoring and reviewing C/C++ coursework as a teaching assistant.",1,true,true,2
+skill-typescript-javascript,Core Programming,1,TypeScript / JavaScript,typescript,Proficient,"The languages I use to build typed, interactive web applications.","Built NotePal's Next.js interface in TypeScript, CytoCV's Fetch API frontend in JavaScript, and this portfolio; also supported JavaScript coursework as a teaching assistant.",1,true,true,3
+skill-sql,Core Programming,1,SQL,database,Proficient,"The standard language for modeling, querying, and maintaining relational data.","Re-architected CytoCV's data layer and migrated its application data from SQLite to PostgreSQL, supported by UW Database Systems coursework.",1,true,true,4
+skill-tensorflow-keras,"AI, ML & Data",2,TensorFlow / Keras,tensorflow,Advanced,"Deep-learning frameworks for building and evaluating neural-network pipelines.","Built CytoCV's Mask R-CNN segmentation workflow and adversarial attack-and-defense experiments; optimized batched Keras evaluation to under five seconds while preserving 94% clean-data accuracy.",1,true,true,1
+skill-opencv,"AI, ML & Data",2,OpenCV,opencv,Proficient,"A computer-vision toolkit for reproducible image processing and analysis.","Used alongside scikit-image in CytoCV's microscopy pipeline to preprocess images, support segmentation, and extract 30+ cell metrics; the pipeline cut processing time by 73%.",1,true,true,2
+skill-numpy-pandas,"AI, ML & Data",2,NumPy / pandas,numpy,Proficient,"Numerical and tabular data tools for efficient array processing, analysis, and automation.","Used NumPy in CytoCV and adversarial-ML automation to process arrays and evaluate metrics; used pandas in Guide Donor Scheduler to analyze 18,000+ FASTA files and export results.",1,true,true,3
+skill-llm-rag,"AI, ML & Data",2,LLM APIs & RAG,llm,Applied proficiency,"Interfaces and retrieval techniques for building grounded generative-AI product features.","Built NotePal's OpenAI-powered autocomplete, notes, flashcards, quizzes, and Pinecone-backed RAG chat while coordinating OCR and speech-processing services through Flask.",1,true,true,4
+skill-django,Full-Stack & Systems,3,Django,django,Advanced,"A Python web framework for secure, data-backed applications and APIs.","Architected CytoCV's Django backend, REST API, data model, and full-stack workflow for 15+ scientists; the platform reduced manual microscopy analysis by 97%.",1,true,true,1
+skill-nextjs-react,Full-Stack & Systems,3,Next.js / React,nextdotjs,Proficient,"A production React stack for building routed, interactive web applications.","Built and deployed NotePal's typed Next.js interface on Vercel with CI/CD, including a Notion-style editor and AI autocomplete; also used Next.js for this portfolio.",1,true,true,2
+skill-rest-apis,Full-Stack & Systems,3,REST APIs,api,Proficient,"Service interfaces that connect frontends with application, data, and AI backends.","Built Django REST endpoints and a JavaScript Fetch client for CytoCV, plus a modular Flask API coordinating NotePal's OCR, speech, LLM, authentication, and retrieval workflows.",1,true,true,3
+skill-docker-linux,Full-Stack & Systems,3,Docker & Linux,docker,Working proficiency,"Tools for reproducible development environments and production server operations.","Deployed CytoCV on a UW-IT Linux VM with Nginx, Gunicorn, CI/CD, and TLS; used Docker in UW teaching, project review, and developer workshops.",1,true,true,4

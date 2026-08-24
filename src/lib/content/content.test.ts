@@ -229,7 +229,18 @@ function createSheets(overrides: Partial<RawPortfolioSheets> = {}): RawPortfolio
       }
     ],
     skills: [
-      { id: "skill-ts", category: "languages", name: "TypeScript", priority: "1", featured: "true", show_on_home: "true", order: "2" },
+      {
+        id: "skill-ts",
+        category: "languages",
+        name: "TypeScript",
+        proficiency: "Proficient",
+        summary: "Typed JavaScript for maintainable applications.",
+        where_used: "Used to build a production web application.",
+        priority: "1",
+        featured: "true",
+        show_on_home: "true",
+        order: "2"
+      },
       { id: "skill-py", category: "languages", name: "Python", priority: "1", featured: "true", show_on_home: "true", order: "1" },
       { id: "skill-sec", category: "cybersecurity", name: "Security", priority: "2", featured: "false", show_on_home: "true", order: "3" }
     ],
@@ -333,6 +344,11 @@ describe("portfolio normalization", () => {
     expect(content.education[0]?.institutionLogo).toBe("/images/education/university-logo.svg");
     expect(content.education[0]?.institutionLogoAlt).toBe("University logo");
     expect(content.education[0]?.concentration).toBe("Information Assurance");
+    expect(content.skills.find((skill) => skill.id === "skill-ts")).toMatchObject({
+      proficiency: "Proficient",
+      summary: "Typed JavaScript for maintainable applications.",
+      whereUsed: "Used to build a production web application."
+    });
     expect(content.siteSettings.enableRecommendations).toBe(true);
     expect(content.siteSettings.showEmptyRecommendations).toBe(false);
     expect(content.siteSettings.defaultTheme).toBe("navy");
@@ -663,6 +679,27 @@ describe("portfolio normalization", () => {
     ).toThrow(/institutionLogo URL/);
   });
 
+  it("requires complete popup copy when a skill provides any popup field", () => {
+    expect(() =>
+      normalizePortfolioContent(
+        createSheets({
+          skills: [
+            {
+              id: "skill-python",
+              category: "Core Programming",
+              name: "Python",
+              proficiency: "Advanced",
+              featured: "true",
+              show_on_home: "true",
+              order: "1"
+            }
+          ]
+        }),
+        metadata
+      )
+    ).toThrow(/must provide proficiency, summary, and whereUsed together/);
+  });
+
   it.each([
     ["current_experience_id", "currentExperienceId"],
     ["previous_experience_id", "previousExperienceId"],
@@ -911,7 +948,7 @@ describe("portfolio normalization", () => {
     ]);
   });
 
-  it("maps the three Home projects, six skill groups, and four recommendations from template content", () => {
+  it("maps the three Home projects, three focused skill groups, and four recommendations from template content", () => {
     const content = normalizePortfolioContent(readTemplateSheets(), metadata);
     const homeProjects = content.projects.filter((item) => item.showOnHome);
     const skillCounts = new Map<string, number>();
@@ -923,7 +960,7 @@ describe("portfolio normalization", () => {
     expect(content.siteSettings).toMatchObject({
       maxHomeProjectItems: 3,
       maxHomeRecommendationItems: 3,
-      maxHomeSkillItems: 36
+      maxHomeSkillItems: 12
     });
     expect(homeProjects.map((item) => item.title)).toEqual(["NotePal", "Clair", "LeetNotes"]);
     expect(homeProjects.every((item) => item.homeSkills.length === 3)).toBe(true);
@@ -1000,14 +1037,14 @@ describe("portfolio normalization", () => {
       }
     ]);
     expect(Array.from(skillCounts.entries())).toEqual([
-      ["Computer Vision & ML", 6],
-      ["Cybersecurity & Systems", 6],
-      ["Full-Stack Engineering", 6],
-      ["Data & API Engineering", 6],
-      ["Cloud & DevOps", 6],
-      ["Applied AI & Research Computing", 6]
+      ["Core Programming", 4],
+      ["AI, ML & Data", 4],
+      ["Full-Stack & Systems", 4]
     ]);
     expect(content.skills.every((skill) => Boolean(skill.icon))).toBe(true);
+    expect(
+      content.skills.every((skill) => Boolean(skill.proficiency && skill.summary && skill.whereUsed))
+    ).toBe(true);
     expect(content.recommendations.map((item) => item.recommenderName)).toEqual([
       "Brent Lagesse",
       "Annuska Zolyomi, PhD",

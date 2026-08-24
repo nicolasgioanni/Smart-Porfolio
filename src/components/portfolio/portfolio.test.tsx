@@ -48,21 +48,22 @@ const recommendation: RecommendationItem = {
 };
 
 const skillGroup: SkillGroup = {
-  category: "Computer Vision & ML",
+  category: "Core Programming",
   order: 1,
   skills: [
     ["python", "Python", "python"],
-    ["tensorflow", "TensorFlow", "tensorflow"],
-    ["keras", "Keras", "keras"],
-    ["opencv", "OpenCV", "opencv"],
-    ["scikit-image", "scikit-image", "image-processing"],
-    ["numpy", "NumPy", "numpy"]
+    ["c-cpp", "C/C++", "cplusplus"],
+    ["typescript-javascript", "TypeScript / JavaScript", "typescript"],
+    ["sql", "SQL", "database"]
   ].map(([id, name, icon], index) => ({
     id,
-    category: "Computer Vision & ML",
+    category: "Core Programming",
     categoryOrder: 1,
     name,
     icon,
+    proficiency: name === "Python" ? "Advanced" : "Proficient",
+    summary: `${name} supports reliable software development.`,
+    whereUsed: `${name} was applied in portfolio projects and research.`,
     featured: false,
     showOnHome: true,
     order: index + 1
@@ -647,8 +648,9 @@ describe("portfolio UI helpers", () => {
     }
 
     expect(screen.queryByRole("heading", { name: "Resume and contact" })).not.toBeInTheDocument();
-    expect(within(skillsSection!).getByRole("heading", { name: "Computer Vision & ML" })).toBeInTheDocument();
-    expect(skillsSection?.querySelectorAll(".skill-badge")).toHaveLength(6);
+    expect(within(skillsSection!).getByRole("heading", { name: "Core Programming" })).toBeInTheDocument();
+    expect(skillsSection?.querySelectorAll(".skill-badge")).toHaveLength(4);
+    expect(within(skillsSection!).getAllByRole("button", { name: /learn about my experience with/i })).toHaveLength(4);
     expect(within(recommendationsSection!).getByRole("status")).toHaveTextContent("No recommendations yet");
     expect(screen.queryByRole("link", { name: /see all recommendations/i })).not.toBeInTheDocument();
   });

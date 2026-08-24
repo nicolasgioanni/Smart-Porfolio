@@ -11,7 +11,7 @@ max_home_research_items,3
 max_home_project_items,3
 max_home_experience_items,4
 max_home_recommendation_items,3
-max_home_skill_items,36
+max_home_skill_items,12
 recommendations_nav_label,Recommendations
 license_name,MIT
 license_url,

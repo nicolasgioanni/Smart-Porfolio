@@ -86,7 +86,7 @@ export default function TermsPage() {
         <p>
           The site and its linked materials are provided on an as-available basis. Content, links, functionality, and these
           terms may be corrected, updated, suspended, or removed without prior notice. Continued availability of any project,
-          demonstration, repository, manuscript, résumé, or third-party destination is not guaranteed.
+          demonstration, repository, manuscript, resume, or third-party destination is not guaranteed.
         </p>
       </section>
 

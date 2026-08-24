@@ -12,14 +12,14 @@ Profile fields drive:
 
 - Header and footer identity.
 - Home profile overview greeting, role, about text, current work, education, research, location, timezone, portrait, and contact fallbacks.
-- Resume page profile panel.
+- Contact and resume-request email fallbacks.
 - Route metadata defaults.
 
 Portrait assets are referenced by the profile data. If a real image exists but the profile still points to a placeholder, update the content source intentionally in a separate content pass.
 
 The Home profile overview derives `greetingName` from `profile.preferred_name`, then the first word of `profile.full_name`. The right-side `Hi, I’m {greetingName}` greeting is the Home page's single `h1`; the full name beneath the portrait is non-heading identity text.
 
-Spreadsheet keys `role_engineer_prefixes`, `role_engineer_suffix`, and `role_alternate` normalize to `ProfileContent.roleEngineerPrefixes`, `roleEngineerSuffix`, and `roleAlternate`. The overview exposes a discriminated role model: `kind: "rotating"` contains the parsed prefixes, shared suffix, and alternate, while `kind: "static"` contains the required `headline` fallback. A rotating configuration requires all three source fields; a partial configuration or a prefix value with no non-empty items fails generation. `headline` also remains the résumé-safe role, even when Home rotates roles.
+Spreadsheet keys `role_engineer_prefixes`, `role_engineer_suffix`, and `role_alternate` normalize to `ProfileContent.roleEngineerPrefixes`, `roleEngineerSuffix`, and `roleAlternate`. The overview exposes a discriminated role model: `kind: "rotating"` contains the parsed prefixes, shared suffix, and alternate, while `kind: "static"` contains the required `headline` fallback. A rotating configuration requires all three source fields; a partial configuration or a prefix value with no non-empty items fails generation. `headline` also remains the resume-safe role, even when Home rotates roles.
 
 The role is followed by an About paragraph from `profile.short_bio`. If `short_bio` is blank, the existing concise `long_bio` excerpt fallback may be used; if both are blank, the About block is omitted. Components must wrap this generated copy rather than replace or truncate it with hard-coded personal text.
 
@@ -44,7 +44,7 @@ The links sheet drives:
 - Mobile navigation social links.
 - Resume CTA when a resume link is present.
 
-The footer intentionally does not repeat GitHub, LinkedIn, email, or résumé icon rows from `links.csv`. Its legal contact, repository, and license resources come from `site_settings`; repository resources remain omitted while their URLs are blank.
+The footer intentionally does not repeat GitHub, LinkedIn, email, or resume icon rows from `links.csv`. Its legal contact, repository, and license resources come from `site_settings`; repository resources remain omitted while their URLs are blank.
 
 The Home profile card left rail selects compact contact rows in this order when available: location, timezone, Email, Portfolio or Website, LinkedIn, and GitHub. Email can fall back to `profile.email`.
 
@@ -53,10 +53,9 @@ The Home profile card left rail selects compact contact rows in this order when 
 Skills drive:
 
 - Home skill-category cards.
-- Skills detail-page groups.
-- Resume skills groups.
+- Shared skill groups used by portfolio surfaces.
 
-Skills are grouped by `category`, ordered by `category_order`, and then sorted within each group by priority and `order`. Home renders six broad category cards after Projects and before Recommendations, in a two-column desktop grid. Each exact skill renders its spreadsheet-owned `name` and `icon`; the current published content provides six skills per category.
+Skills are grouped by `category`, ordered by `category_order`, and then sorted within each group by priority and `order`. Home renders three recruiter-focused category cards after Projects and before Recommendations, using a three-column desktop grid that collapses responsively. Each of the four skills per category renders its spreadsheet-owned `name` and `icon`; complete `proficiency`, `summary`, and `where_used` fields turn the badge into a dialog trigger that explains the skill and Nicolas's applied experience.
 
 ## Experience Mapping
 
@@ -64,7 +63,6 @@ Experience drives:
 
 - Home work-history list.
 - Experience page timeline details.
-- Resume experience highlights.
 
 Home renders every experience row enabled with `show_on_home`, grouped by the exact `organization` value. The work-history list uses only the title, organization, logo, dates, and location; summaries, type labels, featured labels, bullets, and skills remain available to other surfaces. A compact top-right `View` button opens the Experience route.
 
@@ -76,9 +74,8 @@ Research drives:
 
 - Home Research card row.
 - Research page detail cards.
-- Resume research highlights.
 
-Home renders the first three enabled research rows in a three-column desktop grid. Each larger card shows `home_title` with `title` fallback, organization, date range, location, and one-line `home_summary`; `profile_summary`, `profile_byline`, and `profile_labs` are reserved for the compact profile panel and do not replace this copy. The cards do not show a Featured tag or a `Learn more` action. They render only verified actions, in the fixed order `Source code`, `Manuscript`, then `Live demo`, and render no action for a missing or `pending_links` resource. Roles, impact callouts, bullets, skill chips, and the formal `title` remain available to the Research detail and résumé surfaces. A compact top-right `View` button opens the Research route. Research rows may provide `organization_logo` and `organization_logo_alt` for contexts that display an organization mark.
+Home renders the first three enabled research rows in a three-column desktop grid. Each larger card shows `home_title` with `title` fallback, organization, date range, location, and one-line `home_summary`; `profile_summary`, `profile_byline`, and `profile_labs` are reserved for the compact profile panel and do not replace this copy. The cards do not show a Featured tag or a `Learn more` action. They render only verified actions, in the fixed order `Source code`, `Manuscript`, then `Live demo`, and render no action for a missing or `pending_links` resource. Roles, impact callouts, bullets, skill chips, and the formal `title` remain available to the Research detail route. A compact top-right `View` button opens the Research route. Research rows may provide `organization_logo` and `organization_logo_alt` for contexts that display an organization mark.
 
 ## Projects Mapping
 
@@ -86,7 +83,6 @@ Projects drive:
 
 - Home project cards.
 - Projects page detail cards.
-- Resume project highlights.
 
 The Home section is titled `Projects`. Each card uses the plain `title` and `subtitle`, a product-focused `home_summary`, exactly three `home_skills` badges, and verified links ordered as `Source code` then optional `Live demo`. Ordered columns `home_skill_1_summary`/`home_skill_1_details` through position three map onto optional `ProjectSkill.summary`/`details` fields. A position must provide both values or neither and must have a corresponding ordered skill; legacy project rows without tool explanations remain valid. It does not render Featured or subtitle chips. A compact top-right `View` button opens the Projects route. The Projects page adds problem, solution, impact, image, complete stack, and full links.
 
@@ -107,7 +103,6 @@ Education drives:
 
 - Home profile overview education row.
 - Home education list.
-- Resume education section.
 
 The Home Education card renders every Home-selected row as a clean academic-history list. Each row uses the spreadsheet's institution mark when supplied, with compact institution initials as the visual fallback, then shows institution, degree and field, concentration directly beneath the degree, dates, optional location, and every `bullets` entry as a visible bullet list. It does not render `home_summary`, wrap entries in nested cards, or use skill-style chips. Grade, activities, honors, and similar details remain spreadsheet-owned content in `bullets`; the UI does not invent them. The profile-overview Education panel is intentionally tighter and shows only the identity-level academic facts and compact graduation label.
 
@@ -119,7 +114,7 @@ Whether content comes from local templates or published spreadsheet CSV URLs, ge
 
 ## Resume Mapping
 
-The resume sheet provides custom resume notes or section text. It supplements experience, research, projects, education, and skills data.
+The resume sheet is retained as a header-only compatibility source and always normalizes to an empty array in the private-resume configuration. The Resume route publishes no resume details or files; it directs legitimate contacts to the priority contact form or the public email address.
 
 ## Site Settings Mapping
 
@@ -152,13 +147,13 @@ Unsupported theme values resolve to `navy` at render time.
 
 ## Footer And Notice Behavior
 
-The global footer first renders a compact copyright statement and `Details` disclosure, followed by reserved below-footer scroll space sized for the expanded disclosure. It remains compact on first view, opens after the visitor continues scrolling into that runway, and also opens when contracting content above it moves the previously lower runway boundary fully into view. It closes after upward scrolling crosses the return threshold. Expansion consumes the reserved footprint instead of extending the page at the moment it opens. The manual `Collapse` action suppresses automatic reopening until the footer interaction area is exited and later re-entered; `Details` remains the explicit accessibility fallback. Expanded content maps the owner, contact, repository, license, and hosting facts from generated content while stable notice labels and internal destinations remain component-owned. The three notice routes are `/terms`, `/privacy`, and `/security`; they are intentionally absent from header navigation.
+The global footer first renders a compact copyright statement and `Details` disclosure, followed by reserved below-footer scroll space sized for the expanded disclosure. It remains compact on first view, opens after the visitor continues scrolling into that runway, and also opens when contracting content above it moves the previously lower runway boundary fully into view. It closes after upward scrolling crosses the return threshold. Expansion consumes the reserved footprint instead of extending the page at the moment it opens. The manual `Collapse` action suppresses automatic reopening until the footer interaction area is exited and later re-entered; `Details` remains the explicit accessibility fallback. Expanded content maps the owner, contact, repository, license, and hosting facts from generated content while stable notice labels and internal destinations remain component-owned. The four footer-only routes are `/contact`, `/terms`, `/privacy`, and `/security`; they are intentionally absent from header navigation.
 
 Do not populate public repository or repository-license URLs until the tracked tree and reachable Git history pass an exposure audit and both anonymous URLs resolve successfully. Portfolio content remains rights-reserved except where stated, while distributed site software is governed by the repository's MIT License.
 
 ## Home Summary Behavior
 
-Home is the complete high-level overview of the core portfolio narrative. Compact top-right route buttons appear on Experience, Research, Projects, and Recommendations. Resume content remains on its dedicated route.
+Home is the complete high-level overview of the core portfolio narrative. Compact top-right route buttons appear on Experience, Research, Projects, and Recommendations. The Resume route remains a private-access request surface rather than a public content summary.
 
 Home order:
 
@@ -167,7 +162,7 @@ Home order:
 3. Education
 4. Research
 5. Projects
-6. Skills (six category cards)
+6. Skills (three category cards)
 7. Recommendations
 8. Global footer
 

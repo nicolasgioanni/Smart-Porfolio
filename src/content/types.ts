@@ -171,6 +171,9 @@ export type SkillItem = {
   categoryOrder?: number;
   name: string;
   icon?: string;
+  proficiency?: string;
+  summary?: string;
+  whereUsed?: string;
   priority?: number;
   featured: boolean;
   showOnHome: boolean;
