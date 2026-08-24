@@ -1687,16 +1687,21 @@
 .recommendation-expandable__inline-link {
   color: inherit;
   font-weight: var(--font-weight-bold);
-  text-decoration-line: underline;
+  text-decoration-line: none;
   text-decoration-color: currentColor;
   text-decoration-thickness: 0.08em;
   text-underline-offset: 0.18em;
-  transition: color 180ms ease, text-decoration-color 180ms ease, text-decoration-thickness 180ms ease;
+  transition:
+    color 180ms ease,
+    text-decoration-color 180ms ease,
+    text-decoration-thickness 180ms ease;
 }
 
 .recommendation-expandable__inline-link:hover,
 .recommendation-expandable__inline-link:focus-visible {
-  color: var(--color-accent-strong);
+  color: var(--hover-base-1-inline-link-text);
+  text-decoration-line: underline;
+  text-decoration-color: currentColor;
   text-decoration-thickness: 0.14em;
 }
 

@@ -159,6 +159,7 @@
   --hover-base-1-compact-selected-shadow: 0 3px 9px rgba(2, 9, 24, 0.14);
   --hover-base-1-highlight: rgba(255, 255, 255, 0.2);
   --hover-base-1-hover-text: #ffffff;
+  --hover-base-1-inline-link-text: #6799eb;
   --hover-base-1-selected-text: #f7f9ff;
 }
 
@@ -235,6 +236,7 @@
   --hover-base-1-compact-selected-shadow: 0 3px 9px rgba(35, 40, 47, 0.08);
   --hover-base-1-highlight: rgba(255, 255, 255, 0.22);
   --hover-base-1-hover-text: #ffffff;
+  --hover-base-1-inline-link-text: #4d5158;
   --hover-base-1-selected-text: #30343b;
 }
 
@@ -311,6 +313,7 @@
   --hover-base-1-compact-selected-shadow: 0 3px 9px rgba(0, 0, 0, 0.14);
   --hover-base-1-highlight: rgba(255, 255, 255, 0.2);
   --hover-base-1-hover-text: #ffffff;
+  --hover-base-1-inline-link-text: #788fc9;
   --hover-base-1-selected-text: #f5f7f9;
 }
 
