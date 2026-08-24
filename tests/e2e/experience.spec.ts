@@ -29,6 +29,19 @@ test.describe("Experience showcase", () => {
     const architecture = cytocvCard.getByRole("button", { name: /Application architecture/i });
     const vision = cytocvCard.getByRole("button", { name: /Vision pipeline/i });
 
+    const [architectureIconBox, visionIconBox] = await Promise.all([
+      architecture.locator(".experience-chapter__icon").boundingBox(),
+      vision.locator(".experience-chapter__icon").boundingBox()
+    ]);
+    expect(architectureIconBox).not.toBeNull();
+    expect(visionIconBox).not.toBeNull();
+    expect(
+      Math.abs(
+        architectureIconBox!.x + architectureIconBox!.width -
+          (visionIconBox!.x + visionIconBox!.width)
+      )
+    ).toBeLessThanOrEqual(1);
+
     await architecture.click();
     await expect(architecture).toHaveAttribute("aria-expanded", "true");
     await expect(cytocvCard.getByRole("list", { name: "Application architecture tools" })).toBeVisible();
@@ -62,5 +75,42 @@ test.describe("Experience showcase", () => {
     expect(
       await page.locator(".experience-chapter__panel").first().evaluate((element) => getComputedStyle(element).transitionDuration)
     ).toBe("0s");
+  });
+
+  test("insets chapter dividers while preserving full-width hover targets", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto("/experience");
+
+    const chapters = page.locator(".experience-card__chapters").first();
+    const chapter = chapters.locator(".experience-chapter").first();
+    const trigger = chapter.locator(".experience-chapter__trigger");
+    const dividerInsets = await chapter.evaluate((element) => {
+      const chaptersElement = element.parentElement!;
+      const topDivider = getComputedStyle(chaptersElement, "::before");
+      const rowDivider = getComputedStyle(element, "::before");
+      const accentDivider = getComputedStyle(element, "::after");
+
+      return {
+        accentLeft: accentDivider.left,
+        accentRight: accentDivider.right,
+        rowLeft: rowDivider.left,
+        rowRight: rowDivider.right,
+        topLeft: topDivider.left,
+        topRight: topDivider.right
+      };
+    });
+    const [chapterBox, triggerBox] = await Promise.all([chapter.boundingBox(), trigger.boundingBox()]);
+
+    expect(dividerInsets).toEqual({
+      accentLeft: "4px",
+      accentRight: "4px",
+      rowLeft: "4px",
+      rowRight: "4px",
+      topLeft: "4px",
+      topRight: "4px"
+    });
+    expect(chapterBox).not.toBeNull();
+    expect(triggerBox).not.toBeNull();
+    expect(Math.abs(chapterBox!.width - triggerBox!.width)).toBeLessThanOrEqual(1);
   });
 });
