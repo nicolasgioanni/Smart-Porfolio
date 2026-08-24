@@ -692,7 +692,7 @@ describe("contact route", () => {
   it("keeps noindex metadata while allowing legal-link discovery", () => {
     const metadata = generateMetadata();
 
-    expect(metadata.title).toEqual({ absolute: "Contact | Nicolas Gioanni Portfolio" });
+    expect(metadata.title).toEqual({ absolute: "Nicolas Gioanni | Contact" });
     expect(metadata.description).toBe("Send Nicolas Gioanni a prioritized professional contact request.");
     expect(metadata.robots).toEqual({
       index: false,

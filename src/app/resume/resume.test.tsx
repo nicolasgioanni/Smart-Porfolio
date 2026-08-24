@@ -33,7 +33,7 @@ describe("private resume route", () => {
   });
 
   it("publishes private-request metadata", () => {
-    expect(generateMetadata().title).toEqual({ absolute: "Resume | Nicolas Gioanni Portfolio" });
+    expect(generateMetadata().title).toEqual({ absolute: "Nicolas Gioanni | Resume" });
     expect(generateMetadata().description).toMatch(/private resume/i);
   });
 });
