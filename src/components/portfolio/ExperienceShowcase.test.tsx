@@ -35,12 +35,29 @@ const treasuryExperience: ExperienceItem = {
   showOnHome: true
 };
 
+const experienceSummary =
+  "My experience spans AI engineering, university research, and teaching core computer science courses.";
+
 describe("ExperienceShowcase", () => {
   it("renders logo-led role cards in the plain-language mode by default", () => {
-    const { container } = render(<ExperienceShowcase items={[cytocvExperience]} motionEnabled={false} />);
+    const { container } = render(
+      <ExperienceShowcase items={[cytocvExperience]} motionEnabled={false} summary={experienceSummary} />
+    );
 
-    expect(screen.getByRole("button", { name: "For everyone" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "Technical" })).toHaveAttribute("aria-pressed", "false");
+    const pageHeading = screen.getByRole("heading", { level: 1, name: "Experience" });
+    const introSurface = pageHeading.closest<HTMLElement>(".page-intro__surface");
+    const modeGroup = screen.getByRole("group", { name: /Experience detail level/i });
+    const modeLabel = introSurface?.querySelector(".experience-mode-control__label");
+
+    expect(container.querySelectorAll(".page-intro__surface")).toHaveLength(1);
+    expect(introSurface).toHaveClass("page-intro__surface--with-accessory");
+    expect(introSurface).toContainElement(modeGroup);
+    expect(within(introSurface!).getByText(experienceSummary)).toBeInTheDocument();
+    expect(modeLabel).toHaveTextContent(/Detail level:/);
+    expect(within(modeGroup).getByRole("button", { name: "For everyone" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(modeGroup).getByRole("button", { name: "Technical" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByText("Showing plain-language details.")).toHaveClass("visually-hidden");
+    expect(screen.getByText("Showing plain-language details.")).toHaveAttribute("aria-live", "polite");
     expect(screen.getByRole("heading", { level: 2, name: "Research Assistant (Software Engineering)" })).toBeInTheDocument();
     expect(screen.getByText("UW Bothell School of STEM")).toBeInTheDocument();
     expect(screen.getByText("Aug 2024 – Aug 2026")).toBeInTheDocument();
@@ -56,11 +73,13 @@ describe("ExperienceShowcase", () => {
   });
 
   it("switches the full page to technical copy and scopes tools to expandable chapters", () => {
-    render(<ExperienceShowcase items={[cytocvExperience]} motionEnabled={false} />);
+    render(<ExperienceShowcase items={[cytocvExperience]} motionEnabled={false} summary={experienceSummary} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Technical" }));
 
     expect(screen.getByRole("button", { name: "Technical" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("Showing technical details.")).toHaveClass("visually-hidden");
+    expect(screen.queryByText("Showing plain-language details.")).not.toBeInTheDocument();
     expect(screen.getByText(/Architected a Django and JavaScript application/)).toBeInTheDocument();
     const architectureButton = screen.getByRole("button", { name: /Application architecture/i });
     const architecturePanel = document.getElementById(architectureButton.getAttribute("aria-controls")!);
@@ -79,7 +98,7 @@ describe("ExperienceShowcase", () => {
   });
 
   it("keeps one chapter open per role and closes the active chapter with Escape", () => {
-    render(<ExperienceShowcase items={[cytocvExperience]} motionEnabled={false} />);
+    render(<ExperienceShowcase items={[cytocvExperience]} motionEnabled={false} summary={experienceSummary} />);
 
     const workflowButton = screen.getByRole("button", { name: /Scientific workflow/i });
     const analysisButton = screen.getByRole("button", { name: /Image analysis/i });
@@ -96,7 +115,7 @@ describe("ExperienceShowcase", () => {
   });
 
   it("shows verified identity only when a role has no published details", () => {
-    render(<ExperienceShowcase items={[treasuryExperience]} motionEnabled={false} />);
+    render(<ExperienceShowcase items={[treasuryExperience]} motionEnabled={false} summary={experienceSummary} />);
 
     const roleCard = screen.getByRole("heading", { level: 2, name: "AI Engineer" }).closest("article");
 
@@ -108,9 +127,13 @@ describe("ExperienceShowcase", () => {
     expect(within(roleCard!).queryByRole("button")).not.toBeInTheDocument();
   });
 
-  it("renders the existing empty state when there are no roles", () => {
-    render(<ExperienceShowcase items={[]} motionEnabled={false} />);
+  it("keeps the combined page heading and summary when there are no roles", () => {
+    const { container } = render(<ExperienceShowcase items={[]} motionEnabled={false} summary={experienceSummary} />);
 
+    expect(screen.getByRole("heading", { level: 1, name: "Experience" })).toBeInTheDocument();
+    expect(screen.getByText(experienceSummary)).toBeInTheDocument();
+    expect(container.querySelectorAll(".page-intro__surface")).toHaveLength(1);
+    expect(screen.queryByRole("group", { name: /Experience detail level/i })).not.toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("Experience entries will appear here when content is available.");
   });
 });
