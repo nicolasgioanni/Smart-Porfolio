@@ -8,7 +8,7 @@ const interactionStyles = readFileSync(path.join(process.cwd(), "src", "styles",
 
 describe("progressive footer styles", () => {
   it("reserves a stable overlay runway with a non-interactive activation band", () => {
-    expect(navigationStyles).toMatch(/\.blob-footer\s*\{[\s\S]*display: grid/);
+    expect(navigationStyles).toMatch(/\.blob-footer\s*\{[^}]*display: grid/);
     expect(navigationStyles).toMatch(
       /\.blob-footer__runway,\s*\.blob-footer__island\s*\{[^}]*grid-area: 1 \/ 1/
     );
@@ -34,41 +34,58 @@ describe("progressive footer styles", () => {
   });
 
   it("animates the compact and expanded geometry without scale or blur transitions", () => {
-    expect(navigationStyles).toMatch(/\.blob-footer__island\s*\{[\s\S]*max-width: var\(--header-compact-width\)/);
+    expect(navigationStyles).toMatch(/\.blob-footer__island\s*\{[^}]*max-width: var\(--header-compact-width\)/);
     expect(navigationStyles).toMatch(
-      /\.blob-footer--expanded \.blob-footer__island\s*\{[\s\S]*max-width: var\(--container-width\)/
+      /\.blob-footer--expanded \.blob-footer__island\s*\{[^}]*max-width: var\(--container-width\)/
     );
-    expect(navigationStyles).toMatch(/\.blob-footer__details\s*\{[\s\S]*grid-template-rows: 0fr/);
-    expect(navigationStyles).toMatch(/\.blob-footer--expanded \.blob-footer__details\s*\{[\s\S]*grid-template-rows: 1fr/);
+    expect(navigationStyles).toMatch(/\.blob-footer__details\s*\{[^}]*grid-template-rows: 0fr/);
+    expect(navigationStyles).toMatch(/\.blob-footer--expanded \.blob-footer__details\s*\{[^}]*grid-template-rows: 1fr/);
     expect(navigationStyles).not.toMatch(/\.blob-footer(?:--expanded)?(?: \.blob-footer__island)?\s*\{[^}]*scale\(/);
   });
 
-  it("uses the shared selected treatment to signal the expanded disclosure", () => {
+  it("keeps the disclosure control's complete idle treatment unchanged when expanded", () => {
     expect(navigationStyles).toMatch(
-      /\.blob-footer__toggle\s*\{[\s\S]*background: var\(--color-control-surface-soft\)/
+      /\.blob-footer__toggle\.hover-base-1\s*\{(?=[^}]*--hover-base-1-control-selected-shadow: none)(?=[^}]*--hover-base-1-selected-layer-opacity: 0)(?=[^}]*--hover-base-1-selected-text: var\(--color-ink-strong\))[^}]*\}/
     );
-    expect(navigationStyles).not.toMatch(/\.blob-footer__toggle\.hover-base-1\s*\{/);
+    expect(navigationStyles).toMatch(
+      /\.blob-footer__toggle\s*\{(?=[^}]*border: 1px solid var\(--color-line\))(?=[^}]*color: var\(--color-ink-strong\))(?=[^}]*background: var\(--color-control-surface-soft\))[^}]*\}/
+    );
+    expect(navigationStyles).not.toMatch(
+      /(?:\.blob-footer--expanded\s+\.blob-footer__toggle|\.blob-footer__toggle\[aria-expanded="true"\])\s*\{[^}]*(?:background(?:-color)?|border(?:-color)?|color|box-shadow)\s*:/
+    );
+  });
+
+  it("preserves the shared hover and keyboard-focus treatments for the footer toggle", () => {
     expect(interactionStyles).toMatch(
-      /\.hover-base-1:is\([\s\S]*\[aria-expanded="true"\][\s\S]*\)\s*\{[\s\S]*box-shadow: var\(--hover-base-1-control-selected-shadow\)[\s\S]*color: var\(--hover-base-1-selected-text\)/
+      /\.hover-base-1:not\(:disabled\):not\(\[aria-disabled="true"\]\):focus-visible\s*\{(?=[^}]*box-shadow: var\(--focus-ring\), var\(--hover-base-1-control-hover-shadow\))(?=[^}]*color: var\(--hover-base-1-hover-text\))(?=[^}]*transform: translateY\(-1px\))[^}]*\}/
+    );
+    expect(interactionStyles).toMatch(
+      /\.hover-base-1:not\(:disabled\):not\(\[aria-disabled="true"\]\):focus-visible::before\s*\{(?=[^}]*background: var\(--hover-base-1-hover-surface\))(?=[^}]*box-shadow: inset 0 0 0 1px var\(--hover-base-1-hover-border\))(?=[^}]*opacity: var\(--hover-base-1-hover-layer-opacity\))[^}]*\}/
+    );
+    expect(interactionStyles).toMatch(
+      /@media \(hover: hover\) and \(pointer: fine\)[\s\S]*?\.hover-base-1:not\(:disabled\):not\(\[aria-disabled="true"\]\):hover\s*\{(?=[^}]*box-shadow: var\(--hover-base-1-control-hover-shadow\))(?=[^}]*color: var\(--hover-base-1-hover-text\))(?=[^}]*transform: translateY\(-1px\))[^}]*\}/
+    );
+    expect(interactionStyles).toMatch(
+      /@media \(hover: hover\) and \(pointer: fine\)[\s\S]*?\.hover-base-1:not\(:disabled\):not\(\[aria-disabled="true"\]\):hover::before\s*\{(?=[^}]*background: var\(--hover-base-1-hover-surface\))(?=[^}]*box-shadow: inset 0 0 0 1px var\(--hover-base-1-hover-border\))(?=[^}]*opacity: var\(--hover-base-1-hover-layer-opacity\))[^}]*\}/
     );
   });
 
   it("uses three desktop columns, one mobile column, and safe long-link wrapping", () => {
     expect(navigationStyles).toMatch(
-      /\.blob-footer__details-grid\s*\{[\s\S]*grid-template-columns: minmax\(0, 1\.25fr\) repeat\(2, minmax\(0, 1fr\)\)/
+      /\.blob-footer__details-grid\s*\{[^}]*grid-template-columns: minmax\(0, 1\.25fr\) repeat\(2, minmax\(0, 1fr\)\)/
     );
     expect(navigationStyles).toMatch(
-      /@media \(max-width: 720px\)[\s\S]*\.blob-footer__details-grid\s*\{[\s\S]*grid-template-columns: minmax\(0, 1fr\)/
+      /@media \(max-width: 720px\)[\s\S]*?\.blob-footer__details-grid\s*\{[^}]*grid-template-columns: minmax\(0, 1fr\)/
     );
-    expect(navigationStyles).toMatch(/\.blob-footer__link\s*\{[\s\S]*overflow-wrap: anywhere/);
+    expect(navigationStyles).toMatch(/\.blob-footer__link\s*\{[^}]*overflow-wrap: anywhere/);
   });
 
   it("removes footer transitions and transforms for reduced motion", () => {
     expect(navigationStyles).toMatch(
-      /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.blob-footer__details-inner[\s\S]*transition: none/
+      /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.blob-footer__link\s*\{[^}]*transition: none[^}]*\}/
     );
     expect(navigationStyles).toMatch(
-      /\.blob-footer__details-inner,[\s\S]*\.blob-footer--expanded \.blob-footer__details-inner\s*\{[\s\S]*transform: none/
+      /\.blob-footer__details-inner,\s*\.blob-footer--expanded \.blob-footer__details-inner\s*\{[^}]*transform: none/
     );
   });
 });

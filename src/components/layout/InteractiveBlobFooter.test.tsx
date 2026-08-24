@@ -179,7 +179,12 @@ function retreatRunwayUpward() {
 }
 
 function expectFooterState(container: HTMLElement, state: "compact" | "expanded") {
-  expect(container.querySelector(".blob-footer")).toHaveAttribute("data-footer-state", state);
+  const footer = container.querySelector(".blob-footer");
+  const oppositeState = state === "compact" ? "expanded" : "compact";
+
+  expect(footer).toHaveAttribute("data-footer-state", state);
+  expect(footer).toHaveClass(`blob-footer--${state}`);
+  expect(footer).not.toHaveClass(`blob-footer--${oppositeState}`);
 }
 
 describe("InteractiveBlobFooter", () => {
@@ -217,6 +222,100 @@ describe("InteractiveBlobFooter", () => {
     expect(details).toHaveAttribute("inert");
     expect(screen.getByText(footerProps.compactCopyright)).toBeInTheDocument();
     expect(container.querySelector(".glass-icon-link")).not.toBeInTheDocument();
+  });
+
+  it("keeps the explicit Details fallback working without IntersectionObserver", () => {
+    vi.stubGlobal("IntersectionObserver", undefined);
+    const { container } = render(<InteractiveBlobFooter {...footerProps} />);
+    const details = container.querySelector<HTMLElement>(".blob-footer__details");
+
+    expect(observerRecords).toHaveLength(0);
+    fireEvent.click(screen.getByRole("button", { name: "Details" }));
+    expectFooterState(container, "expanded");
+    expect(screen.getByRole("button", { name: "Collapse" })).toHaveAttribute("aria-expanded", "true");
+    expect(details).toHaveAttribute("aria-hidden", "false");
+    expect(details).not.toHaveAttribute("inert");
+
+    fireEvent.click(screen.getByRole("button", { name: "Collapse" }));
+    expectFooterState(container, "compact");
+    expect(screen.getByRole("button", { name: "Details" })).toHaveAttribute("aria-expanded", "false");
+    expect(details).toHaveAttribute("aria-hidden", "true");
+    expect(details).toHaveAttribute("inert");
+  });
+
+  it("keeps one hover-enabled disclosure control synchronized through a manual round trip", () => {
+    const { container } = renderFooter();
+    const details = container.querySelector<HTMLElement>(".blob-footer__details");
+    const toggle = screen.getByRole("button", { name: "Details" });
+
+    expect(toggle).toHaveClass("blob-footer__toggle", "hover-base-1", "hover-base-1--compact");
+    expect(toggle).toHaveAttribute("aria-controls", details?.id);
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(details).toHaveAttribute("aria-hidden", "true");
+    expect(details).toHaveAttribute("inert");
+
+    fireEvent.click(toggle);
+
+    expect(screen.getByRole("button", { name: "Collapse" })).toBe(toggle);
+    expect(toggle).toHaveClass("blob-footer__toggle", "hover-base-1", "hover-base-1--compact");
+    expect(toggle).toHaveAttribute("aria-controls", details?.id);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(details).toHaveAttribute("aria-hidden", "false");
+    expect(details).not.toHaveAttribute("inert");
+    expectFooterState(container, "expanded");
+
+    fireEvent.click(toggle);
+
+    expect(screen.getByRole("button", { name: "Details" })).toBe(toggle);
+    expect(toggle).toHaveClass("blob-footer__toggle", "hover-base-1", "hover-base-1--compact");
+    expect(toggle).toHaveAttribute("aria-controls", details?.id);
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(details).toHaveAttribute("aria-hidden", "true");
+    expect(details).toHaveAttribute("inert");
+    expectFooterState(container, "compact");
+  });
+
+  it("keeps the disclosure accessibility state synchronized through automatic expansion and collapse", () => {
+    const { container } = renderFooter();
+    const details = container.querySelector<HTMLElement>(".blob-footer__details");
+    const toggle = screen.getByRole("button", { name: "Details" });
+    toggle.focus();
+
+    enterRunwayDownward();
+
+    expect(screen.getByRole("button", { name: "Collapse" })).toBe(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(document.activeElement).toBe(toggle);
+    expect(details).toHaveAttribute("aria-hidden", "false");
+    expect(details).not.toHaveAttribute("inert");
+    expectFooterState(container, "expanded");
+
+    retreatRunwayUpward();
+
+    expect(screen.getByRole("button", { name: "Details" })).toBe(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(document.activeElement).toBe(toggle);
+    expect(details).toHaveAttribute("aria-hidden", "true");
+    expect(details).toHaveAttribute("inert");
+    expectFooterState(container, "compact");
+  });
+
+  it("renders the complete labelled footer content and preserves link order when expanded", () => {
+    renderFooter();
+    fireEvent.click(screen.getByRole("button", { name: "Details" }));
+
+    const notices = screen.getByRole("navigation", { name: "Notices" });
+    const resources = screen.getByRole("navigation", { name: "Resources" });
+
+    expect(screen.getByRole("heading", { name: footerProps.owner })).toBeInTheDocument();
+    expect(screen.getByText(footerProps.identityDescription)).toBeInTheDocument();
+    expect(screen.getByText(footerProps.closingStatement)).toBeInTheDocument();
+    expect(within(notices).getAllByRole("link").map((link) => link.textContent)).toEqual(
+      footerProps.noticeLinks.map((link) => link.label)
+    );
+    expect(within(resources).getAllByRole("link").map((link) => link.textContent)).toEqual(
+      footerProps.resourceLinks.map((link) => link.label)
+    );
   });
 
   it("observes a stable runway sentinel and the visual island", () => {
@@ -391,6 +490,24 @@ describe("InteractiveBlobFooter", () => {
     expectFooterState(container, "compact");
   });
 
+  it("collapses expanded details when the visual footer island leaves the viewport", () => {
+    const { container } = renderFooter();
+    const details = container.querySelector<HTMLElement>(".blob-footer__details");
+    enterRunwayDownward();
+
+    reportIntersection(".blob-footer__island", {
+      bottom: -10,
+      isIntersecting: false,
+      ratio: 0,
+      top: -100
+    });
+
+    expectFooterState(container, "compact");
+    expect(screen.getByRole("button", { name: "Details" })).toHaveAttribute("aria-expanded", "false");
+    expect(details).toHaveAttribute("aria-hidden", "true");
+    expect(details).toHaveAttribute("inert");
+  });
+
   it("keeps manual Collapse suppressed until the visual island exits and later re-enters", () => {
     const { container } = renderFooter();
     enterRunwayDownward();
@@ -398,7 +515,8 @@ describe("InteractiveBlobFooter", () => {
     fireEvent.click(screen.getByRole("button", { name: "Collapse" }));
     expectFooterState(container, "compact");
 
-    reportIntersection(".blob-footer__runway-sentinel", { bottom: 588, ratio: 1, top: 540 });
+    setRunwayRect({ bottom: 588, top: 540 });
+    scrollTo(window.scrollY + 40);
     expectFooterState(container, "compact");
 
     reportIntersection(".blob-footer__island", {
@@ -408,8 +526,8 @@ describe("InteractiveBlobFooter", () => {
       top: -100
     });
     reportIntersection(".blob-footer__island", { ratio: 1 });
-    scrollTo(500);
-    reportIntersection(".blob-footer__runway-sentinel", { bottom: 588, ratio: 1, top: 540 });
+    setRunwayRect({ bottom: 588, top: 540 });
+    scrollTo(window.scrollY + 40);
     expectFooterState(container, "expanded");
   });
 
@@ -454,8 +572,13 @@ describe("InteractiveBlobFooter", () => {
     enterRunwayDownward();
 
     const termsLink = screen.getByRole("link", { name: "Site Terms & Accuracy" });
+    const privacyLink = screen.getByRole("link", { name: "Privacy Notice" });
     termsLink.focus();
     retreatRunwayUpward();
+    expectFooterState(container, "expanded");
+
+    fireEvent.blur(termsLink, { relatedTarget: privacyLink });
+    privacyLink.focus();
     expectFooterState(container, "expanded");
 
     reportIntersection(".blob-footer__runway-sentinel", { bottom: 588, ratio: 1, top: 540 });
@@ -472,6 +595,7 @@ describe("InteractiveBlobFooter", () => {
     enterRunwayDownward();
     expectFooterState(view.container, "expanded");
 
+    setScrollY(0);
     navigationMock.pathname = "/privacy";
     view.rerender(<InteractiveBlobFooter {...footerProps} />);
     expectFooterState(view.container, "compact");
@@ -480,8 +604,26 @@ describe("InteractiveBlobFooter", () => {
     expectFooterState(view.container, "compact");
 
     setRunwayRect({ bottom: 588, top: 540 });
-    scrollTo(window.scrollY + 40);
+    scrollTo(40);
     expectFooterState(view.container, "expanded");
+  });
+
+  it("clears manual-collapse suppression when the route changes", () => {
+    const view = renderFooter();
+    enterRunwayDownward();
+
+    fireEvent.click(screen.getByRole("button", { name: "Collapse" }));
+    setRunwayRect({ bottom: 588, top: 540 });
+    scrollTo(window.scrollY + 40);
+    expectFooterState(view.container, "compact");
+
+    navigationMock.pathname = "/privacy";
+    view.rerender(<InteractiveBlobFooter {...footerProps} />);
+    setRunwayRect({ bottom: 588, top: 540 });
+    scrollTo(window.scrollY + 40);
+
+    expectFooterState(view.container, "expanded");
+    expect(screen.getByRole("button", { name: "Collapse" })).toHaveAttribute("aria-expanded", "true");
   });
 
   it("defers a route-change reset until focus leaves the details", () => {
@@ -507,11 +649,13 @@ describe("InteractiveBlobFooter", () => {
     expect(addEventListener).toHaveBeenCalledWith("scroll", expect.any(Function), { passive: true });
     expect(addEventListener).not.toHaveBeenCalledWith("wheel", expect.any(Function), expect.anything());
     expect(addEventListener).not.toHaveBeenCalledWith("touchmove", expect.any(Function), expect.anything());
+    const scrollListener = addEventListener.mock.calls.find(([type]) => type === "scroll")?.[1];
+    expect(scrollListener).toBeTypeOf("function");
 
     view.unmount();
 
     expect(observerRecords.length).toBeGreaterThanOrEqual(1);
     for (const record of observerRecords) expect(record.disconnect).toHaveBeenCalledOnce();
-    expect(removeEventListener).toHaveBeenCalledWith("scroll", expect.any(Function));
+    expect(removeEventListener).toHaveBeenCalledWith("scroll", scrollListener);
   });
 });
