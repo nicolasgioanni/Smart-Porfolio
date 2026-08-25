@@ -7,7 +7,7 @@ Smart Portfolio uses Node.js, npm, Next.js App Router, a build-time CSV or XLSX 
 - Node.js 22.13 or newer. Node.js 22 matches `.nvmrc` and GitHub Actions.
 - npm.
 - PowerShell for the Windows convenience commands, or Node.js for the cross-platform equivalents.
-- Chromium installed through Playwright when running browser navigation regressions.
+- Chromium installed through Playwright when running browser regressions.
 
 Clone the repository with its current slug:
 
@@ -168,15 +168,17 @@ npm run verify
 
 `verify` runs documentation integrity, lint, typecheck, the full Vitest suite, and a production build. The build regenerates content through `prebuild`.
 
-Run the focused navigation unit and browser regressions separately:
+Run focused interaction regressions separately:
 
 ```bash
 npm run test:navigation
 npx playwright install chromium
 npm run test:e2e:navigation
+npm run test:e2e:footer
+npm run test:e2e:recommendations
 ```
 
-The Playwright command starts Next.js on port `3100` by default. Set `PLAYWRIGHT_PORT` to choose another port. Browser artifacts are written to ignored `test-results/` and `playwright-report/` directories. The normal `verify` command does not install Chromium or run Playwright.
+Each Playwright command starts Next.js on port `3100` by default. Set `PLAYWRIGHT_PORT` to choose another port. Browser artifacts are written to ignored `test-results/` and `playwright-report/` directories. The normal `verify` command does not install Chromium or run Playwright.
 
 The smart local wrapper prepares dependencies when needed, explicitly regenerates content, and then runs the same gate:
 

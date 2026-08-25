@@ -145,7 +145,7 @@ Primary navigation is assembled by [navigationItems.ts](src/components/navigatio
 | Interface | CSS custom properties and reusable glass primitives | Share semantic themes, geometry, surfaces, and interaction states without a UI framework. |
 | Icons | `simple-icons` and local semantic icons | Render configured technology and destination marks. |
 | Browser behavior | IntersectionObserver and native browser APIs | Drive focused reveal, footer, responsive, and preference behavior. |
-| Quality | ESLint, TypeScript, Vitest, Testing Library, jsdom, and Playwright Chromium | Verify code, types, content, components, Functions, scripts, CSS contracts, automation, responsive navigation, and footer lifecycle behavior in a real browser. |
+| Quality | ESLint, TypeScript, Vitest, Testing Library, jsdom, and Playwright Chromium | Verify code, types, content, components, Functions, scripts, CSS contracts, automation, responsive navigation, recommendation overlays, and footer lifecycle behavior in a real browser. |
 | Automation | GitHub Actions | Own candidate selection, verification, artifact transfer, deployment, and scheduled checks. |
 | Hosting | Cloudflare Pages and Wrangler | Serve the static export and compile the isolated Pages Functions through Direct Upload. |
 | Contact | Pages Functions, Turnstile, D1, DNS, and Resend HTTPS API | Assess final-submit abuse risk, validate mail routing, enforce a keyed rolling quota, and deliver two sequential messages. |
@@ -267,12 +267,13 @@ Deployment credentials and immutable Cloudflare target variables are documented 
 | `npm run test:navigation` | Focused header, route rail, responsive navigation, and style-contract regressions. |
 | `npm run test:e2e:navigation` | Chromium coverage for page entrance, the mobile bottom dock, and the unchanged desktop header. |
 | `npm run test:e2e:footer` | Chromium coverage for compact first render, route transitions, restored scroll, and user-scroll expansion. |
+| `npm run test:e2e:recommendations` | Chromium coverage for stable desktop card overlays, responsive natural flow, dismissal, and reduced motion. |
 | `npm run test` | Complete Vitest suite, including components, content, Functions, scripts, and automation contracts. |
 | `npm run build` | Regenerate content, create the static export, and write deployment version metadata. |
 | `npm run build:generated` | Build the existing generated snapshot without fetching content again. |
 | `npm run verify` | Documentation check, lint, typecheck, full tests, and normal build in sequence. |
 
-`verify` does not call the focused Vitest scripts separately because the full suite already includes those files. CI keeps named footer and navigation gates, then installs Chromium and runs both Playwright suites. Run `npm run test:e2e:navigation` and `npm run test:e2e:footer` separately during local verification because `verify` does not install or launch a browser.
+`verify` does not call the focused Vitest scripts separately because the full suite already includes those files. CI keeps named footer and navigation gates, then installs Chromium and runs the navigation, footer, and recommendation Playwright suites. Run the three `test:e2e:*` commands separately during local verification because `verify` does not install or launch a browser.
 
 Pull requests generate from checked-in templates without deployment credentials, then run the complete verification path and static build. Deployable branch candidates use one strict remote snapshot. Artifact checks and live smoke tests run as deployment-specific stages.
 
