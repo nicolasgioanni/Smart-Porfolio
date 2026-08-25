@@ -644,7 +644,7 @@
 }
 
 .home-section__surface .portfolio-card {
-  background: var(--color-surface-soft);
+  background: var(--color-card-surface);
   box-shadow: none;
 }
 
@@ -653,16 +653,24 @@
 }
 
 .portfolio-card--compact {
+  --glass-fallback-surface: var(--color-card-surface-soft);
+
   gap: var(--space-3);
+  background: var(--color-card-surface-soft);
 }
 
 .portfolio-card--detail,
 .portfolio-card--media,
 .portfolio-card--timeline {
+  --glass-fallback-surface: var(--color-card-surface-strong);
+
   align-content: start;
+  background: var(--color-card-surface-strong);
 }
 
 .portfolio-card--cta {
+  --glass-fallback-surface: var(--color-surface-strong);
+
   background: var(--color-surface-strong);
   border-color: var(--color-line-strong);
   box-shadow: var(--shadow-soft), var(--shadow-glow);

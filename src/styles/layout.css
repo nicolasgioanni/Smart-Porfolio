@@ -153,7 +153,7 @@
   height: 280px;
   pointer-events: none;
   content: "";
-  background: radial-gradient(circle at 50% 0%, rgba(78, 143, 205, 0.12), transparent 68%);
+  background: var(--gradient-home-accent);
   z-index: -1;
 }
 

@@ -17,14 +17,23 @@ describe("contact wizard styles", () => {
     );
   });
 
-  it("uses the CytoCV blue focus treatment for fields in every theme", () => {
-    expect(tokenStyles).toMatch(/--color-contact-field-focus:\s*#007bff/);
-    expect(tokenStyles).toMatch(/--contact-field-focus-ring:\s*0 0 0 3px rgba\(0, 123, 255, 0\.2\)/);
-    expect(tokenStyles.match(/--color-contact-field-focus:/g)).toHaveLength(1);
-    expect(tokenStyles.match(/--contact-field-focus-ring:/g)).toHaveLength(1);
+  it("uses palette-specific dual focus treatments for fields in every theme", () => {
+    expect(tokenStyles.match(/--color-contact-field-focus:/g)).toHaveLength(3);
+    expect(tokenStyles.match(/--contact-field-focus-ring:/g)).toHaveLength(3);
+    expect(tokenStyles.match(/--color-control-border:/g)).toHaveLength(3);
+    expect(tokenStyles.match(/--color-control-border-strong:/g)).toHaveLength(3);
+    expect(tokenStyles.match(/--color-field-inset-highlight:/g)).toHaveLength(3);
+    expect(tokenStyles.match(/--contact-field-focus-ring:\s*0 0 0 2px[^;]+0 0 0 5px/g)).toHaveLength(3);
+    expect(contactStyles).toMatch(
+      /\.contact-field input,\s*\.contact-field textarea\s*{[^}]*border:\s*1px solid var\(--color-control-border\)/s
+    );
+    expect(contactStyles).toMatch(
+      /\.contact-field input:hover,\s*\.contact-field textarea:hover\s*{[^}]*border-color:\s*var\(--color-control-border-strong\)/s
+    );
     expect(contactStyles).toMatch(
       /\.contact-field input:focus-visible,\s*\.contact-field textarea:focus-visible\s*{[^}]*border-color: var\(--color-contact-field-focus\)[^}]*box-shadow: var\(--contact-field-focus-ring\)/s
     );
+    expect(contactStyles).toMatch(/box-shadow:\s*inset 0 1px 0 var\(--color-field-inset-highlight\)/);
   });
 
   it("shows invalid fields in the danger color without removing the focus ring", () => {

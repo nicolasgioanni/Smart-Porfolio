@@ -386,7 +386,7 @@ These rows must exist, but blank values leave the built-in defaults in place. Th
 | --- | --- | --- |
 | `site_title` | `siteTitle` | `Portfolio` |
 | `site_description` | `siteDescription` | Generic professional portfolio description. |
-| `default_theme` | `defaultTheme` | `navy`; unsupported values resolve to `navy` in the theme resolver. |
+| `default_theme` | `defaultTheme` | `navy`; unsupported values resolve to `navy` in the theme resolver, and the `navy` identifier is displayed to visitors as Gioanni. |
 | `enable_skeletons` | `enableSkeletons` | `true` |
 | `enable_scroll_motion` | `enableScrollMotion` | `false` |
 | `enable_glass_effects` | `enableGlassEffects` | `true` |
