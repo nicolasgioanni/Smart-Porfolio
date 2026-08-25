@@ -94,7 +94,7 @@ The Function tests call exported handlers with web-standard `Request` and `Respo
 | Area | Test files | Main contracts |
 | --- | --- | --- |
 | Navigation and links | Tests under `src/components/navigation/`, plus responsive-query and theme tests | Route registry, active indicator, fixed mobile dock, unified route-and-action rail order, overflow state, idle motion, five-second interaction pause and resume, responsive transitions, external-link safety, and cleanup |
-| Themes | `src/components/theme/ThemeSwitcher.test.tsx`, `src/lib/theme/resolveThemeName.test.ts` | Supported themes, persistence, keyboard and pointer behavior, fallback, and cleanup |
+| Themes | Tests under `src/components/theme/`, `src/lib/theme/`, and `src/styles/themePalette.test.ts` | Stable identifiers, visitor-facing labels, complete palette tokens, contrast, persistence, keyboard and pointer behavior, fallback, and cleanup |
 | Motion | `src/components/motion/motion.test.tsx`, `src/components/motion/pageEntryStyles.test.ts`, `src/components/portfolio/AnimatedRole.test.tsx` | Page-root entrance scope, reveal persistence, animation timing, static fallback, reduced motion, and cleanup |
 | Footer | `src/components/layout/InteractiveBlobFooter.test.tsx`, `src/components/layout/footerStyles.test.ts` | Server fallback, route-scoped compact state, user-scroll activation, layout-shift resistance, focus safety, responsive layout, motion, and cleanup |
 | Skeletons | `src/components/loading/skeleton.test.tsx` | Structure, hidden state, route loading files, and absence of real content text |

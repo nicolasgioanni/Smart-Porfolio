@@ -100,9 +100,9 @@ test.describe("recommendation cards", () => {
     }
 
     const expectedThemeSurfaces = {
-      dark: "rgb(20, 24, 31)",
-      light: "rgb(254, 254, 255)",
-      navy: "rgb(8, 22, 39)"
+      dark: "rgb(35, 38, 45)",
+      light: "rgb(229, 236, 240)",
+      navy: "rgb(17, 43, 69)"
     } as const;
 
     for (const [theme, expectedBackground] of Object.entries(expectedThemeSurfaces)) {

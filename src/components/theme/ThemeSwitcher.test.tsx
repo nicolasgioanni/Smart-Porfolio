@@ -61,9 +61,10 @@ describe("ThemeSwitcher", () => {
 
     const group = screen.getByRole("group", { name: "Color theme" });
     const options = within(group).getAllByRole("button");
-    expect(options.map((option) => option.textContent)).toEqual(["Light", "Navy", "Dark"]);
+    expect(options.map((option) => option.textContent)).toEqual(["Light", "Gioanni", "Dark"]);
     options.forEach((option) => expect(option).toHaveClass("hover-base-1", "hover-base-1--compact", "hover-base-1--inline"));
-    expect(within(group).getByRole("button", { name: "Navy" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(group).getByRole("button", { name: "Gioanni" })).toHaveAttribute("aria-pressed", "true");
+    expect(trigger).toHaveAccessibleName("Choose color theme. Current theme: Gioanni");
 
     fireEvent.click(within(group).getByRole("button", { name: "Light" }));
 
@@ -72,6 +73,13 @@ describe("ThemeSwitcher", () => {
     expect(within(group).getByRole("button", { name: "Light" })).toHaveAttribute("aria-pressed", "true");
     expect(trigger).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("group", { name: "Color theme" })).toBeInTheDocument();
+
+    fireEvent.click(within(group).getByRole("button", { name: "Gioanni" }));
+
+    expect(document.documentElement.dataset.theme).toBe("navy");
+    expect(window.localStorage.getItem(themeStorageKey)).toBe("navy");
+    expect(within(group).getByRole("button", { name: "Gioanni" })).toHaveAttribute("aria-pressed", "true");
+    expect(trigger).toHaveAccessibleName("Choose color theme. Current theme: Gioanni");
   });
 
   it("restores a valid stored preference after hydration", async () => {

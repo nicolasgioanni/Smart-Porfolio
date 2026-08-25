@@ -20,7 +20,7 @@ Keep components focused around one rendering job. Reuse glass primitives, conten
 
 ## Styling
 
-Use semantic tokens from `src/styles/tokens.css`. Preserve readable surfaces, visible focus, responsive reflow, and reduced-motion behavior in Navy, Light, and Dark.
+Use semantic tokens from `src/styles/tokens.css`. Preserve readable surfaces, visible focus, responsive reflow, and reduced-motion behavior in Light, Gioanni, and Dark.
 
 Avoid heavy visual dependencies, full-screen blur, decorative animation systems, and low-contrast text.
 

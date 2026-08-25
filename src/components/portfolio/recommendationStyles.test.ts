@@ -44,9 +44,9 @@ describe("recommendation styles", () => {
 
   it("uses one opaque theme-matched surface for summary cards and expanded detail overlays", () => {
     const themeSurfaces = [
-      [/:root,\s*\[data-theme="navy"\]\s*\{([^}]*)\}/s, "#081627"],
-      [/\[data-theme="light"\]\s*\{([^}]*)\}/s, "#fefeff"],
-      [/\[data-theme="dark"\]\s*\{([^}]*)\}/s, "#14181f"]
+      [/:root,\s*\[data-theme="navy"\]\s*\{([^}]*)\}/s, "#112b45"],
+      [/\[data-theme="light"\]\s*\{([^}]*)\}/s, "#e5ecf0"],
+      [/\[data-theme="dark"\]\s*\{([^}]*)\}/s, "#23262d"]
     ] as const;
 
     for (const [themePattern, expectedSurface] of themeSurfaces) {
@@ -64,7 +64,7 @@ describe("recommendation styles", () => {
       /\.recommendations-list\[data-layout-mode="overlay"\]\[data-overlay-ready="true"\][\s\S]*\.recommendation-card--detail\s*\{[^}]*position:\s*absolute;[^}]*background:\s*var\(--color-recommendation-card-solid\);[^}]*box-shadow:[^}]*backdrop-filter:\s*none/
     );
     expect(portfolioStyles).toMatch(
-      /\.home-section__surface \.portfolio-card\s*\{[^}]*background:\s*var\(--color-surface-soft\)/
+      /\.home-section__surface \.portfolio-card\s*\{[^}]*background:\s*var\(--color-card-surface\)/
     );
   });
 

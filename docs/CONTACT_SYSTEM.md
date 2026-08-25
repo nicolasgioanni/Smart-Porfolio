@@ -79,7 +79,7 @@ The explicit Turnstile widget uses:
 - execution `execute`;
 - the current submission UUID as `cData`;
 - flexible sizing;
-- light widget styling only for the Light site theme, and dark styling for Navy and Dark;
+- light widget styling only for the Light site theme, and dark styling for Gioanni and Dark;
 - manual token refresh and retry behavior so the client controls recovery;
 - no hidden Turnstile response field because the token is sent in explicit JSON.
 

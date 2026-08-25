@@ -1,0 +1,128 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { describe, expect, it } from "vitest";
+
+const projectRoot = process.cwd();
+const tokenStyles = readFileSync(path.join(projectRoot, "src", "styles", "tokens.css"), "utf8");
+const glassStyles = readFileSync(path.join(projectRoot, "src", "styles", "glass.css"), "utf8");
+const layoutStyles = readFileSync(path.join(projectRoot, "src", "styles", "layout.css"), "utf8");
+const contactStyles = readFileSync(path.join(projectRoot, "src", "styles", "contact.css"), "utf8");
+
+const themePatterns = {
+  dark: /\[data-theme="dark"\]\s*\{([\s\S]*?)\r?\n\}/,
+  light: /\[data-theme="light"\]\s*\{([\s\S]*?)\r?\n\}/,
+  navy: /:root,\s*\[data-theme="navy"\]\s*\{([\s\S]*?)\r?\n\}/
+} as const;
+
+type ThemeKey = keyof typeof themePatterns;
+
+function readThemeTokens(theme: ThemeKey) {
+  const block = tokenStyles.match(themePatterns[theme])?.[1];
+  if (!block) throw new Error(`Missing ${theme} theme block`);
+
+  return new Map(
+    [...block.matchAll(/^\s*(--[\w-]+):\s*([^;]+);/gm)].map((match) => [
+      match[1]!,
+      match[2]!.trim()
+    ])
+  );
+}
+
+function relativeLuminance(hexColor: string) {
+  const channels = hexColor
+    .slice(1)
+    .match(/.{2}/g)!
+    .map((channel) => Number.parseInt(channel, 16) / 255)
+    .map((channel) =>
+      channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4
+    );
+
+  return 0.2126 * channels[0]! + 0.7152 * channels[1]! + 0.0722 * channels[2]!;
+}
+
+function contrastRatio(firstColor: string, secondColor: string) {
+  const firstLuminance = relativeLuminance(firstColor);
+  const secondLuminance = relativeLuminance(secondColor);
+  const lighter = Math.max(firstLuminance, secondLuminance);
+  const darker = Math.min(firstLuminance, secondLuminance);
+
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+const palettes = {
+  dark: readThemeTokens("dark"),
+  light: readThemeTokens("light"),
+  navy: readThemeTokens("navy")
+};
+
+describe("theme palette contract", () => {
+  it("defines the same complete semantic contract in every theme", () => {
+    const expectedTokenNames = [...palettes.navy.keys()];
+
+    expect(expectedTokenNames.length).toBeGreaterThan(70);
+    expect([...palettes.light.keys()]).toEqual(expectedTokenNames);
+    expect([...palettes.dark.keys()]).toEqual(expectedTokenNames);
+  });
+
+  it("keeps each mode's core layers and accents intentionally distinct", () => {
+    const coreTokens = [
+      "--color-background",
+      "--color-background-elevated",
+      "--color-glass-surface",
+      "--color-card-surface",
+      "--color-card-surface-strong",
+      "--color-header-surface",
+      "--color-menu-surface",
+      "--color-accent",
+      "--gradient-header-surface",
+      "--gradient-primary-button"
+    ];
+
+    for (const token of coreTokens) {
+      expect(new Set(Object.values(palettes).map((palette) => palette.get(token))).size).toBe(3);
+    }
+
+    expect(palettes.light.get("--color-background")).toBe("#f8f4eb");
+    expect(palettes.light.get("--color-text-strong")).toBe("#0b2942");
+    expect(palettes.navy.get("--color-background")).toBe("#071423");
+    expect(palettes.navy.get("--color-accent")).toBe("#e1c58f");
+    expect(palettes.dark.get("--color-background")).toBe("#0c0d10");
+    expect(palettes.dark.get("--color-accent-warm")).toBe("#c3a6ff");
+  });
+
+  it("maintains readable text and primary actions on their solid palette layers", () => {
+    for (const palette of Object.values(palettes)) {
+      const background = palette.get("--color-background")!;
+
+      expect(contrastRatio(palette.get("--color-text-primary")!, background)).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(palette.get("--color-text-secondary")!, background)).toBeGreaterThanOrEqual(4.5);
+      expect(
+        contrastRatio(
+          palette.get("--color-control-border")!,
+          palette.get("--color-background-elevated")!
+        )
+      ).toBeGreaterThanOrEqual(3);
+
+      const buttonText = palette.get("--color-primary-button-text")!;
+      const buttonStops = palette.get("--gradient-primary-button")!.match(/#[\da-f]{6}/gi) ?? [];
+
+      expect(buttonStops.length).toBeGreaterThanOrEqual(2);
+      buttonStops.forEach((buttonStop) => {
+        expect(contrastRatio(buttonText, buttonStop)).toBeGreaterThanOrEqual(4.5);
+      });
+    }
+  });
+
+  it("uses high-visibility dual focus rings and tokenized component accents", () => {
+    for (const palette of Object.values(palettes)) {
+      expect(palette.get("--focus-ring")).toMatch(/0 0 0 2px.+0 0 0 5px/);
+      expect(palette.get("--contact-field-focus-ring")).toMatch(/0 0 0 2px.+0 0 0 5px/);
+    }
+
+    expect(glassStyles).toMatch(/\.glass-card\s*{[^}]*background:\s*var\(--color-card-surface\)/s);
+    expect(glassStyles).toMatch(/\.glass-blob--nav\s*{[^}]*background-image:\s*var\(--gradient-header-surface\)/s);
+    expect(glassStyles).toMatch(/\.site-shell\[data-glass-effects="false"\][\s\S]*background:\s*var\(--glass-fallback-surface\)/);
+    expect(layoutStyles).toMatch(/\.home-overview-grid::before\s*{[^}]*background:\s*var\(--gradient-home-accent\)/s);
+    expect(contactStyles).toMatch(/box-shadow:\s*inset 0 1px 0 var\(--color-field-inset-highlight\)/);
+  });
+});
