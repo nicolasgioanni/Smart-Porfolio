@@ -22,6 +22,7 @@ Use this checklist when replacing local sample content or preparing a public wor
 
 - [ ] Populate the required `full_name`, `headline`, `location`, `email`, and `short_bio` values.
 - [ ] Set `preferred_name`, timezone, pronouns, portrait, favicon, and longer profile copy only when they are accurate and approved.
+- [ ] Set `experience_summary` to the concise work overview that should appear above the Experience detail selector.
 - [ ] Populate all three rotating-role fields together, or leave all three blank. Keep at least one non-empty pipe-delimited prefix.
 - [ ] Keep `headline` accurate even when rotating-role copy is enabled because it remains the static and metadata fallback.
 - [ ] Verify `current_experience_id`, `featured_research_id`, and `primary_education_id` exactly match real collection IDs when populated.
@@ -99,7 +100,7 @@ Use this checklist when replacing local sample content or preparing a public wor
 - [ ] Set `copyright_owner` if it should differ from `profile.full_name`.
 - [ ] Set and verify `legal_contact_email`, `legal_effective_date`, `hosting_provider_name`, and the provider's HTTPS `hosting_privacy_url`.
 - [ ] Keep the footer-only Contact form link pointed at `/contact`, and keep the public direct-email link available as a fallback.
-- [ ] Confirm the Privacy and Security notices accurately describe the visible initial Turnstile gate, the `/api/contact/verify` ticket endpoint, the `/api/contact` delivery endpoint, the short-lived essential cookie, bounded mail-domain DNS validation, the pseudonymous D1 quota reservation, sequential Resend delivery, required email/optional phone fields, and provider processing.
+- [ ] Confirm the Privacy and Security notices accurately describe the three-step contact wizard, interaction-only Turnstile execution during final Send, submission custom-data binding, the `/api/contact/verify` ticket endpoint, the `/api/contact` delivery endpoint, the short-lived essential cookie, bounded mail-domain DNS validation, the pseudonymous D1 quota reservation, sequential Resend delivery, required email/optional phone fields, and provider processing.
 - [ ] Confirm the software license separately from the rights reserved in portfolio content.
 - [ ] Set `repository_url` and `license_url` only after anonymous access to both destinations succeeds. Leave them blank to omit unavailable footer resources.
 

@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { PageContainer } from "@/components/layout/PageContainer";
 import { siteRoutes } from "@/components/navigation/siteRoutes";
 import { ExperienceShowcase } from "@/components/portfolio/ExperienceShowcase";
 import { createPageMetadata } from "@/lib/content/createPageMetadata";
@@ -17,16 +16,15 @@ export function generateMetadata(): Metadata {
 export default function ExperiencePage() {
   const content = getPortfolioContent();
   const experienceItems = selectExperienceDetailContent(content);
+  const experienceSummary =
+    content.profile.experienceSummary ??
+    "My experience spans AI engineering at the U.S. Treasury, research software and machine learning at the University of Washington, and teaching core computer science courses.";
 
   return (
-    <PageContainer
-      className="page-container--experience"
-      title="Experience"
-      description="A closer look at what I built, how I worked, and what changed—available in plain language or technical detail."
-      introVariant="panel"
+    <ExperienceShowcase
+      items={experienceItems}
       motionEnabled={content.siteSettings.enableScrollMotion}
-    >
-      <ExperienceShowcase items={experienceItems} motionEnabled={content.siteSettings.enableScrollMotion} />
-    </PageContainer>
+      summary={experienceSummary}
+    />
   );
 }

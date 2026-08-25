@@ -30,15 +30,18 @@ Use this checklist with [Contact System](CONTACT_SYSTEM.md), [Security](SECURITY
 
 ## Turnstile verification
 
-- Render the visible widget with public `NEXT_PUBLIC_TURNSTILE_SITE_KEY`; never expose `TURNSTILE_SECRET_KEY` to the client.
-- Keep action `portfolio_contact`, explicit token handling, and the gate before contact data entry.
+- Prepare the widget with public `NEXT_PUBLIC_TURNSTILE_SITE_KEY`; never expose `TURNSTILE_SECRET_KEY` to the client.
+- Keep action `portfolio_contact`, `execution: "execute"`, `appearance: "interaction-only"`, explicit token handling, and final-submit execution after field and acknowledgment validation.
+- Create a fresh submission UUID and form-start time for each new draft, pass the UUID through Turnstile `cData`, and do not reset the start time after verification.
 - Accept a plain verification object with exactly `submissionId` and `turnstileToken`.
 - Require a valid bounded UUID and a non-empty token of at most 2,048 characters without unsafe controls.
-- Send one server-side Siteverify request per new verified session with a 5-second timeout.
-- Use the UUID as Siteverify `idempotency_key`.
+- Require a fresh single-use token for each new logical message.
+- Generate a separate Siteverify operation UUID, use it as `idempotency_key`, and reuse it only for one bounded retry of the same token after a transient failure.
+- Keep each Siteverify attempt within its 5-second timeout.
 - Include `CF-Connecting-IP` as `remoteip` only after the existing length and control-character checks.
-- Require an HTTP-success JSON response, `success: true`, action exactly `portfolio_contact`, and an exact allowed hostname.
-- Fail closed on missing configuration, provider failure, timeout, invalid JSON, failed verification, action mismatch, or hostname mismatch.
+- Require an HTTP-success JSON response, `success: true`, action exactly `portfolio_contact`, an exact allowed hostname, and `cdata` exactly matching the submission UUID.
+- Return `400 verification_failed` for invalid or duplicate challenges and successful-response contract mismatches. Return `503 verification_unavailable` after the bounded retry exhausts a transient failure or when Siteverify reports an integration fault.
+- Fail closed on missing configuration, provider failure, timeout, invalid JSON, failed verification, action mismatch, hostname mismatch, or custom-data mismatch.
 - Keep production and preview site keys, secrets, allowed hostnames, and allowed origins separated.
 
 ## Verification ticket
@@ -65,9 +68,10 @@ Use this checklist with [Contact System](CONTACT_SYSTEM.md), [Security](SECURITY
 
 - Send no contact fields to `/api/contact/verify` and do not send the Turnstile token to `/api/contact`.
 - Keep the contact draft in React memory and use same-origin credentials for both requests.
-- After the first delivery attempt starts, lock review navigation and acknowledgments.
+- Lock the reviewed payload, navigation, acknowledgments, and repeated Send actions while verification or delivery is active.
 - Require same-ticket retries to reuse the same UUID, start time, acknowledgment values, and byte-equivalent JSON body.
-- On `verification_required`, return to the gate, preserve the draft, unlock it for a new session, and create a new UUID after verification.
+- On `verification_required`, stay on review and require fresh final-submit verification. Preserve the original UUID and locked payload after an ambiguous or partial delivery attempt.
+- Allow a valid ticket to skip another Turnstile check only for a retry of the same locked delivery. Require a fresh token and draft identity for every new message.
 - Validate the mail domain with bounded MX lookup, documented A/AAAA fallback, explicit null-MX rejection, and distinct invalid-versus-unavailable errors.
 - Reserve no more than two slots per normalized-address HMAC during a rolling 24-hour window before provider delivery.
 - Send the visitor confirmation first with `Idempotency-Key: portfolio-contact/visitor/<submissionId>`; only after acceptance send the owner notification with the corresponding `/owner/` key.

@@ -123,7 +123,7 @@ See [Local Content Editing](LOCAL_CONTENT_EDITING.md), [Content Pipeline](CONTEN
 The full flow needs a development Turnstile widget, development provider credentials, an exact local origin, and Wrangler.
 
 1. Set `NEXT_PUBLIC_TURNSTILE_SITE_KEY` before building. Next.js compiles it into the browser bundle.
-2. Configure the matching development widget for the exact local hostname. Do not add local hosts to the production widget.
+2. Configure a matching Managed development widget for the exact local hostname. Do not add local hosts to the production widget. The client owns `execution: "execute"` and `appearance: "interaction-only"`.
 3. Set `TURNSTILE_SECRET_KEY` and `TURNSTILE_ALLOWED_HOSTNAMES` for that widget.
 4. Set both local origins in `CONTACT_ALLOWED_ORIGINS` only if both are used. Scheme and port are part of the comparison.
 5. Use restricted development delivery credentials and a controlled test destination.
@@ -144,16 +144,17 @@ npx --no-install wrangler pages dev out --env-file .env
 
 Wrangler normally serves at `http://localhost:8788`. It reads local Function values from `.env`; Next.js and the content generator use the same file during the preceding build. D1 data persists under the ignored `.wrangler/` local state and does not contact production or preview unless a command explicitly requests remote mode.
 
-The flow is split across two same-origin endpoints:
+The three-step form collects names, contact details, and review acknowledgments before the security check. The flow is split across two same-origin endpoints:
 
-1. The browser sends a fresh Turnstile token and opaque submission ID to `/api/contact/verify`.
-2. The Function verifies the exact `portfolio_contact` action and allowed hostname, then sets a 30-minute signed, `HttpOnly`, `Secure`, `SameSite=Strict`, host-only ticket cookie bound to the submission ID.
-3. The browser submits the reviewed contact fields and the same ID to `/api/contact`.
-4. The delivery Function validates the signed ticket, checks the mail domain, and reserves one of two rolling 24-hour local D1 slots without calling Siteverify again.
-5. It asks Resend to accept the visitor confirmation first and then the owner notification, using separate idempotency keys.
-6. Successful delivery clears the ticket. A delivery failure retains a still-valid ticket and reservation for a safe same-ID retry.
+1. The final Send action locks the reviewed payload and executes the prepared interaction-only widget with the submission UUID in `cData`.
+2. The browser sends the fresh Turnstile token and opaque submission ID to `/api/contact/verify`.
+3. The Function verifies the exact `portfolio_contact` action, allowed hostname, and matching `cdata`, then sets a 30-minute signed, `HttpOnly`, `Secure`, `SameSite=Strict`, host-only ticket cookie bound to the submission ID. One transient Siteverify failure receives one bounded retry with the same operation-scoped idempotency UUID.
+4. The browser submits the locked reviewed contact fields and the same ID to `/api/contact` without resetting the original form-start time.
+5. The delivery Function validates the signed ticket, checks the mail domain, and reserves one of two rolling 24-hour local D1 slots without calling Siteverify again.
+6. It asks Resend to accept the visitor confirmation first and then the owner notification, using separate idempotency keys.
+7. Successful delivery clears the ticket. A delivery failure retains a still-valid ticket and reservation for a safe same-ID retry. A new logical message always receives a fresh token, UUID, and form-start time.
 
-Cloudflare dummy tokens report the action `test`, while the application requires `portfolio_contact`. Use a development widget that returns the configured action. Do not weaken action validation for local convenience.
+Cloudflare dummy tokens report the action `test`, while the application requires `portfolio_contact`. Use a development widget that returns the configured action and custom data. Do not weaken action or submission-binding validation for local convenience.
 
 Wrangler local mode exercises the checked-in `_routes.json`, `_headers`, D1 binding, and migrations. It does not prove remote D1 bindings or migration state, production DNS and WAF behavior, custom-domain configuration, provider secrets, or mailbox delivery.
 

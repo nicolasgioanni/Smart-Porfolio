@@ -6,12 +6,32 @@ test.describe("Experience showcase", () => {
     await page.goto("/experience");
 
     const cards = page.locator(".experience-card");
-    const modeGroup = page.getByRole("group", { name: "Experience detail level" });
+    const introSurface = page.locator(".page-intro__surface");
+    const pageHeading = introSurface.getByRole("heading", { level: 1, name: "Experience" });
+    const pageSummary = introSurface.getByText(/My experience spans AI engineering at the U\.S\. Treasury/);
+    const modeGroup = introSurface.getByRole("group", { name: /Experience detail level/i });
 
-    await expect(page.getByRole("heading", { level: 1, name: "Experience" })).toBeVisible();
+    await expect(introSurface).toHaveCount(1);
+    await expect(pageHeading).toBeVisible();
+    await expect(pageSummary).toBeVisible();
+    await expect(introSurface.getByText(/Detail level:/)).toBeVisible();
     await expect(cards).toHaveCount(5);
     await expect(modeGroup.getByRole("button", { name: "For everyone" })).toHaveAttribute("aria-pressed", "true");
     await expect(page.getByText(/Built and deployed CytoCV/)).toBeVisible();
+
+    const [headingBox, summaryBox, modeBox, introBox] = await Promise.all([
+      pageHeading.boundingBox(),
+      pageSummary.boundingBox(),
+      modeGroup.boundingBox(),
+      introSurface.boundingBox()
+    ]);
+    expect(headingBox).not.toBeNull();
+    expect(summaryBox).not.toBeNull();
+    expect(modeBox).not.toBeNull();
+    expect(introBox).not.toBeNull();
+    expect(modeBox!.x).toBeGreaterThan(headingBox!.x + headingBox!.width);
+    expect(modeBox!.y).toBeLessThan(summaryBox!.y);
+    expect(modeBox!.x + modeBox!.width).toBeLessThanOrEqual(introBox!.x + introBox!.width);
 
     const treasuryCard = page
       .getByRole("heading", { level: 2, name: "AI Engineer" })
@@ -21,11 +41,14 @@ test.describe("Experience showcase", () => {
 
     await modeGroup.getByRole("button", { name: "Technical" }).click();
     await expect(modeGroup.getByRole("button", { name: "Technical" })).toHaveAttribute("aria-pressed", "true");
-    await expect(page.getByText(/Architecture, implementation details, tooling/)).toBeVisible();
+    const liveStatus = introSurface.locator('[aria-live="polite"]');
+    await expect(liveStatus).toHaveText("Showing technical details.");
+    await expect(liveStatus).toHaveClass(/visually-hidden/);
 
     const cytocvCard = page
       .getByRole("heading", { level: 2, name: "Research Assistant (Software Engineering)" })
       .locator("xpath=ancestor::article");
+    await expect(cytocvCard.getByText(/Architected a Django and JavaScript application/)).toBeVisible();
     const architecture = cytocvCard.getByRole("button", { name: /Application architecture/i });
     const vision = cytocvCard.getByRole("button", { name: /Vision pipeline/i });
 
@@ -62,12 +85,31 @@ test.describe("Experience showcase", () => {
 
     const technicalButton = page.getByRole("button", { name: "Technical", exact: true });
     const firstChapter = page.getByRole("button", { name: /Scientific workflow/i });
+    const introSurface = page.locator(".page-intro__surface");
+    const modeControl = introSurface.locator(".experience-mode-control");
+    const modeLabel = modeControl.locator(".experience-mode-control__label");
+    const modeSwitch = modeControl.locator(".experience-mode-switch");
 
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)
     ).toBe(true);
     expect((await technicalButton.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
     expect((await firstChapter.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+
+    const [introBox, controlBox, labelBox, switchBox] = await Promise.all([
+      introSurface.boundingBox(),
+      modeControl.boundingBox(),
+      modeLabel.boundingBox(),
+      modeSwitch.boundingBox()
+    ]);
+    expect(introBox).not.toBeNull();
+    expect(controlBox).not.toBeNull();
+    expect(labelBox).not.toBeNull();
+    expect(switchBox).not.toBeNull();
+    expect(Math.abs(switchBox!.width - controlBox!.width)).toBeLessThanOrEqual(1);
+    expect(switchBox!.x).toBeGreaterThanOrEqual(introBox!.x);
+    expect(switchBox!.x + switchBox!.width).toBeLessThanOrEqual(introBox!.x + introBox!.width);
+    expect(switchBox!.y).toBeGreaterThanOrEqual(labelBox!.y + labelBox!.height);
 
     expect(
       await page.locator(".experience-mode-switch__lens").evaluate((element) => getComputedStyle(element).transitionDuration)

@@ -4,6 +4,7 @@ import type { CSSProperties, KeyboardEvent } from "react";
 import { useState } from "react";
 import type { ExperienceItem } from "@/content/types";
 import { GlassSurface } from "@/components/glass/GlassSurface";
+import { PageContainer } from "@/components/layout/PageContainer";
 import { EmptyState } from "@/components/portfolio/EmptyState";
 import {
   getExperienceModeContent,
@@ -15,16 +16,15 @@ import { formatProfileOverviewDateRange } from "@/lib/content/profileOverview";
 type ExperienceShowcaseProps = {
   items: ExperienceItem[];
   motionEnabled?: boolean;
+  summary: string;
 };
 
-const modeCopy: Record<ExperienceDetailMode, { description: string; label: string }> = {
+const modeCopy: Record<ExperienceDetailMode, { label: string }> = {
   overview: {
-    label: "For everyone",
-    description: "A plain-language look at what I built, who it helped, and the outcomes."
+    label: "For everyone"
   },
   technical: {
-    label: "Technical",
-    description: "Architecture, implementation details, tooling, and measurable results."
+    label: "Technical"
   }
 };
 
@@ -164,13 +164,9 @@ function ExperienceChapter({ itemId, mode, onToggle, open, order, section }: Exp
   );
 }
 
-export function ExperienceShowcase({ items, motionEnabled = true }: ExperienceShowcaseProps) {
+export function ExperienceShowcase({ items, motionEnabled = true, summary }: ExperienceShowcaseProps) {
   const [mode, setMode] = useState<ExperienceDetailMode>("overview");
   const [openByRole, setOpenByRole] = useState<Record<string, string | undefined>>({});
-
-  if (items.length === 0) {
-    return <EmptyState message="Experience entries will appear here when content is available." />;
-  }
 
   function toggleSection(itemId: string, sectionId: string) {
     setOpenByRole((current) => ({
@@ -180,112 +176,135 @@ export function ExperienceShowcase({ items, motionEnabled = true }: ExperienceSh
   }
 
   return (
-    <div className="experience-showcase" data-motion={motionEnabled ? "enabled" : "disabled"}>
-      <GlassSurface as="section" className="experience-mode-control" variant="subtle">
-        <div className="experience-mode-control__copy">
-          <p className="experience-mode-control__eyebrow">Detail level</p>
-          <p aria-live="polite" className="experience-mode-control__description">
-            {modeCopy[mode].description}
-          </p>
-        </div>
-        <div aria-label="Experience detail level" className="experience-mode-switch" data-mode={mode} role="group">
-          <span aria-hidden="true" className="experience-mode-switch__lens" />
-          {(Object.keys(modeCopy) as ExperienceDetailMode[]).map((modeOption) => (
-            <button
-              aria-pressed={mode === modeOption}
-              className="experience-mode-switch__button"
-              key={modeOption}
-              onClick={() => setMode(modeOption)}
-              type="button"
+    <PageContainer
+      className="page-container--experience"
+      description={summary}
+      introAccessory={
+        items.length > 0 ? (
+          <div className="experience-mode-control">
+            <p className="experience-mode-control__label" id="experience-detail-level-label">
+              <span className="visually-hidden">Experience </span>
+              Detail level:
+            </p>
+            <div
+              aria-labelledby="experience-detail-level-label"
+              className="experience-mode-switch"
+              data-mode={mode}
+              role="group"
             >
-              {modeCopy[modeOption].label}
-            </button>
-          ))}
-        </div>
-      </GlassSurface>
+              <span aria-hidden="true" className="experience-mode-switch__lens" />
+              {(Object.keys(modeCopy) as ExperienceDetailMode[]).map((modeOption) => (
+                <button
+                  aria-pressed={mode === modeOption}
+                  className="experience-mode-switch__button"
+                  key={modeOption}
+                  onClick={() => setMode(modeOption)}
+                  type="button"
+                >
+                  {modeCopy[modeOption].label}
+                </button>
+              ))}
+            </div>
+            <p aria-live="polite" className="visually-hidden">
+              {mode === "overview" ? "Showing plain-language details." : "Showing technical details."}
+            </p>
+          </div>
+        ) : undefined
+      }
+      introVariant="panel"
+      motionEnabled={motionEnabled}
+      title="Experience"
+    >
+      <div className="experience-showcase" data-motion={motionEnabled ? "enabled" : "disabled"}>
+        {items.length === 0 ? (
+          <EmptyState message="Experience entries will appear here when content is available." />
+        ) : (
+          <div className="experience-showcase__roles">
+            {items.map((item, itemIndex) => {
+              const modeContent = getExperienceModeContent(item, mode);
+              const dateLabel = formatProfileOverviewDateRange(item.startDate, item.endDate);
+              const current = isCurrentRole(item);
+              const roleStyle = { "--experience-order": itemIndex } as CSSProperties;
 
-      <div className="experience-showcase__roles">
-        {items.map((item, itemIndex) => {
-          const modeContent = getExperienceModeContent(item, mode);
-          const dateLabel = formatProfileOverviewDateRange(item.startDate, item.endDate);
-          const current = isCurrentRole(item);
-          const roleStyle = { "--experience-order": itemIndex } as CSSProperties;
+              return (
+                <div className="experience-card-wrap" key={item.id} style={roleStyle}>
+                  <GlassSurface as="article" className="experience-card">
+                    <header className="experience-card__header">
+                      <div
+                        className={[
+                          "experience-card__mark",
+                          item.organizationLogo ? "experience-card__mark--image" : null
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                      >
+                        {item.organizationLogo ? (
+                          <img
+                            alt=""
+                            aria-hidden="true"
+                            className="experience-card__logo"
+                            decoding="async"
+                            height="64"
+                            loading="lazy"
+                            src={item.organizationLogo}
+                            width="64"
+                          />
+                        ) : (
+                          <span aria-hidden="true" className="experience-card__initials">
+                            {getOrganizationInitials(item.organization)}
+                          </span>
+                        )}
+                      </div>
 
-          return (
-            <div className="experience-card-wrap" key={item.id} style={roleStyle}>
-              <GlassSurface as="article" className="experience-card">
-                <header className="experience-card__header">
-                  <div
-                    className={[
-                      "experience-card__mark",
-                      item.organizationLogo ? "experience-card__mark--image" : null
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
-                  >
-                    {item.organizationLogo ? (
-                      <img
-                        alt=""
-                        aria-hidden="true"
-                        className="experience-card__logo"
-                        decoding="async"
-                        height="64"
-                        loading="lazy"
-                        src={item.organizationLogo}
-                        width="64"
-                      />
-                    ) : (
-                      <span aria-hidden="true" className="experience-card__initials">
-                        {getOrganizationInitials(item.organization)}
-                      </span>
-                    )}
-                  </div>
+                      <div className="experience-card__identity">
+                        <div className="experience-card__organization-row">
+                          <p className="experience-card__organization">{item.organization}</p>
+                          <span aria-hidden="true" className="experience-card__index">
+                            {String(itemIndex + 1).padStart(2, "0")}
+                          </span>
+                        </div>
+                        <h2 className="experience-card__title">{item.title}</h2>
+                        <div className="experience-card__metadata">
+                          {dateLabel ? <span>{dateLabel}</span> : null}
+                          {item.location ? <span>{item.location}</span> : null}
+                          {item.type ? (
+                            <span className="experience-card__badge">{formatRoleType(item.type)}</span>
+                          ) : null}
+                          {current ? (
+                            <span className="experience-card__badge experience-card__badge--current">
+                              <span aria-hidden="true" className="experience-card__status-dot" />
+                              Current
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+                    </header>
 
-                  <div className="experience-card__identity">
-                    <div className="experience-card__organization-row">
-                      <p className="experience-card__organization">{item.organization}</p>
-                      <span aria-hidden="true" className="experience-card__index">
-                        {String(itemIndex + 1).padStart(2, "0")}
-                      </span>
-                    </div>
-                    <h2 className="experience-card__title">{item.title}</h2>
-                    <div className="experience-card__metadata">
-                      {dateLabel ? <span>{dateLabel}</span> : null}
-                      {item.location ? <span>{item.location}</span> : null}
-                      {item.type ? <span className="experience-card__badge">{formatRoleType(item.type)}</span> : null}
-                      {current ? (
-                        <span className="experience-card__badge experience-card__badge--current">
-                          <span aria-hidden="true" className="experience-card__status-dot" />
-                          Current
-                        </span>
+                    <div className="experience-card__body" key={mode}>
+                      <p className="experience-card__summary">{modeContent.summary}</p>
+                      {modeContent.sections.length > 0 ? (
+                        <div className="experience-card__chapters">
+                          {modeContent.sections.map((section, sectionIndex) => (
+                            <ExperienceChapter
+                              itemId={item.id}
+                              key={section.id}
+                              mode={mode}
+                              onToggle={() => toggleSection(item.id, section.id)}
+                              open={openByRole[item.id] === section.id}
+                              order={sectionIndex}
+                              section={section}
+                            />
+                          ))}
+                        </div>
                       ) : null}
                     </div>
-                  </div>
-                </header>
-
-                <div className="experience-card__body" key={mode}>
-                  <p className="experience-card__summary">{modeContent.summary}</p>
-                  {modeContent.sections.length > 0 ? (
-                    <div className="experience-card__chapters">
-                      {modeContent.sections.map((section, sectionIndex) => (
-                        <ExperienceChapter
-                          itemId={item.id}
-                          key={section.id}
-                          mode={mode}
-                          onToggle={() => toggleSection(item.id, section.id)}
-                          open={openByRole[item.id] === section.id}
-                          order={sectionIndex}
-                          section={section}
-                        />
-                      ))}
-                    </div>
-                  ) : null}
+                  </GlassSurface>
                 </div>
-              </GlassSurface>
-            </div>
-          );
-        })}
+              );
+            })}
+          </div>
+        )}
       </div>
-    </div>
+    </PageContainer>
   );
 }

@@ -48,7 +48,11 @@ export async function onRequest(context: PagesContext<ContactEnv>): Promise<Resp
     return jsonResponse(400, { ok: false, error: "invalid_request" });
   }
 
-  if (!(await verifyTurnstile(parsed.payload, request, env))) {
+  const verification = await verifyTurnstile(parsed.payload, request, env);
+  if (verification.kind === "unavailable") {
+    return jsonResponse(503, { ok: false, error: "verification_unavailable" });
+  }
+  if (verification.kind === "rejected") {
     return jsonResponse(400, { ok: false, error: "verification_failed" });
   }
 

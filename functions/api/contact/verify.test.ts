@@ -10,6 +10,7 @@ import {
 import { onRequest } from "./verify";
 
 const submissionId = "4e57585c-9638-4c1e-8f2f-7bd4c5a7c6e9";
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const env = {
   CONTACT_ALLOWED_ORIGINS: "https://nicolasmgioanni.dev",
   TURNSTILE_ALLOWED_HOSTNAMES: "nicolasmgioanni.dev,www.nicolasmgioanni.dev",
@@ -43,8 +44,12 @@ async function invoke(request: Request, environment: ContactEnv = env) {
   return onRequest({ request, env: environment });
 }
 
-function successfulTurnstile(hostname = "nicolasmgioanni.dev", action = CONTACT_ACTION): Response {
-  return Response.json({ success: true, hostname, action });
+function successfulTurnstile(
+  hostname = "nicolasmgioanni.dev",
+  action = CONTACT_ACTION,
+  cdata = submissionId
+): Response {
+  return Response.json({ success: true, hostname, action, cdata });
 }
 
 function decodeTicketPayload(setCookie: string): Record<string, unknown> {
@@ -56,6 +61,7 @@ function decodeTicketPayload(setCookie: string): Record<string, unknown> {
 }
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
@@ -145,9 +151,12 @@ describe("Cloudflare contact verification function", () => {
   });
 
   it.each([
-    ["unsuccessful", { success: false, hostname: "nicolasmgioanni.dev", action: CONTACT_ACTION }],
-    ["wrong action", { success: true, hostname: "nicolasmgioanni.dev", action: "other_action" }],
-    ["wrong hostname", { success: true, hostname: "attacker.example", action: CONTACT_ACTION }]
+    ["invalid token", { success: false, "error-codes": ["invalid-input-response"] }],
+    ["duplicate token", { success: false, "error-codes": ["timeout-or-duplicate"] }],
+    ["wrong action", { success: true, hostname: "nicolasmgioanni.dev", action: "other_action", cdata: submissionId }],
+    ["wrong hostname", { success: true, hostname: "attacker.example", action: CONTACT_ACTION, cdata: submissionId }],
+    ["missing custom data", { success: true, hostname: "nicolasmgioanni.dev", action: CONTACT_ACTION }],
+    ["mismatched custom data", { success: true, hostname: "nicolasmgioanni.dev", action: CONTACT_ACTION, cdata: "other-id" }]
   ])("rejects %s Turnstile validation without issuing a ticket", async (_label, turnstileResult) => {
     const fetchMock = vi.fn().mockResolvedValueOnce(Response.json(turnstileResult));
     vi.stubGlobal("fetch", fetchMock);
@@ -161,19 +170,134 @@ describe("Cloudflare contact verification function", () => {
     expect(fetchMock.mock.calls[0]?.[0]).toBe("https://challenges.cloudflare.com/turnstile/v0/siteverify");
   });
 
-  it("fails closed when Siteverify is unavailable", async () => {
-    const fetchMock = vi.fn().mockRejectedValueOnce(new Error("network unavailable"));
+  it.each([
+    ["network failure", () => Promise.reject(new Error("network unavailable"))],
+    ["HTTP 408", () => Promise.resolve(new Response(null, { status: 408 }))],
+    ["HTTP 429", () => Promise.resolve(new Response(null, { status: 429 }))],
+    ["HTTP 500", () => Promise.resolve(new Response(null, { status: 500 }))],
+    [
+      "malformed 2xx response",
+      () => Promise.resolve(new Response("{", { status: 200, headers: { "Content-Type": "application/json" } }))
+    ],
+    [
+      "provider internal error",
+      () => Promise.resolve(Response.json({ success: false, "error-codes": ["internal-error"] }))
+    ]
+  ])("retries one %s with the identical operation-scoped request", async (_label, firstAttempt) => {
+    const fetchMock = vi.fn().mockImplementationOnce(firstAttempt).mockResolvedValueOnce(successfulTurnstile());
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await invoke(
+      requestFor(validPayload(), { headers: { "CF-Connecting-IP": "203.0.113.10" } })
+    );
+
+    expect(response.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const firstInit = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    const secondInit = fetchMock.mock.calls[1]?.[1] as RequestInit;
+    expect(firstInit.body).toBe(secondInit.body);
+    const firstBody = JSON.parse(String(firstInit.body)) as Record<string, unknown>;
+    const secondBody = JSON.parse(String(secondInit.body)) as Record<string, unknown>;
+    expect(firstBody).toEqual(secondBody);
+    expect(firstBody.idempotency_key).toMatch(uuidPattern);
+    expect(firstBody.idempotency_key).not.toBe(submissionId);
+    expect(firstBody).toMatchObject({
+      secret: "turnstile_test_secret",
+      response: "valid-turnstile-token",
+      remoteip: "203.0.113.10"
+    });
+  });
+
+  it("returns verification_unavailable after both transient attempts fail", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("network unavailable"))
+      .mockResolvedValueOnce(Response.json({ success: false, "error-codes": ["internal-error"] }));
     vi.stubGlobal("fetch", fetchMock);
 
     const response = await invoke(requestFor(validPayload()));
 
-    expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ ok: false, error: "verification_failed" });
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ ok: false, error: "verification_unavailable" });
     expect(response.headers.get("Set-Cookie")).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const firstBody = JSON.parse(String((fetchMock.mock.calls[0]?.[1] as RequestInit).body));
+    const secondBody = JSON.parse(String((fetchMock.mock.calls[1]?.[1] as RequestInit).body));
+    expect(secondBody).toEqual(firstBody);
+  });
+
+  it("returns verification_unavailable after two Siteverify timeouts", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn((_url: string, init?: RequestInit) => {
+      return new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")), { once: true });
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const responsePromise = invoke(requestFor(validPayload()));
+    await vi.advanceTimersByTimeAsync(10_000);
+    const response = await responsePromise;
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ ok: false, error: "verification_unavailable" });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not retry a non-transient Siteverify HTTP failure", async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(new Response(null, { status: 400 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await invoke(requestFor(validPayload()));
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ ok: false, error: "verification_unavailable" });
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("verifies action, hostname, and remote IP once before issuing the strict signed cookie", async () => {
+  it.each(["missing-input-secret", "invalid-input-secret", "missing-input-response", "bad-request", "unknown-error"])(
+    "returns verification_unavailable for the provider error %s without retrying",
+    async (errorCode) => {
+      const fetchMock = vi.fn().mockResolvedValueOnce(Response.json({ success: false, "error-codes": [errorCode] }));
+      vi.stubGlobal("fetch", fetchMock);
+
+      const response = await invoke(requestFor(validPayload()));
+
+      expect(response.status).toBe(503);
+      expect(await response.json()).toEqual({ ok: false, error: "verification_unavailable" });
+      expect(response.headers.get("Set-Cookie")).toBeNull();
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    }
+  );
+
+  it("returns verification_unavailable for an empty provider error list", async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(Response.json({ success: false, "error-codes": [] }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await invoke(requestFor(validPayload()));
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ ok: false, error: "verification_unavailable" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses a new operation id for each independent verification request", async () => {
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(successfulTurnstile()));
+    vi.stubGlobal("fetch", fetchMock);
+
+    expect((await invoke(requestFor(validPayload()))).status).toBe(200);
+    expect((await invoke(requestFor(validPayload()))).status).toBe(200);
+
+    const operationIds = fetchMock.mock.calls.map(([, init]) => {
+      return JSON.parse(String((init as RequestInit).body)).idempotency_key as string;
+    });
+    expect(operationIds).toHaveLength(2);
+    expect(operationIds[0]).toMatch(uuidPattern);
+    expect(operationIds[1]).toMatch(uuidPattern);
+    expect(operationIds[0]).not.toBe(operationIds[1]);
+  });
+
+  it("verifies action, hostname, custom data, and remote IP before issuing the strict signed cookie", async () => {
     const fetchMock = vi.fn().mockResolvedValueOnce(successfulTurnstile("NICOLASMGIOANNI.DEV"));
     vi.stubGlobal("fetch", fetchMock);
 
@@ -187,12 +311,14 @@ describe("Cloudflare contact verification function", () => {
     expect(fetchMock.mock.calls[0]?.[0]).toBe("https://challenges.cloudflare.com/turnstile/v0/siteverify");
     const verifyInit = fetchMock.mock.calls[0]?.[1] as RequestInit;
     expect(new Headers(verifyInit.headers).get("Content-Type")).toBe("application/json");
-    expect(JSON.parse(String(verifyInit.body))).toEqual({
+    const verifyBody = JSON.parse(String(verifyInit.body)) as Record<string, unknown>;
+    expect(verifyBody).toMatchObject({
       secret: "turnstile_test_secret",
       response: "valid-turnstile-token",
-      idempotency_key: submissionId,
       remoteip: "203.0.113.10"
     });
+    expect(verifyBody.idempotency_key).toMatch(uuidPattern);
+    expect(verifyBody.idempotency_key).not.toBe(submissionId);
 
     const setCookie = response.headers.get("Set-Cookie");
     expect(setCookie).toBeTruthy();
