@@ -90,7 +90,7 @@ The footer's `Details` and `Collapse` button exposes `aria-expanded` and `aria-c
 
 Motion is supplementary. Content remains present when motion is disabled.
 
-The `prefers-reduced-motion: reduce` rules and shared preference hook disable or simplify scroll reveals, Home role rotation, route-indicator travel, mobile rail return and drift, Hover Base sheen and lift, recommendation transitions, dialog fades, header and footer transitions, skeleton shimmer, and smooth scrolling. Manual mobile rail scrolling remains available.
+The `prefers-reduced-motion: reduce` rules and shared preference hook disable or simplify page entrance motion, scroll reveals, Home role rotation, route-indicator travel, mobile rail return and drift, Hover Base sheen and lift, recommendation transitions, dialog fades, header and footer transitions, skeleton shimmer, and smooth scrolling. Manual mobile rail scrolling remains available.
 
 The `enable_scroll_motion` content setting controls decorative scroll reveals. It does not replace the operating-system preference.
 

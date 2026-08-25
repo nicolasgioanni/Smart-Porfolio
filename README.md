@@ -265,7 +265,7 @@ Deployment credentials and immutable Cloudflare target variables are documented 
 | `npm run typecheck` | Strict TypeScript checking without output. |
 | `npm run test:footer` | Focused footer behavior and style regressions. |
 | `npm run test:navigation` | Focused header, route rail, responsive navigation, and style-contract regressions. |
-| `npm run test:e2e:navigation` | Chromium coverage for the mobile bottom dock and unchanged desktop header. |
+| `npm run test:e2e:navigation` | Chromium coverage for page entrance, the mobile bottom dock, and the unchanged desktop header. |
 | `npm run test:e2e:footer` | Chromium coverage for compact first render, route transitions, restored scroll, and user-scroll expansion. |
 | `npm run test` | Complete Vitest suite, including components, content, Functions, scripts, and automation contracts. |
 | `npm run build` | Regenerate content, create the static export, and write deployment version metadata. |
