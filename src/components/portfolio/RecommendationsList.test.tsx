@@ -129,26 +129,37 @@ function installResponsiveMode(initialNaturalFlow = false) {
 
 describe("RecommendationsList expansion layout", () => {
   let animationFrameId = 0;
+  let settledSecondCardHeight = 200;
   let responsiveMode: ReturnType<typeof installResponsiveMode>;
+  let visuallyExpandedRecommendationId: string | null = null;
 
   beforeEach(() => {
     animationFrameId = 0;
+    settledSecondCardHeight = 200;
     responsiveMode = installResponsiveMode();
+    visuallyExpandedRecommendationId = null;
 
     vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function getRect(this: HTMLElement) {
       if (this.classList.contains("featured-grid")) {
         return createRect({ height: 424, left: 0, top: 0, width: 620 });
       }
 
-      if (this.classList.contains("recommendation-card--detail")) {
+      if (
+        this.classList.contains("recommendation-card--detail") ||
+        this.classList.contains("recommendation-expandable__viewport")
+      ) {
         const slot = this.closest<HTMLElement>(".recommendations-list__item");
         const id = slot?.dataset.recommendationId ?? "";
         const column = id === "recommendation-b" || id === "recommendation-d" ? 1 : 0;
         const row = id === "recommendation-c" || id === "recommendation-d" ? 1 : 0;
-        const expanded = slot?.dataset.expanded === "true";
+        const visuallyExpanded = slot?.dataset.expanded === "true" || id === visuallyExpandedRecommendationId;
+        const isViewport = this.classList.contains("recommendation-expandable__viewport");
+        const collapsedHeight = isViewport ? 88 : id === "recommendation-b" ? settledSecondCardHeight : 200;
+        const expandedHeight = isViewport ? 240 : 500;
+        const height = visuallyExpanded ? expandedHeight : collapsedHeight;
 
         return createRect({
-          height: expanded ? 500 : 200,
+          height,
           left: column * 320,
           top: row * 224
         });
@@ -243,6 +254,70 @@ describe("RecommendationsList expansion layout", () => {
     });
   });
 
+  it("does not replace settled slot heights while a controlled card is still visually closing", async () => {
+    const { container } = render(<RecommendationsList items={createRecommendations()} />);
+    const root = container.querySelector<HTMLElement>(".recommendations-list");
+    const slots = Array.from(container.querySelectorAll<HTMLElement>(".recommendations-list__item"));
+    const secondToggle = within(slots[1]!).getByRole("button", {
+      name: /show more recommendation from blair professor/i
+    });
+
+    await waitFor(() => {
+      expect(root).toHaveAttribute("data-overlay-ready", "true");
+      expect(slots[1]!.style.getPropertyValue("--recommendation-detail-collapsed-height")).toBe("200px");
+    });
+
+    fireEvent.click(secondToggle);
+    await waitFor(() => expect(slots[1]).toHaveAttribute("data-expanded", "true"));
+
+    visuallyExpandedRecommendationId = "recommendation-b";
+    fireEvent.click(
+      within(slots[1]!).getByRole("button", { name: /show less recommendation from blair professor/i })
+    );
+
+    await waitFor(() => {
+      expect(slots[1]).toHaveAttribute("data-expanded", "false");
+      expect(slots[1]!.style.getPropertyValue("--recommendation-detail-collapsed-height")).toBe("200px");
+    });
+
+    fireEvent(window, new Event("resize"));
+
+    await waitFor(() => {
+      expect(slots[1]!.style.getPropertyValue("--recommendation-detail-collapsed-height")).toBe("200px");
+    });
+
+    fireEvent.click(secondToggle);
+    await waitFor(() => expect(slots[1]).toHaveAttribute("data-expanded", "true"));
+
+    const firstProfileLink = within(slots[0]!).getByRole("link", {
+      name: "View Alex Manager's LinkedIn profile"
+    });
+    fireEvent.focus(firstProfileLink);
+
+    await waitFor(() => {
+      expect(slots[1]).toHaveAttribute("data-expanded", "false");
+      expect(slots[1]!.style.getPropertyValue("--recommendation-detail-collapsed-height")).toBe("200px");
+    });
+
+    fireEvent.click(secondToggle);
+    await waitFor(() => expect(slots[1]).toHaveAttribute("data-expanded", "true"));
+
+    fireEvent.click(document.body);
+
+    await waitFor(() => {
+      expect(slots[1]).toHaveAttribute("data-expanded", "false");
+      expect(slots[1]!.style.getPropertyValue("--recommendation-detail-collapsed-height")).toBe("200px");
+    });
+
+    visuallyExpandedRecommendationId = null;
+    settledSecondCardHeight = 216;
+    fireEvent(window, new Event("resize"));
+
+    await waitFor(() => {
+      expect(slots[1]!.style.getPropertyValue("--recommendation-detail-collapsed-height")).toBe("216px");
+    });
+  });
+
   it("uses natural flow without overlap geometry at 980px and below", async () => {
     responsiveMode.setNaturalFlow(true);
     const { container, unmount } = render(<RecommendationsList items={createRecommendations()} />);
@@ -259,9 +334,15 @@ describe("RecommendationsList expansion layout", () => {
     });
 
     fireEvent.click(within(slots[0]!).getByRole("button", { name: /show more recommendation from alex manager/i }));
-    fireEvent.click(
-      within(slots[1]!).getByRole("button", { name: /show more recommendation from blair professor/i })
-    );
+    await waitFor(() => expect(slots[0]).toHaveAttribute("data-expanded", "true"));
+
+    const secondToggle = within(slots[1]!).getByRole("button", {
+      name: /show more recommendation from blair professor/i
+    });
+    fireEvent.pointerDown(secondToggle);
+    expect(slots[0]).toHaveAttribute("data-expanded", "true");
+
+    fireEvent.click(secondToggle);
 
     await waitFor(() => {
       expect(slots.map((slot) => slot.dataset.expanded)).toEqual(["false", "true", "false", "false"]);
