@@ -131,7 +131,7 @@ The local `resume.csv` compatibility template must remain header-only. It is nev
 | `glass.css` | Glass surfaces, cards, buttons, links, chips, dividers, and blobs. |
 | `navigation.css` | Desktop and mobile navigation, theme disclosure, profile preview, and route indicator. |
 | `portfolio.css` | Home profile, cards, timelines, skills, recommendations, and detail layouts. |
-| `motion.css` | Scroll reveal and compression states. |
+| `motion.css` | CSS-only page entrance plus scroll reveal and compression states. |
 | `skeletons.css` | Loading placeholders and shimmer behavior. |
 | `contact.css` | Contact wizard, fields, review, consent, status, and responsive rules. |
 | `interactions.css` | Shared Hover Base states and reduced-motion behavior. |

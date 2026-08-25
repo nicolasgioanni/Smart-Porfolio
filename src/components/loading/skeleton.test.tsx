@@ -56,7 +56,9 @@ describe("skeleton components", () => {
 
     for (const Component of components) {
       const { unmount } = render(<Component />);
-      expect(screen.getByLabelText("Loading page")).toBeInTheDocument();
+      const loadingPage = screen.getByLabelText("Loading page");
+      expect(loadingPage).toHaveClass("skeleton-page");
+      expect(loadingPage).not.toHaveClass("page-container");
       unmount();
     }
   });
