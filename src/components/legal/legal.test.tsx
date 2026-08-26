@@ -7,11 +7,13 @@ import PrivacyPage, { generateMetadata as generatePrivacyMetadata } from "@/app/
 import SecurityPage, { generateMetadata as generateSecurityMetadata } from "@/app/security/page";
 import TermsPage, { generateMetadata as generateTermsMetadata } from "@/app/terms/page";
 import { resolveLegalEffectiveDate } from "@/components/legal/LegalDocument";
+import { getPortfolioContent } from "@/lib/content/getPortfolioContent";
 
 const siteSettingsTemplate = readFileSync(
   path.join(process.cwd(), "src", "content", "templates", "site_settings.csv"),
   "utf8"
 );
+const sharedEffectiveDate = resolveLegalEffectiveDate(getPortfolioContent().siteSettings.legalEffectiveDate);
 
 vi.mock("next/link", () => ({
   default: ({ children, href, ...props }: AnchorHTMLAttributes<HTMLAnchorElement> & { href: string }) => (
@@ -54,7 +56,8 @@ describe("legal document routes", () => {
     expect(introModule).toHaveTextContent("How portfolio information may be used, verified, and attributed.");
     expect(introModule).not.toContainElement(effectiveDate);
     expect(effectiveDate?.querySelector("time")).toBeInTheDocument();
-    expect(effectiveDate?.querySelector("time")).toHaveAttribute("datetime", "2026-08-30");
+    expect(effectiveDate?.querySelector("time")).toHaveAttribute("datetime", sharedEffectiveDate.iso);
+    expect(effectiveDate?.querySelector("time")).toHaveTextContent(sharedEffectiveDate.label);
     expect(effectiveDate).toHaveClass("legal-document__effective-date");
     expect(
       screen.getByText(/Employment, education, credentials, metrics, authorship, project status, and availability/).closest("p")
@@ -149,7 +152,9 @@ describe("legal document routes", () => {
     );
     expect(introModule).not.toContainElement(effectiveDate);
     expect(effectiveDate).toHaveClass("legal-document__effective-date");
-    expect(effectiveDate?.querySelector("time")).toHaveAttribute("datetime", "2026-08-30");
+    expect(effectiveDate?.querySelector("time")).toBeInTheDocument();
+    expect(effectiveDate?.querySelector("time")).toHaveAttribute("datetime", sharedEffectiveDate.iso);
+    expect(effectiveDate?.querySelector("time")).toHaveTextContent(sharedEffectiveDate.label);
     expect(screen.getByText(/public portfolio pages are statically generated/)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Contact submission safeguards" })).toBeInTheDocument();
     expect(screen.getByText(/interaction-only Turnstile widget.*executes it only/)).toBeInTheDocument();
