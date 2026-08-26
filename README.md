@@ -65,7 +65,7 @@ Deep dives:
 ## Content workflow
 
 1. The portfolio owner edits the reviewed public workbook.
-2. GitHub Actions downloads one anonymous XLSX snapshot.
+2. GitHub Actions accepts one complete anonymous XLSX snapshot, using at most two bounded download attempts.
 3. The generator verifies the exact visible worksheet set, headers, rows, and file constraints.
 4. Source rows are normalized and validated against the typed content contract.
 5. A deterministic SHA-256 hash is calculated from a canonical normalized content subset.
