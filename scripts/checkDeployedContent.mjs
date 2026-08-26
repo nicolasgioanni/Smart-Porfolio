@@ -58,14 +58,22 @@ async function writeOutput(name, value, environment = process.env) {
   }
 }
 
-export async function compareDeployedContent(baseUrl, expectedContentHash, cacheBust, environment = process.env) {
+export async function compareDeployedContent(
+  baseUrl,
+  expectedContentHash,
+  expectedCommitSha,
+  cacheBust,
+  environment = process.env
+) {
   if (!contentHashPattern.test(expectedContentHash)) throw new Error("Expected content hash is invalid");
+  if (!gitShaPattern.test(expectedCommitSha)) throw new Error("Expected commit SHA is invalid");
   const response = await fetchNoCache(endpointUrl(baseUrl, "content-version.json", cacheBust), {
     allowNotFound: true
   });
 
   if (response.status === 404) {
     await writeOutput("deployed_content_matches", "false", environment);
+    await writeOutput("deployed_commit_matches", "false", environment);
     return false;
   }
 
@@ -76,10 +84,13 @@ export async function compareDeployedContent(baseUrl, expectedContentHash, cache
     throw new Error(`Deployed content-version.json is invalid: ${error instanceof Error ? error.message : String(error)}`);
   }
 
-  const matches = version.contentHash === expectedContentHash;
-  await writeOutput("deployed_content_matches", String(matches), environment);
+  const contentMatches = version.contentHash === expectedContentHash;
+  const commitMatches = version.commitSha === expectedCommitSha;
+  await writeOutput("deployed_content_matches", String(contentMatches), environment);
+  await writeOutput("deployed_commit_matches", String(commitMatches), environment);
   await writeOutput("deployed_content_hash", version.contentHash, environment);
-  return matches;
+  await writeOutput("deployed_commit_sha", version.commitSha, environment);
+  return contentMatches && commitMatches;
 }
 
 async function smokeAttempt(baseUrl, artifactDirectory, expectedContentHash, expectedCommitSha, cacheBust) {
@@ -192,10 +203,10 @@ async function runCli() {
     console.log(resolvePagesDeploymentUrl(...args));
     return;
   }
-  if (command === "compare" && args.length === 3) return compareDeployedContent(...args);
+  if (command === "compare" && args.length === 4) return compareDeployedContent(...args);
   if (command === "smoke" && args.length === 4) return smokeDeployment(...args);
   throw new Error(
-    "Usage: node scripts/checkDeployedContent.mjs url <pages-domain> <main|develop> | compare <base-url> <content-hash> <cache-bust> | smoke <base-url> <artifact-directory> <content-hash> <commit-sha>"
+    "Usage: node scripts/checkDeployedContent.mjs url <pages-domain> <main|develop> | compare <base-url> <content-hash> <commit-sha> <cache-bust> | smoke <base-url> <artifact-directory> <content-hash> <commit-sha>"
   );
 }
 

@@ -180,9 +180,14 @@ describe("package and CI deployment automation", () => {
     expect(previewBuild).not.toContain("vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}");
   });
 
-  it("polls deployed no-cache metadata and skips all expensive work when unchanged", async () => {
+  it("polls deployed no-cache metadata and skips expensive work only for the exact candidate", async () => {
     const workflow = await readFile(workflowPath, "utf8");
     const verifyJob = section(workflow, "  verify:", "\n  deploy:");
+    const comparisonStep = section(
+      verifyJob,
+      "- name: Compare the validated snapshot with production",
+      "- name: Decide whether full verification and deployment are required"
+    );
 
     expect(verifyJob).toContain("Compare the validated snapshot with production");
     expect(verifyJob).toContain("node scripts/checkDeployedContent.mjs compare");
@@ -196,6 +201,12 @@ describe("package and CI deployment automation", () => {
     expect(verifyJob).not.toContain("https://${CLOUDFLARE_PAGES_PROJECT_NAME}.pages.dev");
     expect(verifyJob).toContain('"${FORCE_DEPLOY:-false}" == "true"');
     expect(verifyJob).toContain('"${DEPLOYED_CONTENT_MATCHES:-false}" != "true"');
+    expect(verifyJob).toContain('"${DEPLOYED_COMMIT_MATCHES:-false}" != "true"');
+    expect(verifyJob).toContain(
+      "DEPLOYED_COMMIT_MATCHES: ${{ steps.deployed_content.outputs.deployed_commit_matches }}"
+    );
+    expect(comparisonStep).toContain('"$CONTENT_HASH" \\');
+    expect(comparisonStep).toContain('"$CANDIDATE_SHA" \\');
 
     for (const stepName of [
       "Documentation integrity",
