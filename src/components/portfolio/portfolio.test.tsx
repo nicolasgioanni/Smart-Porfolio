@@ -415,11 +415,11 @@ describe("portfolio UI helpers", () => {
     expect(screen.queryByText("Python", { exact: true })).not.toBeInTheDocument();
   });
 
-  it("renders three concise Home research cards with ordered verified actions", () => {
+  it("renders three concise Home research cards with ordered, authored verified actions", () => {
     const items: ResearchItem[] = [
       {
         id: "cytocv-miller-lab",
-        title: "CytoCV: Web-based platform for reproducible yeast microscopy image analysis",
+        title: "CytoCV: Reproducible Yeast Microscopy Analysis",
         role: "Graduate Research",
         organization: "UW Bothell School of STEM",
         location: "Bothell, Washington, United States",
@@ -432,7 +432,7 @@ describe("portfolio UI helpers", () => {
         bullets: ["Detail that should stay hidden."],
         skills: ["Python"],
         links: [
-          { label: "Live demo", url: "https://example.com/demo" },
+          { label: "Live site", url: "https://example.com/demo" },
           { label: "Manuscript", url: "https://example.com/manuscript" },
           { label: "Source code", url: "https://github.com/example/cytocv" }
         ],
@@ -442,7 +442,7 @@ describe("portfolio UI helpers", () => {
       },
       {
         id: "adversarial-machine-learning",
-        title: "Adversarial Machine Learning: Analysis of Causative Attacks against SVMs Learning from Data Streams",
+        title: "Adversarial Machine Learning",
         organization: "UW Bothell School of STEM",
         location: "Bothell, Washington, United States",
         startDate: "2024-09",
@@ -452,14 +452,14 @@ describe("portfolio UI helpers", () => {
         skills: [],
         links: [
           { label: "Source code", url: "https://github.com/example/adversarial-ml" },
-          { label: "Manuscript", url: "https://example.com/adversarial-ml-manuscript" }
+          { label: "Reference manuscript", url: "https://example.com/adversarial-ml-manuscript" }
         ],
         featured: false,
         showOnHome: true
       },
       {
         id: "yeast-dna-target-selection",
-        title: "Guide Donor Scheduler: Yeast DNA target selection automation",
+        title: "Guide Donor Scheduler: Yeast CRISPR Sequence Design",
         organization: "UW Bothell School of STEM",
         location: "Bothell, Washington, United States",
         startDate: "2024-03",
@@ -486,12 +486,15 @@ describe("portfolio UI helpers", () => {
     expect(screen.queryByText("Compact profile-only research copy.")).not.toBeInTheDocument();
     expect(screen.queryByText("A longer detail explanation.")).not.toBeInTheDocument();
     expect(screen.queryByText("Featured")).not.toBeInTheDocument();
-    expect(within(cards[0]).getAllByRole("link").map((link) => link.textContent)).toEqual(["Source code", "Manuscript", "Live demo"]);
+    expect(within(cards[0]).getAllByRole("link").map((link) => link.textContent)).toEqual(["Source code", "Manuscript", "Live site"]);
     expect(within(cards[0]).getByRole("link", { name: `Source code for ${items[0].title}` })).toHaveAttribute(
       "rel",
       "noopener noreferrer"
     );
-    expect(within(cards[1]).getAllByRole("link").map((link) => link.textContent)).toEqual(["Source code", "Manuscript"]);
+    expect(within(cards[1]).getAllByRole("link").map((link) => link.textContent)).toEqual([
+      "Source code",
+      "Reference manuscript"
+    ]);
     expect(within(cards[2]).getAllByRole("link").map((link) => link.textContent)).toEqual(["Source code"]);
     expect(screen.queryByRole("link", { name: /learn more/i })).not.toBeInTheDocument();
     expect(screen.queryByText("Dataset")).not.toBeInTheDocument();
@@ -512,9 +515,11 @@ describe("portfolio UI helpers", () => {
       showOnHome: true
     };
 
-    const { container } = render(<ResearchList items={[item]} variant="detail" />);
+    const { container } = render(
+      <ResearchList items={[item]} mode="overview" onToggle={() => undefined} openByProject={{}} />
+    );
 
-    expect(container.querySelector(".research-card")).toHaveAttribute("id", "research-fragment");
+    expect(container.querySelector(".research-project")).toHaveAttribute("id", "research-fragment");
   });
 
   it("renders Home projects with plain subtitles, three exact skills, and relevant actions", () => {

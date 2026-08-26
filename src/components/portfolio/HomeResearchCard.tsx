@@ -9,20 +9,16 @@ type HomeResearchCardProps = {
 };
 
 type ResearchAction = {
-  label: "Source code" | "Manuscript" | "Live demo";
+  label: string;
   link: PortfolioContentLink;
 };
 
-const researchActionOrder: Array<{ kind: string; label: ResearchAction["label"] }> = [
-  { kind: "github", label: "Source code" },
-  { kind: "publication", label: "Manuscript" },
-  { kind: "website", label: "Live demo" }
-];
+const researchActionOrder = ["github", "publication", "website"];
 
 function getResearchActions(links: PortfolioContentLink[]): ResearchAction[] {
-  return researchActionOrder.flatMap(({ kind, label }) => {
+  return researchActionOrder.flatMap((kind) => {
     const link = links.find((candidate) => getLinkKind(candidate) === kind);
-    return link ? [{ label, link }] : [];
+    return link ? [{ label: link.label, link }] : [];
   });
 }
 
