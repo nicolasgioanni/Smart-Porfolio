@@ -7,6 +7,15 @@ export const ALTERNATE_SITE_NAMES = Object.freeze([
 ] as const);
 export const SITE_LANGUAGE = "en-US";
 export const OPEN_GRAPH_LOCALE = "en_US";
+export const SITE_PROFILE_IMAGE = Object.freeze({
+  path: "/favicon/favicon.png",
+  type: "image/png",
+  sizes: "512x512"
+} as const);
+export const ROOT_FAVICON = Object.freeze({
+  path: "/favicon.ico",
+  type: "image/x-icon"
+} as const);
 
 export const siteConfig = Object.freeze({
   canonicalOrigin: CANONICAL_SITE_ORIGIN,
@@ -14,7 +23,9 @@ export const siteConfig = Object.freeze({
   preferredName: PREFERRED_SITE_NAME,
   alternateNames: ALTERNATE_SITE_NAMES,
   language: SITE_LANGUAGE,
-  openGraphLocale: OPEN_GRAPH_LOCALE
+  openGraphLocale: OPEN_GRAPH_LOCALE,
+  profileImage: SITE_PROFILE_IMAGE,
+  rootFavicon: ROOT_FAVICON
 });
 
 export function createCanonicalUrl(rootRelativePath: string): string {
