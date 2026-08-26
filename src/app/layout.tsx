@@ -43,9 +43,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   const initialTheme = resolveThemeName(content.siteSettings.defaultTheme);
 
   return (
-    <html lang={SITE_LANGUAGE} data-theme={initialTheme}>
-      <body className={`${spaceGrotesk.className} ${spaceGrotesk.variable}`}>
+    <html lang={SITE_LANGUAGE} data-theme={initialTheme} suppressHydrationWarning>
+      <head>
         <ThemePreferenceScript initialTheme={initialTheme} />
+      </head>
+      <body className={`${spaceGrotesk.className} ${spaceGrotesk.variable}`}>
         <SiteShell content={content} initialTheme={initialTheme}>
           {children}
         </SiteShell>

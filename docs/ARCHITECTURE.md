@@ -71,7 +71,7 @@ Core pages do not require a runtime Next.js server, database, authentication ser
 | Routes and metadata | `src/app/` | Static route composition, page metadata, loading files, and legal content. |
 | Layout and navigation | `src/components/layout/`, `src/components/navigation/` | Shared shell, desktop header, active routes, mobile bottom dock and rail, footer, and profile preview. |
 | Portfolio UI | `src/components/portfolio/` | Home overview, evidence pages, cards, skills, recommendations, and route-specific presentation. |
-| Theme and interaction | `src/components/theme/`, `src/components/motion/`, `src/lib/theme/` | Theme persistence, role and scroll motion, reduced-motion behavior, and hydrated state. |
+| Theme and interaction | `src/components/theme/`, `src/components/motion/`, `src/lib/theme/` | System preference resolution, manual theme persistence, role and scroll motion, reduced-motion behavior, and hydrated state. |
 | Content contracts | `src/content/types.ts` | Generated and UI-facing TypeScript shapes. |
 | Content transformation | `src/lib/content/`, `src/lib/csv/`, `scripts/lib/portfolioContentGeneration.ts` | Parsing, normalization, validation, selection, sorting, hashing, and workbook structure. |
 | Styling | `src/styles/` | Semantic tokens, themes, layout, glass primitives, portfolio surfaces, navigation, motion, loading, and contact UI. |
@@ -80,12 +80,12 @@ Core pages do not require a runtime Next.js server, database, authentication ser
 
 ## Static-first application
 
-`next.config.mjs` sets `output: "export"` and disables Next.js image optimization so all application routes can be emitted as static files. `src/app/layout.tsx` reads the generated snapshot during build, resolves the default theme, creates metadata, and renders the shared shell.
+`next.config.mjs` sets `output: "export"` and disables Next.js image optimization so all application routes can be emitted as static files. `src/app/layout.tsx` reads the generated snapshot during build, resolves the server fallback theme, creates metadata, and renders the shared shell.
 
 Static export does not mean the site contains no JavaScript. Focused client components hydrate browser-only behavior:
 
 - active-route measurement, mobile rail overflow state, and bounded idle navigation motion;
-- theme selection and local preference persistence;
+- system color-scheme following, theme selection, and local override persistence;
 - header and footer disclosure behavior;
 - profile image preview;
 - Home role rotation;
@@ -124,7 +124,9 @@ See [Content mapping](CONTENT_MAPPING.md) for field-to-component ownership and [
 
 ## Theme and visual composition
 
-The default theme is resolved from generated site settings. `ThemePreferenceScript` runs before hydration and applies a valid stored `navy`, `light`, or `dark` preference from `portfolio-theme`; otherwise it retains the generated default. The visitor-facing label for the stable `navy` identifier is Gioanni.
+The server fallback theme is resolved from generated site settings. A synchronous `ThemePreferenceScript` runs in the document head before hydration. It applies a valid stored `navy`, `light`, or `dark` override from `portfolio-theme`; without one, it maps `(prefers-color-scheme: dark)` to Dark or Light before body paint. The generated value remains the no-JavaScript and unavailable-media-query fallback. The visitor-facing label for the stable `navy` identifier is Gioanni.
+
+After hydration, `useThemePreference` tracks the preference and effective palette separately. System mode listens for live device color-scheme changes. A manual Light, Gioanni, or Dark choice takes precedence and is synchronized across tabs through browser storage events. Choosing System removes the stored override and immediately resumes device following; a cleared or invalid cross-tab value has the same effect.
 
 Semantic values in `tokens.css` isolate components from theme-specific colors. Glass surfaces, cards, blobs, controls, navigation, motion, loading states, and the Hover Base interaction system compose those values through focused style sheets. The application remains usable when generated settings disable glass effects or scroll motion.
 

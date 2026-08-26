@@ -19,7 +19,7 @@ Prefer server components for static content. Isolate client behavior to a clear 
 Current intentional client features include:
 
 - desktop route indication and mobile navigation;
-- theme disclosure and local preference persistence;
+- theme disclosure, system color-scheme following, and local manual-override persistence;
 - header and footer state;
 - profile image preview;
 - role rotation and optional scroll reveals;

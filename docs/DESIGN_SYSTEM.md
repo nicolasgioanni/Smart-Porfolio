@@ -29,15 +29,15 @@ Smart Portfolio uses a restrained glass-inspired visual language to organize evi
 
 ## Themes
 
-The supported theme identifiers are `navy`, `light`, and `dark`.
+The supported palette identifiers are `navy`, `light`, and `dark`. System is an automatic preference, not a fourth palette.
 
 | Identifier | Menu label | Role |
 | --- | --- | --- |
 | `light` | Light | Warm editorial light mode: ivory canvas, parchment panels, mist-blue cards, and deep navy structure. |
-| `navy` | Gioanni | Default signature mode: layered midnight navy with parchment, champagne, and muted blue-gray accents. |
+| `navy` | Gioanni | Signature mode: layered midnight navy with parchment, champagne, and muted blue-gray accents. |
 | `dark` | Dark | Layered graphite mode: neutral charcoal surfaces with restrained electric blue and violet interaction color. |
 
-The `navy` identifier intentionally remains stable for generated content, `data-theme`, and existing browser preferences, while its visitor-facing name is Gioanni. The generated `default_theme` setting selects the server-rendered value. `ThemePreferenceScript` applies a valid stored `portfolio-theme` preference before hydration. `ThemeSwitcher` presents Light, Gioanni, and Dark as a labelled button group and persists selection through `useThemePreference`.
+The `navy` identifier intentionally remains stable for generated content, `data-theme`, and existing browser preferences, while its visitor-facing name is Gioanni. The generated `default_theme` setting selects the server-rendered fallback. Before body paint, `ThemePreferenceScript` gives a valid stored override precedence and otherwise maps the device preference to Light or Dark. `ThemeSwitcher` presents System before the three palettes as a labelled button group. `useThemePreference` follows live system changes until a manual palette is selected, stores only manual overrides, synchronizes cross-tab changes, and removes the override when System is selected.
 
 Components must use semantic variables such as `--color-ink`, `--color-muted`, `--color-line`, and `--color-surface`. Do not read a palette-specific variable from a component rule when a semantic token expresses the role.
 
@@ -268,7 +268,7 @@ Every file under `public/` is directly retrievable. Use an approved asset, a saf
 3. Confirm structure and accessible state before adding animation.
 4. Add fine-pointer hover only after keyboard focus behavior exists.
 5. Implement reduced-motion behavior with the interaction.
-6. Test Light, Gioanni, and Dark at desktop, mobile, and 200 percent zoom.
+6. Test System in both device schemes plus Light, Gioanni, and Dark at desktop, mobile, and 200 percent zoom.
 7. Add or update component and CSS-contract tests.
 8. Update this guide when the change creates a reusable rule.
 

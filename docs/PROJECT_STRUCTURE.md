@@ -85,11 +85,11 @@ The recommendation route and navigation item remain discoverable only when recom
 
 ### Layout and navigation
 
-`src/app/layout.tsx` loads generated content, resolves the initial theme, creates metadata, and renders `SiteShell`. The shell composes the desktop top header or mobile bottom dock, route content, and progressive footer.
+`src/app/layout.tsx` loads generated content, resolves the server fallback theme, installs the pre-hydration system-preference script, creates metadata, and renders `SiteShell`. The shell composes the desktop top header or mobile bottom dock, route content, and progressive footer.
 
 - `src/components/layout/` owns page containers, header and footer composition, profile preview, and structural primitives.
 - `src/components/navigation/` owns the route registry, desktop and mobile navigation, external-link handling, active-route state, and social links.
-- `src/components/theme/` and `src/lib/theme/` own theme resolution, persistence, and the theme disclosure.
+- `src/components/theme/` and `src/lib/theme/` own pre-hydration and live system resolution, manual override persistence, cross-tab synchronization, and the theme disclosure.
 
 ### Portfolio components
 

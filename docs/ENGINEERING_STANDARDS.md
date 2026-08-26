@@ -20,7 +20,7 @@ Keep components focused around one rendering job. Reuse glass primitives, conten
 
 ## Styling
 
-Use semantic tokens from `src/styles/tokens.css`. Preserve readable surfaces, visible focus, responsive reflow, and reduced-motion behavior in Light, Gioanni, and Dark.
+Use semantic tokens from `src/styles/tokens.css`. Preserve readable surfaces, visible focus, responsive reflow, and reduced-motion behavior in Light, Gioanni, and Dark. Keep System as preference logic that resolves to Light or Dark; never introduce `data-theme="system"` or a fourth token palette.
 
 Avoid heavy visual dependencies, full-screen blur, decorative animation systems, and low-contrast text.
 
@@ -32,7 +32,7 @@ Do not broaden `public/_routes.json`, client-visible environment variables, or C
 
 ## Tests
 
-Add tests for schema changes, selection rules, navigation, validation, interaction, Functions, automation, and user-visible rendering. Keep tests close to the behavior they protect when practical.
+Add tests for schema changes, selection rules, navigation, validation, interaction, Functions, automation, and user-visible rendering. Theme behavior must cover pre-hydration resolution, live device changes, manual precedence, storage synchronization, unavailable browser APIs, and listener cleanup. Keep tests close to the behavior they protect when practical.
 
 Run focused tests during development and `npm run verify` before delivery.
 
