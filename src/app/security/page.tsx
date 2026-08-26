@@ -34,7 +34,7 @@ export default function SecurityPage() {
         <p>
           The public portfolio pages are statically generated and do not provide visitor accounts, payments, or a general
           application API. Contact requests are handled by two narrowly scoped Cloudflare Pages Functions. Cloudflare
-          Turnstile supplies a final-submit bot-protection signal, and Resend delivers the visitor confirmation and private
+          Turnstile supplies an upfront bot-protection gate, and Resend delivers the visitor confirmation and private
           owner notification. Hosting, source control, Turnstile, Resend, receiving email systems, linked demonstrations, and other
           external services are independently operated third-party systems and are outside this site&apos;s testing scope.
         </p>
@@ -59,28 +59,31 @@ export default function SecurityPage() {
       <section>
         <h2>Contact submission safeguards</h2>
         <p>
-          The contact wizard collects names and contact details, then presents one review step. It prepares an
-          interaction-only Turnstile widget while the form is active and executes it only after the visitor selects the
-          final <em>Send request</em> action with valid fields and acknowledgments. The widget stays hidden unless Cloudflare
-          requires interaction. Every new logical message receives a fresh, single-use token and opaque submission
-          identifier. The identifier is also supplied as Turnstile custom data.
+          Before contact fields are shown, the site renders a visible Turnstile gate. Every new logical message receives a
+          fresh, single-use token and opaque submission identifier, and the identifier is also supplied as Turnstile custom
+          data. Contact fields remain unavailable until server verification succeeds. The form then opens automatically after
+          a brief success state unless the visitor activates Continue sooner. The wizard collects names and contact details
+          and presents one review step with two required acknowledgments and a 500-character message maximum.
         </p>
         <p>
           The server verifies the token through Cloudflare Siteverify at <code>/api/contact/verify</code>, requiring success,
           the exact expected action, an allowed hostname, and custom data matching the submitted identifier. A separate
           operation UUID scopes one bounded retry of the same token after a transient provider failure. Invalid challenges
-          fail closed, and exhausted transient failures remain retryable without discarding the reviewed fields. Success sets
+          fail closed, and exhausted transient failures remain retryable without discarding any existing draft. Success sets
           a signed, 30-minute, <code>HttpOnly</code>, <code>Secure</code>, <code>SameSite=Strict</code>, host-only verification
           cookie bound to the submission identifier. The cookie contains no contact content, and its signing key is derived
           with domain-separated HKDF from the existing server-only Turnstile secret rather than a new secret.
         </p>
         <p>
-          Browser-side field checks improve usability but are not treated as a security boundary. The final
+          Browser-side field checks improve usability but are not treated as a security boundary. Opening the form after
+          successful verification records the form-start time, so time spent at the gate does not satisfy the minimum
+          completion check. The final
           <code>/api/contact</code> endpoint validates the signed ticket and matching submission identifier without calling
           Siteverify a second time. It independently performs schema, type, length, email, required-acknowledgment, timing,
           honeypot, and bounded mail-domain DNS validation, and returns generic JSON errors that do not expose provider
-          responses or private configuration. The form-start time is preserved through verification. Successful delivery
-          clears the cookie. A delivery failure retains the still-valid ticket for retry until its original expiry. After an
+          responses or private configuration. Successful delivery clears the cookie. A delivery failure retains the
+          still-valid ticket for retry until its original expiry. An expired ticket returns the visitor to the visible gate.
+          Successful refresh returns to locked review without sending automatically. After an
           email-provider attempt or uncertain delivery outcome, reviewed fields remain locked so any retry uses the same
           submission identifier and the same separately idempotent Resend payloads.
         </p>
@@ -92,15 +95,16 @@ export default function SecurityPage() {
           headers. The private owner destination and all provider secrets remain server-side and are not returned to the
           browser. The confirmation is submitted to Resend first; the private owner notification is submitted only after that
           request is accepted. Separate submission-scoped idempotency keys make a partial-failure retry safe without
-          duplicating an already accepted confirmation. A fresh verification is required for the next new message, while a
-          valid ticket can authorize only a retry of the same locked delivery.
+          duplicating an already accepted confirmation. A fresh gate is required for the next new message, while a valid
+          30-minute ticket can authorize only the same locked delivery and its retries.
         </p>
         <p>
           The application enforces at most two reservations per normalized email address in a rolling 24-hour window. It
-          stores only an opaque submission identifier, a domain-separated keyed HMAC-SHA-256 of the normalized address, and
-          reservation and expiry times in Cloudflare D1. It does not store the raw address, name, phone number, or message in
-          D1. A same-identifier retry for the same address does not consume another slot. The handler fails closed when the D1
-          binding or query is unavailable. Operator-managed Cloudflare WAF rate limiting remains defense in depth and should
+          stores only an opaque submission identifier, a domain-separated keyed HMAC-SHA-256 of the normalized address, an
+          opaque keyed fingerprint of the normalized full delivery payload, and reservation and expiry times in Cloudflare
+          D1. It does not store the raw address, name, phone number, or message in D1. A same-identifier retry does not consume
+          another slot only when both keyed values match. The handler fails closed when the D1 binding or query is unavailable.
+          Operator-managed Cloudflare WAF rate limiting remains defense in depth and should
           use a non-interactive response rather than add another human check. The application code does not
           intentionally log request bodies or contact fields; Cloudflare and other providers may maintain request, delivery,
           and security metadata under their own practices. The handlers fail closed when required Turnstile, ticket, DNS

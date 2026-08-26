@@ -42,8 +42,8 @@ export default function PrivacyPage() {
         <p>
           This Notice applies to this portfolio website. The portfolio has no visitor accounts, payment processing,
           first-party analytics, advertising, or tracking pixels. It does not use advertising, analytics, or cross-site
-          tracking cookies. Its contact form uses one short-lived, essential verification cookie to enforce final-submit
-          human verification and provides a direct channel for legitimate professional inquiries.
+          tracking cookies. Its contact form uses one short-lived, essential verification cookie to enforce an upfront
+          human-verification gate and provides a direct channel for legitimate professional inquiries.
         </p>
         <p>
           The portfolio owner does not sell or rent personal information, use it for targeted or cross-context behavioral
@@ -78,10 +78,9 @@ export default function PrivacyPage() {
           {" "}is provided as UK-specific regulatory background.
         </p>
         <p>
-          After you select <em>Send request</em> and Cloudflare verifies the Turnstile check, the site sets a signed
-          contact-verification cookie for up to 30 minutes. The interaction-only widget remains hidden unless Cloudflare
-          requires your attention. The cookie is restricted to this host and sent only over secure connections, is
-          unavailable to browser scripts, and is limited to same-site requests. It contains a verification
+          After you complete the visible security gate and Cloudflare verifies the Turnstile check, the site sets a signed
+          contact-verification cookie for up to 30 minutes. The cookie is restricted to this host and sent only over secure
+          connections, is unavailable to browser scripts, and is limited to same-site requests. It contains a verification
           ticket bound to one opaque submission identifier, not your name, email address, phone number, message,
           acknowledgments, or other contact content. It is cleared after successful delivery. If delivery fails, it remains
           available until its original expiry so you can retry without repeating the security check.
@@ -104,17 +103,18 @@ export default function PrivacyPage() {
       <section>
         <h2>Contact requests and email communications</h2>
         <p>
-          The contact form collects your first name, last name, email address, optional phone number, message, and your
-          confirmation of each of the three required acknowledgments shown during review. It also processes a Cloudflare
+          The contact form collects your first name, last name, email address, optional phone number, a message of up to 500
+          characters, and your confirmation of both required acknowledgments shown during review. It also processes a Cloudflare
           Turnstile response, an opaque submission identifier, and limited request information needed to validate the
-          submission and prevent abuse. The final request also includes a form-start timestamp and a hidden anti-spam field.
-          These values are used to identify implausibly fast or automated submissions; the hidden field is expected to remain
-          empty for ordinary visitors. The information is used to review your inquiry, send a receipt, respond to you, and
-          protect the contact channel.
+          submission and prevent abuse. After verification, the form opens automatically after a brief success state unless
+          you activate Continue sooner. Opening the form records a form-start timestamp. The final request also includes that
+          timestamp and a hidden anti-spam field. These values are used to identify implausibly
+          fast or automated submissions; the hidden field is expected to remain empty for ordinary visitors. The information
+          is used to review your inquiry, send a receipt, respond to you, and protect the contact channel.
         </p>
         <p>
-          Preparing and running Turnstile during the final Send action causes the browser to communicate with Cloudflare.
-          The interaction-only widget remains hidden unless Cloudflare requires visitor input. Cloudflare&apos;s{" "}
+          Loading and completing the visible upfront Turnstile gate causes the browser to communicate with Cloudflare before
+          contact fields are entered. Cloudflare&apos;s{" "}
           <SmartLink href="https://www.cloudflare.com/turnstile-privacy-policy/">
             Turnstile Privacy Addendum
           </SmartLink>{" "}
@@ -124,13 +124,14 @@ export default function PrivacyPage() {
           the service does not access, store, or transmit user communications, form entries, or page input.
         </p>
         <p>
-          In this implementation, the contact fields are not supplied to Turnstile. The form creates an opaque identifier
-          for the reviewed submission and supplies that identifier as Turnstile custom data. When you choose <em>Send
-          request</em>, the widget creates a fresh, single-use token for the new message, and the browser sends only that
+          In this implementation, contact fields are not supplied to Turnstile. The form creates an opaque identifier for the
+          new message and supplies that identifier as Turnstile custom data. When you complete the gate, the widget creates a
+          fresh, single-use token, and the browser sends only that
           token and the opaque submission identifier over HTTPS to <code>/api/contact/verify</code>. That narrowly scoped
           Cloudflare Pages Function may include the connecting IP address when it asks Cloudflare to verify the token. It
           requires successful verification, the expected action and hostname, and matching custom data before establishing
-          the short-lived verification cookie. Verification then continues the same final Send action.
+          the short-lived verification cookie. Contact fields remain unavailable until verification succeeds, then the form
+          opens automatically after a brief delay or sooner when you activate Continue.
         </p>
         <p>
           Your contact-field values remain in your browser while you complete and review the form. They are transmitted over
@@ -145,16 +146,19 @@ export default function PrivacyPage() {
           the submitter. The endpoint does not send the Turnstile response through Cloudflare verification a second time.
           After an email-provider attempt or uncertain delivery outcome, reviewed fields are locked so the request can be
           retried with the same submission identifier and idempotent delivery payloads. A still-valid signed ticket permits only that
-          same locked delivery retry without another Turnstile check. If the ticket expires first, the final Send action
-          requires a fresh token while preserving the locked delivery identity and content.
+          same locked delivery retry without another Turnstile check. If the ticket expires first, the form returns to the
+          visible gate and requires a fresh token while preserving the locked delivery identity and content. Successful
+          refresh returns to the locked review and does not send automatically.
         </p>
         <p>
-          A verified submission reserves one of two allowed attempts for that normalized address during a rolling 24-hour
-          window. The reservation stores only the opaque submission identifier, keyed email value, reservation time, and
-          expiry time in Cloudflare D1; it does not store the name, raw email address, phone number, or message. The same
-          identifier and address can retry without taking another slot, while a provider or network failure keeps the original
-          reservation until it expires. For this address-specific limit, the server normalizes the address by trimming it and
-          converting it to lowercase, then stores a keyed HMAC-SHA-256 value rather than the address itself.
+          Before email delivery, an eligible request reserves one of two allowed attempts for that normalized address during
+          a rolling 24-hour window. The reservation stores only the opaque submission identifier, keyed email value, opaque keyed full-payload
+          fingerprint, reservation time, and expiry time in Cloudflare D1; it does not store the name, raw email address,
+          phone number, or message. The same identifier can retry without taking another slot only when its address and
+          payload fingerprints match, while a provider or network failure keeps the original reservation until it expires.
+          The server normalizes the address by trimming it and converting it to lowercase, then stores a keyed HMAC-SHA-256
+          value rather than the address itself. It separately fingerprints the normalized delivery payload so a changed
+          same-identifier retry is rejected without storing the field values.
         </p>
         <p>
           After acceptance, Resend is asked first to deliver a transactional confirmation to the email address you supplied.
