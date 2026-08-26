@@ -9,7 +9,7 @@ Use this guide for source selection, generation, hashing, and deployment semanti
 ```mermaid
 flowchart LR
   A[Local CSV templates] --> D[Content generator]
-  B[Public XLSX workbook] --> C[One anonymous HTTPS download]
+  B[Public XLSX workbook] --> C[Bounded anonymous HTTPS download]
   C --> D
   D --> E[Schema and workbook checks]
   E --> F[Normalization and validation]
@@ -46,14 +46,16 @@ When the command runs directly, it loads the ignored root `.env` file if present
 
 ## Remote download boundary
 
-The remote path makes exactly one request for the complete workbook:
+The remote path accepts exactly one complete workbook snapshot. It can make at most two independent requests so one transient source failure does not discard an otherwise valid deployment candidate:
 
 - The URL must use HTTPS and must not contain a username or password.
 - Fetch credentials are omitted, redirects are followed, and no authorization or cookie header is added.
 - The request advertises XLSX and generic binary responses through `Accept`.
-- The fixed timeout is 15 seconds.
+- Each attempt has a 15-second deadline covering response headers and the complete capped body.
+- A retryable failure waits one fixed second before one final attempt, for a maximum 31-second download window. Each attempt uses a fresh request and never combines bytes from different responses.
 - The maximum response size is 5 MiB. A non-empty `Content-Length` must parse as a non-negative safe integer or generation fails. The declared size and the streamed or fallback body size are each enforced.
-- A non-success HTTP status fails generation with a generic error that does not include the configured URL.
+- Deadlines, network or stream interruptions, HTTP 408, HTTP 429, and HTTP 5xx responses are retryable. Other HTTP 4xx responses and invalid length or size boundaries fail immediately.
+- Download failures use generic errors that do not include the configured URL. A timed-out stream is cancelled and partial bytes are discarded.
 
 Payload validation rejects a `text/html` response type, common HTML or login content at the start of the body, and data without a ZIP signature. ExcelJS must then parse the bytes as a valid, non-empty XLSX workbook. The response MIME type is not an allowlist by itself. A non-HTML MIME type can proceed only when the ZIP and XLSX checks also succeed.
 
@@ -196,7 +198,7 @@ The package scripts deliberately separate generation from candidate consumption:
 - `npm run build` runs `prebuild`, regenerates content, creates the static export, and writes `out/content-version.json`.
 - `npm run build:generated` consumes the existing generated JSON without another workbook download, then writes `out/content-version.json`.
 
-Pull requests generate from local templates without remote credentials. Current `main` and `develop` pushes, scheduled checks, and manual deployment candidates use strict remote mode. The verify job downloads once, tests and builds that snapshot, creates an integrity manifest, and uploads the exact `out/` artifact. The deploy job downloads and verifies the artifact without rebuilding or fetching content again.
+Pull requests generate from local templates without remote credentials. Current `main` and `develop` pushes, scheduled checks, and manual deployment candidates use strict remote mode. The verify job accepts one complete workbook snapshot through the bounded download policy, tests and builds that snapshot, creates an integrity manifest, and uploads the exact `out/` artifact. The deploy job downloads and verifies the artifact without rebuilding or fetching content again.
 
 `out/content-version.json` contains only:
 

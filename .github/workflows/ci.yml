@@ -105,7 +105,7 @@ jobs:
           echo "pages_domain=$CLOUDFLARE_PAGES_DOMAIN" >> "$GITHUB_OUTPUT"
           echo "pages_project_name=$CLOUDFLARE_PAGES_PROJECT_NAME" >> "$GITHUB_OUTPUT"
 
-      - name: Fetch and generate the strict public workbook snapshot once
+      - name: Fetch and generate the strict public workbook snapshot
         if: github.event_name != 'pull_request' && steps.candidate.outputs.is_latest == 'true'
         env:
           PORTFOLIO_WORKBOOK_URL: ${{ secrets.PORTFOLIO_WORKBOOK_URL }}

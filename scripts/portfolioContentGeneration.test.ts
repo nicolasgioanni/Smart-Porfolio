@@ -8,6 +8,8 @@ import generatedPortfolioContent from "../src/content/generated/portfolio.genera
 import type { GeneratedPortfolioContent } from "../src/content/types";
 import {
   generatePortfolioContent,
+  portfolioWorkbookDownloadMaxAttempts,
+  portfolioWorkbookDownloadRetryDelayMs,
   portfolioWorkbookDownloadTimeoutMs,
   portfolioWorkbookMaxBytes
 } from "./fetchPortfolioContent";
@@ -235,7 +237,7 @@ describe("strict XLSX download boundary", () => {
     }
   });
 
-  it("uses exactly one anonymous download with a fixed timeout and no credentials", async () => {
+  it("uses one anonymous first-attempt download with a fixed timeout and no credentials", async () => {
     const bytes = await createWorkbookBytes({
       sheetOrder: [...portfolioWorkbookSheetNames].reverse(),
       titleFor: (name) => `  ${[...name].map((character, index) => index % 2 ? character : character.toUpperCase()).join("")}  `
@@ -330,11 +332,15 @@ describe("strict XLSX download boundary", () => {
   it("fails closed on HTTP errors and never exposes the workbook URL", async () => {
     const { outputFile } = await createTemporaryPaths();
     let errorMessage = "";
+    let fetchCount = 0;
 
     try {
       await generatePortfolioContent({
         environment: { PORTFOLIO_WORKBOOK_URL: workbookUrl, PORTFOLIO_REQUIRE_REMOTE_CONTENT: "true" },
-        fetchImplementation: async () => responseFromBytes(new Uint8Array(), { status: 403 }),
+        fetchImplementation: async () => {
+          fetchCount += 1;
+          return responseFromBytes(new Uint8Array(), { status: 403 });
+        },
         outputFile,
         templatesDirectory,
         log: () => undefined
@@ -346,19 +352,21 @@ describe("strict XLSX download boundary", () => {
     expect(errorMessage).toBe("Failed to download the public XLSX workbook");
     expect(errorMessage).not.toContain(workbookUrl);
     expect(errorMessage).not.toContain("private-test-id");
+    expect(fetchCount).toBe(1);
     expect(await fileDoesNotExist(outputFile)).toBe(true);
   });
 
-  it("aborts a stalled download at the fixed timeout", async () => {
+  it("exhausts two bounded attempts for a stalled download and never starts a third", async () => {
     vi.useFakeTimers();
     const { outputFile } = await createTemporaryPaths();
-    let receivedSignal: AbortSignal | undefined;
+    const receivedSignals: AbortSignal[] = [];
     const generation = generatePortfolioContent({
       environment: { PORTFOLIO_WORKBOOK_URL: workbookUrl, PORTFOLIO_REQUIRE_REMOTE_CONTENT: "true" },
       fetchImplementation: async (_url, init) => {
-        receivedSignal = init.signal as AbortSignal;
+        const signal = init.signal as AbortSignal;
+        receivedSignals.push(signal);
         return new Promise((_resolve, reject) => {
-          receivedSignal!.addEventListener("abort", () => reject(new Error("aborted")), { once: true });
+          signal.addEventListener("abort", () => reject(new Error("aborted")), { once: true });
         });
       },
       outputFile,
@@ -367,9 +375,113 @@ describe("strict XLSX download boundary", () => {
     });
     const rejection = expect(generation).rejects.toThrow(/download timed out/);
 
-    await vi.advanceTimersByTimeAsync(portfolioWorkbookDownloadTimeoutMs);
+    await vi.advanceTimersByTimeAsync(
+      (portfolioWorkbookDownloadTimeoutMs * portfolioWorkbookDownloadMaxAttempts) +
+        portfolioWorkbookDownloadRetryDelayMs
+    );
     await rejection;
-    expect(receivedSignal?.aborted).toBe(true);
+    expect(receivedSignals).toHaveLength(portfolioWorkbookDownloadMaxAttempts);
+    expect(receivedSignals.every((signal) => signal.aborted)).toBe(true);
+    expect(await fileDoesNotExist(outputFile)).toBe(true);
+  });
+
+  it("waits once, uses a fresh signal, and recovers from a transient network failure", async () => {
+    const bytes = await createWorkbookBytes();
+    const { outputFile } = await createTemporaryPaths();
+    const receivedSignals: AbortSignal[] = [];
+    const retryDelays: number[] = [];
+    let releaseRetry: (() => void) | undefined;
+    let fetchCount = 0;
+    const generation = generatePortfolioContent({
+      environment: { PORTFOLIO_WORKBOOK_URL: workbookUrl, PORTFOLIO_REQUIRE_REMOTE_CONTENT: "true" },
+      fetchImplementation: async (_url, init) => {
+        fetchCount += 1;
+        receivedSignals.push(init.signal as AbortSignal);
+        if (fetchCount === 1) throw new Error("transient network failure");
+        return responseFromBytes(bytes, { contentType: xlsxContentType });
+      },
+      outputFile,
+      templatesDirectory,
+      log: () => undefined,
+      waitImplementation: (delayMs) => {
+        retryDelays.push(delayMs);
+        return new Promise((resolve) => {
+          releaseRetry = resolve;
+        });
+      }
+    });
+
+    await vi.waitFor(() => expect(releaseRetry).toBeTypeOf("function"));
+    expect(fetchCount).toBe(1);
+    releaseRetry!();
+    await generation;
+
+    expect(fetchCount).toBe(2);
+    expect(retryDelays).toEqual([portfolioWorkbookDownloadRetryDelayMs]);
+    expect(receivedSignals).toHaveLength(2);
+    expect(receivedSignals[0]).not.toBe(receivedSignals[1]);
+    expect(receivedSignals.every((signal) => !signal.aborted)).toBe(true);
+    expect(await fileDoesNotExist(outputFile)).toBe(false);
+  });
+
+  it("retries a temporary service error with the same bounded policy", async () => {
+    const bytes = await createWorkbookBytes();
+    const { outputFile } = await createTemporaryPaths();
+    const retryDelays: number[] = [];
+    let fetchCount = 0;
+    const generation = generatePortfolioContent({
+      environment: { PORTFOLIO_WORKBOOK_URL: workbookUrl, PORTFOLIO_REQUIRE_REMOTE_CONTENT: "true" },
+      fetchImplementation: async () => {
+        fetchCount += 1;
+        return fetchCount === 1
+          ? responseFromBytes(new Uint8Array(), { status: 503 })
+          : responseFromBytes(bytes, { contentType: xlsxContentType });
+      },
+      outputFile,
+      templatesDirectory,
+      log: () => undefined,
+      waitImplementation: async (delayMs) => {
+        retryDelays.push(delayMs);
+      }
+    });
+
+    await generation;
+    expect(fetchCount).toBe(2);
+    expect(retryDelays).toEqual([portfolioWorkbookDownloadRetryDelayMs]);
+  });
+
+  it("cancels each stalled response body at its deadline and never writes partial bytes", async () => {
+    vi.useFakeTimers();
+    const { outputFile } = await createTemporaryPaths();
+    let cancelCount = 0;
+    let fetchCount = 0;
+    const generation = generatePortfolioContent({
+      environment: { PORTFOLIO_WORKBOOK_URL: workbookUrl, PORTFOLIO_REQUIRE_REMOTE_CONTENT: "true" },
+      fetchImplementation: async () => {
+        fetchCount += 1;
+        const stream = new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(new Uint8Array([0x50, 0x4b, 0x03, 0x04]));
+          },
+          cancel() {
+            cancelCount += 1;
+          }
+        });
+        return new Response(stream, { status: 200, headers: { "content-type": xlsxContentType } });
+      },
+      outputFile,
+      templatesDirectory,
+      log: () => undefined
+    });
+    const rejection = expect(generation).rejects.toThrow(/download timed out/);
+
+    await vi.advanceTimersByTimeAsync(
+      (portfolioWorkbookDownloadTimeoutMs * portfolioWorkbookDownloadMaxAttempts) +
+        portfolioWorkbookDownloadRetryDelayMs
+    );
+    await rejection;
+    expect(fetchCount).toBe(portfolioWorkbookDownloadMaxAttempts);
+    expect(cancelCount).toBe(portfolioWorkbookDownloadMaxAttempts);
     expect(await fileDoesNotExist(outputFile)).toBe(true);
   });
 
