@@ -13,7 +13,8 @@ import { GlassIconButton } from "@/components/glass/GlassIconButton";
 import { ThemeIcon } from "@/components/icons/ThemeIcon";
 import { useThemePreference } from "@/components/theme/useThemePreference";
 import type { ThemeName } from "@/lib/theme/resolveThemeName";
-import { themeLabels, themeOptions } from "@/lib/theme/themeOptions";
+import { themeLabels, themePreferenceOptions } from "@/lib/theme/themeOptions";
+import { systemThemePreference } from "@/lib/theme/themePreference";
 
 export const themeMenuCloseDelayMs = 240;
 export const themeMenuPortalViewportGutterPx = 12;
@@ -47,7 +48,7 @@ export function ThemeSwitcher({
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelId = useId();
-  const { selectedTheme, updateTheme } = useThemePreference(initialTheme);
+  const { selectedPreference, selectedTheme, updateThemePreference } = useThemePreference(initialTheme);
   openRef.current = open;
 
   const updatePortalPlacement = useCallback(() => {
@@ -250,18 +251,30 @@ export function ThemeSwitcher({
       ref={popoverRef}
       style={portalStyle}
     >
-      <div aria-label="Color theme" className="theme-switcher__panel" role="group">
-        {themeOptions.map(({ label, name }) => (
+      <div aria-label="Color theme preference" className="theme-switcher__panel" role="group">
+        {themePreferenceOptions.map(({ label, name }) => (
           <button
-            aria-pressed={selectedTheme === name}
+            aria-label={
+              name === systemThemePreference
+                ? selectedPreference === systemThemePreference
+                  ? `System, follows device setting; currently ${themeLabels[selectedTheme]}`
+                  : "System, follows device setting"
+                : undefined
+            }
+            aria-pressed={selectedPreference === name}
             className="theme-switcher__option hover-base-1 hover-base-1--compact hover-base-1--inline"
             key={name}
-            onClick={() => updateTheme(name)}
+            onClick={() => updateThemePreference(name)}
             onPointerDown={preservePointerFocus}
             tabIndex={open ? 0 : -1}
             type="button"
           >
             <span>{label}</span>
+            {name === systemThemePreference ? (
+              <span aria-hidden="true" className="theme-switcher__option-detail">
+                Auto
+              </span>
+            ) : null}
           </button>
         ))}
       </div>
@@ -284,7 +297,11 @@ export function ThemeSwitcher({
           aria-controls={panelId}
           aria-expanded={open}
           className="theme-switcher__trigger"
-          label={`Choose color theme. Current theme: ${themeLabels[selectedTheme]}`}
+          label={
+            selectedPreference === systemThemePreference
+              ? `Choose color theme. Current setting: System; using ${themeLabels[selectedTheme]}`
+              : `Choose color theme. Current setting: ${themeLabels[selectedTheme]}`
+          }
           onClick={handleTriggerClick}
           ref={triggerRef}
         >

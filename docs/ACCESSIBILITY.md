@@ -36,9 +36,9 @@ The Contact, Privacy, Terms, and Security routes are intentionally available fro
 
 ## Theme control
 
-The theme disclosure is a labelled button with `aria-expanded` and `aria-controls`. Light, Gioanni, and Dark choices form a labelled group and expose selection with `aria-pressed`. Gioanni retains the internal `navy` preference value so existing saved choices continue to work.
+The theme disclosure is a labelled button with `aria-expanded` and `aria-controls`. System, Light, Gioanni, and Dark preferences form a labelled group and expose selection with `aria-pressed`. System is a behavior rather than a fourth palette: it announces the effective Light or Dark result from the device preference, while the corresponding manual palette button remains unpressed. Gioanni retains the internal `navy` value so existing saved choices continue to work.
 
-Keyboard focus opens the disclosure. Escape closes it and restores focus to the trigger. Closed options use `tabIndex=-1`. The stored `portfolio-theme` preference is applied before hydration when possible.
+Keyboard focus opens the disclosure. Escape closes it and restores focus to the trigger. Closed options use `tabIndex=-1`. Before hydration, a valid `portfolio-theme` override is applied first; without one, the device color preference selects Light or Dark. System changes continue to update the page until the visitor chooses a manual override.
 
 Theme changes must preserve readable text, visible focus, borders, disabled states, selection, and status colors. Formal contrast conformance is not asserted by an automated audit, so contrast remains a manual verification requirement.
 
@@ -129,7 +129,7 @@ Verify meaningful UI changes at 200 percent zoom, at the 980 and 720 pixel layou
 
 1. Confirm the route has one H1 and logical heading order.
 2. Navigate every control with Tab and Shift+Tab.
-3. Confirm the dual-layer focus treatment is visible in Light, Gioanni, and Dark.
+3. Confirm System announces its active Light or Dark result, then verify the dual-layer focus treatment in all three palettes.
 4. Operate menus, dialogs, and disclosures with the keyboard.
 5. Verify active, expanded, pressed, invalid, busy, and live-region state where applicable.
 6. Repeat the interaction with reduced motion enabled.

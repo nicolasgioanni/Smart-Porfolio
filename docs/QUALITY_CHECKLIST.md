@@ -23,6 +23,7 @@ Run this checklist before shipping meaningful changes.
 - External new-tab links use safe `rel` attributes.
 - Text contrast remains strong across the Light, Gioanni, and Dark surface layers.
 - Dual-layer focus states remain visible on each palette's canvas, panels, cards, and controls.
+- System resolves device light and dark preferences, follows live changes, and never marks an effective palette as a manual selection.
 - Reduced-motion users do not receive entrance, compression, or shimmer effects.
 - Dialog focus, disclosure state, and form errors remain keyboard accessible.
 
@@ -32,6 +33,7 @@ Run this checklist before shipping meaningful changes.
 - No runtime portfolio content fetch was added.
 - Runtime request handling remains isolated to the documented `/api/contact/verify` and `/api/contact` Cloudflare Pages Functions.
 - Client components are justified by interaction or browser APIs.
+- Theme listeners are scoped to System behavior, respect manual override precedence, synchronize cleared storage, and clean up on unmount.
 
 ## Verification
 
