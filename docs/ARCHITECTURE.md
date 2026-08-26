@@ -162,7 +162,7 @@ A deployable candidate follows this sequence:
 
 1. Resolve the exact candidate commit and target branch.
 2. Generate one validated content snapshot.
-3. Compare its canonical normalized content subset hash with the active production manifest when the event permits a no-op.
+3. Compare its canonical normalized content subset hash and exact commit SHA with the active production manifest when the event permits a no-op.
 4. Run documentation validation, lint, typecheck, focused footer and navigation regressions, the full Vitest suite, the navigation, footer, and recommendation Playwright Chromium suites, and a static build.
 5. Write `content-version.json` and `artifact-integrity.json`.
 6. Upload and download the immutable Actions artifact.

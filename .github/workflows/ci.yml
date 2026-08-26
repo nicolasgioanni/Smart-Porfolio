@@ -142,6 +142,7 @@ jobs:
           node scripts/checkDeployedContent.mjs compare \
             "$production_url" \
             "$CONTENT_HASH" \
+            "$CANDIDATE_SHA" \
             "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${CANDIDATE_SHA}"
 
       - name: Decide whether full verification and deployment are required
@@ -150,6 +151,7 @@ jobs:
         env:
           CANDIDATE_IS_LATEST: ${{ steps.candidate.outputs.is_latest }}
           DEPLOYED_CONTENT_MATCHES: ${{ steps.deployed_content.outputs.deployed_content_matches }}
+          DEPLOYED_COMMIT_MATCHES: ${{ steps.deployed_content.outputs.deployed_commit_matches }}
           FORCE_DEPLOY: ${{ inputs.force_deploy }}
         run: |
           set -euo pipefail
@@ -171,7 +173,9 @@ jobs:
             deploy_target="preview"
           else
             deploy_target="production"
-            if [[ "${FORCE_DEPLOY:-false}" == "true" || "${DEPLOYED_CONTENT_MATCHES:-false}" != "true" ]]; then
+            if [[ "${FORCE_DEPLOY:-false}" == "true" ||
+                  "${DEPLOYED_CONTENT_MATCHES:-false}" != "true" ||
+                  "${DEPLOYED_COMMIT_MATCHES:-false}" != "true" ]]; then
               should_verify=true
               should_deploy=true
             fi
