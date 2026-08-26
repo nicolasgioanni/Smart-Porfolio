@@ -19,7 +19,7 @@ Smart Portfolio uses a restrained glass-inspired visual language to organize evi
 | Shell, pages, header, and footer | `src/styles/layout.css` |
 | Glass primitives and controls | `src/styles/glass.css` and `src/components/glass/` |
 | Navigation and theme disclosure | `src/styles/navigation.css` and navigation components |
-| Portfolio pages and cards | `src/styles/portfolio.css`, `src/styles/experience.css`, and portfolio components |
+| Portfolio pages and cards | `src/styles/portfolio.css`, `src/styles/detail.css`, `src/styles/experience.css`, `src/styles/research.css`, and portfolio components |
 | Interaction states | `src/styles/interactions.css` |
 | Motion | `src/styles/motion.css` and motion components |
 | Loading states | `src/styles/skeletons.css` and loading components |
@@ -67,6 +67,7 @@ Space Grotesk is loaded through `next/font` with Segoe UI and sans-serif fallbac
 | Feature leads | `--font-size-lead` | `1.0625rem` (17px) |
 | Card headings | `--font-size-card-title` | `1.25rem` (20px) |
 | Section headings | `--font-size-section-title` | `1.375rem` (22px) |
+| Research project titles | `--font-size-research-title` | Fluid 25.6-36px |
 | Resume and compact flow titles | `--font-size-resume-title` | `1.625rem` (26px) |
 | Route and form titles | `--font-size-page-title` | 24-26px, responsive |
 | Home greeting | `--font-size-hero-title` | Fluid 30-44px |
@@ -161,15 +162,23 @@ Use `PortfolioCard` variants according to meaning:
 | `media` | Card with primary media. |
 | `timeline` | Experience timeline entry. |
 
-Research and project Home cards use concise copy and bottom-aligned verified actions. Detail cards carry longer summaries, problem and solution context, impact, bullets, stack, and supporting links where the content type provides them.
+Research and project Home cards use concise copy and bottom-aligned verified actions. The Projects route retains evidence cards, while the Research route uses its alternating project showcase described below.
 
 Home section route actions use compact buttons aligned with the section heading. They remain visually subordinate to primary page actions.
 
+### Research showcase
+
+The dedicated Research route opens with the focused title `Applied AI Research` and a short summary that foregrounds CytoCV and adversarial machine learning. Its projects remain in content-defined order and render as full-width research modules. On desktop, a project-specific scientific SVG and its evidence content alternate left and right. At `920px` and below, every visualization moves above its content so reading order and touch navigation stay predictable.
+
+CytoCV uses a multichannel yeast-segmentation lens, Adversarial Machine Learning uses an eight-prototype attack-and-defense matrix, and Guide Donor Scheduler uses a guide, PAM, donor, and export diagram. These SVGs are semantic diagrams rather than external brand marks. They share structural styling while each project owns a bounded accent palette that remains legible in Navy, Light, and Dark.
+
+The shared `Overview` and `Technical` selector changes all research narratives at once. Each collapsed evidence row carries a complete lead; expansion adds supporting bullets and tools. Only one row per project remains open. Verified resources stay interactive, while the CytoCV manuscript placeholder is visibly inactive and labelled as forthcoming.
+
 ### Experience showcase
 
-The dedicated Experience route combines its heading, spreadsheet-backed summary, and page-wide detail control in one strong glass introduction panel. On desktop, `Detail level:` and the `For everyone` or `Technical` selector occupy the upper-right column while the heading and summary remain in the flexible left column. The selector swaps the narrative depth for every logo-led role card while identity metadata remains stable.
+The dedicated Experience route combines its heading, spreadsheet-backed summary, and page-wide detail control in one strong glass introduction panel. The same compact `Overview` and `Technical` selector used by Research is inset at the panel's top-right edge on desktop, while the heading and summary retain the remaining width. The selector swaps the narrative depth for every logo-led role card while identity metadata remains stable.
 
-The segmented selector uses one translated glass lens, and role cards use bounded logo highlights rather than pointer-following effects. Below `760px`, the selector row moves beneath the summary and stretches to the panel width. Below `520px`, its label stacks above the full-width segmented control. On small screens, evidence returns to the full card width and result signals move below their chapter summaries. Each collapsed evidence chapter communicates its central fact; expansion adds context and tools tied to that chapter, and only one chapter per role remains open.
+The segmented selector uses one translated glass lens, measures 12.25rem, and keeps a 34px desktop button height with a 44px coarse-pointer target. Below `760px`, the selector returns to document flow beneath the summary without expanding to the panel width. On small screens, evidence returns to the full card width and result signals move below their disclosure summaries. Each collapsed evidence row communicates its central fact; expansion adds context and tools tied to that row, and only one row per role remains open.
 
 ## Skills
 
@@ -217,9 +226,9 @@ Use `aria-current`, `aria-pressed`, `aria-expanded`, or native disabled state to
 
 ## Motion
 
-Motion supports state and orientation. Prefer opacity and transform. Experience chapters, recommendation disclosure, and footer grid rows are documented exceptions where a bounded layout transition communicates state.
+Motion supports state and orientation. Prefer opacity and transform. Shared detail disclosures, recommendation disclosure, and footer grid rows are documented exceptions where a bounded layout transition communicates state.
 
-The role rotation, route indicator, header state, mobile rail drift, theme disclosure, experience chapters, recommendation expansion, footer disclosure, scroll reveals, and skeleton shimmer have explicit reduced-motion behavior. See [Animation guidelines](ANIMATION_GUIDELINES.md) for exact timing and constraints.
+The role rotation, route indicator, header state, mobile rail drift, theme disclosure, research and experience details, recommendation expansion, footer disclosure, scroll reveals, and skeleton shimmer have explicit reduced-motion behavior. See [Animation guidelines](ANIMATION_GUIDELINES.md) for exact timing and constraints.
 
 ## Loading states
 

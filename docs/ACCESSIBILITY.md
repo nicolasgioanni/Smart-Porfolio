@@ -68,13 +68,13 @@ Skills without the complete explanatory field set render as non-interactive badg
 
 The header profile image opens a labelled modal preview with a close button, Escape handling, and backdrop dismissal. The current preview does not implement the same focus trap and trigger-focus restoration used by skill dialogs. Treat that as a known manual-review limitation.
 
-### Experience chapters
+### Research and Experience details
 
-The Experience heading, summary, and detail controls share one page-introduction surface. The descriptive H1 and summary remain available when there are no published roles, while the detail controls are omitted because there is no content to switch.
+The Research and Experience headings, summaries, and detail controls each share one page-introduction surface. The descriptive H1 and summary remain available when a collection is empty, while its detail control is omitted because there is no content to switch.
 
-The visible `Detail level:` text and its visually hidden `Experience` prefix label the page-level `For everyone` and `Technical` group through `aria-labelledby`. Each button exposes the selected depth with `aria-pressed`. A concise visually hidden polite live region announces depth changes without adding explanatory copy to the layout or repeating every role.
+The visible `Detail` text sits beside an `Overview` and `Technical` button group with a context-specific accessible name. Each button exposes the selected depth with `aria-pressed`. A concise visually hidden polite live region announces depth changes without adding explanatory copy to the layout or repeating every project or role.
 
-Each expandable evidence chapter is a native button with `aria-expanded` and `aria-controls`; its panel is a labelled region and is `aria-hidden` while collapsed. Only one chapter per role remains open. Escape closes the focused chapter without moving focus. Organization logos are decorative because the adjacent organization name supplies the same identity in text.
+Each expandable evidence row is a native button with `aria-expanded` and `aria-controls`; its panel is a labelled region and is `aria-hidden` while collapsed. Research keeps one row open per project, and Experience keeps one row open per role. Escape closes the focused row without moving focus. Research SVGs provide concise diagram labels. Organization logos remain decorative when the adjacent organization name supplies the same identity in text.
 
 ### Recommendations
 

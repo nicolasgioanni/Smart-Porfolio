@@ -1,120 +1,115 @@
 import type { ExperienceItem } from "@/content/types";
+import {
+  DETAILS_UNAVAILABLE,
+  type DetailMode,
+  type DetailModeContent,
+  type DetailNarrative,
+  type DetailSection
+} from "@/lib/content/detailNarratives";
 import { getSummary } from "@/lib/content/displayHelpers";
 
-export type ExperienceDetailMode = "overview" | "technical";
+export type ExperienceDetailMode = DetailMode;
+export type ExperienceDetailSection = DetailSection;
+export type ExperienceModeContent = DetailModeContent;
 
-export type ExperienceDetailSection = {
-  id: string;
-  title: string;
-  lead: string;
-  details: string[];
-  signal?: string;
-  tools?: string[];
-};
+type ExperienceNarrative = DetailNarrative;
 
-export type ExperienceModeContent = {
-  summary: string;
-  sections: ExperienceDetailSection[];
-};
-
-type ExperienceNarrative = Record<ExperienceDetailMode, ExperienceModeContent>;
-
-export const EXPERIENCE_DETAILS_UNAVAILABLE = "Details not yet available.";
+export const EXPERIENCE_DETAILS_UNAVAILABLE = DETAILS_UNAVAILABLE;
 
 const experienceNarratives: Record<string, ExperienceNarrative> = {
   "research-assistant-software-engineering": {
     overview: {
       summary:
-        "Built and deployed CytoCV, a web platform that helps 15+ scientists analyze yeast microscopy images and export per-cell measurements.",
+        "Built and deployed CytoCV, an open-source web platform that turns yeast microscopy stacks into reviewable per-cell fluorescence measurements and structured exports.",
       sections: [
         {
           id: "workflow",
           title: "Scientific workflow",
-          lead: "Built a web platform that segments yeast microscopy stacks and exports more than 30 cell-level measurements.",
+          lead: "Translated a microscopy workflow into a repeatable path from DeltaVision or TIFF upload through analysis, review, and export.",
           details: [
             "Built for the University of Utah Miller Lab through UW Bothell's SEE Lab.",
-            "The platform gives scientific users a repeatable path from uploaded images to analysis-ready results."
+            "Aligned the platform with biology-facing requirements across ingestion, segmentation, measurement, and result review."
           ],
-          signal: "15+ scientists"
+          signal: "End-to-end workflow"
         },
         {
           id: "analysis",
           title: "Image analysis",
-          lead: "Turned a manual microscopy process into a repeatable computer-vision workflow.",
+          lead: "Used DIC-guided Mask R-CNN inference to segment cells and mother-daughter pairs for multichannel analysis.",
           details: [
-            "The workflow preprocesses microscopy images, segments yeast cells, and extracts more than 30 measurements for each cell.",
-            "Deterministic batch processing keeps repeated analyses consistent."
+            "Reviewable overlays align DIC segmentation with fluorescence channels before export.",
+            "Configurable analyses cover puncta distance, CEN-dot localization, biorientation, contour intensity, and nuclear or cell-pair intensity."
           ],
-          signal: "30+ measurements"
+          signal: "DIC-guided CV"
         },
         {
           id: "results",
-          title: "Results",
-          lead: "Reduced manual analysis by 97%, processing time by 73%, and file storage by 56.6%.",
+          title: "Research platform",
+          lead: "Delivered background processing, progress and cancellation controls, protected artifacts, and durable results.",
           details: [
-            "Manual microscopy analysis was reduced by 97%.",
-            "The processing workflow ran 73% faster, while preview and cache changes reduced storage by 56.6%."
+            "Authentication and retention controls support repeatable shared-lab use.",
+            "PostgreSQL persistence keeps experiments, analysis state, and exported results available across sessions."
           ],
-          signal: "97% less manual work"
+          signal: "Reviewable results"
         },
         {
           id: "ownership",
-          title: "Ownership",
-          lead: "Led a six-person Agile team and maintained the platform's delivery pipeline.",
+          title: "Open research software",
+          lead: "Led architecture, implementation, deployment, and maintenance with SEE Lab and Miller Lab collaborators.",
           details: [
-            "Coordinated development across a six-person team.",
-            "Maintained continuous delivery for a production deployment used by researchers."
+            "Released CytoCV v2.0.0 with citation metadata, reproducibility documentation, and a versioned software DOI.",
+            "Continued maintaining the deployed application while the journal manuscript remained in preparation."
           ],
-          signal: "6-person team"
+          signal: "Citable v2.0.0"
         }
       ]
     },
     technical: {
       summary:
-        "Architected a Django and JavaScript application with REST APIs, deterministic Mask R-CNN batch processing, PostgreSQL storage, and Linux VM deployment.",
+        "Architected a Django and JavaScript application with JSON endpoints, DIC-guided Mask R-CNN inference, worker-backed analysis, PostgreSQL persistence, and Linux deployment.",
       sections: [
         {
           id: "workflow",
           title: "Application architecture",
-          lead: "Built Python/Django REST APIs and a JavaScript Fetch API frontend.",
+          lead: "Connected Django JSON endpoints to a JavaScript browser interface and PostgreSQL-backed data model.",
           details: [
-            "Designed the full-stack workflow used to submit microscopy jobs and retrieve analysis results.",
+            "Designed the full-stack workflow used to submit microscopy jobs, poll progress, and retrieve analysis results.",
             "Re-architected the data layer and migrated application data from SQLite to PostgreSQL."
           ],
-          tools: ["Python", "Django", "JavaScript", "REST APIs", "PostgreSQL"]
+          tools: ["Python", "Django", "JavaScript", "HTTP/JSON", "PostgreSQL"]
         },
         {
           id: "analysis",
           title: "Vision pipeline",
-          lead: "Built deterministic TensorFlow/Keras Mask R-CNN workflows for yeast microscopy.",
+          lead: "Built deterministic TensorFlow/Keras Mask R-CNN workflows for DIC-guided yeast segmentation.",
           details: [
-            "Used OpenCV, scikit-image, and NumPy for preprocessing, segmentation support, and measurement extraction.",
-            "The pipeline extracts more than 30 cell-level metrics from microscopy data."
+            "Used OpenCV, scikit-image, and NumPy to postprocess instance predictions into reviewable cells and cell pairs.",
+            "Aligned fluorescence channels with segmentation masks for configurable per-cell analysis."
           ],
-          signal: "73% faster",
+          signal: "Multichannel CV",
           tools: ["TensorFlow/Keras", "Mask R-CNN", "OpenCV", "scikit-image", "NumPy"]
         },
         {
           id: "results",
-          title: "Production delivery",
-          lead: "Deployed the application on a UW-IT Linux VM with a production web stack and automated delivery.",
+          title: "Research platform",
+          lead: "Designed worker-backed jobs, progress and cancellation flows, protected artifacts, and durable result storage.",
           details: [
-            "Served the application with Nginx and Gunicorn, secured it with Let's Encrypt TLS, and maintained CI/CD.",
-            "Migrated preview and preprocessing caches and converted TIFF caches to PNG, reducing file storage by 56.6%."
+            "A Django management worker coordinates upload preparation and analysis outside the web request.",
+            "Authentication, retention controls, and PostgreSQL persistence support shared research workflows."
           ],
-          signal: "56.6% less storage",
-          tools: ["Linux", "Nginx", "Gunicorn", "Let's Encrypt TLS", "CI/CD"]
+          signal: "Worker-backed",
+          tools: ["Django", "PostgreSQL", "pandas", "openpyxl"]
         },
         {
           id: "ownership",
-          title: "Scale and delivery",
-          lead: "Delivered the workflow for 15+ scientists while leading a six-person Agile team.",
+          title: "Production delivery",
+          lead: "Led Linux deployment, regression testing, technical documentation, and the citable v2.0.0 release.",
           details: [
-            "Owned work across the application, ML pipeline, data layer, and deployment environment.",
-            "The completed workflow reduced manual analysis by 97%."
+            "Operated the production stack with Gunicorn, Nginx, and systemd-managed web and worker services.",
+            "Maintained reproducibility and methods documentation alongside the deployed application."
           ],
-          signal: "15+ users",
-          tools: ["Agile delivery", "Code review"]
+          signal: "Production R&D",
+          tools: ["Linux", "Gunicorn", "Nginx", "systemd", "GitHub Actions", "Docker"]
         }
       ]
     }
@@ -214,94 +209,93 @@ const experienceNarratives: Record<string, ExperienceNarrative> = {
   "undergraduate-researcher-adversarial-ml": {
     overview: {
       summary:
-        "Studied how poisoned training data can manipulate machine-learning models and how defenses can detect the attack.",
+        "Completed an independent study in adversarial machine learning with four attack prototypes and four defensive strategies across image-classification benchmarks.",
       sections: [
         {
           id: "question",
-          title: "Research question",
-          lead: "Tested targeted training-data poisoning against models learning from data streams.",
+          title: "Study scope",
+          lead: "Built eight focused prototypes spanning adversarial attacks and defensive techniques.",
           details: [
-            "Examined whether attacks could evade loss-based anomaly filtering.",
-            "Evaluated whether a feature-space stability metric could detect changes to a model's decision boundary."
+            "The study covered evasion, model extraction, model inversion, and backdoor poisoning.",
+            "Defenses covered adversarial-input detection, input preprocessing, output perturbation, and defensive distillation."
           ],
-          signal: "Adversarial ML"
+          signal: "4 attacks · 4 defenses"
         },
         {
           id: "workflow",
-          title: "Experiment system",
-          lead: "Automated attack, defense, and experiment-reporting workflows.",
+          title: "Attack experiments",
+          lead: "Generated DeepFool adversarial examples and built Copycat CNN, MIFace, and corner-trigger poisoning experiments.",
           details: [
-            "Built repeatable tests instead of evaluating each attack and defense by hand.",
-            "Tracked attack success, model accuracy, and execution latency."
+            "The prototypes covered distinct evasion, extraction, inversion, and poisoning threat models.",
+            "Each experiment kept its target model and generated outputs available for inspection."
           ],
-          signal: "Repeatable tests"
+          signal: "4 attack families"
         },
         {
           id: "evaluation",
-          title: "Evaluation",
-          lead: "Measured whether the defense remained fast without sacrificing clean-data performance.",
+          title: "Defense experiments",
+          lead: "Compared adversarial-input detection, JPEG preprocessing, Gaussian-noise postprocessing, and defensive distillation.",
           details: [
-            "Compared attack success, runtime, and accuracy across the automated evaluation workflow."
+            "FGM adversarial samples supplied detector training data.",
+            "Preprocessing, postprocessing, and distillation experiments exposed their effects on downstream predictions."
           ],
-          signal: "3 tracked signals"
+          signal: "4 defense strategies"
         },
         {
           id: "outcome",
-          title: "Result",
-          lead: "Reduced batched defense execution to under five seconds while preserving 94% clean-data accuracy.",
+          title: "Evaluation",
+          lead: "Measured attack success alongside clean, attacked, and defended model accuracy.",
           details: [
-            "Defense evaluation completed in under five seconds.",
-            "The evaluated model retained 94% accuracy on clean data."
+            "Ran the prototypes across MNIST, Fashion-MNIST, and CIFAR-10.",
+            "Captured experiment metrics and visual outputs to make attack and defense behavior inspectable."
           ],
-          signal: "<5 sec · 94%"
+          signal: "3 datasets"
         }
       ]
     },
     technical: {
       summary:
-        "Automated adversarial-ML experiments with Python, TensorFlow/Keras, NumPy, and Matplotlib.",
+        "Integrated Adversarial Robustness Toolbox primitives with TensorFlow/Keras models across eight focused attack-and-defense prototypes.",
       sections: [
         {
           id: "question",
-          title: "Attack and defense model",
-          lead: "Implemented attack and defense pipelines for image-classification models.",
+          title: "Evasion and extraction",
+          lead: "Generated DeepFool examples against Fashion-MNIST and trained a Copycat CNN substitute model from queried outputs.",
           details: [
-            "The associated study evaluated targeted training-data poisoning against SVMs learning from data streams.",
-            "Tested whether attacks could evade loss-based anomaly filtering."
+            "Compared classifier predictions before and after DeepFool perturbation.",
+            "Evaluated the extracted model separately from its target classifier."
           ],
-          tools: ["Python", "TensorFlow/Keras", "Adversarial ML"]
+          tools: ["ART", "TensorFlow/Keras", "DeepFool", "Fashion-MNIST"]
         },
         {
           id: "workflow",
-          title: "Evaluation workflow",
-          lead: "Automated reporting for attack success rate, latency, and model accuracy.",
+          title: "Inversion and poisoning",
+          lead: "Built MIFace model-inversion and corner-trigger backdoor-poisoning experiments.",
           details: [
-            "Evaluated loss-based anomaly filtering and a feature-space stability metric.",
-            "Produced repeatable experiment outputs for comparison."
+            "Reconstructed representative MNIST inputs through model inversion.",
+            "Injected a visual trigger into training samples and measured its effect on triggered test inputs."
           ],
-          signal: "Automated reporting",
-          tools: ["NumPy", "Matplotlib"]
+          tools: ["MIFace", "Backdoor poisoning", "MNIST", "CIFAR-10"]
         },
         {
           id: "evaluation",
-          title: "Performance optimization",
-          lead: "Optimized batched Keras defense evaluation to run in under five seconds.",
+          title: "Detection and preprocessing",
+          lead: "Trained an adversarial-input detector on FGM samples and evaluated JPEG preprocessing.",
           details: [
-            "Batched the evaluation path to reduce defense runtime.",
-            "Tracked the runtime improvement alongside attack and accuracy metrics."
+            "Generated detector training inputs from Fast Gradient Method adversarial examples.",
+            "Measured whether JPEG transformation changed downstream classification behavior."
           ],
-          signal: "Under 5 seconds",
-          tools: ["Keras", "Batch evaluation"]
+          tools: ["FGM", "JPEG compression", "NumPy"]
         },
         {
           id: "outcome",
-          title: "Accuracy guardrail",
-          lead: "Preserved 94% accuracy on clean data during defense evaluation.",
+          title: "Postprocessing and distillation",
+          lead: "Compared Gaussian-noise output perturbation with defensive distillation.",
           details: [
-            "Used clean-data accuracy as a guardrail while evaluating the optimized defense workflow."
+            "Tracked clean, attacked, and defended accuracy rather than reporting a mitigation in isolation.",
+            "Used Matplotlib outputs to make experiment effects inspectable."
           ],
-          signal: "94% accuracy",
-          tools: ["Model evaluation"]
+          tools: ["Gaussian noise", "Defensive distillation", "Matplotlib"]
         }
       ]
     }
@@ -309,90 +303,92 @@ const experienceNarratives: Record<string, ExperienceNarrative> = {
   "research-assistant-ai-ml": {
     overview: {
       summary:
-        "Built a research tool that automated CRISPR/Cas9 guide and donor-sequence design across 18,000+ yeast DNA files.",
+        "Built Guide Donor Scheduler, a Python tool that converts yeast FASTA sequences and requested amino-acid substitutions into CRISPR/Cas9 guide and donor constructs.",
       sections: [
         {
           id: "workflow",
           title: "Research workflow",
-          lead: "Built an automated target-selection workflow for yeast DNA research.",
+          lead: "Automated yeast CRISPR guide and donor design from FASTA input to spreadsheet output.",
           details: [
-            "The tool selected guide sequences, constructed donor sequences, and prepared validated results for researchers.",
-            "It replaced a repetitive manual sequence-design process."
+            "The tool reads FSA or FNA records, applies requested mutation rules, and prepares candidate designs.",
+            "Researchers receive an organized XLS workbook containing the sequence-design decisions."
           ],
-          signal: "18,000+ files"
+          signal: "FASTA to XLS"
         },
         {
           id: "selection",
           title: "Sequence design",
-          lead: "Generated guide and donor sequences around requested genetic mutations.",
+          lead: "Selected 20-base guides near PAM sites and constructed configurable 132-base donor sequences.",
           details: [
-            "Selected 20-base guides near NGG PAM sites.",
-            "Constructed 132-base donor sequences and added silent edits intended to prevent re-cutting."
+            "Forward NGG and reverse-strand CCN discovery keeps candidate selection strand-aware.",
+            "Codon-aware silent PAM or seed edits preserve the requested protein change while reducing re-cutting risk."
           ],
-          signal: "Validated designs"
+          signal: "20 bp · 132 bp"
         },
         {
           id: "output",
-          title: "Researcher-ready output",
-          lead: "Produced validated sequence results that researchers could use in Excel.",
+          title: "Candidate selection",
+          lead: "Supported guide filtering, ranking, duplicate removal, reverse complements, and kill-guide generation.",
           details: [
-            "Processed more than 18,000 FASTA files and organized the selected sequences into an exportable format."
+            "Configurable rank thresholds and guide-library rules narrow candidate sets when those modes are enabled.",
+            "Unit tests cover strand inversion, PAM discovery, mutation generation, PAM disruption, and adjacent mutations."
           ],
-          signal: "Excel delivery"
+          signal: "Strand-aware"
         },
         {
           id: "outcome",
-          title: "Result",
-          lead: "Reduced the manual research workflow by 99%.",
+          title: "Researcher-ready output",
+          lead: "Generated color-coded XLS workbooks with traceable guide, donor, mutation, and cut-site details.",
           details: [
-            "Automating file analysis, target selection, and export removed nearly all of the prior manual process."
+            "Outputs include guides, original PAMs, mutation offsets, cut-site distances, full constructs, and decision rationale."
           ],
-          signal: "99% less manual work"
+          signal: "XLS delivery"
         }
       ]
     },
     technical: {
       summary:
-        "Built a Python sequence-design pipeline with pandas, Biopython, and regular expressions.",
+        "Built a configurable Python CLI with fastaparser, regular-expression PAM discovery, codon-aware mutation rules, and XLS generation.",
       sections: [
         {
           id: "workflow",
           title: "Input processing",
-          lead: "Parsed and analyzed more than 18,000 FASTA files.",
+          lead: "Read one or more FSA or FNA records and prepared their sequences for strand-aware analysis.",
           details: [
-            "Used Biopython for biological sequence handling, pandas for tabular workflows, and regular expressions for pattern matching."
+            "The command-line interface accepts input and output options while configuration controls mutation and library behavior."
           ],
-          signal: "18,000+ FASTA files",
-          tools: ["Python", "pandas", "Biopython", "Regex"]
+          signal: "FASTA ingestion",
+          tools: ["Python", "fastaparser", "argparse"]
         },
         {
           id: "selection",
-          title: "Guide selection",
-          lead: "Selected 20-base guide sequences near NGG PAM sites.",
+          title: "PAM and guide discovery",
+          lead: "Located forward NGG and reverse-strand CCN sites, then derived 20-base guide candidates.",
           details: [
-            "Applied the selection rules across the parsed yeast DNA inputs to identify candidate guides."
+            "Regular-expression matching, reverse complements, rank thresholds, and duplicate removal refine the candidate library."
           ],
-          tools: ["Biopython", "Regex"]
+          tools: ["Regex", "Reverse complements", "Guide ranking"]
         },
         {
           id: "output",
           title: "Donor construction",
-          lead: "Built 132-base donor sequences around requested mutations.",
+          lead: "Built configurable 132-base donor templates around requested amino-acid substitutions.",
           details: [
-            "Added silent edits intended to prevent re-cutting, then validated the constructed sequence output."
+            "Codon-table and PAM-frame logic applies silent PAM or seed edits while preserving the requested protein change."
           ],
           signal: "132-base donors",
-          tools: ["Python", "Biopython"]
+          tools: ["Codon table", "PAM-frame logic", "Reverse complements"]
         },
         {
           id: "outcome",
-          title: "Output and impact",
-          lead: "Exported validated sequences to Excel and reduced manual work by 99%.",
+          title: "XLS export and testing",
+          lead: "Wrote color-coded XLS workbooks and exercised mutation logic in GitHub Actions.",
           details: [
-            "Used pandas to prepare researcher-ready output from the completed sequence-design workflow."
+            "Workbook rows retain guide, PAM, mutation, cut-site, construct, and decision details.",
+            "Unit tests cover DNA inversion, PAM discovery, mutation generation, PAM disruption, and adjacent mutation cases."
           ],
-          signal: "99% reduction",
-          tools: ["pandas", "Excel"]
+          signal: "Traceable output",
+          tools: ["xlwt", "xlrd", "xlutils", "unittest", "GitHub Actions"]
         }
       ]
     }

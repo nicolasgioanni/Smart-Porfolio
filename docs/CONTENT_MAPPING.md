@@ -130,13 +130,15 @@ Home Research cards display:
 - `home_title` with `title` fallback;
 - organization, date range, and location;
 - `home_summary` with `detail_summary` fallback;
-- at most one inferred GitHub action labelled `Source code`;
-- at most one inferred publication action labelled `Manuscript`;
-- at most one inferred website action labelled `Live demo`.
+- at most one inferred GitHub action using its authored label;
+- at most one inferred publication action using its authored label;
+- at most one inferred website action using its authored label.
 
-Those actions always appear in the order above. Home cards ignore `pending_links`, role, impact, bullets, skills, profile-only fields, image, and organization logo.
+Those action kinds always appear in the order above, while labels such as `Reference manuscript`, `Software DOI`, and `Live site` retain their precise authored meaning. Home cards ignore `pending_links`, role, impact, bullets, skills, profile-only fields, image, and organization logo.
 
-The Research route displays formal `title`, role, featured status, organization, date range, location, `detail_summary` with Home fallback, impact, bullets, skills, and every link. The current detail card does not render `image` or organization logo fields.
+The Research route gives the three established projects concise display titles, then uses `home_title` with formal `title` fallback for other IDs. It also displays a distinct formal title when appropriate, role, organization, date range, location, impact, every published link, and deduplicated pending-link labels. CytoCV, Adversarial Machine Learning, and Guide Donor Scheduler receive verified project-specific Overview and Technical narratives plus scientific SVG diagrams. Unknown research IDs fall back to `home_summary`, `detail_summary`, bullets, and skills. Content order controls the left-right visual alternation. The route does not render `image` or organization logo fields.
+
+Published links keep their authored labels and order. A pending label that matches a published label is suppressed case-insensitively. Other pending labels render as disabled status controls; the CytoCV `Manuscript` entry therefore appears as `Manuscript forthcoming` until a URL is published.
 
 ## Projects
 
