@@ -12,6 +12,7 @@ The source-controlled identity is:
 - Alternate site names, in order: `Nicolas Gioanni Portfolio`, `nicolasmgioanni.dev`
 - Language: `en-US`
 - Open Graph locale: `en_US`
+- Search favicon: the 512 x 512 profile image at `/favicon/favicon.png`, with `/favicon.ico` as a root fallback containing the same image
 
 The workbook, request headers, deployment variables, and runtime hostnames do not control this identity. Preview and `pages.dev` deployments therefore continue to declare URLs on `nicolasmgioanni.dev` as canonical.
 
@@ -55,6 +56,10 @@ Indexable pages emit `index, follow`. Contact emits `noindex, follow`. Googlebot
 
 All pages retain their configured title and description behavior and receive the source-controlled application, author, creator, and publisher identity. Open Graph uses the canonical page URL, `website` type, `en_US`, the preferred site name, and the existing profile image when configured. Twitter uses a summary card with the same page identity and available image.
 
+The homepage advertises the profile image as a typed 512 x 512 PNG favicon and also exposes a conventional root ICO fallback. Both assets use the same profile photo shown by the site header. The sitemap does not select the favicon, and a web app manifest is not required for Google Search favicon discovery.
+
+Search engines cache favicon choices independently from the page. After a favicon deployment, confirm that both favicon URLs return successful image responses, then request homepage indexing with Search Console's URL Inspection tool. Google documents that recrawling and processing can take several days to several weeks, and meeting the favicon requirements does not guarantee when it will appear. See Google's [favicon guidance](https://developers.google.com/search/docs/appearance/favicon-in-search).
+
 ## Homepage structured data
 
 The exported homepage contains one server-rendered JSON-LD `@graph` with exactly one node of each type:
@@ -83,6 +88,8 @@ Check these production URLs after the deployment completes:
 - `https://nicolasmgioanni.dev/privacy`
 - `https://nicolasmgioanni.dev/security`
 - `https://nicolasmgioanni.dev/contact`
+- `https://nicolasmgioanni.dev/favicon/favicon.png`
+- `https://nicolasmgioanni.dev/favicon.ico`
 
 Confirm that the two generated search files return successful responses with their expected text or XML content. Confirm that the sitemap lists exactly nine URLs. In page source, verify each page's own canonical URL and robots directive, the homepage's single JSON-LD graph, and the absence of `pages.dev` canonical URLs or Google verification markup. Contact must remain crawlable while reporting `noindex, follow`.
 

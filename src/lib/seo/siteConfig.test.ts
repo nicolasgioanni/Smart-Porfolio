@@ -5,7 +5,9 @@ import {
   CANONICAL_SITE_ORIGIN,
   OPEN_GRAPH_LOCALE,
   PREFERRED_SITE_NAME,
+  ROOT_FAVICON,
   SITE_LANGUAGE,
+  SITE_PROFILE_IMAGE,
   createCanonicalUrl,
   siteConfig
 } from "@/lib/seo/siteConfig";
@@ -18,7 +20,9 @@ describe("canonical site configuration", () => {
       preferredName: PREFERRED_SITE_NAME,
       alternateNames: ALTERNATE_SITE_NAMES,
       language: SITE_LANGUAGE,
-      openGraphLocale: OPEN_GRAPH_LOCALE
+      openGraphLocale: OPEN_GRAPH_LOCALE,
+      profileImage: SITE_PROFILE_IMAGE,
+      rootFavicon: ROOT_FAVICON
     });
     expect(CANONICAL_SITE_ORIGIN).toBe("https://nicolasmgioanni.dev");
     expect(CANONICAL_HOMEPAGE_URL).toBe("https://nicolasmgioanni.dev/");
@@ -26,6 +30,12 @@ describe("canonical site configuration", () => {
     expect(ALTERNATE_SITE_NAMES).toEqual(["Nicolas Gioanni Portfolio", "nicolasmgioanni.dev"]);
     expect(SITE_LANGUAGE).toBe("en-US");
     expect(OPEN_GRAPH_LOCALE).toBe("en_US");
+    expect(SITE_PROFILE_IMAGE).toEqual({
+      path: "/favicon/favicon.png",
+      type: "image/png",
+      sizes: "512x512"
+    });
+    expect(ROOT_FAVICON).toEqual({ path: "/favicon.ico", type: "image/x-icon" });
   });
 
   it("constructs canonical homepage and detail URLs", () => {

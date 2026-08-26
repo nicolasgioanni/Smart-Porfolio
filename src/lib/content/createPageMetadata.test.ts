@@ -28,11 +28,44 @@ describe("createPageMetadata", () => {
     expect(metadata.authors).toEqual([{ name: "Nicolas Gioanni", url: "https://nicolasmgioanni.dev/" }]);
     expect(metadata.creator).toBe("Nicolas Gioanni");
     expect(metadata.publisher).toBe("Nicolas Gioanni");
-    expect(metadata.icons).toEqual([{ rel: "icon", url: content.profile.faviconImage }]);
+    expect(metadata.icons).toEqual({
+      icon: [
+        {
+          url: "/favicon/favicon.png",
+          type: "image/png",
+          sizes: "512x512"
+        }
+      ],
+      shortcut: [{ url: "/favicon.ico", type: "image/x-icon" }]
+    });
     expect(metadata.robots).toEqual({
       index: true,
       follow: true,
       googleBot: googleBotIndexingDirectives
+    });
+  });
+
+  it("keeps the source-controlled profile icon independent of content data", () => {
+    const metadata = createPageMetadata(
+      {
+        ...content,
+        profile: {
+          ...content.profile,
+          faviconImage: "/images/profile/portrait-placeholder.png"
+        }
+      },
+      { pathname: siteRoutes.home }
+    );
+
+    expect(metadata.icons).toEqual({
+      icon: [
+        {
+          url: "/favicon/favicon.png",
+          type: "image/png",
+          sizes: "512x512"
+        }
+      ],
+      shortcut: [{ url: "/favicon.ico", type: "image/x-icon" }]
     });
   });
 
