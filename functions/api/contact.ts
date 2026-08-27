@@ -49,6 +49,9 @@ export async function onRequest(context: PagesContext<ContactEnv>): Promise<Resp
   if (parsed.kind === "spam") {
     return jsonResponse(200, { ok: true });
   }
+  if (parsed.kind === "expired") {
+    return jsonResponse(409, { ok: false, error: "request_expired" });
+  }
   if (parsed.kind === "invalid") {
     return jsonResponse(400, { ok: false, error: "invalid_request" });
   }

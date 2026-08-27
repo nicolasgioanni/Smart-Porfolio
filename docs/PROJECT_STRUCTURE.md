@@ -15,7 +15,8 @@ Smart-Porfolio/
 |       |-- contact.ts
 |       `-- contact/verify.ts
 |-- migrations/
-|   `-- 0001_contact_rate_reservations.sql
+|   |-- 0001_contact_rate_reservations.sql
+|   `-- 0002_contact_payload_fingerprint.sql
 |-- public/
 |   |-- _headers
 |   |-- _routes.json

@@ -3,7 +3,7 @@ export const contactFieldLimits = {
   lastName: 80,
   email: 254,
   phone: 40,
-  message: 3000
+  message: 500
 } as const;
 
 export type ContactDraft = {
@@ -28,6 +28,8 @@ export const initialContactDraft: ContactDraft = {
 };
 
 const emailLocalPattern = /^[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+$/i;
+const emailAsciiTldPattern = /^[a-z]{2,63}$/;
+const emailPunycodeTldPattern = /^xn--[a-z0-9](?:[a-z0-9-]{0,57}[a-z0-9])$/;
 const phonePattern = /^[0-9A-Za-z+().,\-\s/#*]+$/;
 
 function requiredError(value: string, message: string): string | undefined {
@@ -45,12 +47,8 @@ export function validateDetailsStep(draft: ContactDraft): ContactFieldErrors {
   const email = draft.email.trim();
   const phone = draft.phone.trim();
   const phoneDigitCount = phone.replace(/\D/g, "").length;
-  let emailError = requiredError(email, "Enter your email address");
+  const emailError = validateEmailField(email);
   let phoneError: string | undefined;
-
-  if (!emailError && !isValidEmail(email)) {
-    emailError = "Enter a valid email address";
-  }
 
   if (phone && (!phonePattern.test(phone) || phoneDigitCount < 7 || phoneDigitCount > 20)) {
     phoneError = "Enter a valid phone number";
@@ -59,11 +57,21 @@ export function validateDetailsStep(draft: ContactDraft): ContactFieldErrors {
   return {
     email: emailError,
     phone: phoneError,
-    message: requiredError(draft.message, "Enter a message")
+    message:
+      requiredError(draft.message, "Enter a message") ??
+      (draft.message.trim().length > contactFieldLimits.message
+        ? `Keep your message to ${contactFieldLimits.message} characters or fewer`
+        : undefined)
   };
 }
 
-function isValidEmail(value: string): boolean {
+export function validateEmailField(value: string): string | undefined {
+  const email = value.trim();
+  if (!email) return "Enter your email address";
+  return isValidEmail(email) ? undefined : "Enter a valid email address";
+}
+
+export function isValidEmail(value: string): boolean {
   if (!value || value.length > contactFieldLimits.email || /\s/.test(value)) return false;
 
   const atIndex = value.lastIndexOf("@");
@@ -76,9 +84,21 @@ function isValidEmail(value: string): boolean {
   }
   if (domain.length > 253 || !domain.includes(".")) return false;
 
-  return domain.split(".").every((label) => {
+  const labels = domain.split(".");
+  const labelsAreValid = labels.every((label) => {
     return Boolean(label && label.length <= 63 && /^[a-z0-9-]+$/.test(label) && !label.startsWith("-") && !label.endsWith("-"));
   });
+  if (!labelsAreValid) return false;
+
+  const topLevelDomain = labels.at(-1) ?? "";
+  if (emailAsciiTldPattern.test(topLevelDomain)) return true;
+  if (!emailPunycodeTldPattern.test(topLevelDomain)) return false;
+
+  try {
+    return new URL(`https://${topLevelDomain}`).hostname === topLevelDomain;
+  } catch {
+    return false;
+  }
 }
 
 export function hasFieldErrors(errors: ContactFieldErrors): boolean {

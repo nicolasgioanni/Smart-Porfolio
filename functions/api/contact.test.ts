@@ -7,6 +7,7 @@ import {
   MAX_REQUEST_BYTES,
   createContactTicket,
   createEmailMessages,
+  parseContactPayload,
   reserveContactSubmission,
   validateEmailDomain,
   type ContactEnv,
@@ -23,10 +24,12 @@ const configuredReplyToEmail = "ngioanni@uw.edu";
 const submissionId = "4e57585c-9638-4c1e-8f2f-7bd4c5a7c6e9";
 const otherSubmissionId = "92d8fa8c-93dd-4b65-821b-33b9867b389f";
 const thirdSubmissionId = "76c85491-ff24-44c6-ab99-8e553ec02c6a";
+const validStartedAt = Date.now() - 5_000;
 
 interface ReservationRow {
   submission_id: string;
   email_hash: string;
+  payload_hash: string | null;
   reserved_at: number;
   expires_at: number;
 }
@@ -87,7 +90,13 @@ class FakeContactDatabase implements ContactRateLimitDatabase {
     }
 
     if (query.startsWith("INSERT INTO contact_rate_reservations")) {
-      const [id, emailHash, reservedAt, expiresAt] = statement.values as [string, string, number, number];
+      const [id, emailHash, payloadHash, reservedAt, expiresAt] = statement.values as [
+        string,
+        string,
+        string,
+        number,
+        number
+      ];
       const existing = this.rows.get(id);
       const activeCount = [...this.rows.values()].filter(
         (row) => row.email_hash === emailHash && row.expires_at > reservedAt
@@ -96,6 +105,7 @@ class FakeContactDatabase implements ContactRateLimitDatabase {
         this.rows.set(id, {
           submission_id: id,
           email_hash: emailHash,
+          payload_hash: payloadHash,
           reserved_at: reservedAt,
           expires_at: expiresAt
         });
@@ -161,8 +171,7 @@ function validPayload(overrides: Record<string, unknown> = {}): ContactPayload {
     message: "I would like to discuss a professional opportunity.",
     contactConsent: true,
     legalConsent: true,
-    legitimateConsent: true,
-    startedAt: Date.now() - 5_000,
+    startedAt: validStartedAt,
     website: "",
     ...overrides
   } as ContactPayload;
@@ -201,6 +210,63 @@ function mxResponse(exchange = "10 mx.example.com."): Response {
 function resendAccepted(id: string): Response {
   return Response.json({ id });
 }
+
+describe("contact payload validation", () => {
+  it("accepts exactly 500 message characters and rejects 501", () => {
+    const now = validStartedAt + 5_000;
+    const accepted = parseContactPayload(validPayload({ message: "x".repeat(500) }), now);
+    const rejected = parseContactPayload(validPayload({ message: "x".repeat(501) }), now);
+
+    expect(accepted).toMatchObject({ kind: "valid", payload: { message: "x".repeat(500) } });
+    expect(rejected).toEqual({ kind: "invalid" });
+  });
+
+  it("distinguishes an expired two-hour draft from malformed timing data", () => {
+    const now = validStartedAt + 2 * 60 * 60 * 1_000 + 1;
+
+    expect(parseContactPayload(validPayload(), now)).toEqual({ kind: "expired" });
+    expect(parseContactPayload(validPayload({ email: "invalid" }), now)).toEqual({ kind: "invalid" });
+    expect(parseContactPayload(validPayload({ startedAt: now + 31_000 }), now)).toEqual({ kind: "invalid" });
+  });
+
+  it.each([
+    "person@example.co",
+    "PERSON@EXAMPLE.COM",
+    "person@sub.example.co.uk",
+    "person@example.xn--p1ai"
+  ])("accepts a deliverable-looking domain suffix in %s", (email) => {
+    expect(parseContactPayload(validPayload({ email }), validStartedAt + 5_000).kind).toBe("valid");
+  });
+
+  it.each([
+    "person@example",
+    "person@example.",
+    "person@example.c",
+    "person@example.123",
+    "person@example.c0",
+    "person@example.xn--abc",
+    "person@192.0.2.1",
+    "person@example..com",
+    "person@-example.com",
+    "person@example-.com"
+  ])("rejects an invalid or missing domain suffix in %s", (email) => {
+    expect(parseContactPayload(validPayload({ email }), validStartedAt + 5_000)).toEqual({ kind: "invalid" });
+  });
+
+  it("requires both canonical consent flags as literal true and rejects the retired field", () => {
+    for (const overrides of [
+      { contactConsent: false },
+      { contactConsent: "true" },
+      { contactConsent: undefined },
+      { legalConsent: false },
+      { legalConsent: "true" },
+      { legalConsent: undefined },
+      { legitimateConsent: true }
+    ]) {
+      expect(parseContactPayload(validPayload(overrides), validStartedAt + 5_000)).toEqual({ kind: "invalid" });
+    }
+  });
+});
 
 describe("Cloudflare contact function security boundary", () => {
   it("allows POST only and returns non-cacheable generic responses", async () => {
@@ -281,6 +347,20 @@ describe("Cloudflare contact function security boundary", () => {
     expect(rateLimitDatabase.rows).toHaveLength(0);
   });
 
+  it("returns a distinct recovery response for a draft older than two hours", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await invoke(
+      requestFor(validPayload({ startedAt: Date.now() - 2 * 60 * 60 * 1_000 - 1 }))
+    );
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({ ok: false, error: "request_expired" });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(rateLimitDatabase.rows).toHaveLength(0);
+  });
+
   it.each([
     ["ticket signing secret", { TURNSTILE_SECRET_KEY: "" }],
     ["origin allowlist", { CONTACT_ALLOWED_ORIGINS: "" }],
@@ -353,9 +433,9 @@ describe("email-domain validation", () => {
     const fetchMock = vi.fn().mockResolvedValue(mxResponse());
     vi.stubGlobal("fetch", fetchMock);
 
-    await expect(validateEmailDomain("Avery@Example.com")).resolves.toEqual({ kind: "valid" });
+    await expect(validateEmailDomain("Avery@Example.co")).resolves.toEqual({ kind: "valid" });
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock.mock.calls[0]?.[0]).toContain("name=example.com&type=MX");
+    expect(fetchMock.mock.calls[0]?.[0]).toContain("name=example.co&type=MX");
   });
 
   it("rejects null MX and NXDOMAIN results", async () => {
@@ -442,14 +522,18 @@ describe("email-domain validation", () => {
 describe("pseudonymous rolling quota", () => {
   it("allows exactly two active IDs, normalizes email case/whitespace, and returns the earliest retry time", async () => {
     const now = Date.UTC(2026, 7, 30, 12, 0, 0);
-    const first = await reserveContactSubmission({ submissionId, email: " Avery@Example.com " }, env, now);
+    const first = await reserveContactSubmission(
+      validPayload({ submissionId, email: " Avery@Example.com " }),
+      env,
+      now
+    );
     const second = await reserveContactSubmission(
-      { submissionId: otherSubmissionId, email: "avery@example.com" },
+      validPayload({ submissionId: otherSubmissionId, email: "avery@example.com" }),
       env,
       now + 1_000
     );
     const third = await reserveContactSubmission(
-      { submissionId: thirdSubmissionId, email: "AVERY@example.com" },
+      validPayload({ submissionId: thirdSubmissionId, email: "AVERY@example.com" }),
       env,
       now + 2_000
     );
@@ -463,15 +547,22 @@ describe("pseudonymous rolling quota", () => {
     expect(rateLimitDatabase.rows).toHaveLength(2);
     for (const row of rateLimitDatabase.rows.values()) {
       expect(row.email_hash).toMatch(/^[A-Za-z0-9_-]{43}$/);
+      expect(row.payload_hash).toMatch(/^[A-Za-z0-9_-]{43}$/);
       expect(JSON.stringify(row)).not.toContain("avery@example.com");
+      expect(JSON.stringify(row)).not.toContain("professional opportunity");
     }
   });
 
-  it("treats a same-ID same-email retry as free and rejects a changed email", async () => {
+  it("treats a same-ID identical-payload retry as free and rejects a changed email", async () => {
     const now = Date.UTC(2026, 7, 30, 12, 0, 0);
-    const first = await reserveContactSubmission({ submissionId, email: "avery@example.com" }, env, now);
-    const retry = await reserveContactSubmission({ submissionId, email: "AVERY@example.com" }, env, now + 5_000);
-    const mismatch = await reserveContactSubmission({ submissionId, email: "other@example.com" }, env, now + 6_000);
+    const payload = validPayload();
+    const first = await reserveContactSubmission(payload, env, now);
+    const retry = await reserveContactSubmission({ ...payload }, env, now + 5_000);
+    const mismatch = await reserveContactSubmission(
+      { ...payload, email: "other@example.com" },
+      env,
+      now + 6_000
+    );
 
     expect(first.kind).toBe("reserved");
     expect(retry).toEqual(first);
@@ -479,13 +570,41 @@ describe("pseudonymous rolling quota", () => {
     expect(rateLimitDatabase.rows).toHaveLength(1);
   });
 
+  it.each([
+    ["first name", { firstName: "Morgan" }],
+    ["last name", { lastName: "Lee" }],
+    ["phone", { phone: "+1 425 555 0100" }],
+    ["message", { message: "This is a different inquiry." }],
+    ["start time", { startedAt: validStartedAt - 1_000 }]
+  ])("rejects a same-ID retry with a changed %s", async (_field, override) => {
+    const now = Date.UTC(2026, 7, 30, 12, 0, 0);
+    const payload = validPayload();
+
+    await expect(reserveContactSubmission(payload, env, now)).resolves.toMatchObject({ kind: "reserved" });
+    await expect(
+      reserveContactSubmission({ ...payload, ...override } as ContactPayload, env, now + 1_000)
+    ).resolves.toEqual({ kind: "mismatch" });
+    expect(rateLimitDatabase.rows).toHaveLength(1);
+  });
+
+  it("fails closed when a migrated reservation has no payload fingerprint", async () => {
+    const now = Date.UTC(2026, 7, 30, 12, 0, 0);
+    const payload = validPayload();
+    await reserveContactSubmission(payload, env, now);
+    const row = rateLimitDatabase.rows.get(submissionId);
+    if (!row) throw new Error("Expected the initial reservation.");
+    row.payload_hash = null;
+
+    await expect(reserveContactSubmission(payload, env, now + 1_000)).resolves.toEqual({ kind: "mismatch" });
+  });
+
   it("removes expired reservations and permits a fresh rolling-window submission", async () => {
     const now = Date.UTC(2026, 7, 30, 12, 0, 0);
-    await reserveContactSubmission({ submissionId, email: "avery@example.com" }, env, now);
-    await reserveContactSubmission({ submissionId: otherSubmissionId, email: "avery@example.com" }, env, now + 1_000);
+    await reserveContactSubmission(validPayload(), env, now);
+    await reserveContactSubmission(validPayload({ submissionId: otherSubmissionId }), env, now + 1_000);
 
     const afterExpiry = await reserveContactSubmission(
-      { submissionId: thirdSubmissionId, email: "avery@example.com" },
+      validPayload({ submissionId: thirdSubmissionId }),
       env,
       now + CONTACT_RATE_LIMIT_WINDOW_SECONDS * 1_000
     );
@@ -499,7 +618,7 @@ describe("pseudonymous rolling quota", () => {
     const now = Date.UTC(2026, 7, 30, 12, 0, 0);
     const results = await Promise.all(
       [submissionId, otherSubmissionId, thirdSubmissionId].map((id) =>
-        reserveContactSubmission({ submissionId: id, email: "avery@example.com" }, env, now)
+        reserveContactSubmission(validPayload({ submissionId: id }), env, now)
       )
     );
 
@@ -581,8 +700,9 @@ describe("sequential contact delivery", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const cookie = await ticketCookie();
-    const first = await invoke(requestFor(validPayload(), { cookie }));
-    const retry = await invoke(requestFor(validPayload(), { cookie }));
+    const payload = validPayload();
+    const first = await invoke(requestFor(payload, { cookie }));
+    const retry = await invoke(requestFor(payload, { cookie }));
 
     expect(first.status).toBe(502);
     expect(first.headers.get("Set-Cookie")).toBeNull();
@@ -597,6 +717,29 @@ describe("sequential contact delivery", () => {
       `portfolio-contact/visitor/${submissionId}`,
       `portfolio-contact/owner/${submissionId}`
     ]);
+  });
+
+  it("rejects a changed payload after a partial delivery without making another Resend request", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(mxResponse())
+      .mockResolvedValueOnce(resendAccepted("visitor-id"))
+      .mockResolvedValueOnce(Response.json({ message: "temporary failure" }, { status: 500 }))
+      .mockResolvedValueOnce(mxResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    const cookie = await ticketCookie();
+    const payload = validPayload();
+    const first = await invoke(requestFor(payload, { cookie }));
+    const changed = await invoke(
+      requestFor({ ...payload, message: "A different valid message." }, { cookie })
+    );
+
+    expect(first.status).toBe(502);
+    expect(changed.status).toBe(400);
+    expect(await changed.json()).toEqual({ ok: false, error: "invalid_request" });
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(fetchMock.mock.calls.filter(([url]) => url === "https://api.resend.com/emails")).toHaveLength(2);
   });
 
   it("maps domain, D1, mismatch, and quota outcomes without sending email", async () => {
@@ -619,7 +762,7 @@ describe("sequential contact delivery", () => {
     expect(await d1Unavailable.json()).toEqual({ ok: false, error: "service_unavailable" });
     rateLimitDatabase.fail = false;
 
-    await reserveContactSubmission({ submissionId, email: "first@example.com" }, env);
+    await reserveContactSubmission(validPayload({ email: "first@example.com" }), env);
     vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(mxResponse()));
     const mismatch = await invoke(
       requestFor(validPayload({ email: "second@example.com" }), { cookie: await ticketCookie() })
@@ -629,8 +772,8 @@ describe("sequential contact delivery", () => {
   });
 
   it("returns 429 with Retry-After after two rolling-window reservations", async () => {
-    await reserveContactSubmission({ submissionId, email: "avery@example.com" }, env);
-    await reserveContactSubmission({ submissionId: otherSubmissionId, email: "avery@example.com" }, env);
+    await reserveContactSubmission(validPayload(), env);
+    await reserveContactSubmission(validPayload({ submissionId: otherSubmissionId }), env);
     const fetchMock = vi.fn().mockResolvedValueOnce(mxResponse());
     vi.stubGlobal("fetch", fetchMock);
 

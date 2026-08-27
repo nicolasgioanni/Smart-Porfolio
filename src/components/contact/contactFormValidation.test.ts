@@ -4,6 +4,7 @@ import {
   hasFieldErrors,
   initialContactDraft,
   validateDetailsStep,
+  validateEmailField,
   validateNameStep,
   type ContactDraft
 } from "@/components/contact/contactFormValidation";
@@ -39,6 +40,53 @@ describe("contact form validation", () => {
     );
   });
 
+  it("validates a trimmed email independently for on-blur feedback", () => {
+    expect(validateEmailField("   ")).toBe("Enter your email address");
+    expect(validateEmailField("not-an-email")).toBe("Enter a valid email address");
+    expect(validateEmailField("  person@example.com  ")).toBeUndefined();
+  });
+
+  it("accepts common, multi-label, and valid internationalized email domains", () => {
+    for (const email of ["person@example.co", "person@dept.example.com", "person@example.xn--p1ai"]) {
+      expect(validateEmailField(email)).toBeUndefined();
+    }
+  });
+
+  it("rejects incomplete provider-like and invalid top-level domains", () => {
+    for (const email of [
+      "person@gmai",
+      "person@hotma",
+      "person@tooooo",
+      "person@example.c",
+      "person@example.123",
+      "person@example.c0m"
+    ]) {
+      expect(validateEmailField(email)).toBe("Enter a valid email address");
+    }
+  });
+
+  it("rejects malformed punycode, address literals, and malformed domain labels", () => {
+    for (const email of [
+      "person@example.xn--",
+      "person@example.xn---abc",
+      "person@127.0.0.1",
+      "person@[127.0.0.1]",
+      "person@example..com",
+      "person@example.com.",
+      "person@-example.com",
+      "person@example-.com"
+    ]) {
+      expect(validateEmailField(email)).toBe("Enter a valid email address");
+    }
+  });
+
+  it("rejects messages longer than the compact 500-character contract", () => {
+    expect(validateDetailsStep(draft({ email: "person@example.com", message: "a".repeat(500) })).message).toBeUndefined();
+    expect(validateDetailsStep(draft({ email: "person@example.com", message: "a".repeat(501) })).message).toBe(
+      "Keep your message to 500 characters or fewer"
+    );
+  });
+
   it("accepts international-friendly phone formatting and rejects malformed or implausible values", () => {
     for (const phone of ["+44 20 7946 0958", "+1 (425) 555-0123", "425-555-0123 x204"]) {
       expect(validateDetailsStep(draft({ email: "person@example.com", message: "Hello", phone })).phone).toBeUndefined();
@@ -52,6 +100,6 @@ describe("contact form validation", () => {
   });
 
   it("publishes the same field limits enforced by the form and endpoint contract", () => {
-    expect(contactFieldLimits).toEqual({ firstName: 80, lastName: 80, email: 254, phone: 40, message: 3000 });
+    expect(contactFieldLimits).toEqual({ firstName: 80, lastName: 80, email: 254, phone: 40, message: 500 });
   });
 });
