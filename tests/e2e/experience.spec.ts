@@ -67,8 +67,9 @@ test.describe("Experience showcase", () => {
 
     await architecture.click();
     await expect(architecture).toHaveAttribute("aria-expanded", "true");
-    await expect(cytocvCard.getByRole("list", { name: "Application architecture tools" })).toBeVisible();
-    await expect(cytocvCard.getByText("PostgreSQL", { exact: true })).toBeVisible();
+    const architectureTools = cytocvCard.getByRole("list", { name: "Application architecture tools" });
+    await expect(architectureTools).toBeVisible();
+    await expect(architectureTools.getByText("PostgreSQL", { exact: true })).toBeVisible();
 
     await vision.click();
     await expect(architecture).toHaveAttribute("aria-expanded", "false");

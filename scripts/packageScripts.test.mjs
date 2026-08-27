@@ -53,6 +53,12 @@ describe("package and CI deployment automation", () => {
     expect(packageJson.scripts["test:e2e:recommendations"]).toBe(
       "playwright test recommendations.spec.ts --project=chromium"
     );
+    expect(packageJson.scripts["test:e2e:experience"]).toBe(
+      "playwright test experience.spec.ts --project=chromium"
+    );
+    expect(packageJson.scripts["test:e2e:research"]).toBe(
+      "playwright test research.spec.ts --project=chromium"
+    );
   });
 
   it("keeps a stable verify job across branch, daily, and forced-manual triggers", async () => {
@@ -109,6 +115,8 @@ describe("package and CI deployment automation", () => {
     expect(verifyJob).toContain("run: npm run test:e2e:navigation");
     expect(verifyJob).toContain("run: npm run test:e2e:footer");
     expect(verifyJob).toContain("run: npm run test:e2e:recommendations");
+    expect(verifyJob).toContain("run: npm run test:e2e:experience");
+    expect(verifyJob).toContain("run: npm run test:e2e:research");
     expect(verifyJob).toContain("run: npm run test");
     expect(pullRequestBuild).toContain("run: npm run build:generated");
     expect(pullRequestGeneration).not.toContain("secrets.");
@@ -218,7 +226,9 @@ describe("package and CI deployment automation", () => {
       "Install Chromium for browser regressions",
       "Browser navigation regression tests",
       "Browser footer regression tests",
-      "Browser recommendation regression tests"
+      "Browser recommendation regression tests",
+      "Browser experience regression tests",
+      "Browser research regression tests"
     ]) {
       expect(verifyJob).toMatch(
         new RegExp(`- name: ${stepName}\\s+if: steps\\.decision\\.outputs\\.should_verify == 'true'`)
