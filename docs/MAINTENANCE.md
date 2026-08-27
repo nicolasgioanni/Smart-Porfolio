@@ -217,7 +217,7 @@ The stable required job is `verify`. Preserve:
 - environment-specific D1 target validation and migration-before-upload ordering;
 - per-target concurrency and latest-branch-head guards for both production and stable preview;
 - smoke testing after upload;
-- isolated heartbeat writes only.
+- develop-only heartbeat writes, including the existing-branch, single-path, and race-rejection guards.
 
 Update `scripts/packageScripts.test.mjs` or a focused script test for every workflow invariant that can be checked statically. Run the complete test suite because workflow tests are included by Vitest.
 
