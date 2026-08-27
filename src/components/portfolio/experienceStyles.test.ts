@@ -17,7 +17,9 @@ describe("shared detail styles", () => {
     expect(accessoryRule).toMatch(/top:\s*var\(--space-4\)/);
     expect(accessoryRule).toMatch(/right:\s*var\(--space-4\)/);
     expect(switchRule).toMatch(/width:\s*12\.25rem/);
-    expect(buttonRule).toMatch(/min-height:\s*34px/);
+    expect(buttonRule).toMatch(/min-width:\s*44px/);
+    expect(buttonRule).toMatch(/min-height:\s*44px/);
+    expect(detailStyles).not.toMatch(/@media \(pointer: coarse\)[\s\S]*\.detail-mode-switch__button/);
   });
 
   it("returns the control to document flow when the intro copy needs the width", () => {

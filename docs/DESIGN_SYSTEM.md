@@ -178,7 +178,7 @@ The shared `Overview` and `Technical` selector changes all research narratives a
 
 The dedicated Experience route combines its heading, spreadsheet-backed summary, and page-wide detail control in one strong glass introduction panel. The same compact `Overview` and `Technical` selector used by Research is inset at the panel's top-right edge on desktop, while the heading and summary retain the remaining width. The selector swaps the narrative depth for every logo-led role card while identity metadata remains stable.
 
-The segmented selector uses one translated glass lens, measures 12.25rem, and keeps a 34px desktop button height with a 44px coarse-pointer target. Below `760px`, the selector returns to document flow beneath the summary without expanding to the panel width. On small screens, evidence returns to the full card width and result signals move below their disclosure summaries. Each collapsed evidence row communicates its central fact; expansion adds context and tools tied to that row, and only one row per role remains open.
+The segmented selector uses one translated glass lens, measures 12.25rem, and keeps each mode button at least 44 by 44 CSS pixels for every pointer capability. Below `760px`, the selector returns to document flow beneath the summary without expanding to the panel width. On small screens, evidence returns to the full card width and result signals move below their disclosure summaries. Each collapsed evidence row communicates its central fact; expansion adds context and tools tied to that row, and only one row per role remains open.
 
 ## Skills
 

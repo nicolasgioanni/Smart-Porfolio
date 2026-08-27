@@ -66,6 +66,13 @@ test.describe("Experience showcase", () => {
     await expect(introSurface.getByText("Detail", { exact: true })).toBeVisible();
     await expect(modeGroup.getByRole("button", { name: "Overview" })).toHaveAttribute("aria-pressed", "true");
 
+    for (const detailButton of await modeGroup.getByRole("button").all()) {
+      const detailButtonBox = await detailButton.boundingBox();
+      expect(detailButtonBox).not.toBeNull();
+      expect(detailButtonBox!.width).toBeGreaterThanOrEqual(44);
+      expect(detailButtonBox!.height).toBeGreaterThanOrEqual(44);
+    }
+
     const [headingBox, summaryBox, modeBox, introBox] = await Promise.all([
       pageHeading.boundingBox(),
       pageSummary.boundingBox(),
@@ -141,7 +148,8 @@ test.describe("Experience showcase", () => {
 
     const technicalButton = modeSwitch.getByRole("button", { name: "Technical", exact: true });
     await expect(technicalButton).toBeVisible();
-    expect((await technicalButton.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(34);
+    expect((await technicalButton.boundingBox())?.width ?? 0).toBeGreaterThanOrEqual(44);
+    expect((await technicalButton.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
 
     const firstDisclosure = cards.locator("button.detail-section__trigger").first();
     if (await firstDisclosure.count()) {
