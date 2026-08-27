@@ -136,7 +136,7 @@ Pull-request runs use the checked-in recommendation templates and exercise every
 
 | Test | What it verifies |
 | --- | --- |
-| `scripts/packageScripts.test.mjs` | Node and tool pins, workflow triggers, single-snapshot conditions, branch isolation, permissions, exact-candidate no-op behavior, artifact transfer, target validation, heartbeat boundaries, no-cache metadata, and Wrangler invocation |
+| `scripts/packageScripts.test.mjs` | Node and tool pins, workflow triggers, single-snapshot conditions, branch isolation, permissions, exact-candidate no-op behavior, artifact transfer, target validation, develop-only heartbeat boundaries and race rejection, no-cache metadata, and Wrangler invocation |
 | `scripts/checkDeployedContent.test.mjs` | Independent deployed content and commit comparison, missing or malformed manifest behavior, and post-deployment smoke requests with exact contact Function method rejection |
 | Artifact tests inside `scripts/packageScripts.test.mjs` | Content-version creation, hidden file inclusion, manifest structure, commit binding, digest verification, and tamper rejection |
 | `scripts/localAutomation.test.mjs` | Project discovery, environment copy safety, dependency-state hashing, stale content, and port selection |
