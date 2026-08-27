@@ -12,6 +12,7 @@ import LoadingResume from "@/app/resume/loading";
 import LoadingSecurity from "@/app/security/loading";
 import LoadingTerms from "@/app/terms/loading";
 import { HomePageSkeleton } from "@/components/loading/HomePageSkeleton";
+import { legalSkeletonProfiles } from "@/components/loading/LegalPageSkeleton";
 import { PageSkeleton } from "@/components/loading/PageSkeleton";
 import { RouteSkeleton, routeSkeletons, skeletonRoutePaths } from "@/components/loading/RouteSkeleton";
 import { SkeletonBlock } from "@/components/loading/SkeletonBlock";
@@ -53,6 +54,7 @@ describe("skeleton components", () => {
     );
 
     expect(screen.getByLabelText("Loading page")).toHaveAttribute("aria-busy", "true");
+    expect(screen.getAllByTestId("skeleton-block")[0]).toHaveStyle({ height: "34px" });
   });
 
   it("renders Home page skeleton without real content text", () => {
@@ -60,6 +62,15 @@ describe("skeleton components", () => {
 
     expect(container.textContent).toBe("");
     expect(container.querySelectorAll(".home-skeleton__skill-group")).toHaveLength(3);
+    expect(Array.from(container.querySelectorAll("[data-skeleton-section]")).map((section) => section.getAttribute("data-skeleton-section"))).toEqual([
+      "experience",
+      "education",
+      "research",
+      "projects",
+      "skills",
+      "recommendations"
+    ]);
+    expect(container.querySelectorAll('[data-skeleton-section="education"] .home-skeleton__row')).toHaveLength(1);
   });
 
   it("renders one combined Experience intro skeleton without a separate page header", () => {
@@ -68,8 +79,15 @@ describe("skeleton components", () => {
     expect(container.querySelectorAll(".experience-skeleton__intro")).toHaveLength(1);
     expect(container.querySelector(".experience-skeleton__intro-copy")).toBeInTheDocument();
     expect(container.querySelector(".experience-skeleton__intro-control")).toBeInTheDocument();
+    expect(container.querySelector(".experience-skeleton__intro-copy .skeleton-block")).toHaveStyle({ height: "44px" });
     expect(container.querySelectorAll(".experience-skeleton__card")).toHaveLength(5);
     expect(container.querySelector(".skeleton-page__header")).not.toBeInTheDocument();
+  });
+
+  it("keeps the custom Research intro title footprint independent from generic page headings", () => {
+    const { container } = render(<LoadingResearch />);
+
+    expect(container.querySelector(".research-skeleton__intro-copy .skeleton-block")).toHaveStyle({ height: "44px" });
   });
 
   it("covers every declared route with a local loading boundary and registered composition", () => {
@@ -89,13 +107,31 @@ describe("skeleton components", () => {
     }
   });
 
-  it("keeps the shared legal composition aligned across all legal routes", () => {
-    for (const pathname of ["/terms", "/privacy", "/security"] as const) {
+  it("keeps shared legal sections route-faithful through registered row profiles", () => {
+    const expectedSectionCounts = {
+      "/terms": 7,
+      "/privacy": 8,
+      "/security": 7
+    } as const;
+
+    expect(Object.keys(legalSkeletonProfiles)).toEqual(Object.keys(expectedSectionCounts));
+
+    for (const [pathname, expectedSectionCount] of Object.entries(expectedSectionCounts) as [
+      keyof typeof expectedSectionCounts,
+      number
+    ][]) {
       const { container, unmount } = render(<RouteSkeleton pathname={pathname} />);
 
       expect(container.querySelector(".skeleton-page--legal")).toBeInTheDocument();
       expect(container.querySelector(".legal-skeleton")).toBeInTheDocument();
-      expect(container.querySelectorAll(".legal-skeleton__section")).toHaveLength(6);
+      expect(routeSkeletons[pathname]).toBeDefined();
+      expect(legalSkeletonProfiles[pathname]).toHaveLength(expectedSectionCount);
+      expect(container.querySelectorAll(".legal-skeleton__section")).toHaveLength(expectedSectionCount);
+      expect(
+        Array.from(container.querySelectorAll(".legal-skeleton__section .skeleton-text")).map(
+          (section) => section.querySelectorAll(".skeleton-block").length
+        )
+      ).toEqual(legalSkeletonProfiles[pathname].map((section) => section.rows));
       unmount();
     }
   });

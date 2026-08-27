@@ -163,7 +163,9 @@
 
 .home-skeleton__hero {
   display: grid;
-  grid-template-areas: "profile details";
+  grid-template-areas:
+    "profile introduction"
+    "profile details";
   grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
   column-gap: clamp(var(--space-10), 5vw, 3.5rem);
   padding: clamp(var(--space-10), 5vw, 3.5rem);
@@ -197,6 +199,7 @@
 }
 
 .home-skeleton__introduction {
+  grid-area: introduction;
   gap: var(--space-2);
   padding-bottom: 28px;
 }
@@ -469,7 +472,11 @@
   .detail-card-skeleton,
   .resume-skeleton,
   .contact-skeleton,
-  .legal-skeleton
+  .legal-skeleton,
+  .experience-skeleton__intro,
+  .experience-skeleton__card,
+  .research-skeleton__intro,
+  .research-skeleton__project
 ) {
   backdrop-filter: none;
 }
@@ -509,6 +516,25 @@
     padding: var(--space-6);
   }
 
+  .home-skeleton__hero {
+    grid-template-areas:
+      "profile"
+      "introduction"
+      "details";
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-8);
+  }
+
+  .home-skeleton__profile {
+    max-width: 320px;
+    justify-self: center;
+    width: 100%;
+  }
+
+  .home-skeleton__card-grid,
+  .detail-card-skeleton-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 @media (max-width: 860px) {
@@ -528,26 +554,6 @@
     width: min(100% - 24px, 980px);
   }
 
-  .home-skeleton__hero {
-    grid-template-areas:
-      "profile"
-      "details";
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--space-8);
-  }
-
-  .home-skeleton__profile {
-    max-width: 320px;
-    justify-self: center;
-    width: 100%;
-  }
-
-  .home-skeleton__academic-grid,
-  .home-skeleton__card-grid,
-  .home-skeleton__skill-grid,
-  .detail-card-skeleton-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 @media (max-width: 720px) {
@@ -560,7 +566,16 @@
     padding: var(--space-5);
   }
 
+  .home-skeleton__hero {
+    grid-template-areas:
+      "introduction"
+      "profile"
+      "details";
+    gap: var(--space-6);
+  }
+
   .home-skeleton__academic-grid {
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--space-5);
     margin-top: var(--space-5);
   }

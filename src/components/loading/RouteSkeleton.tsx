@@ -2,7 +2,7 @@ import type { ComponentType } from "react";
 import { ContactPageSkeleton } from "@/components/loading/ContactPageSkeleton";
 import { ExperiencePageSkeleton } from "@/components/loading/ExperiencePageSkeleton";
 import { HomePageSkeleton } from "@/components/loading/HomePageSkeleton";
-import { LegalPageSkeleton } from "@/components/loading/LegalPageSkeleton";
+import { LegalPageSkeleton, legalSkeletonProfiles } from "@/components/loading/LegalPageSkeleton";
 import { ProjectsPageSkeleton } from "@/components/loading/ProjectsPageSkeleton";
 import { RecommendationsPageSkeleton } from "@/components/loading/RecommendationsPageSkeleton";
 import { ResearchPageSkeleton } from "@/components/loading/ResearchPageSkeleton";
@@ -10,6 +10,18 @@ import { ResumePageSkeleton } from "@/components/loading/ResumePageSkeleton";
 import { siteRoutes, type SiteRoutePath } from "@/components/navigation/siteRoutes";
 
 type RouteSkeletonComponent = ComponentType;
+
+function TermsPageSkeleton() {
+  return <LegalPageSkeleton sectionProfiles={legalSkeletonProfiles[siteRoutes.terms]} />;
+}
+
+function PrivacyPageSkeleton() {
+  return <LegalPageSkeleton sectionProfiles={legalSkeletonProfiles[siteRoutes.privacy]} />;
+}
+
+function SecurityPageSkeleton() {
+  return <LegalPageSkeleton sectionProfiles={legalSkeletonProfiles[siteRoutes.security]} />;
+}
 
 export const routeSkeletons = {
   [siteRoutes.home]: HomePageSkeleton,
@@ -19,9 +31,9 @@ export const routeSkeletons = {
   [siteRoutes.recommendations]: RecommendationsPageSkeleton,
   [siteRoutes.resume]: ResumePageSkeleton,
   [siteRoutes.contact]: ContactPageSkeleton,
-  [siteRoutes.terms]: LegalPageSkeleton,
-  [siteRoutes.privacy]: LegalPageSkeleton,
-  [siteRoutes.security]: LegalPageSkeleton
+  [siteRoutes.terms]: TermsPageSkeleton,
+  [siteRoutes.privacy]: PrivacyPageSkeleton,
+  [siteRoutes.security]: SecurityPageSkeleton
 } as const satisfies Readonly<Record<SiteRoutePath, RouteSkeletonComponent>>;
 
 export const skeletonRoutePaths = Object.freeze(Object.keys(routeSkeletons) as SiteRoutePath[]);
