@@ -60,6 +60,12 @@ The theme disclosure fades and settles over `200ms` with opacity and transform. 
 
 Theme selection updates colors without closing the panel. Reduced motion preserves visibility and selection without settle transitions.
 
+## Modal dialogs
+
+Shared modal entry and exit use opacity plus a small consumer-configurable translation or scale over `180ms`. `src/styles/dialog.css` owns the lifecycle selectors so profile, skill, and media consumers do not duplicate timing or open-and-close state. Consumers may adjust geometry and the two entry-transform custom properties, but they must not add independent lifecycle timers.
+
+Reduced motion removes the transition and entry transform while preserving portal rendering, focus containment, dismissal, scroll locking, and focus restoration.
+
 ## Mobile navigation rail
 
 At `max-width: 980px`, route links followed by GitHub, LinkedIn, Email, and theme controls remain in one native horizontal rail. After each pathname loads, automatic motion waits exactly `3000ms`. If the rail overflows and has not been touched, it returns to the Home edge over `420ms`, then drifts at approximately `20px` per second and reverses at each boundary. Controls are never cloned or reordered, and the motion has no live announcement.

@@ -18,6 +18,7 @@ Smart Portfolio uses a restrained glass-inspired visual language to organize evi
 | Document and type defaults | `src/styles/base.css` |
 | Shell, pages, header, and footer | `src/styles/layout.css` |
 | Glass primitives and controls | `src/styles/glass.css` and `src/components/glass/` |
+| Modal lifecycle and motion | `src/styles/dialog.css` and `src/components/overlay/ModalDialog.tsx` |
 | Navigation and theme disclosure | `src/styles/navigation.css` and navigation components |
 | Portfolio pages and cards | `src/styles/portfolio.css`, `src/styles/detail.css`, `src/styles/experience.css`, `src/styles/research.css`, and portfolio components |
 | Interaction states | `src/styles/interactions.css` |
@@ -184,7 +185,7 @@ The segmented selector uses one translated glass lens, measures 12.25rem, and ke
 
 Home groups selected skills by `category` and `category_order`. The published content currently produces three cards with four skills each. A skill with the complete proficiency, summary, and evidence set renders as a button that opens the shared dialog. Incomplete legacy detail sets render as static badges.
 
-The shared dialog is modal, traps focus, closes through Escape, backdrop, or button, restores trigger focus, and removes background scrolling. Project cards reuse the same interaction contract for configured project-specific skills.
+The shared portal-backed dialog is modal, traps focus, closes through Escape, backdrop, or button, restores trigger focus, and removes background scrolling. Profile previews and project cards reuse the same interaction contract. Each consumer owns only its content, accessible label, initial-focus target, and visual geometry.
 
 ## Recommendations
 
