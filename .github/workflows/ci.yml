@@ -32,13 +32,13 @@ jobs:
       should_deploy: ${{ steps.decision.outputs.should_deploy }}
     steps:
       - name: Check out the exact candidate
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'main' || github.sha }}
           fetch-depth: 0
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
@@ -227,7 +227,7 @@ jobs:
 
       - name: Upload the exact verified static export
         if: steps.decision.outputs.should_deploy == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: cloudflare-pages-build
           path: out/
@@ -247,13 +247,13 @@ jobs:
       cancel-in-progress: true
     steps:
       - name: Check out the exact verified candidate
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ needs.verify.outputs.candidate_sha }}
           fetch-depth: 0
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
@@ -262,7 +262,7 @@ jobs:
         run: npm ci
 
       - name: Download the immutable verified export
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: cloudflare-pages-build
           path: out
@@ -322,13 +322,13 @@ jobs:
       cancel-in-progress: false
     steps:
       - name: Check out main without modifying it
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: main
           fetch-depth: 0
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
 
