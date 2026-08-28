@@ -1,4 +1,8 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import {
+  expectDisclosureFocusToKeepRestingElevation,
+  findFirstExpandableCard
+} from "./cardFocusElevation";
 
 async function settleLayout(page: Page) {
   await page.waitForLoadState("networkidle");
@@ -201,5 +205,19 @@ test.describe("Research showcase", () => {
       expect(panelId).toBeTruthy();
       await expect(page.locator(`#${panelId}`)).toHaveCSS("transition-duration", "0s");
     }
+  });
+
+  test("keeps expanded projects at rest after focus and scrolling in every palette", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto("/research");
+    await settleLayout(page);
+
+    const projects = await expectResearchProjectsOrEmptyState(page);
+    if (!projects) return;
+
+    const project = await findFirstExpandableCard(projects);
+    test.skip(!project, "Focus elevation regression requires an expandable Research project.");
+
+    await expectDisclosureFocusToKeepRestingElevation(page, project!);
   });
 });
