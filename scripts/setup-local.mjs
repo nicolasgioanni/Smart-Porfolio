@@ -51,9 +51,7 @@ async function main() {
   console.log(`npm: ${npmVersion}`);
 
   const nodeMajorVersion = getNodeMajorVersion(nodeVersion);
-  if (nodeMajorVersion < 20) {
-    console.warn("Warning: Node 20 or newer is recommended for this project.");
-  } else if (nodeMajorVersion === 20 && getNodeMinorVersion(nodeVersion) < 19) {
+  if (nodeMajorVersion < 20 || (nodeMajorVersion === 20 && getNodeMinorVersion(nodeVersion) < 19)) {
     console.warn("Warning: Node 20.19 or newer avoids engine warnings from some development dependencies.");
   }
 

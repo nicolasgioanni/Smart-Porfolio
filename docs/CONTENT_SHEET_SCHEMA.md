@@ -1,8 +1,8 @@
 ﻿# Content Sheet Schema
 
-This portfolio uses public-safe spreadsheet content as the source of truth. Each logical sheet can be exported as CSV and converted into typed JSON during the build.
+This portfolio uses public-safe spreadsheet content as the source of truth. One public Google Sheets workbook supplies nine logical tabs as CSV and is converted into typed JSON during the build.
 
-## Required sheets
+## Required public workbook tabs
 
 - `profile`: global key-value profile facts.
 - `links`: external and local links used across the site.
@@ -12,8 +12,9 @@ This portfolio uses public-safe spreadsheet content as the source of truth. Each
 - `recommendations`: professional recommendations and verification links.
 - `education`: education entries used across portfolio surfaces.
 - `skills`: grouped skills used across portfolio surfaces.
-- `resume`: reserved local-only compatibility sheet. Keep `src/content/templates/resume.csv` empty except for its header while the Resume route is private.
 - `site_settings`: safe UI and selection configuration.
+
+Tab-name matching is case-insensitive and tab order does not matter. Do not create or publish a `resume` tab. `src/content/templates/resume.csv` remains an empty, header-only local compatibility source while the Resume route is private.
 
 ## Field rules
 
@@ -300,36 +301,27 @@ Detail pages contain longer explanations, full bullets, technical context, impac
 - `featured=true` prioritizes an eligible item above non-featured items.
 - Home page item counts are limited by `site_settings` values.
 
-## Publishing Google Sheets as CSV
+## Sharing one workbook for anonymous XLSX download
 
-1. Create one tab per logical sheet.
-2. Use the field names in this document as the header row.
-3. Select `File`, then `Share`, then `Publish to web`.
-4. Choose the tab and CSV output.
-5. Copy the published CSV URL.
-6. Store the URL in the matching environment variable listed below. Do not create or publish a resume tab; that source is intentionally the empty local template.
+1. In your own browser, create one blank Google Sheets workbook. This project does not need or request access to your Drive account.
+2. Manually import each of the nine matching files from `src/content/templates` into its own named tab. Do not import `resume.csv`.
+3. Preserve the documented field names as row one, and review every value for anonymous public release.
+4. After reviewing the workbook, use `Share` > `General access`, select `Anyone with the link`, and keep the role at `Viewer`. Do not authorize a connector, Google API credential, OAuth application, or service account.
+5. Configure an anonymous HTTPS XLSX export URL in `PORTFOLIO_WORKBOOK_URL`. The generator downloads the complete workbook once, matches worksheet titles with `trim().toLowerCase()`, and rejects missing, duplicate, unexpected, `resume`, hidden, or very-hidden worksheets. No per-tab URL, Google API, or account credential is used.
 
 ## Environment variables
 
-- `PORTFOLIO_PROFILE_CSV_URL`
-- `PORTFOLIO_LINKS_CSV_URL`
-- `PORTFOLIO_RESEARCH_CSV_URL`
-- `PORTFOLIO_PROJECTS_CSV_URL`
-- `PORTFOLIO_EXPERIENCE_CSV_URL`
-- `PORTFOLIO_RECOMMENDATIONS_CSV_URL`
-- `PORTFOLIO_EDUCATION_CSV_URL`
-- `PORTFOLIO_SKILLS_CSV_URL`
-- `PORTFOLIO_SITE_SETTINGS_CSV_URL`
+- `PORTFOLIO_WORKBOOK_URL`
 - `PORTFOLIO_REQUIRE_REMOTE_CONTENT`
 
-Put local values in the ignored `.env` created from the tracked, placeholder-only `.env.example`. Production build values remain configured separately in the Cloudflare Pages dashboard.
+Put local values in the ignored `.env` created from the tracked, placeholder-only `.env.example`. Configure `PORTFOLIO_WORKBOOK_URL` as a GitHub repository variable for production; Cloudflare does not build or fetch spreadsheet content.
 
-When `PORTFOLIO_REQUIRE_REMOTE_CONTENT=true`, missing CSV URLs for the remotely configurable sheets fail the content generation step. The empty local resume template is intentionally exempt because it has no remote source. This helps prevent accidental demo-content deployments without reopening the private resume surface.
+When `PORTFOLIO_REQUIRE_REMOTE_CONTENT=true`, a missing or invalid workbook source fails content generation. The empty local resume template is intentionally exempt because it has no remote source. GitHub Actions hard-codes this setting for production candidates to prevent fallback-content deployments without reopening the private resume surface.
 
 ## Updating the portfolio
 
-1. Edit the local CSV templates or the published Google Sheet.
-2. Keep configured remote CSV publish links public and accessible.
+1. Edit the local CSV templates or one of the nine published Google Sheet tabs.
+2. Keep the configured workbook public and anonymously readable.
 3. Run `npm run generate:content`; validation and normalization write `src/content/generated/portfolio.generated.json`.
-4. Review and commit the source and regenerated JSON together, then rebuild or redeploy.
+4. For local template work, review and commit the source and regenerated JSON together. For production workbook edits, let the daily or manual GitHub workflow verify and deploy the exact tested artifact; do not commit generated deployment state.
 5. Static pages render from generated JSON with no runtime spreadsheet request. Never maintain generated JSON by hand.

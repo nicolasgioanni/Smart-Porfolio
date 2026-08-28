@@ -2,11 +2,11 @@
 
 ## Prerequisites
 
-- Node.js 20 or newer is recommended.
+- Node.js 20.19 or newer is required. Node.js 22 LTS matches GitHub Actions.
 - npm is required.
 - PowerShell is recommended on Windows.
 
-The project uses npm, Next.js App Router, static export, a build-time CSV content generator, and one Cloudflare Pages Function for contact delivery. Core pages need no runtime server, database, authentication, or runtime Google Sheets request. Run Wrangler when testing the complete `/contact` flow.
+The project uses npm, Next.js App Router, static export, a build-time CSV/XLSX content generator, and one Cloudflare Pages Function for contact delivery. Core pages need no runtime server, database, authentication, or runtime Google Sheets request. Run Wrangler when testing the complete `/contact` flow.
 
 ## Clone and enter the project
 
@@ -28,7 +28,7 @@ This command:
 - Finds the project root.
 - Checks Node and npm.
 - Prints detected versions.
-- Warns when Node is older than 20.
+- Warns when Node is older than 20.19.
 - Uses `npm ci` when `package-lock.json` exists.
 - Uses `npm install` when `package-lock.json` is missing.
 - Skips install when dependencies and setup hashes are current.
@@ -95,9 +95,9 @@ npx --yes wrangler@4.86.0 pages dev out --env-file .env
 
 Wrangler serves the project at `http://localhost:8788` by default. The checked-in example therefore allows `localhost` and `127.0.0.1` as Turnstile hostnames and lists both matching port-8788 origins. Remove any origin you do not use. Rebuild after changing `NEXT_PUBLIC_TURNSTILE_SITE_KEY` because Next.js compiles public values into the browser bundle.
 
-Cloudflare's dummy Turnstile response uses the action `test`. This application deliberately requires `portfolio_contact`, so use a development widget that returns the configured action for end-to-end local testing; do not weaken production action validation to accommodate a dummy token. A Pages preview with an explicitly configured hostname and origin is another safe end-to-end option.
+Cloudflare's dummy Turnstile response uses the action `test`. This application deliberately requires `portfolio_contact`, so use a development widget that returns the configured action for end-to-end local testing; do not weaken production action validation to accommodate a dummy token. A Pages preview with its own `NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY`, hostname, origin, and runtime secret is another safe end-to-end option. When that preview key is blank, the preview contact form remains unavailable rather than using production credentials.
 
-Wrangler receives local Function values explicitly through `--env-file .env`; Next.js and the build-time content generator read the same file. The package script pins the Wrangler version for reproducible local behavior. This consolidation is local-only. Production and preview values must still be configured separately in the Cloudflare Pages dashboard, with sensitive values stored as encrypted secrets. See Cloudflare's [Pages local-development](https://developers.cloudflare.com/pages/functions/local-development/) and [bindings/secrets](https://developers.cloudflare.com/pages/functions/bindings/) documentation.
+Wrangler receives local Function values explicitly through `--env-file .env`; Next.js and the build-time content generator read the same file. The package script pins the Wrangler version for reproducible local behavior. This consolidation is local-only. Production build-time public values are GitHub repository variables, the direct-upload credential is held in GitHub Actions secrets, and Pages Function runtime values are configured separately in Cloudflare with sensitive values stored as encrypted secrets. See Cloudflare's [Pages local-development](https://developers.cloudflare.com/pages/functions/local-development/) and [bindings/secrets](https://developers.cloudflare.com/pages/functions/bindings/) documentation.
 
 ## Verification
 
@@ -164,13 +164,13 @@ Build the static export:
 npm run build
 ```
 
-The static output is written to `out/` by Next.js. A plain static file server is sufficient for page-only inspection. Use `npm run dev:pages` (or `npx wrangler pages dev out --env-file .env`) when the test must include `/api/contact`; it also exercises the checked-in `_routes.json` and `_headers` deployment files.
+The static output is written to `out/` by Next.js. A plain static file server is sufficient for page-only inspection. Use `npm run dev:pages` (or `npx --no-install wrangler pages dev out --env-file .env`) when the test must include `/api/contact`; it also exercises the checked-in `_routes.json` and `_headers` deployment files.
 
 ## Troubleshooting
 
 ### node not found
 
-Install Node.js 20 or newer and open a new terminal.
+Install Node.js 20.19 or newer and open a new terminal. Node.js 22 LTS matches GitHub Actions.
 
 ### npm not found
 

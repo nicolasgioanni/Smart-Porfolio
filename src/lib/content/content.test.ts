@@ -38,6 +38,7 @@ import { formatDateRange } from "@/lib/formatting/formatDateRange";
 
 const metadata: GeneratedContentMetadata = {
   generatedAt: "2026-01-01T00:00:00.000Z",
+  contentHash: "0".repeat(64),
   sourceMode: "templates",
   sources: {
     profile: "template",
