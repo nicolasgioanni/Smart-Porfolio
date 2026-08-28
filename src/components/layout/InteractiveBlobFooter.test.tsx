@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { renderToString } from "react-dom/server";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 import { InteractiveBlobFooter } from "@/components/layout/InteractiveBlobFooter";
 
 const navigationMock = vi.hoisted(() => ({ pathname: "/" }));
@@ -10,8 +10,8 @@ vi.mock("next/navigation", () => ({
 
 type ObserverRecord = {
   callback: IntersectionObserverCallback;
-  disconnect: ReturnType<typeof vi.fn>;
-  observe: ReturnType<typeof vi.fn>;
+  disconnect: Mock<IntersectionObserver["disconnect"]>;
+  observe: Mock<IntersectionObserver["observe"]>;
   options?: IntersectionObserverInit;
   targets: Set<Element>;
 };
@@ -23,10 +23,10 @@ class MockIntersectionObserver implements IntersectionObserver {
   readonly rootMargin: string;
   readonly thresholds: readonly number[];
   callback: IntersectionObserverCallback;
-  disconnect = vi.fn();
-  observe: ReturnType<typeof vi.fn>;
-  takeRecords = vi.fn((): IntersectionObserverEntry[] => []);
-  unobserve: ReturnType<typeof vi.fn>;
+  disconnect: Mock<IntersectionObserver["disconnect"]> = vi.fn();
+  observe: Mock<IntersectionObserver["observe"]>;
+  takeRecords: Mock<IntersectionObserver["takeRecords"]> = vi.fn((): IntersectionObserverEntry[] => []);
+  unobserve: Mock<IntersectionObserver["unobserve"]>;
 
   constructor(callback: IntersectionObserverCallback, options?: IntersectionObserverInit) {
     const targets = new Set<Element>();
@@ -35,8 +35,12 @@ class MockIntersectionObserver implements IntersectionObserver {
     this.root = options?.root ?? null;
     this.rootMargin = options?.rootMargin ?? "0px";
     this.thresholds = Array.isArray(options?.threshold) ? options.threshold : [options?.threshold ?? 0];
-    this.observe = vi.fn((target: Element) => targets.add(target));
-    this.unobserve = vi.fn((target: Element) => targets.delete(target));
+    this.observe = vi.fn((target: Element) => {
+      targets.add(target);
+    });
+    this.unobserve = vi.fn((target: Element) => {
+      targets.delete(target);
+    });
 
     observerRecords.push({
       callback,

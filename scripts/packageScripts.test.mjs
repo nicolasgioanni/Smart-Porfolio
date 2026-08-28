@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { createArtifactManifest, verifyArtifactManifest } from "./artifactIntegrity.mjs";
+import { resolvePagesDeploymentUrl } from "./checkDeployedContent.mjs";
 import { readContentVersion, writeContentVersion } from "./writeContentVersion.mjs";
 
 const projectRoot = path.resolve(import.meta.dirname, "..");
@@ -23,14 +24,15 @@ describe("package and CI deployment automation", () => {
     const packageJson = JSON.parse(await readFile(path.join(projectRoot, "package.json"), "utf8"));
     const nvmVersion = (await readFile(path.join(projectRoot, ".nvmrc"), "utf8")).trim();
 
-    expect(packageJson.engines.node).toBe(">=20.19.0");
+    expect(packageJson.engines.node).toBe(">=22.13.0");
     expect(nvmVersion).toBe("22");
     expect(packageJson.scripts.build).toBe("next build && node scripts/writeContentVersion.mjs");
     expect(packageJson.scripts["build:generated"]).toBe(
       "next build && node scripts/writeContentVersion.mjs"
     );
     expect(packageJson.scripts["dev:pages"]).toContain("npx --no-install wrangler");
-    expect(packageJson.devDependencies.wrangler).toBe("4.86.0");
+    expect(packageJson.devDependencies.wrangler).toBe("4.127.0");
+    expect(packageJson.devDependencies.vitest).toBe("4.1.11");
     expect(packageJson.scripts["test:footer"]).toBe(
       "vitest run src/components/layout/InteractiveBlobFooter.test.tsx src/components/layout/footerStyles.test.ts"
     );
@@ -50,6 +52,8 @@ describe("package and CI deployment automation", () => {
     expect(workflow).toContain(
       "ref: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'main' || github.sha }}"
     );
+    expect(workflow).toContain("pages_domain: ${{ steps.pages.outputs.pages_domain }}");
+    expect(workflow).toContain("pages_project_name: ${{ steps.pages.outputs.pages_project_name }}");
     expect(workflow).not.toContain("pull_request_target:");
     expect(workflow).not.toContain("always()");
     expect(workflow).not.toContain("continue-on-error");
@@ -88,6 +92,16 @@ describe("package and CI deployment automation", () => {
     expect(verifyJob).toContain('PORTFOLIO_REQUIRE_REMOTE_CONTENT: "true"');
     expect(verifyJob).not.toContain("PORTFOLIO_GOOGLE_SHEET_URL");
     expect(verifyJob).not.toMatch(/PORTFOLIO_[A-Z_]+_CSV_URL/);
+    expect(verifyJob).toContain("Validate the immutable Cloudflare Pages target");
+    expect(verifyJob).toContain(
+      '[[ "$CLOUDFLARE_PAGES_PROJECT_NAME" != "smart-portfolio" ]]'
+    );
+    expect(verifyJob).toContain(
+      '[[ "$CLOUDFLARE_PAGES_DOMAIN" != "smart-portfolio-bds.pages.dev" ]]'
+    );
+    expect(verifyJob.indexOf("Validate the immutable Cloudflare Pages target")).toBeLessThan(
+      verifyJob.indexOf("Fetch and generate the strict public workbook snapshot once")
+    );
     expect(verifyJob.indexOf("run: npm run generate:content")).toBeLessThan(
       verifyJob.indexOf("run: npm run lint")
     );
@@ -124,7 +138,14 @@ describe("package and CI deployment automation", () => {
 
     expect(verifyJob).toContain("Compare the validated snapshot with production");
     expect(verifyJob).toContain("node scripts/checkDeployedContent.mjs compare");
-    expect(verifyJob).toContain("https://${CLOUDFLARE_PAGES_PROJECT_NAME}.pages.dev");
+    expect(verifyJob).toContain("CLOUDFLARE_PAGES_DOMAIN: ${{ steps.pages.outputs.pages_domain }}");
+    expect(verifyJob).toContain(
+      'node scripts/checkDeployedContent.mjs url "$CLOUDFLARE_PAGES_DOMAIN" main'
+    );
+    expect(verifyJob).toContain(
+      "(github.event_name == 'workflow_dispatch' && inputs.force_deploy == false)"
+    );
+    expect(verifyJob).not.toContain("https://${CLOUDFLARE_PAGES_PROJECT_NAME}.pages.dev");
     expect(verifyJob).toContain('"${FORCE_DEPLOY:-false}" == "true"');
     expect(verifyJob).toContain('"${DEPLOYED_CONTENT_MATCHES:-false}" != "true"');
 
@@ -158,6 +179,14 @@ describe("package and CI deployment automation", () => {
     expect(deployJob).toContain("group: cloudflare-${{ needs.verify.outputs.deploy_target }}");
     expect(deployJob).toContain("cancel-in-progress: true");
     expect(deployJob).toContain("Recheck the deployment branch immediately before Wrangler");
+    expect(deployJob).toContain(
+      "CLOUDFLARE_PAGES_PROJECT_NAME: ${{ needs.verify.outputs.pages_project_name }}"
+    );
+    expect(deployJob).toContain(
+      "CLOUDFLARE_PAGES_DOMAIN: ${{ needs.verify.outputs.pages_domain }}"
+    );
+    expect(deployJob).not.toContain("vars.CLOUDFLARE_PAGES_PROJECT_NAME");
+    expect(deployJob).not.toContain("vars.CLOUDFLARE_PAGES_DOMAIN");
     expect(deployJob).toContain("npx --no-install wrangler pages deploy out");
     expect(deployJob).not.toContain("npx --yes");
     expect(deployJob).toContain('--branch "$CANDIDATE_BRANCH"');
@@ -171,6 +200,10 @@ describe("package and CI deployment automation", () => {
     expect(verifyJob).toContain('deploy_target="preview"');
     expect(verifyJob).toContain('candidate_branch="$GITHUB_REF_NAME"');
     expect(deployJob).toContain("node scripts/checkDeployedContent.mjs smoke");
+    expect(deployJob).toContain(
+      'node scripts/checkDeployedContent.mjs url "$CLOUDFLARE_PAGES_DOMAIN" "$CANDIDATE_BRANCH"'
+    );
+    expect(deployJob).not.toContain(".${CLOUDFLARE_PAGES_PROJECT_NAME}.pages.dev");
     expect(deployJob.indexOf("Recheck the deployment branch immediately before Wrangler")).toBeLessThan(
       deployJob.indexOf("npx --no-install wrangler pages deploy out")
     );
@@ -217,16 +250,38 @@ describe("package and CI deployment automation", () => {
       expect(serializedConfig).not.toContain(secretName);
     }
     expect(wranglerConfig.vars.TURNSTILE_ALLOWED_HOSTNAMES).toBe(
-      "smart-portfolio.pages.dev,nicolasmgioanni.dev,www.nicolasmgioanni.dev"
+      "smart-portfolio-bds.pages.dev,nicolasmgioanni.dev,www.nicolasmgioanni.dev"
     );
     expect(wranglerConfig.vars.CONTACT_ALLOWED_ORIGINS).toBe(
-      "https://smart-portfolio.pages.dev,https://nicolasmgioanni.dev,https://www.nicolasmgioanni.dev"
+      "https://smart-portfolio-bds.pages.dev,https://nicolasmgioanni.dev,https://www.nicolasmgioanni.dev"
     );
     expect(wranglerConfig.env.preview.vars.TURNSTILE_ALLOWED_HOSTNAMES).toBe(
-      "develop.smart-portfolio.pages.dev"
+      "develop.smart-portfolio-bds.pages.dev"
     );
     expect(wranglerConfig.env.preview.vars.CONTACT_ALLOWED_ORIGINS).toBe(
-      "https://develop.smart-portfolio.pages.dev"
+      "https://develop.smart-portfolio-bds.pages.dev"
+    );
+  });
+
+  it("resolves the assigned Cloudflare Pages domain independently from the project name", () => {
+    expect(resolvePagesDeploymentUrl("smart-portfolio-bds.pages.dev", "main")).toBe(
+      "https://smart-portfolio-bds.pages.dev"
+    );
+    expect(resolvePagesDeploymentUrl("smart-portfolio-bds.pages.dev", "develop")).toBe(
+      "https://develop.smart-portfolio-bds.pages.dev"
+    );
+
+    for (const invalidDomain of [
+      "",
+      "smart-portfolio.pages.dev/path",
+      "https://smart-portfolio-bds.pages.dev",
+      "SMART-PORTFOLIO-BDS.pages.dev",
+      "smart-portfolio-bds.example.com"
+    ]) {
+      expect(() => resolvePagesDeploymentUrl(invalidDomain, "main")).toThrow(/pages\.dev hostname/);
+    }
+    expect(() => resolvePagesDeploymentUrl("smart-portfolio-bds.pages.dev", "feature")).toThrow(
+      /main or develop/
     );
   });
 

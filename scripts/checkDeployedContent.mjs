@@ -7,6 +7,16 @@ import { parseContentVersion } from "./writeContentVersion.mjs";
 
 const contentHashPattern = /^[a-f0-9]{64}$/;
 const gitShaPattern = /^[a-f0-9]{40}$/;
+const pagesDomainPattern = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.pages\.dev$/;
+
+export function resolvePagesDeploymentUrl(pagesDomain, branch) {
+  if (typeof pagesDomain !== "string" || !pagesDomainPattern.test(pagesDomain)) {
+    throw new Error("Cloudflare Pages domain must be a lowercase pages.dev hostname without a scheme or path");
+  }
+  if (branch === "main") return `https://${pagesDomain}`;
+  if (branch === "develop") return `https://develop.${pagesDomain}`;
+  throw new Error("Cloudflare Pages deployment branch must be main or develop");
+}
 
 function normalizeBaseUrl(value) {
   let url;
@@ -124,10 +134,14 @@ export async function smokeDeployment(baseUrl, artifactDirectory, expectedConten
 
 async function runCli() {
   const [command, ...args] = process.argv.slice(2);
+  if (command === "url" && args.length === 2) {
+    console.log(resolvePagesDeploymentUrl(...args));
+    return;
+  }
   if (command === "compare" && args.length === 3) return compareDeployedContent(...args);
   if (command === "smoke" && args.length === 4) return smokeDeployment(...args);
   throw new Error(
-    "Usage: node scripts/checkDeployedContent.mjs compare <base-url> <content-hash> <cache-bust> | smoke <base-url> <artifact-directory> <content-hash> <commit-sha>"
+    "Usage: node scripts/checkDeployedContent.mjs url <pages-domain> <main|develop> | compare <base-url> <content-hash> <cache-bust> | smoke <base-url> <artifact-directory> <content-hash> <commit-sha>"
   );
 }
 
