@@ -52,7 +52,7 @@ Cloudflare Pages `_headers` rules do not apply to Function-generated responses. 
 
 The workbook URL and all nine worksheets are intentionally public content sources. The downloaded workbook must contain exactly the expected visible worksheets and no hidden, unexpected, duplicate, or `resume` sheet. Do not store secrets, private recommendation text, credentials, unpublished contact details, private resume files or access links, or sensitive personal data in worksheet cells or workbook metadata.
 
-Treat the XLSX file as untrusted input even though its URL is configured by the repository owner. The generator enforces HTTPS, a fixed timeout and byte limit, HTML/login-page rejection, XLSX ZIP validation, exact worksheet structure, cached formula results, headers, row shape, and the existing content schema before build. It does not log the workbook URL, Google identifiers, or response metadata.
+Treat the XLSX file as untrusted input even though its URL is configured by the repository owner. The generator enforces HTTPS, a fixed timeout and byte limit, HTML/login-page rejection, XLSX ZIP validation, exact worksheet structure, cached formula results, headers, row shape, and the existing content schema before build. It does not log the workbook URL, Google identifiers, or response metadata. GitHub Actions registers the configured workbook URL for masking before the strict generation step so later runner output redacts it.
 
 Generated JSON is a transient build input in deployment workflows. The tested `out/` artifact carries a digest and a public-safe `/content-version.json`; no generated snapshot or deployment state is committed to `main`.
 

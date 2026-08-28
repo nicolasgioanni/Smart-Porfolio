@@ -102,6 +102,19 @@ describe("package and CI deployment automation", () => {
     expect(verifyJob.indexOf("Validate the immutable Cloudflare Pages target")).toBeLessThan(
       verifyJob.indexOf("Fetch and generate the strict public workbook snapshot once")
     );
+    const maskStep = verifyJob.slice(
+      verifyJob.indexOf("Mask the anonymous workbook URL"),
+      verifyJob.indexOf("Fetch and generate the strict public workbook snapshot once")
+    );
+    expect(verifyJob).toContain("Mask the anonymous workbook URL");
+    expect(maskStep).toContain("if: github.event_name != 'pull_request' && steps.candidate.outputs.is_latest == 'true'");
+    expect(maskStep).toContain("PORTFOLIO_WORKBOOK_URL: ${{ vars.PORTFOLIO_WORKBOOK_URL }}");
+    expect(maskStep).toContain('if [[ -n "${PORTFOLIO_WORKBOOK_URL:-}" ]]');
+    expect(maskStep).toContain('echo "::add-mask::$PORTFOLIO_WORKBOOK_URL"');
+    expect(maskStep).not.toContain("secrets.");
+    expect(verifyJob.indexOf("Mask the anonymous workbook URL")).toBeLessThan(
+      verifyJob.indexOf("Fetch and generate the strict public workbook snapshot once")
+    );
     expect(verifyJob.indexOf("run: npm run generate:content")).toBeLessThan(
       verifyJob.indexOf("run: npm run lint")
     );

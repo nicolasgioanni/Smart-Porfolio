@@ -533,6 +533,30 @@ describe("XLSX workbook structure and cells", () => {
     expect(second.generatedAt).toBe("2026-05-01T00:00:00.000Z");
   });
 
+  it("canonicalizes a displayed legal date before hashing and preserves generatedAt", async () => {
+    const isoBytes = await createWorkbookBytes();
+    const displayedBytes = await createWorkbookBytes({
+      mutate: (workbook) => {
+        findKeyValueCell(getWorksheet(workbook, "site_settings"), "legal_effective_date").value = "8/22/2026";
+      }
+    });
+    const { outputFile } = await createTemporaryPaths();
+    const first = await generateFromWorkbook(isoBytes, {
+      outputFile,
+      generatedAt: "2026-07-01T00:00:00.000Z"
+    });
+    const second = await generateFromWorkbook(displayedBytes, {
+      outputFile,
+      generatedAt: "2026-08-01T00:00:00.000Z"
+    });
+    const generated = JSON.parse(await readFile(outputFile, "utf8")) as GeneratedPortfolioContent;
+
+    expect(second.contentHash).toBe(first.contentHash);
+    expect(second.contentChanged).toBe(false);
+    expect(second.generatedAt).toBe("2026-07-01T00:00:00.000Z");
+    expect(generated.siteSettings.legalEffectiveDate).toBe("2026-08-22");
+  });
+
   it("fails closed on header/schema violations, private resume aliases, and unknown key rows", async () => {
     const scenarios: Array<{ bytes: Uint8Array; error: RegExp }> = [
       {

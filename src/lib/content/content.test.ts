@@ -5,6 +5,7 @@ import type { GeneratedContentMetadata } from "@/content/types";
 import { parseCsv } from "@/lib/csv/parseCsv";
 import {
   normalizeBoolean,
+  normalizeLegalEffectiveDate,
   normalizeLinkList,
   normalizeNumber,
   normalizePipeDelimitedList,
@@ -378,6 +379,15 @@ describe("portfolio normalization", () => {
   });
 
   it.each([
+    ["2026-08-22", "2026-08-22"],
+    ["8/22/2026", "2026-08-22"],
+    ["08/22/2026", "2026-08-22"],
+    ["2/29/2024", "2024-02-29"]
+  ])("normalizes a valid legal effective date from %s", (input, expected) => {
+    expect(normalizeLegalEffectiveDate(input)).toBe(expected);
+  });
+
+  it.each([
     ["label only", "CytoCV", ""],
     ["URL only", "", "https://github.com/BrentLagesse/CytoCV"]
   ])("rejects a recommendation quote link with %s", (_caseName, label, url) => {
@@ -425,6 +435,10 @@ describe("portfolio normalization", () => {
     ["license_url", "http://github.com/example/portfolio/LICENSE", /licenseUrl has an invalid URL/],
     ["legal_contact_email", "not-an-email", /legalContactEmail has an invalid email address/],
     ["legal_effective_date", "2026-02-30", /legalEffectiveDate has an invalid ISO date/],
+    ["legal_effective_date", "2/30/2026", /legalEffectiveDate has an invalid ISO date/],
+    ["legal_effective_date", "2/29/2026", /legalEffectiveDate has an invalid ISO date/],
+    ["legal_effective_date", "13/1/2026", /legalEffectiveDate has an invalid ISO date/],
+    ["legal_effective_date", "22/8/2026", /legalEffectiveDate has an invalid ISO date/],
     ["hosting_privacy_url", "http://vercel.com/legal/privacy-notice", /hostingPrivacyUrl has an invalid URL/]
   ])("rejects invalid legal setting %s", (key, value, expectedError) => {
     const sheets = createSheets();
