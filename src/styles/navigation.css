@@ -257,23 +257,13 @@
 
 
 .profile-image-preview {
-  position: fixed;
-  inset: 0;
-  z-index: 90;
-  display: grid;
-  place-items: center;
+  --modal-dialog-entry-scale: 0.98;
+  --modal-dialog-entry-y: -6px;
+
   padding: var(--space-4);
-  opacity: 0;
   background: var(--color-profile-preview-backdrop);
   backdrop-filter: blur(8px);
   cursor: pointer;
-  pointer-events: none;
-  transition: opacity 160ms ease;
-}
-
-.profile-image-preview[data-state="open"] {
-  opacity: 1;
-  pointer-events: auto;
 }
 
 .profile-image-preview__frame {
@@ -289,16 +279,6 @@
   background: var(--color-menu-surface);
   box-shadow: var(--shadow-soft);
   cursor: default;
-  opacity: 0;
-  transform: translateY(-6px) scale(0.98);
-  transition:
-    opacity 160ms ease,
-    transform 160ms ease;
-}
-
-.profile-image-preview[data-state="open"] .profile-image-preview__frame {
-  opacity: 1;
-  transform: translateY(0) scale(1);
 }
 
 .profile-image-preview__image {
@@ -873,9 +853,7 @@
   .mobile-navigation__link,
   .theme-switcher__trigger,
   .theme-switcher__popover,
-  .profile-image-preview,
   .profile-image-preview__close,
-  .profile-image-preview__frame,
   .blob-footer,
   .blob-footer__island,
   .blob-footer__details,
