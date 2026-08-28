@@ -1,74 +1,44 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
-const profilePreviewFadeMs = 160;
+import type { RefObject } from "react";
+import { useId, useRef } from "react";
+import { ModalDialog } from "@/components/overlay/ModalDialog";
 
 type ProfileImagePreviewProps = {
   alt: string;
   imageSrc: string;
   onClose: () => void;
   open: boolean;
+  restoreFocusRef: RefObject<HTMLElement>;
 };
 
-export function ProfileImagePreview({ alt, imageSrc, onClose, open }: ProfileImagePreviewProps) {
-  const [active, setActive] = useState(open);
-  const [mounted, setMounted] = useState(open);
-
-  useEffect(() => {
-    if (open) {
-      setMounted(true);
-    } else {
-      setActive(false);
-    }
-
-    const timeout = window.setTimeout(
-      () => {
-        if (open) {
-          setActive(true);
-        } else {
-          setMounted(false);
-        }
-      },
-      open ? 0 : profilePreviewFadeMs
-    );
-
-    return () => window.clearTimeout(timeout);
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose, open]);
-
-  if (!open && !mounted) return null;
-
-  const previewState = open && active ? "open" : "closed";
+export function ProfileImagePreview({ alt, imageSrc, onClose, open, restoreFocusRef }: ProfileImagePreviewProps) {
+  const dialogId = `profile-image-preview-${useId().replaceAll(":", "")}`;
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   return (
-    <div className="profile-image-preview" data-state={previewState} onClick={onClose}>
-      <div aria-label={alt} aria-modal="true" className="profile-image-preview__frame" onClick={(event) => event.stopPropagation()} role="dialog">
-        <img alt={alt} className="profile-image-preview__image" src={imageSrc} />
-        <div className="profile-image-preview__actions">
-          <button
-            aria-label="Close profile photo preview"
-            className="profile-image-preview__close hover-base-1 hover-base-1--compact"
-            onClick={onClose}
-            type="button"
-          >
-            Close
-          </button>
-        </div>
+    <ModalDialog
+      ariaLabel={alt}
+      dialogId={dialogId}
+      frameClassName="profile-image-preview__frame"
+      initialFocusRef={closeButtonRef}
+      onRequestClose={onClose}
+      open={open}
+      restoreFocusRef={restoreFocusRef}
+      rootClassName="profile-image-preview"
+    >
+      <img alt={alt} className="profile-image-preview__image" src={imageSrc} />
+      <div className="profile-image-preview__actions">
+        <button
+          aria-label="Close profile photo preview"
+          className="profile-image-preview__close hover-base-1 hover-base-1--compact"
+          onClick={onClose}
+          ref={closeButtonRef}
+          type="button"
+        >
+          Close
+        </button>
       </div>
-    </div>
+    </ModalDialog>
   );
 }

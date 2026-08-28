@@ -91,17 +91,20 @@ The recommendation route and navigation item remain discoverable only when recom
 
 - `src/components/layout/` owns page containers, header and footer composition, profile preview, and structural primitives.
 - `src/components/navigation/` owns the route registry, desktop and mobile navigation, external-link handling, active-route state, and social links.
+- `src/components/overlay/` owns reusable portal-backed modal lifecycle, focus management, dismissal, and background-scroll locking.
 - `src/components/theme/` and `src/lib/theme/` own pre-hydration and live system resolution, manual override persistence, cross-tab synchronization, and the theme disclosure.
 
 ### Portfolio components
 
 `src/components/portfolio/` contains the Home summary layer and evidence-focused route components. `HomeOverview.tsx` owns Home section order. `selectHomeContent.ts` and `profileOverview.ts` own content selection and fallback rules.
 
-Focused client behavior includes the configured role rotation, skills dialogs, recommendation measurement and expansion, optional scroll reveals, and the shared shell interactions. Content rendering remains server-generated.
+Focused client behavior includes the configured role rotation, modal media and skills dialogs, recommendation measurement and expansion, optional scroll reveals, and the shared shell interactions. Content rendering remains server-generated. Modal consumers provide their content and geometry while `src/components/overlay/ModalDialog.tsx` provides the common accessible interaction contract.
 
 ### Glass and loading primitives
 
 `src/components/glass/` owns reusable surfaces, cards, controls, links, chips, dividers, and blobs. `src/components/loading/` owns route-level skeleton composition. Components consume semantic values from `src/styles/` rather than defining theme colors locally.
+
+Shared dialog lifecycle and transition state live in `src/components/overlay/ModalDialog.tsx` and `src/styles/dialog.css`. Consumer style sheets define only domain-specific backdrop color, frame size, and internal presentation.
 
 ## Content system
 

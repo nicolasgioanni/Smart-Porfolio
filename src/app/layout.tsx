@@ -4,6 +4,7 @@ import "@/styles/tokens.css";
 import "@/styles/base.css";
 import "@/styles/layout.css";
 import "@/styles/glass.css";
+import "@/styles/dialog.css";
 import "@/styles/navigation.css";
 import "@/styles/portfolio.css";
 import "@/styles/detail.css";
