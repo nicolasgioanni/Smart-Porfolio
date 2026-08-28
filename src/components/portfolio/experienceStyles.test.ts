@@ -3,6 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 const detailStyles = readFileSync(path.join(process.cwd(), "src", "styles", "detail.css"), "utf8");
+const experienceStyles = readFileSync(path.join(process.cwd(), "src", "styles", "experience.css"), "utf8");
 
 describe("shared detail styles", () => {
   it("pins the compact detail control to the intro panel's top-right corner", () => {
@@ -52,5 +53,16 @@ describe("shared detail styles", () => {
     expect(dividerRule).toMatch(/left:\s*var\(--space-1\)/);
     expect(accentDividerRule).toMatch(/right:\s*var\(--space-1\)/);
     expect(accentDividerRule).toMatch(/left:\s*var\(--space-1\)/);
+  });
+
+  it("keeps full-card elevation exclusive to pointer hover", () => {
+    const sharedAttentionRule =
+      experienceStyles.match(/\.experience-card:hover,\s*\.experience-card:focus-within\s*\{[^}]*}/s)?.[0] ?? "";
+    const hoverElevationRule = experienceStyles.match(/\.experience-card:hover\s*\{[^}]*}/s)?.[0] ?? "";
+
+    expect(sharedAttentionRule).toMatch(/border-color:\s*var\(--color-line-strong\)/);
+    expect(sharedAttentionRule).not.toMatch(/box-shadow|transform/);
+    expect(hoverElevationRule).toMatch(/box-shadow:\s*var\(--shadow-soft\),\s*var\(--shadow-glow\)/);
+    expect(hoverElevationRule).toMatch(/transform:\s*translate3d\(0, -2px, 0\)/);
   });
 });
