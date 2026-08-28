@@ -281,11 +281,17 @@ describe("package and CI deployment automation", () => {
     expect(wranglerConfig.vars.CONTACT_ALLOWED_ORIGINS).toBe(
       "https://smart-portfolio-bds.pages.dev,https://nicolasmgioanni.dev,https://www.nicolasmgioanni.dev"
     );
+    expect(wranglerConfig.vars.CONTACT_FROM_EMAIL).toBe(
+      "Nicolas Gioanni <noreply@mail.nicolasmgioanni.dev>"
+    );
     expect(wranglerConfig.env.preview.vars.TURNSTILE_ALLOWED_HOSTNAMES).toBe(
       "develop.smart-portfolio-bds.pages.dev"
     );
     expect(wranglerConfig.env.preview.vars.CONTACT_ALLOWED_ORIGINS).toBe(
       "https://develop.smart-portfolio-bds.pages.dev"
+    );
+    expect(wranglerConfig.env.preview.vars.CONTACT_FROM_EMAIL).toBe(
+      "Nicolas Gioanni <noreply@mail.nicolasmgioanni.dev>"
     );
   });
 

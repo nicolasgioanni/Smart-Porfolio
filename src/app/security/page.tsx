@@ -49,12 +49,12 @@ export default function SecurityPage() {
         </p>
         <p>
           Email delivery uses a fixed, verified sender identity. Automated confirmation mail is sent from
-          noreply@nicolasmgioanni.dev and directs follow-up to the public ngioanni@uw.edu address. Visitor-supplied addresses
-          are used only as recipients or contact details and cannot control the message sender, reply handling, or other mail
-          headers. The private owner destination and all provider secrets remain server-side and are not returned to the
-          browser. The handler minimizes sensitive logging and fails closed when required Turnstile, validation, rate-limit,
-          email, or private-recipient configuration is unavailable. A browser widget or client-side success state alone never
-          authorizes delivery.
+          noreply@mail.nicolasmgioanni.dev and directs follow-up to the public ngioanni@uw.edu address. Visitor-supplied
+          addresses are used only as recipients or contact details and cannot control the message sender, reply handling, or
+          other mail headers. The private owner destination and all provider secrets remain server-side and are not returned
+          to the browser. The handler minimizes sensitive logging and fails closed when required Turnstile, validation,
+          rate-limit, email, or private-recipient configuration is unavailable. A browser widget or client-side success state
+          alone never authorizes delivery.
         </p>
       </section>
 
