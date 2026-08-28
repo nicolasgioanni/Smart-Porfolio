@@ -8,9 +8,11 @@ export function HomePageSkeleton() {
       <div aria-hidden="true" className="home-skeleton">
         <section className="home-skeleton__hero">
           <div className="home-skeleton__profile">
-            <SkeletonBlock className="home-skeleton__portrait" height={280} radius="999px" width={280} />
-            <SkeletonBlock height={28} width="68%" />
-            <SkeletonBlock height={16} width="42%" />
+            <div className="home-skeleton__portrait-column">
+              <SkeletonBlock className="home-skeleton__portrait" height={280} radius="999px" width={280} />
+              <SkeletonBlock height={28} width="68%" />
+              <SkeletonBlock height={16} width="42%" />
+            </div>
             <div className="home-skeleton__identity-list">
               <SkeletonBlock height={16} width="78%" />
               <SkeletonBlock height={16} width="64%" />
