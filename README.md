@@ -78,7 +78,7 @@ npm run verify:local
 
 ## Production deployment overview
 
-GitHub Actions is the only production deployment path. Pull requests run verification without deploying. A green `develop` push deploys only the protected `develop.smart-portfolio.pages.dev` preview; a green `main` push, a forced manual run, or a daily `13:17 UTC` check that detects meaningful workbook changes can deploy the Next.js static export and `/api/contact` Pages Function to production.
+GitHub Actions is the only production deployment path. Pull requests run verification without deploying. A green `develop` push deploys only the protected `develop.smart-portfolio-bds.pages.dev` preview; a green `main` push, a forced manual run, or a daily `13:17 UTC` check that detects meaningful workbook changes can deploy the Next.js static export and `/api/contact` Pages Function to production at Cloudflare's assigned `smart-portfolio-bds.pages.dev` domain.
 
 Daily checks compare normalized rendered content with the successfully deployed `/content-version.json` manifest rather than spreadsheet formatting, XLSX metadata, or generation timestamps. An unchanged workbook is a successful no-op: it does not run lint, tests, build, artifact upload, or deployment. A changed workbook must pass lint, typecheck, footer tests, the full test suite, and the static build before GitHub Actions uploads the exact tested artifact.
 

@@ -52,7 +52,7 @@ The deployed site does not fetch spreadsheet data in the browser. This avoids lo
 
 ## Cloudflare Pages fit
 
-GitHub Actions owns the content check, quality gate, static build, and Cloudflare Direct Upload. Cloudflare Git integration stays disabled. The workflow uploads the tested `out/` artifact from repository root so Wrangler also compiles the repository-level `functions/` directory, while `public/_routes.json` keeps the invocation surface limited to `/api/contact`. No database, authentication service, background job, or runtime content API is required.
+GitHub Actions owns the content check, quality gate, static build, and Cloudflare Direct Upload. Cloudflare Git integration stays disabled. The Pages project name is `smart-portfolio`, but its assigned domain is `smart-portfolio-bds.pages.dev`; `CLOUDFLARE_PAGES_DOMAIN` keeps polling and smoke-test URLs independent from the deployment project name. The workflow uploads the tested `out/` artifact from repository root so Wrangler also compiles the repository-level `functions/` directory, while `public/_routes.json` keeps the invocation surface limited to `/api/contact`. No database, authentication service, background job, or runtime content API is required.
 
 ## Green-gated content flow
 

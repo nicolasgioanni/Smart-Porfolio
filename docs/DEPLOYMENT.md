@@ -66,6 +66,7 @@ Repository variables:
 
 - `PORTFOLIO_WORKBOOK_URL`: the one anonymously downloadable HTTPS XLSX URL.
 - `CLOUDFLARE_PAGES_PROJECT_NAME`: `smart-portfolio`.
+- `CLOUDFLARE_PAGES_DOMAIN`: `smart-portfolio-bds.pages.dev`, the exact domain assigned by Cloudflare. Do not derive it from the project name.
 - `NEXT_PUBLIC_TURNSTILE_SITE_KEY`: the production public widget key.
 - `NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY`: optional public key for the `develop` preview. There is no production-key fallback.
 
@@ -109,7 +110,7 @@ wrangler pages deploy out \
   --commit-hash="$GITHUB_SHA"
 ```
 
-Its stable alias is `https://develop.smart-portfolio.pages.dev`. It cannot update the production branch or production aliases. Preview builds receive only `NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY`; when that variable is blank, the contact form is visibly unavailable instead of using the production key.
+The project name remains `smart-portfolio`, while Cloudflare's assigned Pages domain is `smart-portfolio-bds.pages.dev`. Production uses `https://smart-portfolio-bds.pages.dev`, and the stable preview alias is `https://develop.smart-portfolio-bds.pages.dev`. The workflow uses the explicit `CLOUDFLARE_PAGES_DOMAIN` variable for polling and smoke tests instead of assuming that a project name always equals its assigned hostname. The preview cannot update the production branch or production aliases. Preview builds receive only `NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY`; when that variable is blank, the contact form is visibly unavailable instead of using the production key.
 
 `wrangler.jsonc` is the reviewed Pages configuration source of truth. It pins the compatibility date and static output directory and carries only non-secret production and preview variables for exact hostnames, exact origins, sender, and fixed reply-to. Keep `TURNSTILE_SECRET_KEY`, `RESEND_API_KEY`, and `CONTACT_RECIPIENT_EMAIL` as encrypted Cloudflare secrets, configured separately for production and preview as appropriate.
 
@@ -153,10 +154,10 @@ GitHub may still display the human account associated with the scheduled workflo
 
 ## First deployment and domain cutover
 
-1. Create a Direct Upload Cloudflare Pages project named `smart-portfolio`; leave Git integration disabled.
+1. Keep the existing Direct Upload project named `smart-portfolio`; it was created with production branch `main` and assigned `smart-portfolio-bds.pages.dev`. Do not run project creation again or enable Git integration. Local Cloudflare administration requires Node.js 22.13 or newer, `npm ci`, and `npx --no-install wrangler login`.
 2. Configure the GitHub variables and secrets, encrypted Cloudflare production/preview secrets, Wrangler non-secret variables, exact Turnstile hostnames, Resend domain, and WAF rule.
-3. Manually run the workflow with `force_deploy=true`. Verify `https://smart-portfolio.pages.dev`, static routing, security headers, `/content-version.json`, artifact/commit values, and `/api/contact`. Test Turnstile and end-to-end Resend delivery.
-4. Push a safe change to `develop`; confirm only `https://develop.smart-portfolio.pages.dev` changes and its contact form is unavailable when no preview key is configured.
+3. Manually run the workflow with `force_deploy=true`. A forced first run skips only the deployed-hash comparison because no live manifest exists yet; it still performs workbook validation, every check, build, artifact verification, exact-SHA protection, deployment, and smoke tests. Verify `https://smart-portfolio-bds.pages.dev`, static routing, security headers, `/content-version.json`, artifact/commit values, and `/api/contact`. Test Turnstile and end-to-end Resend delivery.
+4. Push a safe change to `develop`; confirm only `https://develop.smart-portfolio-bds.pages.dev` changes and its contact form is unavailable when no preview key is configured.
 5. Run a non-forced manual check and confirm an unchanged workbook stops before lint, tests, build, artifact upload, or deployment.
 6. Make one safe visible workbook edit. Confirm one green deployment and a changed manifest hash, with no generated-content commit. A second non-forced run should be unchanged.
 7. Attach `nicolasmgioanni.dev` and `www` to Pages, replace the current Vercel DNS targets, wait for valid TLS, and repeat routing, Turnstile, manifest, contact-delivery, sender, and reply-to tests on every allowed hostname.
