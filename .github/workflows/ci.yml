@@ -299,7 +299,7 @@ jobs:
           --branch "$CANDIDATE_BRANCH"
           --commit-hash "$CANDIDATE_SHA"
 
-      - name: Smoke test static content, integrity metadata, and the contact API
+      - name: Smoke test static content, integrity metadata, and both contact APIs
         env:
           CLOUDFLARE_PAGES_DOMAIN: ${{ needs.verify.outputs.pages_domain }}
           CANDIDATE_BRANCH: ${{ needs.verify.outputs.candidate_branch }}

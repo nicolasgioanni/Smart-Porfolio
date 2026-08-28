@@ -28,14 +28,34 @@ describe("static portfolio security contracts", () => {
     expect(serverActionFiles).toEqual([]);
   });
 
-  it("keeps runtime requests limited to the scoped contact endpoint", () => {
+  it("keeps runtime requests limited to the scoped contact endpoints", () => {
     const sourceFiles = collectFiles(path.join(projectRoot, "src"), [".ts", ".tsx"]).filter((filePath) => !filePath.endsWith(".test.ts"));
     const runtimeFetchFiles = sourceFiles.filter((filePath) => readFileSync(filePath, "utf8").includes("fetch("));
 
     expect(runtimeFetchFiles.map((filePath) => path.relative(projectRoot, filePath).replaceAll("\\", "/"))).toEqual([
       "src/components/contact/ContactForm.tsx"
     ]);
-    expect(readFileSync(runtimeFetchFiles[0], "utf8")).toContain('fetch("/api/contact"');
+    const contactFormSource = readFileSync(runtimeFetchFiles[0], "utf8");
+    expect(contactFormSource).toContain('fetch("/api/contact/verify"');
+    expect(contactFormSource).toContain('fetch("/api/contact"');
+    expect(contactFormSource).toContain("onTokenChange={handleTurnstileTokenChange}");
+    expect(contactFormSource).not.toMatch(/onTokenChange=\{\([^)]*\)\s*=>/);
+  });
+
+  it("limits Cloudflare Pages Function routing to the two contact endpoints", () => {
+    const routes = JSON.parse(readFileSync(path.join(projectRoot, "public", "_routes.json"), "utf8")) as {
+      exclude: string[];
+      include: string[];
+      version: number;
+    };
+
+    expect(routes).toEqual({
+      version: 1,
+      include: ["/api/contact/verify", "/api/contact"],
+      exclude: []
+    });
+    expect(existsSync(path.join(projectRoot, "functions", "api", "contact", "verify.ts"))).toBe(true);
+    expect(existsSync(path.join(projectRoot, "functions", "api", "contact.ts"))).toBe(true);
   });
 
   it("renders structured recommendation quote links without parsing spreadsheet markup", () => {

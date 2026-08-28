@@ -1,14 +1,14 @@
 import {
-  hasRequiredDeliveryConfiguration,
-  hasValidContactTicket,
+  createContactTicket,
+  hasRequiredTurnstileConfiguration,
   isAllowedOrigin,
   jsonResponse,
-  parseContactPayload,
+  parseTurnstileVerificationPayload,
   readJsonBody,
-  sendContactEmails,
-  serializeClearedContactTicketCookie,
-  type ContactEnv
-} from "../_shared/contact";
+  serializeContactTicketCookie,
+  type ContactEnv,
+  verifyTurnstile
+} from "../../_shared/contact";
 
 interface PagesContext<Env> {
   request: Request;
@@ -22,7 +22,7 @@ export async function onRequest(context: PagesContext<ContactEnv>): Promise<Resp
     return jsonResponse(405, { ok: false, error: "method_not_allowed" }, { Allow: "POST" });
   }
 
-  if (!hasRequiredDeliveryConfiguration(env)) {
+  if (!hasRequiredTurnstileConfiguration(env)) {
     return jsonResponse(503, { ok: false, error: "service_unavailable" });
   }
 
@@ -43,22 +43,19 @@ export async function onRequest(context: PagesContext<ContactEnv>): Promise<Resp
     return jsonResponse(400, { ok: false, error: "invalid_request" });
   }
 
-  const parsed = parseContactPayload(body.value);
-  if (parsed.kind === "spam") {
-    return jsonResponse(200, { ok: true });
-  }
+  const parsed = parseTurnstileVerificationPayload(body.value);
   if (parsed.kind === "invalid") {
     return jsonResponse(400, { ok: false, error: "invalid_request" });
   }
 
-  if (!(await hasValidContactTicket(request, parsed.payload.submissionId, env))) {
-    return jsonResponse(401, { ok: false, error: "verification_required" });
+  if (!(await verifyTurnstile(parsed.payload, request, env))) {
+    return jsonResponse(400, { ok: false, error: "verification_failed" });
   }
 
-  const delivered = await sendContactEmails(parsed.payload, env);
-  if (!delivered) {
-    return jsonResponse(502, { ok: false, error: "delivery_failed" });
+  const ticket = await createContactTicket(parsed.payload.submissionId, env);
+  if (!ticket) {
+    return jsonResponse(503, { ok: false, error: "service_unavailable" });
   }
 
-  return jsonResponse(200, { ok: true }, { "Set-Cookie": serializeClearedContactTicketCookie() });
+  return jsonResponse(200, { ok: true }, { "Set-Cookie": serializeContactTicketCookie(ticket) });
 }
