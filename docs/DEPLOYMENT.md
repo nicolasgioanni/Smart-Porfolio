@@ -1,133 +1,185 @@
 # Deployment
 
-## Cloudflare Pages deployment
+## Deployment ownership
 
-1. Audit the tracked tree and reachable Git history for secrets, private metadata, unpublished assets, and unsafe configuration; resolve every blocker before changing visibility.
-2. Push the repository to GitHub only after the exposure audit passes.
-3. Create or connect a Cloudflare Pages project. Use Git integration or Wrangler so Cloudflare compiles the repository-level `functions/` directory; a static-assets-only upload is not sufficient for the contact endpoint.
-4. Use `npm run build` as the build command and `out` as the build output directory.
-5. Confirm the deployed Function route is exactly `/api/contact`. `public/_routes.json` is copied into `out/` and prevents static page and asset requests from invoking the Function.
-6. Configure production and preview values separately before accepting contact requests.
+GitHub Actions is the only production deployment path. Keep Cloudflare Pages Git integration disconnected, and disable Vercel automatic deployments after the Cloudflare cutover. A provider-dashboard upload or deploy hook would bypass the repository's green gate and is not part of this design.
 
-The Next.js app remains an `output: "export"` build. Cloudflare serves the exported pages from its CDN and runs only `/api/contact` through Pages Functions.
+The stable required job is named `verify`:
 
-## Environment variables and secrets
+| Event | Content source | Verification | Deployment |
+| --- | --- | --- | --- |
+| Pull request into `main` or `develop` | Checked-in templates | Full suite and static build | Never |
+| Push to `develop` | One strict XLSX download | Full suite and static build | Preview branch only |
+| Push to `main` | One strict XLSX download | Full suite and static build | Production only |
+| Daily `17 13 * * *` | One strict XLSX download | Only when deployed hash differs | Production only when changed |
+| Manual dispatch | Latest `main`, one strict XLSX download | Always when forced; otherwise only when changed | Production only |
 
-Local development uses the ignored `.env` file created from the tracked, placeholder-only `.env.example`. Do not upload that file or reuse it as production configuration. Configure production and preview variables in the Cloudflare Pages dashboard, and store the sensitive values called out below as encrypted secrets.
+`force_deploy` is a boolean that defaults to `true`. It may bypass only the unchanged-content optimization. It never bypasses workbook validation, lint, typecheck, footer regression tests, the full test suite, build, artifact integrity, the latest-`main` check, Cloudflare's result, or smoke tests.
 
-Build-time public value:
+Manual and scheduled jobs explicitly check out current `main`, regardless of the branch displayed in the GitHub UI. Production concurrency cancels stale candidates. The deploy job re-fetches `main` immediately before upload and refuses to deploy when the tested SHA is no longer current.
 
-- `NEXT_PUBLIC_TURNSTILE_SITE_KEY`: the public site key compiled into the browser bundle. This is the only Turnstile value permitted under `NEXT_PUBLIC_`.
+## One-fetch, exact-artifact pipeline
 
-Pages Function secrets:
+A deployable candidate follows this sequence:
 
-- `TURNSTILE_SECRET_KEY`: the matching Turnstile server secret.
-- `RESEND_API_KEY`: a restricted Resend API key used only by the contact Function.
-- `CONTACT_RECIPIENT_EMAIL`: the private inbox that receives contact requests. Store it as an encrypted secret and never put the real value in source, generated content, build logs, public variables, or example files.
+```text
+Download workbook once
+-> parse and validate once
+-> generate JSON once
+-> run the complete verification suite
+-> build from that same JSON
+-> write public deployment metadata
+-> create and upload an integrity-checked out/ artifact
+-> check out the exact tested commit for functions/ and Wrangler config
+-> verify the downloaded artifact
+-> deploy from repository root
+-> smoke-test the resulting deployment
+```
 
-Pages Function configuration:
+`npm run build:generated` runs Next.js directly against the existing generated JSON and does not invoke content generation. The deploy jobs do not rebuild and do not download the workbook. Running locally installed Wrangler from the repository root ensures `functions/api/contact.ts`, its shared modules, `wrangler.jsonc`, `_routes.json`, and the tested static output all come from the intended revision.
 
-- `TURNSTILE_ALLOWED_HOSTNAMES`: comma-separated exact hostnames without schemes, ports, paths, or wildcards.
-- `CONTACT_ALLOWED_ORIGINS`: comma-separated exact HTTPS origins, including scheme and optional port, with no path.
+The Actions artifact is named `cloudflare-pages-build` and contains the contents of `out/`. `out/artifact-integrity.json` records SHA-256 values used to reject a modified, incomplete, or wrong-revision artifact before Wrangler runs.
 
-The Turnstile widget and server verifier use the fixed action `portfolio_contact`. Production and preview must use their own exact hostname/origin lists; do not broadly allow `*.pages.dev`. If a preview hostname is not explicitly configured, contact submission should remain unavailable there.
+## Deployed content manifest
 
-CSV URL variables:
+Every candidate build creates `out/content-version.json`:
 
-- `PORTFOLIO_PROFILE_CSV_URL`
-- `PORTFOLIO_LINKS_CSV_URL`
-- `PORTFOLIO_RESEARCH_CSV_URL`
-- `PORTFOLIO_PROJECTS_CSV_URL`
-- `PORTFOLIO_EXPERIENCE_CSV_URL`
-- `PORTFOLIO_RECOMMENDATIONS_CSV_URL`
-- `PORTFOLIO_EDUCATION_CSV_URL`
-- `PORTFOLIO_SKILLS_CSV_URL`
-- `PORTFOLIO_SITE_SETTINGS_CSV_URL`
+```json
+{
+  "schemaVersion": 1,
+  "contentHash": "<sha256>",
+  "commitSha": "<GitHub commit SHA>",
+  "generatedAt": "<generated content timestamp>",
+  "deployedAt": "<build timestamp>"
+}
+```
 
-Optional strict mode:
+It contains no workbook URL or identifier, worksheet ID, email address, secret name or value, or runner detail. `public/_headers` gives `/content-version.json` a specific `Cache-Control: no-store` rule.
 
-- `PORTFOLIO_REQUIRE_REMOTE_CONTENT=true`
+Production's active manifest is the source of truth for the last successful content deployment. Scheduled and non-forced manual checks request it with `Cache-Control: no-cache`, `Pragma: no-cache`, and a cache-busting query. A `404` is treated as a first deployment; other inaccessible or malformed responses fail closed instead of guessing. If tests, build, artifact verification, or Wrangler fails, the previous deployment and manifest remain active, so the next scheduled run retries.
 
-Use strict mode for production when demo fallback content should never deploy.
+Generated content and deployment state are not committed after deployment.
 
-There is intentionally no remote resume-sheet variable. `src/content/templates/resume.csv` must remain the empty, header-only source so a content build cannot restore private resume details from a remote sheet.
+## GitHub configuration
 
-## Cloudflare Turnstile setup
+Repository variables:
 
-1. Create a production Turnstile widget for the canonical portfolio hostname only.
-2. Set its public site key as the build-time `NEXT_PUBLIC_TURNSTILE_SITE_KEY`.
-3. Store its secret as the encrypted Pages Function secret `TURNSTILE_SECRET_KEY`.
-4. Set `TURNSTILE_ALLOWED_HOSTNAMES` to the same exact production hostname set.
-5. Keep the widget action fixed to `portfolio_contact` and verify that exact action and hostname after every Siteverify call.
+- `CLOUDFLARE_PAGES_PROJECT_NAME`: `smart-portfolio`.
+- `CLOUDFLARE_PAGES_DOMAIN`: `smart-portfolio-bds.pages.dev`, the exact domain assigned by Cloudflare. Do not derive it from the project name.
+- `NEXT_PUBLIC_TURNSTILE_SITE_KEY`: the production public widget key.
+- `NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY`: optional public key for the `develop` preview. There is no production-key fallback.
 
-Turnstile tokens are single-use and short-lived. The browser widget is not the enforcement boundary: the Function must fail closed when Siteverify is unavailable or returns an invalid, expired, duplicate, action-mismatched, or hostname-mismatched result. See Cloudflare's [server-side validation](https://developers.cloudflare.com/turnstile/get-started/server-side-validation/) and [hostname management](https://developers.cloudflare.com/turnstile/additional-configuration/hostname-management/) documentation.
+Actions secrets:
 
-## Resend setup
+- `PORTFOLIO_WORKBOOK_URL`: the anonymously downloadable HTTPS XLSX URL. It is public-read-only configuration stored as a secret solely so GitHub automatically redacts it from runner logs. It grants no Google account or Drive access, and the workflow never injects it into pull-request steps.
+- `CLOUDFLARE_API_TOKEN`: a restricted token with Pages Edit only.
+- `CLOUDFLARE_ACCOUNT_ID`: the target account identifier.
 
-1. Verify `nicolasmgioanni.dev` in Resend and complete its required DNS records before production delivery.
-2. Confirm the fixed sender `Nicolas Gioanni <noreply@nicolasmgioanni.dev>` is permitted by that verified domain.
-3. Create a restricted API key and store it only as `RESEND_API_KEY` in Pages Function secrets.
-4. Store the actual destination inbox only as the encrypted `CONTACT_RECIPIENT_EMAIL` secret.
-5. Exercise both messages in a controlled test: the owner notification replies to the visitor's required email, while the visitor confirmation replies to the fixed public address `ngioanni@uw.edu`. Neither the fixed From nor public reply-to identity is a runtime setting.
+The Cloudflare secrets are used only by deployment jobs.
 
-The Function uses Resend's batch endpoint with a submission-scoped idempotency key. Domain verification and idempotency behavior are documented in Resend's [domain](https://resend.com/docs/dashboard/domains/introduction) and [idempotency](https://resend.com/docs/dashboard/emails/idempotency-keys) guides.
+The workflow hard-codes `PORTFOLIO_REQUIRE_REMOTE_CONTENT=true` for `main`, `develop`, scheduled, and manual deployment candidates. Pull requests never receive Cloudflare credentials. Verification jobs use `contents: read`; deployment jobs add only the deployment permission they require. No job uses `pull_request_target`, `always()` as a failure bypass, `continue-on-error` for a required step, a deploy hook, a test-skipping passcode or commit message, a personal token, or a privileged PR-head checkout.
 
-## WAF rate-limit rule
+## Workbook setup without Google account access
 
-Create a Cloudflare WAF rate-limiting rule before production activation. The Free-plan-compatible baseline matches the endpoint path:
+The automation performs one anonymous HTTPS download. It does not request Google Drive access, install a connector, call the Drive or Sheets APIs, use an API key, hold OAuth tokens, use a service account, or authenticate as the owner.
+
+1. In your own browser session, create one Google Sheets workbook. Do not grant this project or an automation tool access to Drive.
+2. Manually import the nine matching CSV templates from `src/content/templates` as worksheets named `profile`, `links`, `research`, `projects`, `experience`, `recommendations`, `education`, `skills`, and `site_settings`. Never import `resume.csv`.
+3. Preserve row-one field names and text formatting where automatic conversion would alter identifiers, dates, URLs, booleans, or multiline text.
+4. Review every value and workbook property for anonymous public release.
+5. Configure a Google Sheets URL that returns the complete workbook as XLSX without login or permission prompts as the `PORTFOLIO_WORKBOOK_URL` GitHub Actions secret. Secret storage is used only for automatic runner-log redaction; the URL remains an anonymous download and is not a Google credential.
+
+The workbook must contain exactly those nine visible worksheets and nothing else. Worksheet matching uses `worksheetName.trim().toLowerCase()`: capitalization and physical order are ignored, but internal spaces, hyphens, and spelling changes are not aliases. A missing, duplicate-normalized, unexpected, `resume`, hidden, or very-hidden worksheet fails generation. HTML/login responses, invalid ZIP/XLSX data, an oversized response, timeout, invalid headers, malformed rows, uncached formula results, or schema violations also fail without template fallback.
+
+The URL is public configuration, not a credential. Anyone able to retrieve it can read the workbook, so keep private resume content, recipient inboxes, credentials, unpublished recommendations, and sensitive personal data out of all worksheets and workbook metadata.
+
+## Semantic change detection
+
+Generated metadata contains a deterministic SHA-256 `contentHash` of canonical normalized rendered content. Volatile metadata is excluded. Worksheet order and capitalization, XLSX author or modified time, download time, equivalent line endings, harmless trailing blank rows or columns, and `generatedAt` do not affect the hash. A visible normalized content edit does.
+
+When a newly generated hash matches the existing generated JSON, generation preserves its `generatedAt`. Generation reports machine-readable `content_changed`, `content_hash`, and `generated_at` outputs. Scheduled deployment decisions compare `content_hash` with the active production manifest, not with a repository commit.
+
+There is intentionally no remote resume source. `src/content/templates/resume.csv` remains the empty, header-only local compatibility file.
+
+## Production and preview isolation
+
+Production deploys with branch `main`. A green `develop` push uses:
+
+```bash
+wrangler pages deploy out \
+  --project-name=smart-portfolio \
+  --branch=develop \
+  --commit-hash="$GITHUB_SHA"
+```
+
+The project name remains `smart-portfolio`, while Cloudflare's assigned Pages domain is `smart-portfolio-bds.pages.dev`. Production uses `https://smart-portfolio-bds.pages.dev`, and the stable preview alias is `https://develop.smart-portfolio-bds.pages.dev`. The workflow uses the explicit `CLOUDFLARE_PAGES_DOMAIN` variable for polling and smoke tests instead of assuming that a project name always equals its assigned hostname. The preview cannot update the production branch or production aliases. Preview builds receive only `NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY`; when that variable is blank, the contact form is visibly unavailable instead of using the production key.
+
+`wrangler.jsonc` is the reviewed Pages configuration source of truth. It pins the compatibility date and static output directory and carries only non-secret production and preview variables for exact hostnames, exact origins, sender, and fixed reply-to. Keep `TURNSTILE_SECRET_KEY`, `RESEND_API_KEY`, and `CONTACT_RECIPIENT_EMAIL` as encrypted Cloudflare secrets, configured separately for production and preview as appropriate.
+
+## Contact runtime configuration
+
+Encrypted Cloudflare secrets:
+
+- `TURNSTILE_SECRET_KEY`
+- `RESEND_API_KEY`
+- `CONTACT_RECIPIENT_EMAIL`
+
+Reviewed non-secret Wrangler values:
+
+- `TURNSTILE_ALLOWED_HOSTNAMES`: comma-separated exact hostnames, without wildcards.
+- `CONTACT_ALLOWED_ORIGINS`: comma-separated exact HTTPS origins.
+- `CONTACT_FROM_EMAIL`: sender identity authorized by the verified Resend domain.
+- `CONTACT_REPLY_TO_EMAIL`: fixed public reply-to for visitor confirmations.
+
+The owner notification still replies to the visitor's validated address. The Function continues using Turnstile Siteverify with exact action and hostname validation, exact origin validation, Resend batch sending, submission-scoped idempotency, the existing body-size limit, strict schema validation, honeypot and timing checks, generic error responses, and no sensitive request-body logging.
+
+Before production activation, configure a Cloudflare WAF rate-limit rule matching only:
 
 ```text
 http.request.uri.path eq "/api/contact"
 ```
 
-Count by source IP. On Cloudflare Free, start with 5 requests per 10 seconds and a 10-second block, then tune from non-sensitive aggregate evidence. The Function rejects non-POST methods independently. Plans that expose the Method field and longer periods may narrow the expression to POST and use a longer window or mitigation period. Apply the rule only to this path so static browsing is unaffected. The WAF rule supplements, but does not replace, the Function's origin checks, 16 KiB body limit, schema validation, honeypot/timing checks, Turnstile Siteverify call, and Resend idempotency key. Confirm current plan limits in Cloudflare's [rate-limiting availability table](https://developers.cloudflare.com/waf/rate-limiting-rules/#availability).
+Count by source IP. On a compatible Free plan, start with 5 requests per 10 seconds and a 10-second block, then adjust only from non-sensitive aggregate evidence.
 
-## Security headers and Function routing
+## Branch protection and heartbeat
 
-`public/_headers` adds a static-response Content Security Policy and baseline browser protections. The policy permits the Cloudflare Turnstile script and frame origin while retaining the inline script/style allowances currently required by the exported Next.js application. Review those allowances whenever inline bootstrapping changes.
+Protect `main` with:
 
-Cloudflare Pages `_headers` rules do not govern Function-generated responses. `/api/contact` must continue returning its own `no-store`, content-type, referrer, and content-type-sniffing headers. `public/_routes.json` must continue including only `/api/contact`; broadening it changes the billed and security-relevant runtime surface.
+1. Pull-request-based changes and zero mandatory human approvals.
+2. The strict required `verify` status check, with the branch required to be up to date.
+3. Force-push and deletion blocked.
+4. No GitHub Actions bypass for `main`.
 
-See Cloudflare's [Pages Functions routing](https://developers.cloudflare.com/pages/functions/routing/) and [Turnstile CSP](https://developers.cloudflare.com/turnstile/reference/content-security-policy/) references.
+Production automation does not write generated content or deployment state to `main`. To preserve GitHub's public-repository schedule, the scheduled workflow may make one bot heartbeat after 30 days without relevant activity. It writes only `.github/schedule-heartbeat` on the isolated `automation-heartbeat` branch with `github-actions[bot]`; it never modifies `main`, never deploys, and does not require a branch-protection bypass. This heartbeat job is the sole narrow exception that needs `contents: write`. A `GITHUB_TOKEN` push does not recursively trigger another workflow.
 
-## Publishing Google Sheets as CSV
+GitHub may still display the human account associated with the scheduled workflow as its actor. The workflow execution, deployment, and isolated heartbeat are owned by Actions; do not replace them with a personal access token.
 
-1. Create one tab for each logical sheet.
-2. Keep the first row as the documented field names.
-3. Select `File`, then `Share`, then `Publish to web`.
-4. Choose the tab and CSV format.
-5. Copy the published CSV URL into the matching Cloudflare build environment variable.
+## First deployment and domain cutover
 
-After editing Google Sheets, trigger a new Cloudflare Pages deployment. The build fetches CSV content, generates JSON, and renders static pages; the deployed browser never fetches the sheets at runtime.
+1. Keep the existing Direct Upload project named `smart-portfolio`; it was created with production branch `main` and assigned `smart-portfolio-bds.pages.dev`. Do not run project creation again or enable Git integration. Local Cloudflare administration requires Node.js 22.13 or newer, `npm ci`, and `npx --no-install wrangler login`.
+2. Configure the GitHub variables and secrets, encrypted Cloudflare production/preview secrets, Wrangler non-secret variables, exact Turnstile hostnames, Resend domain, and WAF rule.
+3. Manually run the workflow with `force_deploy=true`. A forced first run skips only the deployed-hash comparison because no live manifest exists yet; it still performs workbook validation, every check, build, artifact verification, exact-SHA protection, deployment, and smoke tests. Verify `https://smart-portfolio-bds.pages.dev`, static routing, security headers, `/content-version.json`, artifact/commit values, and `/api/contact`. Test Turnstile and end-to-end Resend delivery.
+4. Push a safe change to `develop`; confirm only `https://develop.smart-portfolio-bds.pages.dev` changes and its contact form is unavailable when no preview key is configured.
+5. Run a non-forced manual check and confirm an unchanged workbook stops before lint, tests, build, artifact upload, or deployment.
+6. Make one safe visible workbook edit. Confirm one green deployment and a changed manifest hash, with no generated-content commit. A second non-forced run should be unchanged.
+7. Attach `nicolasmgioanni.dev` and `www` to Pages, replace the current Vercel DNS targets, wait for valid TLS, and repeat routing, Turnstile, manifest, contact-delivery, sender, and reply-to tests on every allowed hostname.
+8. Disable Vercel automatic deployments only after the Cloudflare domains are healthy. Retain the previous DNS values until rollback is no longer needed.
 
-## Asset placement
-
-- Portrait image: `public/images/profile/`.
-- Project images: `public/images/projects/`.
-- Research images: `public/images/research/`.
-- Favicon: `public/favicon/`.
-
-Root-relative paths are supported by validation, but every file under `public/` is deployed for anonymous access. For the private-resume configuration, keep `resume_url` and `resume_download_label` blank, remove resume-file link rows, and do not place any resume PDF under `public/resume/` or another public directory.
-
-Before deployment, verify that templates, configured remote sheets, generated JSON, built HTML, and `out/` contain no private resume URL or file. Prior deployments, CDN caches, repository history, and published source archives require separate review; removing a current asset does not retract an earlier copy.
-
-## Static export caveats
-
-- Do not add Next.js API routes, route handlers, middleware, or server actions; runtime request handling belongs in the narrow `functions/` boundary.
-- Do not depend on runtime Google Sheets requests.
-- Do not use default Next image optimization without a static-compatible configuration.
-- Avoid Next.js rewrites, redirects, ISR, and other runtime-server features.
-- Keep `/api/contact` out of generated portfolio content and client-exposed configuration.
-
-The `/recommendations` route is a static page generated from the same build-time JSON as the rest of the portfolio. LinkedIn recommendation links are plain outbound links only. The `/contact` page is also statically exported, but its client form posts to the separately compiled `/api/contact` Pages Function.
+Changing the workbook never calls Cloudflare directly. GitHub Actions polls, validates, green-gates, and performs Direct Upload. The deployed browser does not fetch the workbook at runtime.
 
 ## Pre-deployment verification
 
-1. Run `npm run verify`.
-2. Confirm `out/_routes.json` and `out/_headers` exist after the build and validate `_routes.json` as JSON.
-3. Search the tracked tree and `out/` for real secret values, the private recipient address, private resume filenames, and stale public resume URLs.
-4. Confirm the production Turnstile widget, site key, secret, hostname list, and fixed `portfolio_contact` action agree.
-5. Confirm `CONTACT_ALLOWED_ORIGINS` contains only the intended exact production origin and that `CONTACT_RECIPIENT_EMAIL` is stored as a secret.
-6. Confirm the Resend domain and fixed sender are verified, then send one controlled end-to-end request.
-7. Verify the request reaches the private inbox, the visitor receives a confirmation, duplicate/replayed Turnstile tokens fail, and logs do not contain message bodies or recipient-secret values.
-8. Confirm the WAF rate-limit rule is enabled for POST `/api/contact` before announcing the form.
+Run locally:
+
+```bash
+npm ci
+npm run lint
+npm run typecheck
+npm run test:footer
+npm run test
+npm run build
+```
+
+Before enabling production, confirm that no real secret or workbook URL is tracked; no Google authentication dependency exists; the deploy job uses the tested artifact and exact commit's `functions/`; a red `verify` blocks both production and preview; `develop` cannot update production; and `main` needs no Actions bypass.
+
+Every file under `public/` is anonymously deployed. Keep private resume files outside `public/`, generated JSON, `out/`, artifacts, and repository history. Static export also means dynamic Next.js server features require an explicit architecture change; `/api/contact` remains a Cloudflare Pages Function rather than a Next.js API route.

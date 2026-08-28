@@ -215,6 +215,7 @@ export type SiteSettings = {
 
 export type GeneratedContentMetadata = {
   generatedAt: string;
+  contentHash: string;
   sourceMode: ContentSourceMode;
   sources: Record<string, "template" | "remote">;
 };
