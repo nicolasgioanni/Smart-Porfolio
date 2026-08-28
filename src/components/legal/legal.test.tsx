@@ -78,7 +78,7 @@ describe("legal document routes", () => {
     expect(screen.getByText(/public portfolio pages are statically generated/)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Contact submission safeguards" })).toBeInTheDocument();
     expect(screen.getByText(/verifies the Turnstile token with Cloudflare on the server/)).toBeInTheDocument();
-    expect(screen.getByText(/noreply@nicolasmgioanni\.dev/)).toBeInTheDocument();
+    expect(screen.getByText(/noreply@mail\.nicolasmgioanni\.dev/)).toBeInTheDocument();
     expect(screen.getByText(/private owner destination and all provider secrets remain server-side/)).toBeInTheDocument();
     expect(screen.getByText(/fails closed when required Turnstile/)).toBeInTheDocument();
     expect(screen.getByText("The affected portfolio URL or asset.")).toBeInTheDocument();
