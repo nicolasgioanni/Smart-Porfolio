@@ -8,7 +8,7 @@ This project is a static-first smart portfolio. Next.js App Router pages are ren
 
 Google Sheets is used only as a public-safe editing surface. One workbook contains the nine public tabs `profile`, `links`, `research`, `projects`, `experience`, `recommendations`, `education`, `skills`, and `site_settings`; case does not affect tab matching and tab order is irrelevant. There is no remote `resume` tab.
 
-The owner manually creates one workbook in the Google Sheets UI, imports each of the nine checked-in CSV templates into its matching named tab, and exposes only the reviewed workbook for anonymous XLSX download. The project never receives Google Drive access, a connector, Google API credentials, OAuth tokens, a service account, or permission to the owner's account. GitHub Actions holds only `PORTFOLIO_WORKBOOK_URL`, an anonymously downloadable public URL.
+The owner manually creates one workbook in the Google Sheets UI, imports each of the nine checked-in CSV templates into its matching named tab, and exposes only the reviewed workbook for anonymous XLSX download. The project never receives Google Drive access, a connector, Google API credentials, OAuth tokens, a service account, or permission to the owner's account. GitHub Actions holds only `PORTFOLIO_WORKBOOK_URL`, an anonymously downloadable public URL stored as an Actions secret solely for automatic runner-log redaction.
 
 ## Build-time content fetching
 

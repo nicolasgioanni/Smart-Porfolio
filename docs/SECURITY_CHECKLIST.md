@@ -73,8 +73,8 @@
 - The tracked `.env.example` contains placeholders only and no private recipient, credential, or usable secret.
 - Local Pages Function testing uses `npm run dev:pages` or `wrangler pages dev out --env-file .env`; no second local secret file is required.
 - Only `NEXT_PUBLIC_TURNSTILE_SITE_KEY` is exposed publicly; no private value uses a `NEXT_PUBLIC_` name.
-- Build-time public values are configured as GitHub repository variables, the restricted Pages upload credential uses GitHub Actions secrets, and Pages Function runtime values are configured separately in Cloudflare with sensitive values encrypted. Neither environment imports the local `.env` file. `develop` receives only the optional preview Turnstile site key and never falls back to the production key.
-- Treat `PORTFOLIO_WORKBOOK_URL` as public configuration only. Use one anonymous HTTPS XLSX download and never introduce Drive/Sheets API access, OAuth, a service account, or a Google API key.
+- Build-time public values are normally configured as GitHub repository variables, the restricted Pages upload credential uses GitHub Actions secrets, and Pages Function runtime values are configured separately in Cloudflare with sensitive values encrypted. Neither environment imports the local `.env` file. `develop` receives only the optional preview Turnstile site key and never falls back to the production key.
+- Treat `PORTFOLIO_WORKBOOK_URL` as public-read-only configuration stored in a GitHub Actions secret solely for automatic log redaction. Use one anonymous HTTPS XLSX download and never introduce Drive/Sheets API access, OAuth, a service account, or a Google API key.
 - Keep generated deployment state out of `main`; verify the `out/` artifact digest and use the active `/content-version.json` hash as the successful-deployment record.
 - Production and preview have separate exact hostname/origin lists and appropriate credentials.
 - Scan the tracked tree, reachable Git history, and `out/` for secrets, the private recipient, private resume artifacts, and stale URLs before publishing.
