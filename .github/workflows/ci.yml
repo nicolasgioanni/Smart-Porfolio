@@ -181,6 +181,10 @@ jobs:
           echo "should_deploy=$should_deploy" >> "$GITHUB_OUTPUT"
           echo "deploy_target=$deploy_target" >> "$GITHUB_OUTPUT"
 
+      - name: Documentation integrity
+        if: steps.decision.outputs.should_verify == 'true'
+        run: npm run docs:check
+
       - name: Lint
         if: steps.decision.outputs.should_verify == 'true'
         run: npm run lint
@@ -299,7 +303,7 @@ jobs:
           --branch "$CANDIDATE_BRANCH"
           --commit-hash "$CANDIDATE_SHA"
 
-      - name: Smoke test static content, integrity metadata, and the contact API
+      - name: Smoke test static content, integrity metadata, and both contact APIs
         env:
           CLOUDFLARE_PAGES_DOMAIN: ${{ needs.verify.outputs.pages_domain }}
           CANDIDATE_BRANCH: ${{ needs.verify.outputs.candidate_branch }}

@@ -7,6 +7,11 @@ import { GlassButton } from "@/components/glass/GlassButton";
 import { EmptyState } from "@/components/portfolio/EmptyState";
 import { RecommendationCard } from "@/components/portfolio/RecommendationCard";
 import {
+  MOBILE_UI_QUERY,
+  PHONE_HERO_QUERY,
+  useMediaQuery
+} from "@/components/responsive/useMediaQuery";
+import {
   calculateHomeRecommendationCollapsedGridHeight,
   calculateHomeRecommendationLayout,
   calculateHomeRecommendationOverflowLayout,
@@ -209,12 +214,27 @@ export function HomeRecommendations({ items, showAction = true }: { items: Recom
   const scheduledFrameRef = useRef<number>();
   const [layout, setLayout] = useState<Record<string, HomeRecommendationLayout>>({});
   const layoutRef = useRef<Record<string, HomeRecommendationLayout>>({});
+  const usesNaturalFlow = useMediaQuery(MOBILE_UI_QUERY);
+  const usesSingleColumnLayout = useMediaQuery(PHONE_HERO_QUERY);
   const itemSignature = useMemo(() => items.map((item) => item.id).join("|"), [items]);
 
   const measureLayout = useCallback(() => {
     const grid = gridRef.current;
 
     if (!grid) return;
+
+    if (usesNaturalFlow) {
+      clearRecommendationOverflowLayout(grid);
+    }
+
+    if (usesSingleColumnLayout) {
+      if (Object.keys(layoutRef.current).length > 0) {
+        layoutRef.current = {};
+        setLayout({});
+      }
+
+      return;
+    }
 
     const metrics = Array.from(grid.children)
       .filter((child): child is HTMLElement => child instanceof HTMLElement)
@@ -230,8 +250,10 @@ export function HomeRecommendations({ items, showAction = true }: { items: Recom
       return;
     }
 
-    applyRecommendationOverflowLayout(grid, metrics, nextLayout);
-  }, [items.length]);
+    if (!usesNaturalFlow) {
+      applyRecommendationOverflowLayout(grid, metrics, nextLayout);
+    }
+  }, [items.length, usesNaturalFlow, usesSingleColumnLayout]);
 
   const scheduleMeasurement = useCallback(() => {
     if (scheduledFrameRef.current !== undefined) {
@@ -270,6 +292,7 @@ export function HomeRecommendations({ items, showAction = true }: { items: Recom
     if (sectionHeader) resizeObserver?.observe(sectionHeader);
 
     window.addEventListener("resize", scheduleMeasurement);
+    scheduleMeasurement();
     void document.fonts?.ready.then(() => {
       if (active) scheduleMeasurement();
     });
@@ -279,6 +302,7 @@ export function HomeRecommendations({ items, showAction = true }: { items: Recom
 
       if (scheduledFrameRef.current !== undefined) {
         window.cancelAnimationFrame(scheduledFrameRef.current);
+        scheduledFrameRef.current = undefined;
       }
 
       resizeObserver?.disconnect();

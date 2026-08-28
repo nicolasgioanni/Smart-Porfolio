@@ -1,63 +1,86 @@
-# Performance Budget
+# Performance budget
 
-## Runtime Strategy
+## Runtime strategy
 
-The portfolio is a static export app with one isolated Cloudflare Pages Function for contact delivery. The site should render portfolio content from static HTML and generated data without runtime sheet requests.
+The portfolio is a static export with two isolated Cloudflare Pages Functions for contact verification and delivery. Portfolio routes render from static HTML and generated content without runtime workbook requests.
 
-Keep `output: "export"` unless the hosting and product requirements change.
+Keep `output: "export"` unless product and hosting requirements change through a documented architecture review.
 
-## Content Fetching
+## Content fetching
 
-Do not fetch portfolio content from the browser or from route handlers at request time. Fetch content during generation/build and render from generated files.
+Do not fetch portfolio content from the browser or a request-time route. Generate content before build and render from the validated snapshot.
 
-Security tests should continue proving there are no Next.js API routes, route handlers, server actions, or runtime content fetches, and that Pages Function routing invokes only `/api/contact`.
+Security tests should continue proving there are no Next.js API routes, route handlers, server actions, or runtime portfolio fetches, and that Function routing invokes only the two documented contact paths.
 
-## JavaScript Budget
+## JavaScript budget
 
-Prefer Server Components for static content. Client components should be isolated and purposeful.
+Prefer server components for static content. Isolate client behavior to a clear interaction or browser API.
 
-Current intentional client features:
+Current intentional client features include:
 
-- Mobile navigation state.
-- Scroll reveal/compress motion.
-- Footer theme switcher with localStorage persistence.
-- Contact wizard and explicit Turnstile integration.
+- desktop route indication and mobile navigation;
+- theme disclosure and local preference persistence;
+- header and footer state;
+- profile image preview;
+- role rotation and optional scroll reveals;
+- skills dialogs and recommendation expansion;
+- contact verification and submission.
 
-Avoid large client-only components unless they provide clear portfolio value.
+Avoid large client-only trees or framework additions when native browser and React behavior already meets the requirement. Compare the Next.js route table after adding a dependency or converting a server component.
 
-## Animation Budget
+## Animation budget
 
-Keep animation CSS-first. Do not add animation-heavy libraries in the core portfolio experience.
+Keep motion CSS-first. Do not add an animation library to the core experience without a measured need.
 
-Motion rules:
-
-- Animate opacity and transform only.
+- Prefer opacity and transform.
+- Keep documented layout transitions bounded to the header, recommendation disclosure, and footer.
 - Do not blur text.
-- Do not animate layout properties.
-- Respect reduced motion.
+- Do not add continuous scroll interpolation.
+- Respect reduced motion for every new effect.
 
 ## Assets
 
-Optimize images before placing them in `public`. Prefer appropriately sized PNG, JPG, WebP, or AVIF assets. Avoid oversized source images.
+Optimize raster images before adding them to `public/`. Match encoded dimensions to their real display role, prefer WebP or AVIF when browser support and transparency needs permit, and avoid multi-megabyte source images for small UI marks.
 
-Reserve dimensions for images, skeletons, grids, cards, and controls to avoid layout shift.
+Reserve image dimensions to avoid layout shift. Keep the shared page background CSS and token driven rather than adding full-page wallpaper downloads.
 
-Avoid full-page wallpaper backgrounds. The shared page background should remain CSS/token-driven so Home visual polish does not add a large render-blocking image request.
+Every public asset is anonymously retrievable. Asset privacy is a security requirement, not a performance technique.
 
-## Glass Effects
+## Glass effects
 
-Limit large `backdrop-filter` surfaces. Glass should be bounded to cards, navigation, footer, and section panels. The `enable_glass_effects` setting must keep the interface readable when disabled.
+Limit `backdrop-filter` to bounded cards, navigation, footer, dialogs, and section panels. Mobile tokens reduce blur. The `enable_glass_effects` setting must leave an opaque, readable surface when effects are disabled.
 
-## Skeleton Loading
+## Skeleton loading
 
-Skeletons support route transitions and deferred UI. They do not replace the static content strategy.
-
-Skeletons should:
+Skeletons support route transitions and deferred UI. They do not replace static delivery.
 
 - Match final layout dimensions.
-- Contain no real content text.
+- Contain no real text or fake controls.
 - Disable shimmer under reduced motion.
+- Do not introduce an artificial delay.
 
-## Build Metrics
+## Contact runtime
 
-After major visual-system changes, record the Next build route table and first-load JavaScript values from `npm run build`. Watch for unexpected growth from client components, fonts, images, or libraries.
+Keep Function requests narrow and time-bounded. Preserve body limits, no-store responses, Turnstile and Resend timeouts, one Turnstile verification per contact session, and one Resend batch per accepted submission.
+
+Edge rate limiting is an operator control. It does not justify heavier application processing or replace server validation.
+
+## Build and deployment
+
+Production candidates fetch the workbook once and build from the existing generated snapshot. Deploy jobs verify and upload the tested artifact without regenerating content or rebuilding.
+
+Semantic no-op behavior avoids the expensive quality and deployment pipeline only after the new source has been downloaded, parsed, validated, normalized, and compared with the active manifest.
+
+## Measurement
+
+After a major visual or dependency change:
+
+1. Run `npm run build`.
+2. Record the Next.js route table and first-load JavaScript values in review notes.
+3. Compare affected routes with the previous result.
+4. Inspect new or changed public asset sizes.
+5. Test the production export rather than judging development-server behavior.
+
+This repository does not enforce a numeric Lighthouse score or bundle threshold. Do not claim a measured performance result without recording the tool, route, environment, and date.
+
+See [Performance checklist](PERFORMANCE_CHECKLIST.md), [Design system](DESIGN_SYSTEM.md), and [Testing](TESTING.md).

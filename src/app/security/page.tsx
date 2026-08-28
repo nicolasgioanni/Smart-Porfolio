@@ -28,8 +28,9 @@ export default function SecurityPage() {
         <h2>Architecture and scope</h2>
         <p>
           The public portfolio pages are statically generated and do not provide visitor accounts, payments, or a general
-          application API. Contact requests are handled by a narrowly scoped Cloudflare Pages Function. Cloudflare Turnstile
-          supplies bot-protection signals, and Resend delivers the visitor confirmation and private owner notification.
+          application API. Contact requests are handled by two narrowly scoped Cloudflare Pages Functions. Cloudflare
+          Turnstile supplies the initial bot-protection signal, and Resend delivers the visitor confirmation and private owner
+          notification.
           Hosting, source control, Turnstile, Resend, receiving email systems, linked demonstrations, and other external
           services are independently operated third-party systems and are outside this site&apos;s testing scope.
         </p>
@@ -42,17 +43,32 @@ export default function SecurityPage() {
       <section>
         <h2>Contact submission safeguards</h2>
         <p>
-          Browser-side field checks improve usability but are not treated as a security boundary. The Pages Function performs
-          independent schema, type, length, email, and required-acknowledgment validation; verifies the Turnstile token with
-          Cloudflare on the server; applies request rate limits and abuse checks; and returns generic errors that do not expose
-          provider responses or private configuration.
+          Turnstile is visibly completed at the start of the form. The server verifies that token once through Cloudflare
+          Siteverify at <code>/api/contact/verify</code>, requiring the exact expected action and an allowed hostname. Success
+          sets a signed, 30-minute, <code>HttpOnly</code>, <code>Secure</code>, <code>SameSite=Strict</code>, host-only
+          verification cookie bound to one opaque submission identifier. The form advances automatically on success, with
+          Continue retained only as a fallback. The cookie contains no contact content, and its signing key is derived with
+          domain-separated HKDF from the existing server-only Turnstile secret rather than a new secret.
+        </p>
+        <p>
+          Browser-side field checks improve usability but are not treated as a security boundary. The final
+          <code>/api/contact</code> endpoint validates the signed ticket and matching submission identifier without calling
+          Siteverify a second time. It independently performs schema, type, length, email, required-acknowledgment, timing,
+          and honeypot validation, and returns generic JSON errors that do not expose provider responses or private
+          configuration. Successful delivery clears the cookie. A delivery failure
+          retains the still-valid ticket for retry until its original expiry. After the first delivery attempt, reviewed
+          fields remain locked so any failed or uncertain retry uses the same submission identifier and byte-equivalent
+          Resend payload required by idempotency.
         </p>
         <p>
           Email delivery uses a fixed, verified sender identity. Automated confirmation mail is sent from
-          noreply@nicolasmgioanni.dev and directs follow-up to the public ngioanni@uw.edu address. Visitor-supplied addresses
-          are used only as recipients or contact details and cannot control the message sender, reply handling, or other mail
-          headers. The private owner destination and all provider secrets remain server-side and are not returned to the
-          browser. The handler minimizes sensitive logging and fails closed when required Turnstile, validation, rate-limit,
+          noreply@mail.nicolasmgioanni.dev and directs follow-up to the public ngioanni@uw.edu address. The validated visitor
+          address receives the confirmation and is used as the reply-to address on the private owner notification, but it
+          cannot control the sender, private destination, or other mail headers. The private owner destination and all provider
+          secrets remain server-side and are not returned to the browser. The application handlers do not implement request
+          rate limiting. Edge rate limiting is an operator-managed Cloudflare WAF control whose live configuration is not
+          represented in this repository. If enabled, it should use a non-interactive response rather than repeat the visible
+          human check. The handlers minimize sensitive logging and fail closed when required Turnstile, ticket, validation,
           email, or private-recipient configuration is unavailable. A browser widget or client-side success state alone never
           authorizes delivery.
         </p>

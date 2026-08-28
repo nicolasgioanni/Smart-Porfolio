@@ -8,6 +8,7 @@ import { MobileNavigation } from "@/components/navigation/MobileNavigation";
 import type { NavigationItem } from "@/components/navigation/navigationItems";
 import { SocialLinkGroup } from "@/components/navigation/SocialLinkGroup";
 import { ProfileImagePreview } from "@/components/layout/ProfileImagePreview";
+import { MOBILE_UI_QUERY, useMediaQuery } from "@/components/responsive/useMediaQuery";
 import { ThemeSwitcher } from "@/components/theme/ThemeSwitcher";
 import type { ThemeName } from "@/lib/theme/resolveThemeName";
 
@@ -31,6 +32,7 @@ type InteractiveBlobHeaderProps = {
 };
 
 export function InteractiveBlobHeader({ brand, initialTheme, navigationItems, primaryLinks }: InteractiveBlobHeaderProps) {
+  const mobileUiMode = useMediaQuery(MOBILE_UI_QUERY);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [pointerNearHeader, setPointerNearHeaderState] = useState(false);
   const [profilePreviewOpen, setProfilePreviewOpen] = useState(false);
@@ -46,8 +48,8 @@ export function InteractiveBlobHeader({ brand, initialTheme, navigationItems, pr
   const scrollIntentRef = useRef<HeaderScrollIntent>("expanded");
   const themeMenuOpenRef = useRef(false);
   const headerVisualStateRef = useRef<HeaderScrollIntent>("expanded");
-  const naturallyCompactHeader = scrollIntent === "compact" && !pointerNearHeader && !mobileMenuOpen;
-  const compactHeader = themeMenuOpen && themeMenuHeaderState ? themeMenuHeaderState === "compact" : naturallyCompactHeader;
+  const naturallyCompactHeader = !mobileUiMode && scrollIntent === "compact" && !pointerNearHeader && !mobileMenuOpen;
+  const compactHeader = !mobileUiMode && (themeMenuOpen && themeMenuHeaderState ? themeMenuHeaderState === "compact" : naturallyCompactHeader);
   headerVisualStateRef.current = compactHeader ? "compact" : "expanded";
 
   const setScrollIntent = useCallback((nextIntent: HeaderScrollIntent) => {
@@ -65,6 +67,12 @@ export function InteractiveBlobHeader({ brand, initialTheme, navigationItems, pr
   }, []);
 
   useEffect(() => {
+    if (mobileUiMode) {
+      finePointerRef.current = false;
+      setPointerNearHeader(false);
+      return;
+    }
+
     const mediaQuery = window.matchMedia?.("(hover: hover) and (pointer: fine)");
 
     function updatePointerMode() {
@@ -79,10 +87,16 @@ export function InteractiveBlobHeader({ brand, initialTheme, navigationItems, pr
       mediaQuery?.removeEventListener?.("change", updatePointerMode);
       mediaQuery?.removeListener?.(updatePointerMode);
     };
-  }, []);
+  }, [mobileUiMode, setPointerNearHeader]);
 
   useEffect(() => {
     lastScrollYRef.current = window.scrollY;
+
+    const nextIntent = mobileUiMode || window.scrollY <= compactScrollThreshold ? "expanded" : "compact";
+    setScrollIntent(nextIntent);
+    if (themeMenuOpenRef.current) setThemeMenuHeaderState(nextIntent);
+
+    if (mobileUiMode) return;
 
     function handleScroll() {
       const nextScrollY = window.scrollY;
@@ -107,9 +121,11 @@ export function InteractiveBlobHeader({ brand, initialTheme, navigationItems, pr
     window.addEventListener("scroll", handleScroll, { passive: true });
 
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [setScrollIntent]);
+  }, [mobileUiMode, setScrollIntent]);
 
   useEffect(() => {
+    if (mobileUiMode) return;
+
     function handlePointerMove(event: PointerEvent) {
       if (!finePointerRef.current) return;
 
@@ -120,20 +136,20 @@ export function InteractiveBlobHeader({ brand, initialTheme, navigationItems, pr
     window.addEventListener("pointermove", handlePointerMove);
 
     return () => window.removeEventListener("pointermove", handlePointerMove);
-  }, [setPointerNearHeader]);
+  }, [mobileUiMode, setPointerNearHeader]);
 
   function expandHeaderFromFocus() {
     setScrollIntent("expanded");
   }
 
   function revealHeaderFromPointer() {
-    if (!finePointerRef.current) return;
+    if (mobileUiMode || !finePointerRef.current) return;
 
     setPointerNearHeader(true);
   }
 
   function compactHeaderWhenAway(event?: ReactPointerEvent<HTMLElement>) {
-    if (!finePointerRef.current) return;
+    if (mobileUiMode || !finePointerRef.current) return;
 
     const pointerStillNearHeader = typeof event?.clientY === "number" && event.clientY <= topProximityPixels;
     setPointerNearHeader(pointerStillNearHeader);

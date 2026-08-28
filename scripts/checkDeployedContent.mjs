@@ -99,12 +99,24 @@ async function smokeAttempt(baseUrl, artifactDirectory, expectedContentHash, exp
   );
   assert.deepEqual(deployedManifest, localManifest, "Deployed artifact manifest does not match the verified upload");
 
-  const apiResponse = await fetch(endpointUrl(baseUrl, "api/contact", cacheBust), {
-    headers: { "Cache-Control": "no-cache", Pragma: "no-cache" },
-    redirect: "manual",
-    signal: AbortSignal.timeout(20_000)
-  });
-  assert.equal(apiResponse.status, 405, "The contact Pages Function did not reject a GET request with HTTP 405");
+  for (const endpoint of ["api/contact/verify", "api/contact"]) {
+    const apiResponse = await fetch(endpointUrl(baseUrl, endpoint, cacheBust), {
+      headers: { "Cache-Control": "no-cache", Pragma: "no-cache" },
+      redirect: "manual",
+      signal: AbortSignal.timeout(20_000)
+    });
+    assert.equal(apiResponse.status, 405, `/${endpoint} did not reject a GET request with HTTP 405`);
+    assert.match(
+      apiResponse.headers.get("content-type") ?? "",
+      /^application\/json\b/i,
+      `/${endpoint} did not return JSON`
+    );
+    assert.deepEqual(
+      await apiResponse.json(),
+      { ok: false, error: "method_not_allowed" },
+      `/${endpoint} did not return the expected method rejection`
+    );
+  }
 }
 
 export async function smokeDeployment(baseUrl, artifactDirectory, expectedContentHash, expectedCommitSha) {

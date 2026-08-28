@@ -18,6 +18,7 @@ import { TurnstileWidget, type TurnstileStatus } from "@/components/contact/Turn
 type ContactStep = 0 | 1 | 2 | 3;
 type ConsentField = "contact" | "legal" | "legitimate";
 type SubmissionStatus = "idle" | "submitting";
+type VerificationGateStatus = "waiting" | "verifying" | "verified";
 
 const initialConsents: Record<ConsentField, boolean> = {
   contact: false,
@@ -25,8 +26,7 @@ const initialConsents: Record<ConsentField, boolean> = {
   legitimate: false
 };
 
-const turnstileTokenLifetimeMs = 5 * 60 * 1000;
-const turnstileClientExpiryBufferMs = 15 * 1000;
+const verificationAutoAdvanceDelayMs = 400;
 
 function createSubmissionId(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -159,19 +159,22 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
   const [draft, setDraft] = useState<ContactDraft>(initialContactDraft);
   const [errors, setErrors] = useState<ContactFieldErrors>({});
   const [consents, setConsents] = useState(initialConsents);
-  const [turnstileStatus, setTurnstileStatus] = useState<TurnstileStatus>(turnstileSiteKey ? "loading" : "unavailable");
-  const [turnstileToken, setTurnstileToken] = useState("");
-  const [turnstileTokenIssuedAt, setTurnstileTokenIssuedAt] = useState<number>();
+  const [, setTurnstileStatus] = useState<TurnstileStatus>(turnstileSiteKey ? "loading" : "unavailable");
+  const [verificationGateStatus, setVerificationGateStatus] = useState<VerificationGateStatus>("waiting");
+  const [turnstileWidgetAttempt, setTurnstileWidgetAttempt] = useState(0);
   const [submissionStatus, setSubmissionStatus] = useState<SubmissionStatus>("idle");
+  const [hasDeliveryAttempt, setHasDeliveryAttempt] = useState(false);
   const [formAlert, setFormAlert] = useState("");
   const [submittedEmail, setSubmittedEmail] = useState("");
   const formStartedAtRef = useRef(Date.now());
   const submissionIdRef = useRef<string | undefined>(undefined);
+  const verificationRequestRef = useRef(0);
+  const autoAdvanceTimeoutRef = useRef<number | undefined>(undefined);
   const successHeadingRef = useRef<HTMLHeadingElement>(null);
   const stepHeadingRef = useRef<HTMLDivElement>(null);
   const mailtoHref = `mailto:${contactEmail}?subject=Portfolio%20Contact`;
   const allConsentsAccepted = Object.values(consents).every(Boolean);
-  const isTurnstileReady = turnstileStatus === "ready" && Boolean(turnstileToken);
+  const isHumanVerified = verificationGateStatus === "verified";
 
   useEffect(() => {
     if (step > 0) {
@@ -183,33 +186,83 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
     if (submittedEmail) successHeadingRef.current?.focus();
   }, [submittedEmail]);
 
-  useEffect(() => {
-    if (!turnstileTokenIssuedAt || !turnstileToken) return;
-
-    const expiresIn = Math.max(
-      turnstileTokenLifetimeMs - turnstileClientExpiryBufferMs - (Date.now() - turnstileTokenIssuedAt),
-      0
-    );
-    const timeout = window.setTimeout(() => {
-      setTurnstileToken("");
-      setTurnstileTokenIssuedAt(undefined);
-      setTurnstileStatus("expired");
-      setFormAlert("Your human verification expired. Complete it again; your form details are still here.");
-      formStartedAtRef.current = Date.now();
-      setStep(0);
-    }, expiresIn);
-
-    return () => window.clearTimeout(timeout);
-  }, [turnstileToken, turnstileTokenIssuedAt]);
+  useEffect(
+    () => () => {
+      verificationRequestRef.current += 1;
+      if (autoAdvanceTimeoutRef.current !== undefined) {
+        window.clearTimeout(autoAdvanceTimeoutRef.current);
+      }
+    },
+    []
+  );
 
   const handleTurnstileStatusChange = useCallback((status: TurnstileStatus) => {
     setTurnstileStatus(status);
   }, []);
 
-  const handleTurnstileTokenChange = useCallback((token: string) => {
-    setTurnstileToken(token);
-    setTurnstileTokenIssuedAt(token ? Date.now() : undefined);
-    if (token) setFormAlert("");
+  const handleTurnstileTokenChange = useCallback(async (token: string) => {
+    if (!token) return;
+
+    if (autoAdvanceTimeoutRef.current !== undefined) {
+      window.clearTimeout(autoAdvanceTimeoutRef.current);
+      autoAdvanceTimeoutRef.current = undefined;
+    }
+    const requestId = verificationRequestRef.current + 1;
+    verificationRequestRef.current = requestId;
+    submissionIdRef.current ??= createSubmissionId();
+    setVerificationGateStatus("verifying");
+    setFormAlert("");
+
+    try {
+      const response = await fetch("/api/contact/verify", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          submissionId: submissionIdRef.current,
+          turnstileToken: token
+        })
+      });
+      const result = (await response.json().catch(() => null)) as { error?: string; ok?: boolean } | null;
+
+      if (verificationRequestRef.current !== requestId) return;
+      if (!response.ok || result?.ok !== true) {
+        if (autoAdvanceTimeoutRef.current !== undefined) {
+          window.clearTimeout(autoAdvanceTimeoutRef.current);
+          autoAdvanceTimeoutRef.current = undefined;
+        }
+        submissionIdRef.current = undefined;
+        setVerificationGateStatus("waiting");
+        setTurnstileWidgetAttempt((current) => current + 1);
+        setFormAlert(
+          result?.error === "verification_failed"
+            ? "The security check could not be confirmed. Please run it again."
+            : "Secure verification is temporarily unavailable. Please try again or email me directly."
+        );
+        return;
+      }
+
+      formStartedAtRef.current = Date.now();
+      setVerificationGateStatus("verified");
+      setFormAlert("");
+      autoAdvanceTimeoutRef.current = window.setTimeout(() => {
+        autoAdvanceTimeoutRef.current = undefined;
+        setStep((current) => (current === 0 ? 1 : current));
+      }, verificationAutoAdvanceDelayMs);
+    } catch {
+      if (verificationRequestRef.current !== requestId) return;
+      if (autoAdvanceTimeoutRef.current !== undefined) {
+        window.clearTimeout(autoAdvanceTimeoutRef.current);
+        autoAdvanceTimeoutRef.current = undefined;
+      }
+      submissionIdRef.current = undefined;
+      setVerificationGateStatus("waiting");
+      setTurnstileWidgetAttempt((current) => current + 1);
+      setFormAlert("Secure verification is temporarily unavailable. Please try again or email me directly.");
+    }
   }, []);
 
   function updateDraft(field: ContactField | "website", value: string) {
@@ -224,7 +277,11 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
   }
 
   function goToNameStep() {
-    if (!isTurnstileReady) return;
+    if (!isHumanVerified) return;
+    if (autoAdvanceTimeoutRef.current !== undefined) {
+      window.clearTimeout(autoAdvanceTimeoutRef.current);
+      autoAdvanceTimeoutRef.current = undefined;
+    }
     setFormAlert("");
     setStep(1);
   }
@@ -254,35 +311,36 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
   }
 
   function updateConsent(field: ConsentField, checked: boolean) {
+    if (hasDeliveryAttempt) return;
     setConsents((current) => ({ ...current, [field]: checked }));
     setFormAlert("");
   }
 
   function toggleConsentFromCard(field: ConsentField, target: EventTarget) {
+    if (hasDeliveryAttempt) return;
     if (target instanceof HTMLElement && target.closest("a, input, label")) return;
     updateConsent(field, !consents[field]);
   }
 
   function returnToVerification(message: string) {
-    setTurnstileToken("");
-    setTurnstileTokenIssuedAt(undefined);
-    setTurnstileStatus("expired");
+    verificationRequestRef.current += 1;
+    if (autoAdvanceTimeoutRef.current !== undefined) {
+      window.clearTimeout(autoAdvanceTimeoutRef.current);
+      autoAdvanceTimeoutRef.current = undefined;
+    }
+    submissionIdRef.current = undefined;
+    setVerificationGateStatus("waiting");
+    setTurnstileStatus("loading");
+    setTurnstileWidgetAttempt((current) => current + 1);
     setSubmissionStatus("idle");
+    setHasDeliveryAttempt(false);
     setFormAlert(message);
     formStartedAtRef.current = Date.now();
     setStep(0);
   }
 
   async function submitRequest() {
-    if (!allConsentsAccepted || !isTurnstileReady || submissionStatus === "submitting") return;
-
-    if (
-      !turnstileTokenIssuedAt ||
-      Date.now() - turnstileTokenIssuedAt >= turnstileTokenLifetimeMs - turnstileClientExpiryBufferMs
-    ) {
-      returnToVerification("Your human verification expired. Complete it again; your form details are still here.");
-      return;
-    }
+    if (!allConsentsAccepted || !isHumanVerified || submissionStatus === "submitting") return;
 
     const nameErrors = validateNameStep(draft);
     const detailErrors = validateDetailsStep(draft);
@@ -294,10 +352,14 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
     }
 
     setSubmissionStatus("submitting");
+    setHasDeliveryAttempt(true);
     setFormAlert("");
 
     try {
-      submissionIdRef.current ??= createSubmissionId();
+      if (!submissionIdRef.current) {
+        returnToVerification("Your secure verification session is unavailable. Complete the check again; your form details are still here.");
+        return;
+      }
       const response = await fetch("/api/contact", {
         method: "POST",
         credentials: "same-origin",
@@ -315,16 +377,23 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
           contactConsent: consents.contact,
           legalConsent: consents.legal,
           legitimateConsent: consents.legitimate,
-          turnstileToken,
           startedAt: formStartedAtRef.current,
           website: draft.website
         })
       });
-      const result = (await response.json().catch(() => null)) as { ok?: boolean } | null;
+      const result = (await response.json().catch(() => null)) as { error?: string; ok?: boolean } | null;
 
       if (!response.ok || result?.ok !== true) {
-        returnToVerification(
-          "Your request could not be sent. Complete a fresh security check and try again, or email me directly."
+        if (result?.error === "verification_required") {
+          returnToVerification(
+            "Your secure verification session expired. Complete the check again; your form details are still here."
+          );
+          return;
+        }
+
+        setSubmissionStatus("idle");
+        setFormAlert(
+          "Your request could not be delivered right now. Your verification remains complete, and your reviewed details are locked for a safe retry. Try again, or email me directly."
         );
         return;
       }
@@ -333,13 +402,14 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
       setDraft(initialContactDraft);
       setConsents(initialConsents);
       setErrors({});
-      setTurnstileToken("");
-      setTurnstileTokenIssuedAt(undefined);
+      submissionIdRef.current = undefined;
       setSubmissionStatus("idle");
+      setHasDeliveryAttempt(false);
       setFormAlert("");
     } catch {
-      returnToVerification(
-        "Your request could not be sent. Complete a fresh security check and try again, or email me directly."
+      setSubmissionStatus("idle");
+      setFormAlert(
+        "Your request could not reach the delivery service. Your verification remains complete, and your reviewed details are locked for a safe retry. Check your connection and try again, or email me directly."
       );
     }
   }
@@ -384,10 +454,21 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
                 title="Verify you are human"
               />
               <TurnstileWidget
+                key={turnstileWidgetAttempt}
                 onStatusChange={handleTurnstileStatusChange}
                 onTokenChange={handleTurnstileTokenChange}
                 siteKey={turnstileSiteKey}
               />
+              {verificationGateStatus === "verifying" ? (
+                <p className="contact-submit-status" role="status">
+                  Confirming secure verification...
+                </p>
+              ) : null}
+              {verificationGateStatus === "verified" ? (
+                <p className="contact-submit-status" role="status">
+                  Verification confirmed. Continuing...
+                </p>
+              ) : null}
               {formAlert ? (
                 <p className="contact-form__alert" role="alert">
                   {formAlert}
@@ -396,7 +477,7 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
               <div className="contact-step__actions contact-step__actions--end">
                 <button
                   className="contact-action contact-action--primary glass-button glass-button--primary hover-base-1 hover-base-1--solid"
-                  disabled={!isTurnstileReady}
+                  disabled={!isHumanVerified}
                   onClick={goToNameStep}
                   type="button"
                 >
@@ -572,6 +653,7 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
                 >
                   <input
                     checked={consents.contact}
+                    disabled={hasDeliveryAttempt}
                     id="contact-consent"
                     name="contactConsent"
                     onChange={(event) => updateConsent("contact", event.target.checked)}
@@ -592,6 +674,7 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
                   <input
                     aria-labelledby="legal-consent-label"
                     checked={consents.legal}
+                    disabled={hasDeliveryAttempt}
                     id="legal-consent"
                     name="legalConsent"
                     onChange={(event) => updateConsent("legal", event.target.checked)}
@@ -617,6 +700,7 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
                 >
                   <input
                     checked={consents.legitimate}
+                    disabled={hasDeliveryAttempt}
                     id="legitimate-consent"
                     name="legitimateConsent"
                     onChange={(event) => updateConsent("legitimate", event.target.checked)}
@@ -643,7 +727,7 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
               <div className="contact-step__actions">
                 <button
                   className="contact-action contact-action--secondary glass-button glass-button--secondary hover-base-1"
-                  disabled={submissionStatus === "submitting"}
+                  disabled={submissionStatus === "submitting" || hasDeliveryAttempt}
                   onClick={() => setStep(2)}
                   type="button"
                 >
@@ -651,7 +735,7 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
                 </button>
                 <button
                   className="contact-action contact-action--primary glass-button glass-button--primary hover-base-1 hover-base-1--solid"
-                  disabled={!allConsentsAccepted || !isTurnstileReady || submissionStatus === "submitting"}
+                  disabled={!allConsentsAccepted || !isHumanVerified || submissionStatus === "submitting"}
                   type="submit"
                 >
                   {submissionStatus === "submitting" ? "Sending request..." : "Send request"}

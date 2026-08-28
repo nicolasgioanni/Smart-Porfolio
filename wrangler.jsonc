@@ -6,7 +6,7 @@
   "vars": {
     "TURNSTILE_ALLOWED_HOSTNAMES": "smart-portfolio-bds.pages.dev,nicolasmgioanni.dev,www.nicolasmgioanni.dev",
     "CONTACT_ALLOWED_ORIGINS": "https://smart-portfolio-bds.pages.dev,https://nicolasmgioanni.dev,https://www.nicolasmgioanni.dev",
-    "CONTACT_FROM_EMAIL": "Nicolas Gioanni <noreply@nicolasmgioanni.dev>",
+    "CONTACT_FROM_EMAIL": "Nicolas Gioanni <noreply@mail.nicolasmgioanni.dev>",
     "CONTACT_REPLY_TO_EMAIL": "ngioanni@uw.edu"
   },
   "env": {
@@ -14,7 +14,7 @@
       "vars": {
         "TURNSTILE_ALLOWED_HOSTNAMES": "develop.smart-portfolio-bds.pages.dev",
         "CONTACT_ALLOWED_ORIGINS": "https://develop.smart-portfolio-bds.pages.dev",
-        "CONTACT_FROM_EMAIL": "Nicolas Gioanni <noreply@nicolasmgioanni.dev>",
+        "CONTACT_FROM_EMAIL": "Nicolas Gioanni <noreply@mail.nicolasmgioanni.dev>",
         "CONTACT_REPLY_TO_EMAIL": "ngioanni@uw.edu"
       }
     }

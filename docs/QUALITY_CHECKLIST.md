@@ -1,11 +1,11 @@
-# Quality Checklist
+# Quality checklist
 
 Run this checklist before shipping meaningful changes.
 
 ## Content
 
-- Generated JSON was created from CSV sources with `npm run generate:content`.
-- Demo content is not accidentally being used for production.
+- Generated JSON was created from the intended local or strict remote source with `npm run generate:content`.
+- Local template content is not accidentally being used for a deployable production candidate.
 - New fields are documented in the schema and mapping docs.
 - Recommendation text remains in CSV content, not React components.
 
@@ -24,18 +24,24 @@ Run this checklist before shipping meaningful changes.
 - Text contrast remains strong on glass surfaces.
 - Focus states remain visible.
 - Reduced-motion users do not receive entrance, compression, or shimmer effects.
+- Dialog focus, disclosure state, and form errors remain keyboard accessible.
 
 ## Code
 
 - Static export assumptions still hold for portfolio pages.
 - No runtime portfolio content fetch was added.
-- Runtime request handling remains isolated to the documented `/api/contact` Cloudflare Pages Function.
+- Runtime request handling remains isolated to the documented `/api/contact/verify` and `/api/contact` Cloudflare Pages Functions.
 - Client components are justified by interaction or browser APIs.
 
 ## Verification
 
+- `npm run docs:check`
+- `npm run generate:content`
 - `npm run lint`
 - `npm run typecheck`
+- `npm run test:footer`
 - `npm run test`
 - `npm run build`
 - `npm run verify`
+
+`npm run verify` includes documentation validation, lint, typecheck, the full test suite, and a normal build. The focused footer command remains a separate named CI gate.
