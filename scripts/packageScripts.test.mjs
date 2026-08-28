@@ -180,7 +180,7 @@ describe("package and CI deployment automation", () => {
     expect(verifyJob).toContain("node scripts/artifactIntegrity.mjs create out");
     expect(verifyJob).toContain("node scripts/artifactIntegrity.mjs verify out");
     expect(verifyJob).toContain("name: cloudflare-pages-build");
-    expect(verifyJob).toMatch(/path: out\/\s+if-no-files-found: error/);
+    expect(verifyJob).toMatch(/path: out\/\s+include-hidden-files: true\s+if-no-files-found: error/);
     expect(deployJob).toContain("needs: verify");
     expect(deployJob).toContain(
       "if: needs.verify.result == 'success' && needs.verify.outputs.should_deploy == 'true'"
@@ -311,6 +311,7 @@ describe("package and CI deployment automation", () => {
         "utf8"
       );
       await writeFile(path.join(artifactDirectory, "index.html"), "<!doctype html><title>Verified</title>", "utf8");
+      await writeFile(path.join(artifactDirectory, ".nojekyll"), "", "utf8");
       await writeContentVersion({
         generatedContentPath,
         outputPath: path.join(artifactDirectory, "content-version.json"),
@@ -321,6 +322,7 @@ describe("package and CI deployment automation", () => {
       expect(Object.keys(manifest).sort()).toEqual(["algorithm", "commitSha", "files", "schemaVersion"]);
       expect(manifest.algorithm).toBe("sha256");
       expect(manifest.commitSha).toBe(candidateSha);
+      expect(manifest.files.map((file) => file.path)).toContain(".nojekyll");
       expect(manifest.files.map((file) => file.path)).toContain("content-version.json");
       for (const file of manifest.files) {
         expect(Object.keys(file).sort()).toEqual(["path", "sha256", "size"]);
