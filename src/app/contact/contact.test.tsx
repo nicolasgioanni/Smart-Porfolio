@@ -22,32 +22,40 @@ vi.mock("@/components/contact/TurnstileWidget", () => ({
     siteKey: string;
   }) => (
     <div data-site-key={siteKey} data-testid="turnstile-mock">
-      <button
-        onClick={() => {
-          onTokenChange("test-turnstile-token");
-          onStatusChange("ready");
-        }}
-        type="button"
-      >
-        Complete human verification
-      </button>
-      <button
-        onClick={() => {
-          onTokenChange("");
-          onStatusChange("expired");
-        }}
-        type="button"
-      >
-        Expire human verification
-      </button>
+      {siteKey ? (
+        <>
+          <button
+            onClick={() => {
+              onTokenChange("test-turnstile-token");
+              onStatusChange("ready");
+            }}
+            type="button"
+          >
+            Complete human verification
+          </button>
+          <button
+            onClick={() => {
+              onTokenChange("");
+              onStatusChange("expired");
+            }}
+            type="button"
+          >
+            Expire human verification
+          </button>
+        </>
+      ) : (
+        <p role="status">Secure verification is temporarily unavailable.</p>
+      )}
     </div>
   )
 }));
 
 const originalSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+const originalPreviewSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY;
 
 beforeEach(() => {
   process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY = "test-site-key";
+  process.env.NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY = "preview-only-test-key";
 });
 
 afterEach(() => {
@@ -55,6 +63,11 @@ afterEach(() => {
     delete process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
   } else {
     process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY = originalSiteKey;
+  }
+  if (originalPreviewSiteKey === undefined) {
+    delete process.env.NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY;
+  } else {
+    process.env.NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY = originalPreviewSiteKey;
   }
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
@@ -134,6 +147,17 @@ describe("contact route", () => {
       "href",
       "mailto:ngioanni@uw.edu?subject=Portfolio%20Contact"
     );
+  });
+
+  it("keeps the form unavailable when the selected build has no Turnstile key", () => {
+    delete process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+
+    render(<ContactPage />);
+
+    expect(screen.getByTestId("turnstile-mock")).toHaveAttribute("data-site-key", "");
+    expect(screen.getByRole("status")).toHaveTextContent(/secure verification is temporarily unavailable/i);
+    expect(screen.queryByRole("button", { name: "Complete human verification" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
   });
 
   it("gates all four steps and shows accessible name and contact errors", () => {

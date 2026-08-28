@@ -1,6 +1,4 @@
 export const CONTACT_ACTION = "portfolio_contact";
-export const CONTACT_FROM_EMAIL = "Nicolas Gioanni <noreply@nicolasmgioanni.dev>";
-export const CONTACT_REPLY_TO_EMAIL = "ngioanni@uw.edu";
 export const MAX_REQUEST_BYTES = 16_384;
 
 const TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
@@ -32,7 +30,9 @@ const PHONE_CHARACTER_PATTERN = /^[0-9A-Za-z+().,\-\s/#*]+$/;
 
 export interface ContactEnv {
   CONTACT_ALLOWED_ORIGINS?: string;
+  CONTACT_FROM_EMAIL?: string;
   CONTACT_RECIPIENT_EMAIL?: string;
+  CONTACT_REPLY_TO_EMAIL?: string;
   RESEND_API_KEY?: string;
   TURNSTILE_ALLOWED_HOSTNAMES?: string;
   TURNSTILE_SECRET_KEY?: string;
@@ -92,8 +92,11 @@ export function hasRequiredConfiguration(env: ContactEnv): boolean {
   return Boolean(
     env.TURNSTILE_SECRET_KEY?.trim() &&
       parseHostnames(env.TURNSTILE_ALLOWED_HOSTNAMES).length > 0 &&
+      parseOrigins(env.CONTACT_ALLOWED_ORIGINS).length > 0 &&
       env.RESEND_API_KEY?.trim() &&
-      isValidEmail(env.CONTACT_RECIPIENT_EMAIL?.trim() ?? "")
+      isValidEmail(env.CONTACT_RECIPIENT_EMAIL?.trim() ?? "") &&
+      isValidFromMailbox(env.CONTACT_FROM_EMAIL?.trim() ?? "") &&
+      isValidEmail(env.CONTACT_REPLY_TO_EMAIL?.trim() ?? "")
   );
 }
 
@@ -104,18 +107,8 @@ export function isAllowedOrigin(request: Request, configuredOrigins?: string): b
   const origin = normalizeOrigin(rawOrigin);
   if (!origin) return false;
 
-  const configuredValues = (configuredOrigins ?? "")
-    .split(",")
-    .map((value) => value.trim())
-    .filter(Boolean);
-  const allowedOrigins = configuredValues.map(normalizeOrigin);
-
-  if (allowedOrigins.some((value) => !value)) return false;
-
-  if (allowedOrigins.length === 0) {
-    return origin === new URL(request.url).origin;
-  }
-
+  const allowedOrigins = parseOrigins(configuredOrigins);
+  if (allowedOrigins.length === 0) return false;
   return allowedOrigins.includes(origin);
 }
 
@@ -261,9 +254,21 @@ export async function verifyTurnstile(payload: ContactPayload, request: Request,
 export async function sendContactEmails(payload: ContactPayload, env: ContactEnv): Promise<boolean> {
   const apiKey = env.RESEND_API_KEY?.trim();
   const recipient = env.CONTACT_RECIPIENT_EMAIL?.trim();
-  if (!apiKey || !recipient || !isValidEmail(recipient)) return false;
+  const fromEmail = env.CONTACT_FROM_EMAIL?.trim();
+  const replyToEmail = env.CONTACT_REPLY_TO_EMAIL?.trim();
+  if (
+    !apiKey ||
+    !recipient ||
+    !isValidEmail(recipient) ||
+    !fromEmail ||
+    !isValidFromMailbox(fromEmail) ||
+    !replyToEmail ||
+    !isValidEmail(replyToEmail)
+  ) {
+    return false;
+  }
 
-  const messages = createEmailMessages(payload, recipient);
+  const messages = createEmailMessages(payload, recipient, fromEmail, replyToEmail);
   const response = await fetchWithTimeout(
     RESEND_BATCH_URL,
     {
@@ -281,7 +286,12 @@ export async function sendContactEmails(payload: ContactPayload, env: ContactEnv
   return response?.ok === true;
 }
 
-export function createEmailMessages(payload: ContactPayload, recipient: string): [EmailMessage, EmailMessage] {
+export function createEmailMessages(
+  payload: ContactPayload,
+  recipient: string,
+  fromEmail: string,
+  replyToEmail: string
+): [EmailMessage, EmailMessage] {
   const fullName = `${payload.firstName} ${payload.lastName}`;
   const phone = payload.phone || "Not provided";
   const escapedName = escapeHtml(fullName);
@@ -313,14 +323,14 @@ export function createEmailMessages(payload: ContactPayload, recipient: string):
     "Message:",
     payload.message,
     "",
-    "No additional action is required. Please wait for a direct response from me. If you need to add important context, email ngioanni@uw.edu.",
+    `No additional action is required. Please wait for a direct response from me. If you need to add important context, email ${replyToEmail}.`,
     "",
     "This is an automated confirmation. Replies to the sending address are not monitored."
   ].join("\n");
 
   return [
     {
-      from: CONTACT_FROM_EMAIL,
+      from: fromEmail,
       to: [recipient],
       reply_to: payload.email,
       subject: "New portfolio contact request",
@@ -340,9 +350,9 @@ export function createEmailMessages(payload: ContactPayload, recipient: string):
       )
     },
     {
-      from: CONTACT_FROM_EMAIL,
+      from: fromEmail,
       to: [payload.email],
-      reply_to: CONTACT_REPLY_TO_EMAIL,
+      reply_to: replyToEmail,
       subject: "Contact request received",
       text: confirmationText,
       html: emailShell(
@@ -355,7 +365,7 @@ export function createEmailMessages(payload: ContactPayload, recipient: string):
             ["Phone", escapedPhone]
           ],
           escapedMessage
-        )}<div style="margin-top:20px;padding:14px;border:1px solid #cbd8e6;border-radius:8px;background:#f7fafc;color:#334155;font-size:13px;line-height:1.6;"><strong style="color:#102a46;">This is an automated email.</strong><br>Replies to the sending address are not monitored. To add important context, email <a href="mailto:${CONTACT_REPLY_TO_EMAIL}" style="color:#174f87;">${CONTACT_REPLY_TO_EMAIL}</a>, or wait for my direct response.</div>`
+        )}<div style="margin-top:20px;padding:14px;border:1px solid #cbd8e6;border-radius:8px;background:#f7fafc;color:#334155;font-size:13px;line-height:1.6;"><strong style="color:#102a46;">This is an automated email.</strong><br>Replies to the sending address are not monitored. To add important context, email <a href="mailto:${escapeHtml(replyToEmail)}" style="color:#174f87;">${escapeHtml(replyToEmail)}</a>, or wait for my direct response.</div>`
       )
     }
   ];
@@ -415,6 +425,18 @@ function isValidEmail(value: string): boolean {
   });
 }
 
+function isValidFromMailbox(value: string): boolean {
+  if (!value || value.length > 320 || /[\r\n\t]/.test(value) || hasUnsafeControlCharacters(value)) return false;
+  if (isValidEmail(value)) return true;
+
+  const mailboxMatch = /^([^<>]{1,100})\s*<([^<>]+)>$/.exec(value);
+  if (!mailboxMatch) return false;
+
+  const displayName = mailboxMatch[1]?.trim() ?? "";
+  const address = mailboxMatch[2]?.trim() ?? "";
+  return Boolean(displayName && !/[\r\n\t]/.test(displayName) && !hasUnsafeControlCharacters(displayName) && isValidEmail(address));
+}
+
 function isValidPhone(value: string): boolean {
   if (!value) return true;
   if (value.length > 40 || hasUnsafeControlCharacters(value) || !PHONE_CHARACTER_PATTERN.test(value)) return false;
@@ -433,10 +455,30 @@ function hasUnsafeControlCharacters(value: string): boolean {
 }
 
 function parseHostnames(value?: string): string[] {
-  return (value ?? "")
+  const configuredHostnames = (value ?? "")
     .split(",")
     .map((hostname) => hostname.trim().toLowerCase())
-    .filter((hostname) => /^[a-z0-9.-]+$/.test(hostname) && !hostname.startsWith(".") && !hostname.endsWith("."));
+    .filter(Boolean);
+
+  if (
+    configuredHostnames.length === 0 ||
+    configuredHostnames.some((hostname) => !isValidHostname(hostname))
+  ) {
+    return [];
+  }
+
+  return [...new Set(configuredHostnames)];
+}
+
+function parseOrigins(value?: string): string[] {
+  const configuredOrigins = (value ?? "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  const normalizedOrigins = configuredOrigins.map(normalizeOrigin);
+
+  if (configuredOrigins.length === 0 || normalizedOrigins.some((origin) => !origin)) return [];
+  return [...new Set(normalizedOrigins as string[])];
 }
 
 function normalizeOrigin(value: string): string | undefined {
@@ -444,10 +486,25 @@ function normalizeOrigin(value: string): string | undefined {
     const url = new URL(value);
     if (url.protocol !== "https:" && url.protocol !== "http:") return undefined;
     if (url.pathname !== "/" || url.search || url.hash || url.username || url.password) return undefined;
+    if (!isValidHostname(url.hostname)) return undefined;
     return url.origin;
   } catch {
     return undefined;
   }
+}
+
+function isValidHostname(value: string): boolean {
+  if (!value || value.length > 253) return false;
+
+  return value.split(".").every((label) => {
+    return Boolean(
+      label &&
+        label.length <= 63 &&
+        /^[a-z0-9-]+$/.test(label) &&
+        !label.startsWith("-") &&
+        !label.endsWith("-")
+    );
+  });
 }
 
 async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number): Promise<Response | undefined> {

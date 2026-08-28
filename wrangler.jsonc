@@ -1,0 +1,22 @@
+{
+  "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
+  "name": "smart-portfolio",
+  "pages_build_output_dir": "./out",
+  "compatibility_date": "2026-08-27",
+  "vars": {
+    "TURNSTILE_ALLOWED_HOSTNAMES": "smart-portfolio.pages.dev,nicolasmgioanni.dev,www.nicolasmgioanni.dev",
+    "CONTACT_ALLOWED_ORIGINS": "https://smart-portfolio.pages.dev,https://nicolasmgioanni.dev,https://www.nicolasmgioanni.dev",
+    "CONTACT_FROM_EMAIL": "Nicolas Gioanni <noreply@nicolasmgioanni.dev>",
+    "CONTACT_REPLY_TO_EMAIL": "ngioanni@uw.edu"
+  },
+  "env": {
+    "preview": {
+      "vars": {
+        "TURNSTILE_ALLOWED_HOSTNAMES": "develop.smart-portfolio.pages.dev",
+        "CONTACT_ALLOWED_ORIGINS": "https://develop.smart-portfolio.pages.dev",
+        "CONTACT_FROM_EMAIL": "Nicolas Gioanni <noreply@nicolasmgioanni.dev>",
+        "CONTACT_REPLY_TO_EMAIL": "ngioanni@uw.edu"
+      }
+    }
+  }
+}

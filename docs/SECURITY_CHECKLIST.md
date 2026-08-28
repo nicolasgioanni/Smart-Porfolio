@@ -29,6 +29,7 @@
 ## Delivery and privacy
 
 - Keep `TURNSTILE_SECRET_KEY`, `RESEND_API_KEY`, and `CONTACT_RECIPIENT_EMAIL` in Cloudflare Pages encrypted secrets.
+- Keep reviewed `CONTACT_FROM_EMAIL` and `CONTACT_REPLY_TO_EMAIL` values in non-secret Wrangler environment variables; never substitute them for the encrypted destination inbox.
 - Confirm `CONTACT_RECIPIENT_EMAIL` never appears in tracked files, build output, response bodies, client variables, analytics, or logs.
 - Verify the fixed Resend From address belongs to a verified `nicolasmgioanni.dev` domain.
 - Use the submission-scoped Resend idempotency key and test both owner notification and visitor receipt.
@@ -72,7 +73,9 @@
 - The tracked `.env.example` contains placeholders only and no private recipient, credential, or usable secret.
 - Local Pages Function testing uses `npm run dev:pages` or `wrangler pages dev out --env-file .env`; no second local secret file is required.
 - Only `NEXT_PUBLIC_TURNSTILE_SITE_KEY` is exposed publicly; no private value uses a `NEXT_PUBLIC_` name.
-- Production and preview values are configured in the Cloudflare Pages dashboard, sensitive values use encrypted secrets, and neither environment imports the local `.env` file.
+- Build-time public values are configured as GitHub repository variables, the restricted Pages upload credential uses GitHub Actions secrets, and Pages Function runtime values are configured separately in Cloudflare with sensitive values encrypted. Neither environment imports the local `.env` file. `develop` receives only the optional preview Turnstile site key and never falls back to the production key.
+- Treat `PORTFOLIO_WORKBOOK_URL` as public configuration only. Use one anonymous HTTPS XLSX download and never introduce Drive/Sheets API access, OAuth, a service account, or a Google API key.
+- Keep generated deployment state out of `main`; verify the `out/` artifact digest and use the active `/content-version.json` hash as the successful-deployment record.
 - Production and preview have separate exact hostname/origin lists and appropriate credentials.
 - Scan the tracked tree, reachable Git history, and `out/` for secrets, the private recipient, private resume artifacts, and stale URLs before publishing.
 
