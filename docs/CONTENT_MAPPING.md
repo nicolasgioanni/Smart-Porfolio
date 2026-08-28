@@ -1,189 +1,212 @@
 # Content Mapping
 
-## Source Of Truth
+This document maps normalized portfolio content to selectors, routes, and visible UI. It describes current consumers, not the input schema. See [Content Sheet Schema](CONTENT_SHEET_SCHEMA.md) for exact columns and validation, [Content Pipeline](CONTENT_PIPELINE.md) for generation and hashing, and [Local Content Editing](LOCAL_CONTENT_EDITING.md) for the author workflow.
 
-All portfolio UI content comes from generated JSON built from spreadsheet-compatible CSV sheets. React components should not hard-code personal portfolio facts.
+## Render boundary
 
-The app remains static export friendly: content is generated before build, then read from generated files by static pages.
+`src/lib/content/getPortfolioContent.ts` statically imports `src/content/generated/portfolio.generated.json` and validates it before pages use it. Components receive normalized camel-case objects from that import. They do not fetch the workbook or parse CSV in the browser.
 
-## Profile Mapping
+Spreadsheet content owns portfolio facts, summaries, dates, external destinations, and asset references. Components still own stable interface copy, section headings, internal routes, accessibility labels, layout, and empty-state text. The spreadsheet is therefore the source of portfolio content, not every literal string rendered by the application.
 
-Profile fields drive:
+## Shared Home selection
 
-- Header and footer identity.
-- Home profile overview greeting, role, about text, current work, education, research, location, timezone, portrait, and contact fallbacks.
-- Contact and resume-request email fallbacks.
-- Route metadata defaults.
+Research, projects, experience, and education use this candidate rule:
 
-Portrait assets are referenced by the profile data. If a real image exists but the profile still points to a placeholder, update the content source intentionally in a separate content pass.
+1. If at least one row has `show_on_home=true`, use only those rows.
+2. Otherwise, if at least one row has `featured=true`, use only featured rows.
+3. Otherwise, use all rows.
 
-The Home profile overview derives `greetingName` from `profile.preferred_name`, then the first word of `profile.full_name`. The right-side `Hi, I’m {greetingName}` greeting is the Home page's single `h1`; the full name beneath the portrait is non-heading identity text.
+Candidates then sort by:
 
-Spreadsheet keys `role_engineer_prefixes`, `role_engineer_suffix`, and `role_alternate` normalize to `ProfileContent.roleEngineerPrefixes`, `roleEngineerSuffix`, and `roleAlternate`. The overview exposes a discriminated role model: `kind: "rotating"` contains the parsed prefixes, shared suffix, and alternate, while `kind: "static"` contains the required `headline` fallback. A rotating configuration requires all three source fields; a partial configuration or a prefix value with no non-empty items fails generation. `headline` also remains the resume-safe role, even when Home rotates roles.
+1. featured rows first;
+2. `home_order`, with blank values last;
+3. `start_date` in descending lexicographic order;
+4. `title`, then `institution`, then `id`, depending on the item type.
 
-The role is followed by an About paragraph from `profile.short_bio`. If `short_bio` is blank, the existing concise `long_bio` excerpt fallback may be used; if both are blank, the About block is omitted. Components must wrap this generated copy rather than replace or truncate it with hard-coded personal text.
+Research and projects are limited by `max_home_research_items` and `max_home_project_items`. Experience and education intentionally receive no Home limit. `max_home_experience_items` is normalized but has no current selector effect. A missing, zero, or negative Home limit uses the selector fallback rather than hiding the section.
 
-The right-side hierarchy is greeting, role, About, a full-width Current Work summary, then a 50/50 Education and Research row. The paired panels stretch to the same outer height and use the same geometry; Education's graduation label and Research's resource controls sit in aligned footer rows. On narrow screens, Education stacks before Research. Current Work owns the `View experience` link in its header, Research owns `View research`, and there is no detached supporting-navigation row beneath the panels. Header actions occupy an overlaid action slot so their larger hit areas do not increase header height or create a padding mismatch with Education.
+Skills use the same `show_on_home`, then featured, then all candidate rule, but use generic ordering. Recommendations use their own date and limit behavior described below.
 
-Current Work prefers a suitable current experience row: an entry with a blank end date or an end date normalized as `Present` or `Current`. A valid `current_experience_id` can identify that row; when several current rows are eligible, Home visibility, featured state, and Home ordering provide deterministic selection. The selected experience supplies organization, title, dates, `home_summary`, and optional `organization_logo`. Only when no suitable current experience exists do `profile.current_title` and `profile.current_company` provide a compact fallback. Previous experience rows remain in generated content and on the Experience page, but the Home profile overview never renders a Previous Work preview.
+## Detail selection
 
-The compact Education panel prefers the row named by `primary_education_id`, then uses the established Home-visible/featured/ordered education fallback. Non-blank `profile.university`, `profile.degree`, `profile.field_of_study`, and `profile.graduation` override the matching visible values from that row; the row supplies concentration, dates, and optional `institution_logo`. If no usable education row exists, the profile fields provide the safe fallback. When both degree and field are present, the shared education formatter joins them with `in`, so the current compact display is `Degree: Bachelor of Science in Computer Science`, followed by `Concentration: Information Assurance & Cybersecurity`. The education row uses the same formatter on the larger Home card. This panel emphasizes completion as `Graduated <date>` rather than repeating the full enrollment range, and it omits location because the left profile rail already establishes geography.
+The Research, Projects, and Experience routes use every row in their collection. They sort featured rows first, then `detail_order`, then `start_date` descending, then display name or ID.
 
-Research renders one item. It first considers rows with `show_on_home=true`, prioritizes featured entries, then uses `home_order` and the existing deterministic sort. When no row is marked for Home, a valid `featured_research_id` provides the explicit fallback before the deterministic featured/ordered fallback. Spreadsheet `home_title`, `profile_summary`, `profile_byline`, and `profile_labs` normalize into the research model. The compact view model uses the Home title with `title` fallback. When a byline or labs are present, it places the unlabelled byline directly below the title, renders the labs as a single labelled list, and omits both `role` and narrative copy. Otherwise, it preserves the legacy summary fallback from `profile_summary` to `home_summary` to `detail_summary`. It also consumes validated links, the spreadsheet organization logo, and pending resource labels while omitting organization text and dates. Its resource controls are centered, look transparent while idle, reveal a button surface and border on hover or focus, and do not underline their labels. Verified resources remain links; a label in `pending_links`, such as an unpublished `Manuscript`, renders only in this compact panel as a native disabled, non-interactive button. The separate Home Research cards continue to omit pending resources.
+When Recommendations are enabled, their detail selector uses every recommendation row and sorts by featured, `detail_order`, `recommendation_date` descending, then recommender name or ID. When disabled, that selector returns an empty array. There is no Education detail route even though an education detail selector remains available in the content library.
 
-The `View experience` and `View research` labels and destinations are fixed internal navigation. They use static Next.js navigation inside their relevant panel headers while all personal facts and external destinations continue to come from generated spreadsheet content.
+## Home composition
 
-Location comes from `profile.location`, so values such as `Greater Seattle Area` or `Bothell, WA` should be set in the content source. The compact timezone row comes from `profile.timezone`.
+The Home page renders in this order:
 
-## Links Mapping
+1. profile hero and overview;
+2. Experience;
+3. Education;
+4. Research;
+5. Projects;
+6. Skills;
+7. Recommendations, when enabled and eligible;
+8. global footer.
 
-The links sheet drives:
+## Profile and overview
 
-- Home profile contact links.
-- Header compact icon links.
-- Mobile navigation social links.
-- Resume CTA when a resume link is present.
+### Identity and role
 
-The footer intentionally does not repeat GitHub, LinkedIn, email, or resume icon rows from `links.csv`. Its legal contact, repository, and license resources come from `site_settings`; repository resources remain omitted while their URLs are blank.
+- The greeting name is `preferred_name`, or the first whitespace-delimited word of `full_name`.
+- The header mark uses the first character of `preferred_name`, then `full_name`, and uses `favicon_image` with a component fallback.
+- `role_engineer_prefixes`, `role_engineer_suffix`, and `role_alternate` produce the rotating Home role only when the complete validated set is present. Otherwise Home uses `headline`.
+- About uses `short_bio`. The helper can fall back to `long_bio`, but valid generated content always has the required non-empty `short_bio`.
+- Root metadata uses `site_title` with `full_name` as fallback, `site_description` with `short_bio` as fallback, and `favicon_image` when present.
 
-The Home profile card left rail selects compact contact rows in this order when available: location, timezone, Email, Portfolio or Website, LinkedIn, and GitHub. Email can fall back to `profile.email`.
+### Current Work
 
-## Skills Mapping
+Only experience rows whose `end_date` is blank, `Present`, or `Current`, case-insensitively, qualify as current.
 
-Skills drive:
+1. `current_experience_id` wins only when it references a qualifying current row.
+2. Otherwise current rows use the shared Home candidate and ordering rule.
+3. If no current row exists, `current_title` and `current_company` provide the compact fallback.
 
-- Home skill-category cards.
-- Shared skill groups used by portfolio surfaces.
+The selected row supplies title, organization, dates, `home_summary`, and organization logo. `previous_experience_id` is validated compatibility data and has no current UI consumer.
 
-Skills are grouped by `category`, ordered by `category_order`, and then sorted within each group by priority and `order`. Home renders three recruiter-focused category cards after Projects and before Recommendations, using a three-column desktop grid that collapses responsively. Each of the four skills per category renders its spreadsheet-owned `name` and `icon`; complete `proficiency`, `summary`, and `where_used` fields turn the badge into a dialog trigger that explains the skill and Nicolas's applied experience.
+### Education overview
 
-## Experience Mapping
+`primary_education_id` selects its exact education row when populated. Otherwise education uses the shared Home candidate and ordering rule. If no row exists, the profile education fields can still provide a compact fallback.
 
-Experience drives:
+Non-blank profile values for `university`, `degree`, `field_of_study`, and `graduation` override the selected row's matching visible values. The row can still supply concentration, dates, and logo. The view model retains row location, but the current compact panel does not display location or the start date. It displays institution, the combined degree and field, concentration, and a graduation label. Its logo is decorative in that context.
 
-- Home work-history list.
-- Experience page timeline details.
+### Research overview
 
-Home renders every experience row enabled with `show_on_home`, grouped by the exact `organization` value. The work-history list uses only the title, organization, logo, dates, and location; summaries, type labels, featured labels, bullets, and skills remain available to other surfaces. A compact top-right `View` button opens the Experience route.
+The compact profile Research panel uses a distinct selector:
 
-Experience rows may provide `organization_logo` and `organization_logo_alt`. Store real local marks under `public/images/organizations/` and reference them with a validated root-relative CSV path. When a logo is blank, the Home work-history list uses compact initials derived from the organization name.
+1. If any research row has `show_on_home=true`, use the first such row after Home sorting.
+2. Otherwise, use `featured_research_id` when it resolves.
+3. Otherwise, use the first row after Home sorting.
 
-## Research Mapping
+It displays `home_title` with `title` fallback. When `profile_byline` or `profile_labs` is present, those structured values suppress narrative summary copy. Otherwise summary falls back from `profile_summary` to `home_summary` to `detail_summary`.
 
-Research drives:
+Published `links` with valid labels and URLs are shown. `pending_links` are trimmed, deduplicated case-insensitively, and omitted when their label matches a published link. Pending items are disabled labels, not destinations. The compact organization logo is decorative.
 
-- Home Research card row.
-- Research page detail cards.
+### Identity links
 
-Home renders the first three enabled research rows in a three-column desktop grid. Each larger card shows `home_title` with `title` fallback, organization, date range, location, and one-line `home_summary`; `profile_summary`, `profile_byline`, and `profile_labs` are reserved for the compact profile panel and do not replace this copy. The cards do not show a Featured tag or a `Learn more` action. They render only verified actions, in the fixed order `Source code`, `Manuscript`, then `Live demo`, and render no action for a missing or `pending_links` resource. Roles, impact callouts, bullets, skill chips, and the formal `title` remain available to the Research detail route. A compact top-right `View` button opens the Research route. Research rows may provide `organization_logo` and `organization_logo_alt` for contexts that display an organization mark.
+The profile identity list is assembled in this fixed order:
 
-## Projects Mapping
+1. location;
+2. timezone;
+3. email;
+4. portfolio or website;
+5. LinkedIn;
+6. GitHub.
 
-Projects drive:
+Link matching uses the declared `kind` and an inferred kind from label or URL. Email falls back to `profile.email`. Other link kinds selected for general Home use do not appear in this identity list.
 
-- Home project cards.
-- Projects page detail cards.
+## Links
 
-The Home section is titled `Projects`. Each card uses the plain `title` and `subtitle`, a product-focused `home_summary`, exactly three `home_skills` badges, and verified links ordered as `Source code` then optional `Live demo`. Ordered columns `home_skill_1_summary`/`home_skill_1_details` through position three map onto optional `ProjectSkill.summary`/`details` fields. A position must provide both values or neither and must have a corresponding ordered skill; legacy project rows without tool explanations remain valid. It does not render Featured or subtitle chips. A compact top-right `View` button opens the Projects route. The Projects page adds problem, solution, impact, image, complete stack, and full links.
+General Home links first select rows where any of `is_primary`, `show_on_home`, or `show_in_header` is true. If none match, they fall back to all links. They use generic ordering and are capped at six before the profile identity mapper filters to supported identity kinds.
 
-## Recommendations Mapping
+Header links use only `show_in_header=true`, use generic ordering, and are capped at four. The same selected set is available in desktop and mobile header navigation.
 
-Recommendations drive:
+`show_in_footer` and `icon` are normalized but have no current component consumer. Footer resource links come from `site_settings`, with one exception: if `repository_url` is blank, the footer can use the first link whose kind is `repository`, `source`, or `github_repository`. That fallback does not consult `show_in_footer`.
 
-- The Home Recommendations card after Skills.
-- The Recommendations page at `/recommendations`.
-- The Recommendations navigation item when recommendations exist, unless empty display is explicitly enabled.
-- LinkedIn/source verification links when valid HTTPS URLs are provided.
+## Experience
 
-Home shows the first three eligible recommendation rows by default, while the detail route shows all rows. Both surfaces render the unchanged `full_quote` with the recommender's name, title at the time, organization, full date, relationship, and verification link. An optional validated `fullQuoteLink` turns its one exact matching label into an accessible inline link while the surrounding quote remains plain text; the renderer does not parse markup or auto-link raw URLs. Detail cards and single-card Home rows clamp long quotes to four lines. In multi-card Home rows, a taller rendered header may reduce its quote preview to three lines, at most one line below the default, and the row shares one collapsed height. Collapsed overflow fades through the lower half of its final visible line with a true alpha mask and exposes an accessible `Show more`/`Show less` control. On Home, expansion changes only the selected card: it protrudes below the fixed collapsed panel while an invisible section reserve moves later rows and the footer down in normal document flow. Transitions are disabled for reduced motion. Recommendation copy uses the same body size as Project and Research summaries, and verification actions use the same compact geometry as their resource buttons. A compact top-right `View` button opens the Recommendations route. When recommendation display is enabled but no rows are published, Home and the detail route render an honest empty state.
+Home shows the complete selected experience set and groups it by `organization.trim().toLowerCase()`. Organization capitalization and surrounding whitespace therefore do not create separate groups. The first available logo in a group is reused for the group, with generated initials as the no-logo fallback.
 
-## Education Mapping
+Home displays organization, title, date range, location, and organization logo. It does not display type, summaries, bullets, or skills.
 
-Education drives:
+The Experience route displays every row with title, organization, date range, location, type, featured status, detail summary with Home summary fallback, bullets, and skills. Organization logos are not rendered on the detail timeline.
 
-- Home profile overview education row.
-- Home education list.
+## Education
 
-The Home Education card renders every Home-selected row as a clean academic-history list. Each row uses the spreadsheet's institution mark when supplied, with compact institution initials as the visual fallback, then shows institution, degree and field, concentration directly beneath the degree, dates, optional location, and every `bullets` entry as a visible bullet list. It does not render `home_summary`, wrap entries in nested cards, or use skill-style chips. Grade, activities, honors, and similar details remain spreadsheet-owned content in `bullets`; the UI does not invent them. The profile-overview Education panel is intentionally tighter and shows only the identity-level academic facts and compact graduation label.
+Home displays every selected education row. It uses institution, logo or generated initials, degree and field, concentration, date range, location, and bullets.
 
-The Home profile overview prefers the row named by `profile.primary_education_id`, then uses the deterministic education fallback when that ID is blank. If no education row is available, it falls back to profile fields: `university`, `degree`, `field_of_study`, and `graduation`.
+`home_summary`, `detail_summary`, and `detail_order` have no current UI consumer. They are also intentionally excluded from `contentHash`; see [Content Pipeline](CONTENT_PIPELINE.md#content-hash).
 
-Education rows may provide `institution_logo`, `institution_logo_alt`, and `concentration`. Logo paths should use real safe local assets such as `/images/organizations/uw-logo.svg`; when no logo is provided, the compact panel omits the image without showing a fake mark. Education location remains available to detailed renderers but is omitted from this profile panel rather than duplicated beside the left-rail location.
+## Research
 
-Whether content comes from local templates or the nine worksheets in the XLSX downloaded from `PORTFOLIO_WORKBOOK_URL`, generation validates role-set completeness, parses role prefixes, maps the optional research profile summary, byline, and lab affiliations, resolves Home-title and legacy summary fallbacks, and writes the same normalized model. The deprecated `profile_contributions` column is still accepted as a byline alias during generation. Workbook edits are never fetched by the browser at runtime; the daily or manually dispatched GitHub workflow verifies and deploys meaningful normalized changes, and the active `/content-version.json` records the successful content hash without a repository snapshot commit.
+Home Research cards display:
 
-## Resume Mapping
+- `home_title` with `title` fallback;
+- organization, date range, and location;
+- `home_summary` with `detail_summary` fallback;
+- at most one inferred GitHub action labelled `Source code`;
+- at most one inferred publication action labelled `Manuscript`;
+- at most one inferred website action labelled `Live demo`.
 
-The resume sheet is retained as a header-only compatibility source and always normalizes to an empty array in the private-resume configuration. The Resume route publishes no resume details or files; it directs legitimate contacts to the priority contact form or the public email address.
+Those actions always appear in the order above. Home cards ignore `pending_links`, role, impact, bullets, skills, profile-only fields, image, and organization logo.
 
-## Site Settings Mapping
+The Research route displays formal `title`, role, featured status, organization, date range, location, `detail_summary` with Home fallback, impact, bullets, skills, and every link. The current detail card does not render `image` or organization logo fields.
 
-`site_settings` controls presentation and selection behavior:
+## Projects
 
-- `default_theme`: `navy`, `light`, or `dark`.
-- `enable_skeletons`
-- `enable_scroll_motion`
-- `enable_glass_effects`
-- `enable_recommendations`
-- `show_empty_recommendations`
-- `max_home_research_items`
-- `max_home_project_items`
-- `max_home_experience_items` (retained for existing sheets; Home now shows every enabled experience row)
-- `max_home_recommendation_items`
-- `max_home_skill_items`
-- `recommendations_nav_label`
-- `license_name`
-- `license_url`
-- `copyright_owner`
-- `repository_url`
-- `legal_contact_email`
-- `legal_effective_date`
-- `hosting_provider_name`
-- `hosting_privacy_url`
+Home Project cards display `title`, optional `subtitle`, `home_summary` with detail fallback, up to three ordered `home_skills`, and at most one action each for inferred GitHub and website links. The fixed action labels and order are `Source code`, then `Live demo`.
 
-Unsupported theme values resolve to `navy` at render time.
+A Home skill with complete summary and details opens its evidence dialog. A skill without those optional fields remains a static badge. Generation guarantees at most three skills and validates numbered explanation pairs against their positions.
 
-`license_url`, `repository_url`, and `hosting_privacy_url` must be HTTPS URLs. `legal_contact_email` must be a valid email address. `legal_effective_date` must be a real calendar date; ISO `YYYY-MM-DD` is preferred, while valid `M/D/YYYY` and `MM/DD/YYYY` Google Sheets display values normalize to ISO. The legal routes use safe production fallbacks if legacy generated content predates these settings.
+The Projects route displays title, subtitle, detail summary with Home fallback, problem, solution, impact, image, full stack, and every link. `featured` affects ordering but is not displayed as a chip on project cards.
 
-## Footer And Notice Behavior
+## Skills
 
-The global footer first renders a compact copyright statement and `Details` disclosure, followed by reserved below-footer scroll space sized for the expanded disclosure. It remains compact on first view, opens after the visitor continues scrolling into that runway, and also opens when contracting content above it moves the previously lower runway boundary fully into view. It closes after upward scrolling crosses the return threshold. Expansion consumes the reserved footprint instead of extending the page at the moment it opens. The manual `Collapse` action suppresses automatic reopening until the footer interaction area is exited and later re-entered; `Details` remains the explicit accessibility fallback. Expanded content maps the owner, contact, repository, license, and hosting facts from generated content while stable notice labels and internal destinations remain component-owned. The four footer-only routes are `/contact`, `/terms`, `/privacy`, and `/security`; they are intentionally absent from header navigation.
+Skills use the `show_on_home`, then featured, then all candidate rule. They sort by `priority`, `order`, category, then name. `max_home_skill_items` limits the selected flat list when it is a positive value.
 
-Do not populate public repository or repository-license URLs until the tracked tree and reachable Git history pass an exposure audit and both anonymous URLs resolve successfully. Portfolio content remains rights-reserved except where stated, while distributed site software is governed by the repository's MIT License.
+Selected skills are grouped by the exact normalized `category` string. Categories sort by `category_order`, then category name. Skills within each category use generic ordering. The schema does not require a fixed category count or a fixed number of skills per category.
 
-## Home Summary Behavior
+The Home badge displays `name` and `icon`. The complete `proficiency`, `summary`, and `where_used` set enables the skill dialog; generation rejects a partial set.
 
-Home is the complete high-level overview of the core portfolio narrative. Compact top-right route buttons appear on Experience, Research, Projects, and Recommendations. The Resume route remains a private-access request surface rather than a public content summary.
+## Recommendations
 
-Home order:
+The Home section and navigation item appear only when `enable_recommendations` is not false and either at least one recommendation exists or `show_empty_recommendations=true`. The static `/recommendations` route still exists when hidden; its detail selector returns no rows when Recommendations are disabled.
 
-1. Profile overview
-2. Experience
-3. Education
-4. Research
-5. Projects
-6. Skills (three category cards)
-7. Recommendations
-8. Global footer
+Home candidates use `show_on_home`, then featured, then all. They sort by featured, `home_order`, `recommendation_date` descending, then recommender name or ID. A positive `max_home_recommendation_items` sets the limit. A missing, zero, or negative value falls back to three.
 
-## Detail Page Behavior
+Home and detail cards both display the unchanged `full_quote`, recommender name, title, organization, recommendation date, relationship, optional inline full-quote link, LinkedIn link, and a distinct source link. Quote expansion and line clamping affect presentation only.
 
-Detail pages show all relevant entries for their route with longer summaries, bullets, impact details, technical context, and links.
+`home_quote`, `context`, and recommendation `skills` are normalized but have no current UI consumer.
 
-The Recommendations page shows all recommendations, featured first, then ordered rows. It shows a clean empty state when the recommendations sheet has no rows. Navigation hides that route while empty unless `show_empty_recommendations=true`.
+## Site settings
 
-## Selection And Ordering
+| Setting | Current effect |
+| --- | --- |
+| `site_title` | Metadata title, with profile full name fallback. |
+| `site_description` | Default metadata description, with short bio fallback. |
+| `default_theme` | Initial `navy`, `light`, or `dark` theme; unsupported values resolve to `navy`. |
+| `enable_skeletons` | Loading fallback behavior. |
+| `enable_scroll_motion` | Page and section motion behavior. |
+| `enable_glass_effects` | `data-glass-effects` value on the site shell. |
+| `enable_recommendations` | Recommendations Home section, detail content, and route eligibility. |
+| `show_empty_recommendations` | Allows an empty Recommendations section and route. |
+| `max_home_research_items` | Positive Home Research limit. |
+| `max_home_project_items` | Positive Home Projects limit. |
+| `max_home_experience_items` | Normalized compatibility setting with no current selector effect. |
+| `max_home_recommendation_items` | Positive Home Recommendations limit; otherwise three. |
+| `max_home_skill_items` | Positive flat skill limit before grouping. |
+| `recommendations_nav_label` | Header navigation label only. |
+| `copyright_owner` | Footer owner, with profile full name fallback. |
+| `license_name`, `license_url` | Footer license resource when both are populated. |
+| `repository_url` | Preferred footer source-code destination. |
+| `legal_contact_email` | Footer contact email, with profile email fallback. |
+| `legal_effective_date` | Privacy, security, and terms notice content. |
+| `hosting_provider_name`, `hosting_privacy_url` | Privacy and hosting notice content. |
 
-Home selection uses this priority:
+The footer's notice labels, internal notice routes, descriptive text, and closing statement are component-owned. The footer always includes the contact form, adds contact email when available, and conditionally adds repository and license resources.
 
-1. Items with `show_on_home=true`.
-2. If none exist, featured items.
-3. If none exist, first sorted items.
+## Compatibility fields without a current UI consumer
 
-Within the chosen set, featured items sort first, then `home_order`, then date, then title or ID.
+These accepted fields should not be treated as display controls:
 
-Detail pages use all relevant items. Featured items sort first, then `detail_order`, then date, then title or ID.
+- profile: `previous_experience_id`, `primary_cta_label`, `secondary_cta_label`;
+- links: `icon`, `show_in_footer`;
+- research: `image`;
+- recommendations: `home_quote`, `context`, `skills`;
+- education: `home_summary`, `detail_summary`, `detail_order`;
+- site settings: `max_home_experience_items`.
 
-## Missing Content
+## Authoritative implementation
 
-Sections should not crash on missing arrays or optional fields. Empty states are accessible content and should not mention internal source mechanics.
+| Concern | Source |
+| --- | --- |
+| Home and detail selection | `src/lib/content/selectHomeContent.ts` |
+| Shared ordering | `src/lib/content/sortPortfolioContent.ts` |
+| Profile overview fallbacks | `src/lib/content/profileOverview.ts` |
+| Home composition | `src/components/portfolio/HomeOverview.tsx` |
+| Header link selection and navigation | `src/components/layout/BlobHeader.tsx`, `src/components/navigation/navigationItems.ts` |
+| Footer resources | `src/components/layout/BlobFooter.tsx` |
+| Collection renderers | `src/components/portfolio/` |
+| Route consumers | `src/app/` |

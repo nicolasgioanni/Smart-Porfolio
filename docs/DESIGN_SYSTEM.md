@@ -1,137 +1,262 @@
-# Design System
+# Design system
 
-## Direction
+Smart Portfolio uses a restrained glass-inspired visual language to organize evidence without reducing readability. Semantic tokens, focused CSS files, and reusable React primitives keep Navy, Light, and Dark behavior aligned.
 
-The portfolio uses a restrained glass visual language for navigation, section surfaces, cards, and resume panels. The design should feel polished and evidence-focused: clear hierarchy, compact controls, readable content, and no decorative UI that competes with the work.
+## Design goals
+
+- Keep professional evidence more prominent than decorative effects.
+- Use translucency, fine borders, and controlled highlights to define hierarchy.
+- Preserve readable static content when JavaScript, motion, or glass effects are unavailable.
+- Provide consistent keyboard focus, selected state, disabled state, and reduced-motion behavior.
+- Keep Home concise while making deeper context available on focused routes and in accessible dialogs.
+
+## Sources
+
+| Concern | Primary source |
+| --- | --- |
+| Semantic tokens and themes | `src/styles/tokens.css` |
+| Document and type defaults | `src/styles/base.css` |
+| Shell, pages, header, and footer | `src/styles/layout.css` |
+| Glass primitives and controls | `src/styles/glass.css` and `src/components/glass/` |
+| Navigation and theme disclosure | `src/styles/navigation.css` and navigation components |
+| Portfolio pages and cards | `src/styles/portfolio.css` and portfolio components |
+| Interaction states | `src/styles/interactions.css` |
+| Motion | `src/styles/motion.css` and motion components |
+| Loading states | `src/styles/skeletons.css` and loading components |
+| Contact experience | `src/styles/contact.css` and contact components |
+
+`src/app/layout.tsx` imports these files in cascade order. Do not introduce a second global entry point that changes their order implicitly.
+
+## Themes
+
+The supported themes are `navy`, `light`, and `dark`.
+
+| Theme | Role |
+| --- | --- |
+| Navy | Default cool dark presentation with blue-gray emphasis. |
+| Light | High-lightness neutral presentation with graphite interactions. |
+| Dark | Neutral dark presentation with restrained indigo emphasis. |
+
+The generated `default_theme` setting selects the server-rendered value. `ThemePreferenceScript` applies a valid stored `portfolio-theme` preference before hydration. `ThemeSwitcher` presents Light, Navy, and Dark as a labelled button group and persists selection through `useThemePreference`.
+
+Components must use semantic variables such as `--color-ink`, `--color-muted`, `--color-line`, and `--color-surface`. Do not read a palette-specific variable from a component rule when a semantic token expresses the role.
+
+## Semantic tokens
+
+`tokens.css` defines five main token groups:
+
+- typography, line height, and font weight;
+- spacing, container widths, and header offsets;
+- radii and glass blur;
+- transition timing and easing;
+- semantic color, surface, shadow, gradient, and interaction values per theme.
+
+Aliases such as `--color-canvas`, `--color-ink`, `--color-surface`, and `--color-line` let layout and component styles remain theme-independent. New theme values must define the complete semantic set rather than depending on another theme's cascade accidentally.
 
 ## Typography
 
-Type is centralized in `src/styles/tokens.css`.
+Inter is loaded through `next/font` with Segoe UI, Arial, and sans-serif fallbacks. The token scale ranges from eyebrow and caption text through body, card, section, page, and hero titles.
 
-- `--font-sans` is the Inter stack from `next/font`.
-- `--font-display` aliases the same family for consistent rendering.
-- Font sizes use rem-based tokens with media-query adjustments.
-- Do not scale font size with viewport units.
-- Letter spacing is `0`; rely on weight, size, and spacing for hierarchy.
+| Use | Token |
+| --- | --- |
+| Eyebrow labels | `--font-size-eyebrow` |
+| Supporting metadata | `--font-size-caption` and `--font-size-small` |
+| Primary copy | `--font-size-body` and `--font-size-body-large` |
+| Card headings | `--font-size-card-title` |
+| Section headings | `--font-size-section-title` |
+| Route titles | `--font-size-page-title` |
+| Home greeting | `--font-size-hero-title` |
 
-Use `hero-title` only for the Home hero. Use `page-title` for route intros, `section-heading` for section titles, and card title classes inside compact surfaces.
+Body copy uses normal or relaxed line height. Keep paragraph width and spacing readable instead of shrinking type to fit a card. Heading levels express document structure; visual size comes from classes and tokens.
 
-## Color And Themes
+## Spacing and radii
 
-Theme tokens live in `src/styles/tokens.css`. Component styles should use semantic tokens, not hard-coded colors.
+The spacing scale runs from `--space-1` at 0.25rem through `--space-16` at 4rem. Prefer these values for gaps, padding, and section rhythm.
 
-The default Home experience should read as very dark navy. Page backgrounds should be token-driven gradients, not full-page abstract wallpaper images. Atmospheric accents should stay subtle and belong behind the hero or major section transitions.
+Radii express component role:
 
-Supported themes:
+- `--radius-card` for content cards and inline interaction surfaces;
+- `--radius-panel` for section-level surfaces and dialogs;
+- `--radius-dock` for header and footer islands;
+- `--radius-pill` for chips and pill controls.
 
-- `navy`: default portfolio theme.
-- `light`: light neutral theme with teal and warm accents.
-- `dark`: neutral dark theme with teal and warm accents.
+Do not create a unique radius or near-duplicate spacing value for one component without a layout reason.
 
-Theme selection is applied through `data-theme` on the document element. `default_theme` from `site_settings` is resolved to a supported value, with `navy` as the fallback.
+## Layout
 
-The visible theme control lives in the header after the social links and remains available beside the mobile menu when desktop links collapse. Its icon is an accessible disclosure controlling a theme-aware glass panel ordered `Light`, `Navy`, then `Dark`. The panel is a labelled group of pressed-state buttons rather than an ARIA menu: native Tab navigation remains available, Escape dismisses and returns focus, pointer hover has a forgiving corridor, and selecting a theme keeps the panel open. The footer intentionally has no duplicate theme controls.
+`--container-width` is 1180px. The header has separate full and compact widths, while `--header-offset` and `--scroll-margin-top` keep sticky navigation from covering anchored content.
 
-## Spacing And Radius
+`PageContainer`, `PageIntro`, `SectionHeader`, and `FeaturedGrid` own common route geometry. Home uses full-width top-level rows inside `home-overview-grid`; detail routes use evidence-specific lists and timelines.
 
-Spacing uses `--space-1` through `--space-16`. Reuse these tokens before adding new spacing.
+The implemented Home order is:
 
-Cards use a compact radius token. Larger radii are reserved for navigation, footer docks, and larger panel surfaces where the existing glass language requires them.
+1. Profile overview
+2. Experience
+3. Education
+4. Research
+5. Projects
+6. Skills
+7. Recommendations when enabled
+8. Global footer
 
-## Layout Primitives
+Do not reorder these sections through CSS. Change `HomeOverview.tsx`, skeleton composition, tests, content mapping, and documentation together.
 
-Use the shared layout components for page and section hierarchy:
+## Glass primitives
 
-- `PageIntro` for route headers.
-- `SectionHeader` for section eyebrow, title, description, and an optional action link or compact button.
-- `PageContainer` for detail routes.
-- `FeaturedGrid` for project, research, and recommendation grids, including single-item layouts.
+| Primitive | Use |
+| --- | --- |
+| `GlassSurface` | Page introductions, Home sections, profile shell, dialogs, and large panels. |
+| `GlassCard` | Reusable card surface and the base for `PortfolioCard`. |
+| `GlassBlob` | Floating header and progressive footer docks. |
+| `GlassButton` | Primary and secondary commands or route calls to action. |
+| `GlassLink` | Section-level text links. |
+| `GlassIconButton` | Labelled icon-only controls. |
+| `GlassIconLink` | Social and external destinations. |
+| `GlassChip` | Short metadata, skills, roles, and facts. |
+| `GlassDivider` | Quiet separation within a surface. |
 
-The Home header island should align to the page max-width and remain visually connected to the content grid. The Home profile overview uses one coordinated glass shell with a photo-and-identity rail and a recruiter-focused detail column. Center the photo-and-identity rail vertically against the taller detail column on desktop. That column is ordered greeting H1, animated role, About, full-width Current Work, then a paired Education and Research row.
+Glass surfaces use one-pixel borders, bounded backdrop blur, semantic backgrounds, restrained highlights, and theme-owned shadows. When `enable_glass_effects` is false, surfaces use opaque elevated backgrounds and remove backdrop blur without changing structure.
 
-The greeting and About remain open typography inside the outer surface. On desktop, use approximately 42–52px for the greeting and 28–34px for the role. Keep the greeting-to-role gap near 8px, role-to-About near 28px, About-to-Current Work near 32px, and Current Work-to-paired-cards near 28px. The role stays on one line and reserves space for its widest configured value.
+Keep nested Home cards quieter than their outer section. A nested card should not compete with the panel through stronger blur, highlight, or shadow.
 
-Current Work, Education, and Research may use quiet internal panels with identical padding and header alignment, a smaller shared radius than the shell, a restrained border, and slight tokenized surface contrast. Current Work and Research place their route actions in overlaid header slots so the controls retain generous hit areas without increasing header height or creating extra apparent top padding. Do not add timeline dots, vertical rails, repeated horizontal dividers, independent glass blur, strong shadows, or animated panel effects.
+## Header and navigation
 
-On desktop, Current Work spans the detail column. Education and Research use `repeat(2, minmax(0, 1fr))` with stretched items, equal outer heights, and column-flex interiors. Apply `height: 100%` only to panels inside this paired grid so Current Work retains its intrinsic height and cannot overlap the row below. Pin Education's graduation label and Research's resource controls to matching bottom footer rows without adding filler content. `View experience` belongs at the top right of Current Work and `View research` at the top right of Research. Do not add an Education route action or a detached supporting-navigation row.
+The header is a sticky `GlassBlob` that server-renders expanded. Client behavior compacts it after downward scroll beyond the threshold, restores it on upward scroll or pointer proximity, and keeps it expanded while keyboard focus or the mobile menu requires the controls.
 
-Keep `Hi, I’m {greetingName}` with no trailing period as the single Home `h1`; the full name in the portrait rail is non-heading text. About and panel labels use a logical subordinate heading structure, and the compact panel label is `Research`, not `Selected Research`. The compact Education facts read `Degree: Bachelor of Science in Computer Science` and `Concentration: Information Assurance & Cybersecurity`; the larger Home Education card uses the same degree wording. Generated organization, role, date, summary, education, research, URL, and logo values remain outside component code. Real marks are selected through existing CSV logo paths, and a missing mark leaves a clean text layout rather than producing a fake logo or initials badge. Compact Research uses the spreadsheet organization mark beside its title, places its unlabelled byline directly beneath the title in Current Work subtitle styling, and renders only Labs as a labelled fact list. Research rows without structured profile facts retain the legacy summary layout. Verified resources are links, while a spreadsheet pending resource may appear in this profile panel only as a clearly disabled unpublished control; standalone Home Research cards omit it.
+Desktop navigation uses a persistent animated route indicator plus `aria-current="page"`. Mobile navigation uses a button with `aria-expanded`, a hidden panel, the same route list, and up to four configured social links.
 
-Home order should remain: profile overview, experience, education, research, projects, three Skills category cards, recommendations, then the global footer. Each top-level Home section occupies its own full-width row. Projects, Research, and Skills share a quiet three-card desktop rhythm; Skills collapses to two columns and then one at narrower breakpoints. Each Skills card contains four interactive badges whose dialogs show a concise proficiency label, definition, and evidence of use. Experience, Research, Projects, and Recommendations use consistently sized compact `View` buttons aligned to the top-right of their section headers. Enabled recommendation surfaces use an honest empty state when no rows are available.
+The profile mark opens an image preview only when an image exists. The theme disclosure and mobile menu close each other so their panels do not overlap. Header motion uses the centralized duration and easing tokens.
 
-Recommendation cards in each multi-card Home row share a measured collapsed minimum height, with a taller header receiving at most a one-line quote-preview reduction. The minimum height keeps collapsed borders and actions level without stretching siblings when one quote opens. The selected card may protrude below the outer Home panel, whose border and background remain fixed at the responsive collapsed height; an invisible section reserve moves later rows and the footer below the deepest card without overlap. Home recommendation cards use a dedicated opaque, theme-matched fill so their apparent color stays consistent across the panel boundary; detail recommendation cards and other nested Home cards retain their existing glass surfaces. Single-card Home rows and detail cards retain four-line previews. Separate recommender metadata from the quote with a one-pixel inset divider. Inline quote links remain part of the prose: keep them bold without an underline at rest, then change only their text color and add an underline on hover or keyboard focus. Do not add a background highlight, padding, or line-layout change. Preserve the global focus-visible treatment. Use the standard body size for recommendation, Project, and Research explanatory copy, and keep LinkedIn/source actions at the same compact 36px geometry as Project and Research resource actions.
+## Profile overview
 
-## Portfolio Cards
+The Home profile shell is the only hero-scale surface. It includes:
 
-Use `PortfolioCard` for content cards and resume blocks. Variants are semantic:
+- portrait and identity details;
+- one H1 greeting using the preferred name fallback;
+- a static or configured rotating role;
+- short About copy;
+- full-width current work;
+- a two-column Education and Research row.
 
-- `summary`: normal overview card.
-- `detail`: full evidence card.
-- `compact`: dense cards such as skill groups.
-- `cta`: call-to-action panels.
-- `media`: cards with primary media.
-- `timeline`: experience timeline entries.
+Current work, education, and research are generated from explicit content references with deterministic fallback selection. Organization and institution logos render beside text without an additional decorative frame. A missing mark leaves a text layout rather than inventing a logo.
 
-Avoid one-off card spacing when an existing variant can express the layout.
+The compact Research panel uses structured byline and lab fields when present. In legacy summary mode it uses the documented summary fallback. Verified resources are links; unavailable resources remain clearly disabled and non-interactive.
 
-## Glass Surfaces
+## Portfolio cards
 
-Use `GlassSurface` for large section surfaces, `GlassCard` through `PortfolioCard` for content cards, and `GlassBlob` for header and footer docks.
+Use `PortfolioCard` variants according to meaning:
 
-The footer dock is a normal-flow progressive disclosure. Its compact state uses the header's compact width and a single copyright/control row, with a responsive scroll runway reserved beneath it for the expanded content. The compact dock stays visible first; scrolling farther into the runway expands it to the content width, and reversing past a separate return boundary restores the compact state. Downward scrolling evaluates the runway's live geometry so an already-visible activation boundary still opens reliably after a route change. A boundary that enters from below because content above it contracts uses the same expansion behavior, so layout-driven scroll clamping cannot leave a prominently visible footer compact. The `Details` and `Collapse` labels share one neutral idle button surface; expanded state must not apply a selected color, while the existing hover and keyboard-focus treatments remain unchanged. The expanding details consume the reserved footprint, preventing a hard-bottom stop, page-length jump, or trigger feedback. Expanded details use a three-column identity/notices/resources layout and become one column below 720px. State motion remains limited to width, padding, grid-row height, opacity, and a slight vertical translation over roughly 420 ms. Never scale or animate blur; reduced motion changes state immediately; long URLs wrap without horizontal overflow.
+| Variant | Purpose |
+| --- | --- |
+| `summary` | Standard overview card. |
+| `detail` | Complete evidence card. |
+| `compact` | Dense groups such as skills. |
+| `cta` | Focused action panel. |
+| `media` | Card with primary media. |
+| `timeline` | Experience timeline entry. |
 
-Glass rules:
+Research and project Home cards use concise copy and bottom-aligned verified actions. Detail cards carry longer summaries, problem and solution context, impact, bullets, stack, and supporting links where the content type provides them.
 
-- Keep blur bounded to surfaces.
-- Use borders and highlights for shape definition.
-- Keep text over quiet backgrounds.
-- Reduce blur on mobile through tokens.
-- Keep detail pages readable if motion or glass effects are disabled.
-- Keep nested Home cards visually quiet. The outer section surface should provide the main structure; inner content cards should avoid competing shadows and heavy highlights.
+Home section route actions use compact buttons aligned with the section heading. They remain visually subordinate to primary page actions.
 
-## Buttons, Links, And Chips
+## Skills
 
-- `GlassButton` is for clear commands and CTAs.
-- `GlassLink` is for section-level text links.
-- `GlassIconLink` is for external or social links.
-- `GlassChip` is for metadata, skills, roles, and short facts.
+Home groups selected skills by `category` and `category_order`. The published content currently produces three cards with four skills each. A skill with the complete proficiency, summary, and evidence set renders as a button that opens the shared dialog. Incomplete legacy detail sets render as static badges.
 
-Home section route actions use compact `GlassButton` controls. Keep them top-aligned with their headings and visually smaller than primary page CTAs.
+The shared dialog is modal, traps focus, closes through Escape, backdrop, or button, restores trigger focus, and removes background scrolling. Project cards reuse the same interaction contract for configured project-specific skills.
 
-Home project cards mirror the quiet Research-card geometry: title, plain subtitle, product-focused summary, three compact icon skill badges, then bottom-aligned source/demo actions. The three Skill category cards form one desktop row, with four icon-and-label dialog triggers per card arranged in a two-by-two grid. Recommendation cards use plain identity metadata and a transparent idle expansion control that reveals its subtle button surface on hover or keyboard focus.
+## Recommendations
 
-Inside the profile overview, use compact `SmartLink` actions for Current Work and Research headers. Their overlaid action slots preserve consistent heading geometry. They appear as unadorned text while idle, then reveal the shared subtle control surface, border, and focus treatment over their full hit area on hover or keyboard focus. They do not use a persistent underline. Verified Research resource links remain plain text with a brighter or underlined hover/focus state; pending resources use the same quiet footprint but remain visibly disabled, non-interactive, and free of hover motion. Resource controls do not use arrows, pills, glass-button styling, blur, or scale effects. Organization marks inside these panels render without an added frame, fill, or padding around the source logo.
+Recommendation cards render the full quote with an optional validated inline link and expose `Show more` only when measurement detects overflow. Multi-card Home rows may reduce one preview from four lines to three when header geometry requires a level collapsed row.
 
-External links must keep safe `target` and `rel` attributes.
+The outer Home panel keeps its collapsed border and background. An expanded card may extend below it while an invisible reserve preserves normal document flow for later sections. Home recommendation cards use an opaque theme-matched fill so their color remains stable across the panel boundary.
+
+Quote links remain part of the prose. They become brighter and underlined on hover or focus without adding a background or changing line layout. Expansion controls preserve `aria-expanded`, `aria-controls`, and reduced-motion behavior.
+
+## Footer
+
+The footer is a normal-flow progressive disclosure, not a fixed overlay. Its compact copyright row appears before the page reaches the end. Continued scrolling into a reserved runway can expand details into already-reserved space. The `Details` and `Collapse` button remains the device-independent control.
+
+Expanded details use identity, notices, and resources columns. Automatic collapse is deferred while focus remains inside. Manual collapse suppresses immediate reopening until the interaction region is exited. Route changes reset the disclosure state.
+
+Footer state may animate width, padding, grid-row height, opacity, and small translation. It must not animate blur or scale, block native scrolling, or change total document length when it opens.
+
+## Buttons, links, and chips
+
+- Use buttons for actions and links for navigation.
+- Use `SmartLink` when a destination may be internal, external, or email.
+- Keep external new-tab destinations on `noopener noreferrer`.
+- Give every icon-only control a specific accessible label.
+- Use native disabled behavior for unavailable controls.
+- Keep chips short and non-interactive unless their component is explicitly a button.
 
 ### Hover Base 1
 
-`hover-base-1` is the shared interaction treatment for every visible semantic link and button. Add the base class alongside the component class, then select the narrowest modifier that describes the control:
+`hover-base-1` is the shared visible interaction treatment. Combine it with the narrowest modifier that describes the control:
 
-- `hover-base-1--inset` keeps the decorative surface inside a navigation or segmented-control edge.
-- `hover-base-1--compact` uses the tighter shadow and inset intended for small icon and utility controls.
-- `hover-base-1--inline` uses the card radius for inline text links.
-- `hover-base-1--solid` layers a partially translucent interaction surface over an existing primary fill instead of replacing it.
-- `hover-base-1--no-wave` suppresses only the moving sheen for controls whose visual content should remain unobscured; all other Hover Base 1 states remain intact.
-- `hover-base-1--route` provides the server-rendered active-route fallback used by navigation.
+- `--inset` keeps the surface within a segmented edge;
+- `--compact` uses tighter geometry for utility controls;
+- `--inline` uses card-radius text-link geometry;
+- `--solid` layers interaction over a primary fill;
+- `--no-wave` suppresses only the decorative sheen;
+- `--route` supplies the server-rendered active-route fallback.
 
-Idle controls retain their component-owned background. Hover and keyboard focus use the theme's stronger surface, selected states use its quieter translucent companion, and selected controls temporarily return to the stronger treatment while hovered. Navy and Dark use their blue/indigo families; Light uses a neutral graphite family that matches its grayscale visual language. Selection is semantic: use `aria-current="page"` for routes, `aria-pressed="true"` for toggles, `aria-expanded="true"` for disclosure buttons, or `data-selected="true"` only when no native ARIA state expresses the UI state.
-
-The `::before` surface and `::after` sheen are decorative, have `pointer-events: none`, and do not contribute to layout. The sheen loops only while a fine pointer remains hovered; use `hover-base-1--no-wave` when the sheen would cross important imagery, as it does on the header profile photo. Place a GlassLink arrow in an `aria-hidden="true"` child with class `glass-link__arrow`; Hover Base 1 owns the pseudo-elements. Disabled controls must use the native `disabled` attribute or `aria-disabled="true"` so lift, elevated shadow, and sheen are suppressed.
+Use `aria-current`, `aria-pressed`, `aria-expanded`, or native disabled state to express semantics. Decorative pseudo-elements use `pointer-events: none`. The sheen runs only for a fine pointer, and reduced motion disables sheen, lift, arrow travel, and route-indicator travel while preserving state colors.
 
 ## Motion
 
-Motion uses opacity and transform for decorative movement. The recommendation disclosure is the narrow exception: it animates its clipped `max-height` for an understandable open/close state and pairs that change with a subtle opacity fade. While collapsed overflow exists, a static alpha mask fades only the lower half of the final visible line to transparency; do not substitute blur or a card-colored overlay. Respect `prefers-reduced-motion` by disabling reveal motion, recommendation expansion transitions, compress animation, smooth scroll, and skeleton shimmer.
+Motion supports state and orientation. Prefer opacity and transform. Recommendation disclosure and footer grid rows are documented exceptions where a bounded layout transition communicates state.
 
-## Responsive Behavior
+The role rotation, route indicator, header state, theme disclosure, recommendation expansion, footer disclosure, scroll reveals, and skeleton shimmer have explicit reduced-motion behavior. See [Animation guidelines](ANIMATION_GUIDELINES.md) for exact timing and constraints.
 
-- Header remains compact and sticky with safe scroll margins.
-- Desktop navigation collapses to accessible mobile navigation.
-- Home and feature grids collapse cleanly to one column.
-- The profile academic grid collapses below 720px; Education remains before Research in the stacked order.
-- Profile resource links wrap without horizontal overflow, retain usable touch targets, and preserve bottom safe-area clearance.
-- Buttons and labeled icon links become full-width where tap targets need more room.
+## Loading states
 
-## Skeletons
+Route `loading.tsx` files use skeletons shaped like their destination. Skeletons contain no real text or fake controls, remain hidden from the accessibility tree at primitive level, and expose a busy labelled region at page level. They do not justify client-side content fetching.
 
-Skeletons should match the final layout shapes and contain no real content text. They are loading polish only; static content should still render from generated data.
+See [Skeleton loading guidelines](SKELETON_LOADING_GUIDELINES.md).
+
+## Responsive behavior
+
+The style system uses focused thresholds at 980, 860, 720, 620, 520, 480, and 380 CSS pixels.
+
+- Desktop navigation yields to mobile navigation below 980px.
+- Profile and academic grids collapse as available width narrows.
+- Skills and featured grids reduce columns without changing content order.
+- Expanded footer columns become one column below 720px.
+- Buttons and labelled icon links may become full-width on narrow screens.
+- Long links, metadata, and resource labels wrap without horizontal overflow.
+- Glass blur is reduced on smaller viewports.
+
+Use an existing threshold when possible and test the layout immediately above and below it.
+
+## Accessibility requirements
+
+- Preserve one H1 per page and logical heading order.
+- Keep keyboard access, visible focus, and touch target geometry.
+- Pair visual state with native or ARIA state.
+- Keep dialogs labelled and modal with focus management.
+- Respect reduced motion without hiding content or controls.
+- Use meaningful image alt text and empty alt text for truly decorative duplication.
+- Keep skeletons and decorative animation out of the accessibility tree.
+- Verify all themes at zoom and narrow widths.
+
+See [Accessibility](ACCESSIBILITY.md) for the verified contracts and current limitations. Do not claim formal conformance without a dedicated audit.
+
+## Image strategy
+
+The static export sets Next.js images to unoptimized mode. Components use ordinary image elements with explicit dimensions where practical, eager loading for the primary portrait, and lazy loading for supporting marks.
+
+Every file under `public/` is directly retrievable. Use an approved asset, a safe root-relative path, and useful alt text. Do not use an unverified or unrelated image merely because it exists in the asset tree.
+
+## Adding or changing a component
+
+1. Start with an existing layout, glass, card, link, or loading primitive.
+2. Use semantic tokens for color, spacing, radius, shadow, and motion.
+3. Confirm structure and accessible state before adding animation.
+4. Add fine-pointer hover only after keyboard focus behavior exists.
+5. Implement reduced-motion behavior with the interaction.
+6. Test Navy, Light, and Dark at desktop, mobile, and 200 percent zoom.
+7. Add or update component and CSS-contract tests.
+8. Update this guide when the change creates a reusable rule.
+
+For file ownership and cross-cutting changes, see [Project structure](PROJECT_STRUCTURE.md) and [Maintenance](MAINTENANCE.md).

@@ -181,6 +181,10 @@ jobs:
           echo "should_deploy=$should_deploy" >> "$GITHUB_OUTPUT"
           echo "deploy_target=$deploy_target" >> "$GITHUB_OUTPUT"
 
+      - name: Documentation integrity
+        if: steps.decision.outputs.should_verify == 'true'
+        run: npm run docs:check
+
       - name: Lint
         if: steps.decision.outputs.should_verify == 'true'
         run: npm run lint

@@ -1,118 +1,273 @@
 # Maintenance
 
-## Product Hierarchy
+Smart Portfolio changes safely when each update follows the full path from source data or configuration through types, validation, selectors, components, tests, documentation, security review, and deployment impact. This guide maps common extensions to that path.
 
-Future maintenance should preserve the portfolio hierarchy:
+## Core invariants
 
-- Home is the complete high-level overview.
-- Detail pages are deeper evidence.
-- Generated static content is the performance strategy.
-- Skeletons and motion are polish only.
+- Portfolio pages remain compatible with Next.js static export.
+- Portfolio content is generated before build and is never fetched by the browser.
+- Production and stable preview candidates each use one strict workbook snapshot for generation, tests, and build.
+- Home is the summary layer; focused routes are the evidence layer.
+- Runtime requests remain limited to explicitly allowed Cloudflare Pages Functions.
+- Public configuration and encrypted secrets stay separated.
+- The deployed artifact is the exact artifact that passed verification.
+- Keyboard, focus, reduced-motion, and static-content behavior are part of every UI change.
 
-Home order should remain profile overview, experience, education, research, projects, three Skills category cards, recommendations, then the global footer. Each top-level Home section should keep its own full-width row. Skills retain four evidence-backed interactive badges per category. Experience, Research, Projects, and Recommendations retain compact top-right buttons to their detail routes; enabled recommendation surfaces show an honest empty state when no rows exist.
+## Change map
 
-Keep the separate Home Research-card actions limited to verified `Source code`, `Manuscript`, and `Live demo` links in that order. Do not restore the Home Featured tag, a `Learn more` action, or controls for pending resources on those cards. The compact profile-overview Research panel is the deliberate exception: center its resource group and keep its button-like published links transparent at rest, revealing their surface and border on hover or focus without underlining the label. It may expose a spreadsheet pending resource such as `Manuscript` only as a native disabled, non-interactive unpublished button.
+| Change | Primary implementation | Required companion work |
+| --- | --- | --- |
+| Add a profile field | profile template, strict key allowlist, types, normalizer, validator | Mapping, component, tests, schema, owner guide |
+| Add a collection field | matching template, types, normalizer | Validation, selector, component, tests, schema, workbook header |
+| Add a site setting | `site_settings` key row, strict key allowlist, types, normalizer | Default, validation, consumer, tests, schema, workbook row |
+| Add or rename a sheet column | template header and row conversion | Exact workbook header, tests, docs, migration plan |
+| Add a route | `src/app/`, route registry | Navigation or footer, metadata, loading state, tests, smoke scope |
+| Add a Home section | `HomeOverview.tsx`, selector, component | Skeleton, styles, tests, content mapping, accessibility |
+| Add a card variant | `PortfolioCard`, glass and portfolio CSS | Semantics, responsive behavior, tests, design system |
+| Add a theme token | `tokens.css` | All themes, component usage, contrast and focus review, tests |
+| Change navigation | route registry and navigation components | Active state, mobile behavior, keyboard checks, tests, docs |
+| Change contact behavior | contact components and Functions | Legal copy, Function tests, WAF review, security and contact docs |
+| Add a runtime endpoint | `functions/`, `_routes.json` | Threat model, limits, headers, rate limiting, tests, operations |
+| Change CI | workflow and script tests | Permissions, branch conditions, no-op behavior, operations docs |
+| Change deployment provider | workflow, scripts, configuration | Static and Function compatibility, secrets, DNS, rollback, all operations docs |
 
-Within the profile overview, preserve `Hi, I’m {greetingName}` without a trailing period as the sole Home H1, the spreadsheet-driven role with a static `headline` fallback, the personal About copy, full-width Current Work, and the equal 50/50 Education/Research row. Keep `View experience` and `View research` in overlaid slots within their relevant panel headers so control hit areas do not change header spacing; do not restore a detached bottom navigation row. Keep Education's graduation footer aligned with Research's resource footer. Both Home Education surfaces use the shared spreadsheet-backed wording `Bachelor of Science in Computer Science`; the compact panel keeps it under `Degree` and retains `Concentration: Information Assurance & Cybersecurity`. Compact Research uses its spreadsheet organization logo, an unlabelled byline in Current Work subtitle styling, and a single labelled Labs list. The panel label is `Research`, and Education stacks before Research below 720px.
+## Add a profile field
 
-Research `home_title` is the concise title for both Home surfaces. Keep the formal `title` for the Research page, and retain `title` as the Home fallback when `home_title` is blank. Optional `profile_byline` and pipe-delimited `profile_labs` belong only to the compact profile Research panel; when either is present, `role` and the summary are omitted. When both are blank, the legacy fallback order is `profile_summary`, `home_summary`, then `detail_summary`. The larger Home Research cards continue to render `home_summary` and must not substitute any profile-only field.
+Profile source data is a key-value sheet, but generated content uses explicit typed properties.
 
-## Adding Sections
+1. Add the source key to the profile template.
+2. Add the key to the strict `allowedProfileKeys` workbook allowlist in `scripts/lib/portfolioContentGeneration.ts`.
+3. Add the generated property to `ProfileContent` in `src/content/types.ts`.
+4. Map the source key in `normalizePortfolioContent.ts`.
+5. Add required, URL, grouped-field, or reference validation in `validatePortfolioContent.ts`.
+6. Add selection or display fallback logic in a content helper when the raw field should not reach a component directly.
+7. Render it with semantic structure and existing primitives.
+8. Test blank, valid, and invalid cases, strict remote unknown-key and duplicate-key rejection, and the intended UI fallback.
+9. Update [Content sheet schema](CONTENT_SHEET_SCHEMA.md), [Content mapping](CONTENT_MAPPING.md), and [Local content editing](LOCAL_CONTENT_EDITING.md).
+10. Align the public workbook key set before the next production or stable preview candidate.
 
-Add new sections by creating a focused component, mapping generated content into it, and keeping Home concise.
+If a profile value refers to a collection row, validate the exact ID. Do not silently choose an unrelated row when an explicit reference is invalid.
 
-Use existing primitives first:
+## Add a collection column
 
-- `PageIntro`
-- `SectionHeader`
-- `PortfolioCard`
-- `FeaturedGrid`
-- Glass primitives
+For links, research, projects, experience, recommendations, education, or skills:
 
-Prefer server components unless interactivity is required.
+1. Add the column to the checked-in template in its final position.
+2. Extend the source-row and generated types.
+3. Parse and normalize the value, including list, link, boolean, number, or date behavior.
+4. Add value and cross-field validation.
+5. Update selectors and sort behavior if the field affects visibility, ordering, or fallback.
+6. Update the consuming component and loading state when layout changes.
+7. Test local CSV parsing and remote workbook row conversion.
+8. Test whether the field belongs to the canonical normalized content subset and whether equivalent source representations remain equal.
+9. Update the exact field reference and mapping guide.
+10. Update the workbook header before strict remote generation runs.
 
-## Adding Sheet Fields
+The remote workbook header contract is exact. A column rename is a schema migration, not a presentation-only edit. Coordinate the code and workbook so no deployable candidate observes a mixed version.
 
-When adding a spreadsheet field:
+## Add a site setting
 
-1. Update `src/content/types.ts`.
-2. Update normalization in `src/lib/content/normalizePortfolioContent.ts`.
-3. Update validation in `src/lib/content/validatePortfolioContent.ts` if the field affects correctness.
-4. Update CSV templates in `src/content/templates`.
-5. Keep the corresponding public workbook tab header aligned before its next manual CSV import.
-6. Update docs in `docs/CONTENT_SHEET_SCHEMA.md` and `docs/CONTENT_MAPPING.md`.
-7. Add or update tests.
-8. Regenerate content with `npm run generate:content`.
+`site_settings` remains a `key,value` sheet. Add a row, not a column.
 
-Fields that form an optional group must be validated together. The Home role fields are either all blank/omitted or all non-empty; a partial set must fail generation instead of silently mixing animated and fallback content.
+1. Add the key row to the checked-in template and public workbook.
+2. Add the generated property to `SiteSettings` in `src/content/types.ts`.
+3. Add the key mapping, built-in default, and boolean or number classification in `normalizePortfolioContent.ts` as applicable.
+4. Add the key to the strict `allowedSiteSettingKeys` workbook allowlist in `scripts/lib/portfolioContentGeneration.ts`.
+5. Add value and cross-field validation in `validatePortfolioContent.ts`.
+6. Update the selector, metadata helper, route, layout, or component that consumes the setting.
+7. Decide whether the setting belongs to the canonical normalized content subset and add hash tests for that decision.
+8. Test local normalization plus remote unknown-key, duplicate-key, blank-value, valid-value, and invalid-value behavior.
+9. Update the schema, mapping, local editing guide, and public workbook before the next strict remote candidate.
 
-When adding footer/legal fields, use `site_settings`; `links` remains the source for header and profile contact controls. Do not hard-code repository URLs or license choices in components.
+## Add a source sheet
 
-Keep the footer in normal flow and compact during server rendering. Reserve a responsive runway beneath the compact dock that can contain the expanded disclosure, and place its activation and return boundaries in that stable wrapper rather than in the animating island. Keep the compact row visible on first approach, evaluate the runway's live geometry during each directional scroll so an already-visible boundary cannot enter an observer dead zone, expand after continued downward scrolling enters the runway, and also expand when content contraction moves a boundary that was below the viewport fully into view. Do not mistake browser scroll clamping during that contraction for intentional upward navigation. Collapse after upward scrolling crosses the return boundary. Expansion must consume the reserved footprint instead of changing total document length. Keep the disclosure button's idle background, border, shadow, and text color identical for `Details` and `Collapse`; preserve its existing hover and focus treatments. Native scrolling must remain passive and unobstructed. Preserve the explicit `Details`/`Collapse` control, manual-collapse suppression, focus-safe deferred collapse, independence from `enable_scroll_motion`, and the absence of duplicate social icons.
+Adding a sheet changes the strict workbook contract and the generated model.
 
-Before making a repository public or populating its public footer links, audit the current tracked tree and every reachable historical object for credentials, private contact information, unpublished assets, and unsafe configuration. A failed audit blocks both visibility changes and production source links until the history is remediated and re-audited. History rewriting and force-pushing require explicit authorization.
+Review and update:
 
-## Theme Maintenance
+- expected worksheet names and normalization in `portfolioContentGeneration.ts`;
+- matching local template and source loading;
+- generated metadata source records;
+- types, normalization, validation, and content hashing;
+- missing, unexpected, hidden, and duplicate-normalized sheet tests;
+- workflow assumptions about exact source count;
+- content pipeline, schema, mapping, and owner procedures;
+- public-data and security review.
 
-Supported theme names are `navy`, `light`, and `dark`. Add new theme values only by updating:
+Do not make strict mode accept arbitrary extra sheets. Every accepted sheet becomes public input and requires an explicit purpose.
 
-1. `src/lib/theme/resolveThemeName.ts`
-2. Theme tokens in `src/styles/tokens.css`
-3. The header theme disclosure labels and presentation order
-4. Tests for accepted and rejected theme names
-5. Relevant docs
+## Add a route
 
-Keep component styles on semantic tokens so new themes do not require component CSS rewrites.
+1. Create `src/app/<route>/page.tsx` with route metadata.
+2. Use `PageContainer` or a deliberate equivalent with one H1.
+3. Add `loading.tsx` only when a route-level loading shape provides value.
+4. Register the path in `siteRoutes.ts` if `SmartLink` should treat it as internal.
+5. Add it to primary navigation, footer resources, or neither according to product hierarchy.
+6. Add component and navigation tests.
+7. Confirm static export creates the expected directory and HTML file.
+8. Add the route to local smoke verification and deployment smoke coverage when operationally important.
+9. Update the route map in the root README and [Project structure](PROJECT_STRUCTURE.md).
 
-## Updating Validators
+A route that needs request-time server behavior does not belong under a Next.js route handler while `output: "export"` remains active. Review the runtime-endpoint pattern instead.
 
-Validators should fail on malformed production-critical content and stay tolerant of optional blank fields. Keep error messages specific enough to identify the sheet and row problem.
+## Add a Home section
 
-## Updating Templates
+1. Define the content selection rule in `selectHomeContent.ts`.
+2. Add the UI-facing type to `HomePortfolioContent`.
+3. Create a focused server component unless browser APIs or interactive state are required.
+4. Insert it explicitly in `HomeOverview.tsx` at the intended hierarchy position.
+5. Use `HomeOverviewSection`, existing card primitives, and established route-action geometry.
+6. Update `HomePageSkeleton` to reserve similar layout.
+7. Add desktop, breakpoint, empty-state, and reduced-motion behavior.
+8. Test selection fallbacks, heading structure, links, and interactive state.
+9. Update content mapping, design system, accessibility guidance, and the README overview if material.
 
-Template rows should remain generic demo content unless a real content update is intentionally requested. Templates should prove the UI works without accidentally publishing private or inaccurate data.
+Do not reorder Home with CSS grid placement alone. The DOM order must match reading and keyboard order.
 
-## Maintaining the public workbook
+## Add a card variant
 
-Production uses one public Google Sheets workbook, anonymously downloaded as XLSX from `PORTFOLIO_WORKBOOK_URL`. It must contain exactly the nine visible tabs `profile`, `links`, `research`, `projects`, `experience`, `recommendations`, `education`, `skills`, and `site_settings`, with nothing else. Matching uses the trimmed, lowercase worksheet title, so capitalization and physical order do not matter; spaces, hyphens, and spelling changes are not aliases. Never add a `resume`, hidden, or very-hidden tab.
+Use an existing `PortfolioCard` variant when it already expresses the role. A new variant needs a semantic reason such as a distinct information hierarchy, not one route-specific spacing preference.
 
-The owner creates the workbook and manually imports each checked-in CSV template into its matching tab in the Google Sheets UI. Never add a Drive connector, Google API key, service account, OAuth flow, Sheets/Drive API dependency, or other account access to automate that import. The build receives only an anonymous HTTPS XLSX export URL after the workbook is deliberately made public-safe. It downloads that file once per candidate and parses every required worksheet locally.
+When adding one:
 
-Review all nine tabs before publication. Public workbook data is not a secret, even if the URL is hard to guess. Keep private resume details, credentials, recipient addresses, unpublished recommendations, and sensitive personal data out of it.
+1. Extend the variant type and class mapping.
+2. Reuse semantic color, spacing, radius, and shadow tokens.
+3. Define heading, metadata, action, and empty-state structure.
+4. Confirm nested Home cards remain quieter than their outer panel.
+5. Add focus, hover, selected, disabled, and reduced-motion rules where interactive.
+6. Test long text, missing optional data, narrow widths, and all themes.
+7. Document the variant in [Design system](DESIGN_SYSTEM.md).
 
-## Updating Generated Content
+## Add or change a theme token
 
-Run `npm run generate:content`. Generation validates and normalizes the local templates or configured public workbook, then rewrites `src/content/generated/portfolio.generated.json`, the build artifact consumed by static pages. It hashes normalized rendered content rather than spreadsheet formatting or generated metadata and preserves `generatedAt` when content is unchanged.
+Supported themes are Navy, Light, and Dark.
 
-Do not change generated content by hand. For a local template change, regenerate and review the source and generated JSON together. For a production workbook change, let GitHub Actions fetch it once, verify it, build from it without refetching, validate the artifact digest, and deploy that exact artifact. Production generation and deployment state are not committed to `main`; the active `/content-version.json` manifest records the last successful content hash. A failure before or during deployment leaves that manifest unchanged so the next poll retries.
+1. Define the semantic token in the root token group if it is structural.
+2. Define a value in every theme when it represents color, surface, shadow, or gradient.
+3. Consume the semantic token from component CSS.
+4. Check focus, selection, disabled state, text contrast, and glass-disabled behavior.
+5. Test the affected component in each theme and at responsive breakpoints.
+6. Update [Design system](DESIGN_SYSTEM.md) if the token becomes part of the reusable contract.
 
-## Maintaining deployment automation
+Do not add a component rule that switches directly on `[data-theme]` unless the component genuinely needs behavior beyond token substitution.
 
-- GitHub Actions is the only production deployment path; keep Cloudflare Git integration and Vercel automatic deployment disabled after cutover.
-- Keep `CLOUDFLARE_PAGES_PROJECT_NAME=smart-portfolio` for Wrangler deployment and `CLOUDFLARE_PAGES_DOMAIN=smart-portfolio-bds.pages.dev` for polling and smoke tests. The assigned domain must not be derived from the project name.
-- Keep the daily schedule at `13:17 UTC`. Compare the candidate hash with the production `/content-version.json` using no-cache headers and a cache-busting query. An unchanged hash is a green no-op before lint, tests, build, artifact upload, or deployment.
-- Preserve strict remote mode for every production candidate. Missing or malformed public content must fail closed without local-template fallback.
-- Keep production and preview deploy jobs dependent on green `verify`, preserve their concurrency controls, and retain the latest-`main` guard for production.
-- Keep pull requests verification-only. A green `develop` push may deploy only `--branch=develop`; a green `main` candidate may deploy production.
-- Never rebuild, refetch the workbook, or check out a different commit in a deploy job. Verify the downloaded `out/` artifact before Wrangler runs from repository root so matching Pages Functions are included.
-- Keep generated content and deployment state out of repository commits. The only Actions write is the 30-day inactivity heartbeat on the isolated `automation-heartbeat` branch; it never modifies `main` or deploys.
-- Keep `main` protected by the strict required `verify` check, PR-based changes with zero mandatory approvals, and blocked force-push/deletion. GitHub Actions does not need a `main` bypass.
-- A scheduled run may still show Nicolas as its associated actor because GitHub ties schedules to an account. Do not replace `GITHUB_TOKEN` or the Cloudflare credential with Nicolas's personal token; deployments remain Actions-owned.
+## Change navigation or footer behavior
 
-## Testing Changes
+Navigation changes can affect desktop geometry, mobile visibility, active-route state, keyboard order, and the persistent route indicator.
 
-Run:
+Review:
 
-- `npm run generate:content`
-- `npm run lint`
-- `npm run typecheck`
-- `npm run test`
-- `npm run build`
+- `siteRoutes.ts`, `navigationItems.ts`, and generated recommendation visibility;
+- desktop and mobile navigation components;
+- header compact and expanded states;
+- `aria-current`, `aria-expanded`, focus, Escape, and outside-click behavior;
+- navigation tests and responsive CSS.
 
-Use `npm run verify` before shipping.
+Footer changes must preserve normal document flow, the reserved runway, explicit disclosure control, focus-safe collapse, manual-collapse suppression, route reset, and reduced-motion behavior. Run `npm run test:footer` after any footer or surrounding layout change.
 
-## Security Maintenance
+## Change contact behavior
 
-- Keep the app static-first unless a future product decision explicitly adds endpoints.
-- If endpoints are ever added, document authentication, validation, and rate limiting before implementation.
-- Run dependency reviews deliberately; do not force major upgrades without checking Next.js and test-tooling compatibility.
+The browser is not the trust boundary. A client field, acknowledgement, or sequence change must be reflected in server validation where it affects acceptance.
+
+Review together:
+
+- `ContactForm.tsx`, `TurnstileWidget.tsx`, and client validation;
+- verification and delivery Functions;
+- shared field limits, allowed keys, timing, ticket, and response behavior;
+- exact origin and hostname configuration;
+- privacy, terms, and public security route copy;
+- Function, contact component, legal, and static-security tests;
+- [Contact system](CONTACT_SYSTEM.md), [Security](SECURITY.md), and the checklist;
+- Cloudflare WAF coverage and provider configuration.
+
+Never move an encrypted value into `NEXT_PUBLIC_` configuration. Never return provider, recipient, or validation internals to the visitor.
+
+## Add a runtime endpoint
+
+Adding a Function expands the attack and operational surface. Before implementation, define:
+
+- exact path and accepted method;
+- accepted content type and request-size limit;
+- strict schema and unknown-field behavior;
+- authentication or verification requirement;
+- origin and hostname policy;
+- abuse cases and edge rate limiting;
+- response schema, cache behavior, and security headers;
+- personal-data handling, logging, retention, and provider flow;
+- failure, retry, and idempotency behavior;
+- preview and production configuration;
+- unit, integration, routing, and smoke tests.
+
+Then add the exact path to `public/_routes.json`. Do not use a broad wildcard for convenience. Update architecture, project structure, security, operations, troubleshooting, and deployment documentation.
+
+## Change CI behavior
+
+The stable required job is `verify`. Preserve:
+
+- read-only default permissions;
+- untrusted pull-request isolation from secrets;
+- current-candidate resolution;
+- strict remote generation for deployable candidates;
+- semantic no-op behavior where allowed;
+- documentation validation, lint, typecheck, focused footer tests, full tests, and static build;
+- exact artifact and commit binding;
+- per-target concurrency and latest-branch-head guards for both production and stable preview;
+- smoke testing after upload;
+- isolated heartbeat writes only.
+
+Update `scripts/packageScripts.test.mjs` or a focused script test for every workflow invariant that can be checked statically. Run the complete test suite because workflow tests are included by Vitest.
+
+## Change deployment provider
+
+A provider change is an architecture migration. Confirm the replacement supports:
+
+- static export hosting and custom headers;
+- deployment of the two isolated contact handlers or an equivalent reviewed runtime;
+- exact route allowlisting;
+- encrypted runtime secrets and separate preview values;
+- immutable artifact upload without rebuilding;
+- content and integrity manifests;
+- preview and production isolation;
+- exact-candidate protection and smoke testing;
+- custom-domain TLS, DNS transition, rollback, and cache behavior.
+
+Replace provider-specific workflow, scripts, configuration, headers, Functions, WAF guidance, and documentation as one reviewed change. Do not leave a second automatic deployment owner enabled.
+
+## Maintain content and assets
+
+- Treat local templates as authoring sources and generated JSON as output.
+- Keep the public workbook limited to reviewed public-safe data.
+- Run `npm run generate:content` after source changes.
+- Use safe root-relative asset paths and confirm each referenced file exists.
+- Remember that every file under `public/` is anonymously retrievable.
+- Remove unused assets only after checking source references and documentation; use a recoverable, explicitly scoped operation.
+- Check image dimensions and file size before adding a large raster asset.
+
+See [Local content editing](LOCAL_CONTENT_EDITING.md) and [Performance budget](PERFORMANCE_BUDGET.md).
+
+## Maintain documentation
+
+When behavior changes:
+
+1. Update the deep guide that owns the fact.
+2. Update the corresponding checklist without copying the full explanation.
+3. Update `docs/README.md` when navigation or document scope changes.
+4. Update the root README only when the visitor-facing overview or setup path changes.
+5. Run `npm run docs:check` to verify structure, local links, case, privacy patterns, and placeholders.
+6. Run `npm run verify` before delivery.
+
+## Do not bypass
+
+- Generated-content helpers and runtime generated-shape validation.
+- Strict workbook and header validation.
+- URL scheme, traversal, and paired-field validation.
+- Explicit Home selection and route mapping.
+- Next.js static-export constraints.
+- Exact Function route configuration.
+- Server-side contact validation and signed-ticket checks.
+- Environment separation and secret placement.
+- Documentation, lint, typecheck, test, and build gates.
+- Artifact-integrity and candidate-SHA verification.
+- Production and stable preview smoke tests, plus the production active-manifest comparison.
+
+If a requirement no longer fits, change the architecture deliberately and update its tests and documentation. Do not add a hidden bypass.

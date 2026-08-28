@@ -1,68 +1,135 @@
 # Content Replacement Checklist
 
-Use this checklist when replacing demo content with Nicolas-specific public content.
+Use this checklist when replacing local sample content or preparing a public workbook release. It assumes the exact contract in [Content Sheet Schema](CONTENT_SHEET_SCHEMA.md), the selector behavior in [Content Mapping](CONTENT_MAPPING.md), and the workflow in [Local Content Editing](LOCAL_CONTENT_EDITING.md).
+
+## Publication boundary
+
+- [ ] Confirm every value, quote, email address, URL, and image is approved for anonymous publication.
+- [ ] Remove credentials, tokens, recipient-only addresses, internal notes, and unpublished personal data.
+- [ ] Confirm third-party names, marks, quotes, and media have appropriate attribution and permission.
+- [ ] Audit tracked files and reachable Git history before making the repository public; stop on any unapproved credential, contact detail, asset, or configuration.
+- [ ] Treat everything under `public/`, every workbook tab, and generated JSON as public build input.
+
+## Workbook and headers
+
+- [ ] Keep exactly the nine required visible workbook tabs: `profile`, `links`, `research`, `projects`, `experience`, `recommendations`, `education`, `skills`, and `site_settings`.
+- [ ] Keep `resume.csv` header-only and local; never add a `resume` worksheet to the downloadable workbook.
+- [ ] Remove extra, hidden, very-hidden, archive, and instruction tabs from the downloadable workbook.
+- [ ] Compare every complete header row with [Content Sheet Schema](CONTENT_SHEET_SCHEMA.md). Header order may differ, but spelling, lowercase case, and membership must be exact.
+- [ ] Keep workbook key rows within the `profile` and `site_settings` allowlists and remove duplicate keys.
 
 ## Profile
 
-- Replace `full_name`, `preferred_name`, `headline`, `role_engineer_prefixes`, `role_engineer_suffix`, `role_alternate`, `current_title`, `current_company`, `location`, `timezone`, `email`, `university`, `degree`, `field_of_study`, `graduation`, `short_bio`, and `long_bio`.
-- Keep the three role-animation fields either all non-empty or all blank/omitted. Use pipe-delimited prefixes, and keep `headline` accurate for the static fallback and resume even when the rotating set is present.
-- Confirm the sole Home H1 reads `Hi, I’m {preferred name}` with no trailing period; when `preferred_name` is blank, the first word of `full_name` is used. The full name beneath the portrait remains non-heading text.
-- Keep `current_experience_id`, `featured_research_id`, and `primary_education_id` aligned with real rows where those references remain in use. Current Work and Education have deterministic fallbacks when their selectors are blank; `featured_research_id` is the Research fallback when no row is marked `show_on_home`. `previous_experience_id` may remain as compatible source metadata, but it does not create a Previous Work block on Home; previous roles belong in `experience.csv` and on the Experience page. Never leave a populated stale ID because generation will fail.
-- Update `portrait_image` to a file under `public/images/profile/` or another validated public URL.
-- Update `favicon_image` to a file under `public/favicon/`.
-- For this private-resume configuration, keep `resume_url` and `resume_download_label` blank and do not place a resume PDF under `public/`.
+- [ ] Populate the required `full_name`, `headline`, `location`, `email`, and `short_bio` values.
+- [ ] Set `preferred_name`, timezone, pronouns, portrait, favicon, and longer profile copy only when they are accurate and approved.
+- [ ] Populate all three rotating-role fields together, or leave all three blank. Keep at least one non-empty pipe-delimited prefix.
+- [ ] Keep `headline` accurate even when rotating-role copy is enabled because it remains the static and metadata fallback.
+- [ ] Verify `current_experience_id`, `featured_research_id`, and `primary_education_id` exactly match real collection IDs when populated.
+- [ ] Treat `previous_experience_id` and CTA label fields as compatibility data, not current display controls.
+- [ ] Confirm profile education overrides are intentional. Non-blank profile university, degree, field, and graduation values override the selected education row in the compact overview.
+- [ ] Confirm `portrait_image` and `favicon_image` resolve anonymously without redirects to login content.
 
 ## Links
 
-- Add only intentionally public GitHub, LinkedIn, email, website, portfolio, or publication links. Do not add a resume-file link while the resume is private.
-- Mark only the most important links as primary or header links.
-- Use footer links sparingly.
+- [ ] Add only verified public destinations and use a meaningful `kind`.
+- [ ] Use `is_primary`, `show_on_home`, and `show_in_header` deliberately. Header output is capped at four and general Home selection at six before identity filtering.
+- [ ] Confirm profile identity links appear in the intended fixed order: location, timezone, email, portfolio or website, LinkedIn, GitHub.
+- [ ] Do not rely on `show_in_footer` or `icon` for current rendering; neither has a current component consumer.
+- [ ] Set `repository_url` in `site_settings` when the footer must use an exact repository destination. Otherwise, understand the footer's repository-kind link fallback.
 
-## Evidence sections
+## Experience and education
 
-- Replace demo `research`, `projects`, `experience`, `education`, and `skills` rows with accurate public-safe rows.
-- Keep Home summaries concise.
-- Put deeper proof, bullets, impact, stack, and links on detail rows.
-- Keep the Home profile-overview details ordered as greeting H1, role, About, Current Work, then the equal-width Education/Research row. Put `View experience` and `View research` in their relevant panel-header action slots so their larger hit areas do not change header spacing; do not restore a detached bottom navigation row. Keep the Education graduation row and Research resource row bottom-aligned. On mobile, Education stacks before Research.
-- Use `organization_logo`/`organization_logo_alt` on experience and research rows and `institution_logo`/`institution_logo_alt` on education rows. Store new local marks under `public/images/organizations/`; blank logo fields intentionally render without a fake mark.
-- Keep education `degree`, `field`, and `concentration` separate. The shared formatter combines `Bachelor of Science` and `Computer Science` as `Bachelor of Science in Computer Science` on both Home Education surfaces, while the selected row supplies the `Information Assurance & Cybersecurity` concentration. Leave education `location` blank when it should remain hidden.
-- Give research links descriptive labels such as `Live site`, `Source code`, and `Manuscript`. Add only verified public destinations. Keep the compact profile Research resources centered and button-like: published links have a transparent idle state, reveal their surface and border on hover/focus, and do not underline their labels. The panel may show an unpublished label from `pending_links` only as a native disabled, non-interactive button; the separate Home Research cards must omit it. Move the label into `links` and remove it from `pending_links` when its public URL is ready.
-- Use `home_title` when a research row needs a concise title on both Home research surfaces. Keep `title` as the formal Research-page and resume title.
-- Use `profile_byline` for the compact unlabelled descriptor directly beneath a Home Research title, and use pipe-delimited `profile_labs` for the labelled lab list. The compact panel must not display `role`. Use `profile_summary` only for the legacy summary layout when both structured fields are blank; it falls back to `home_summary`, then `detail_summary`. The larger Home Research card continues to use `home_summary` and ignores all profile-only fields.
+- [ ] Give every row a unique, stable ID and all required fields.
+- [ ] Use blank, `Present`, or `Current` as an experience end date only when the role should qualify for the Current Work selector.
+- [ ] Set `show_on_home`, `featured`, and `home_order` to make Home selection deterministic.
+- [ ] Check organization spelling and capitalization. Home groups experience with `organization.trim().toLowerCase()`.
+- [ ] Verify titles, organizations, dates, locations, summaries, bullets, and skills against the underlying evidence.
+- [ ] Keep education `degree`, `field`, and `concentration` semantically separate.
+- [ ] Confirm education bullets are concise enough for Home because all selected bullets render there.
+- [ ] Do not expect education summaries or `detail_order` to render; those fields have no current UI consumer.
+- [ ] Supply real logo paths and useful alt text where a visible list logo needs it, or leave the logo blank to use the initials fallback.
 
-- Give every Home project a plain `subtitle`, product-focused `home_summary`, three verified `home_skills` label/icon pairs, and matching `home_skill_N_summary`/`home_skill_N_details` explanation pairs. Keep each summary factual and brief, and use its details paragraph to explain the tool's concrete role in that repository. A `Source code` link is required; include `Live demo` only when one exists. Do not restore Featured or subtitle chips.
-- Keep three broad Skills categories with four recruiter-focused, public-safe skills each. Set `category_order`, skill `order`, and a supported `icon` key for every row. Provide complete `proficiency`, `summary`, and `where_used` popup copy for every published skill, and ground each proficiency claim in visible project, research, teaching, or coursework evidence.
+## Research
+
+- [ ] Keep `title` formal and use `home_title` only when a shorter Home title is needed.
+- [ ] Write distinct `home_summary` and `detail_summary` values when the two surfaces need different depth.
+- [ ] Use `profile_byline` and pipe-delimited `profile_labs` for the compact profile panel. When either is present, that panel suppresses narrative summary copy.
+- [ ] If the structured profile fields are blank, verify the compact summary fallback from `profile_summary` to `home_summary` to `detail_summary`.
+- [ ] Mark the intended compact-profile candidate with `show_on_home`; `featured_research_id` is considered only when no row is Home-marked.
+- [ ] Use descriptive `label=url` link entries and confirm link inference produces the intended Home actions.
+- [ ] Keep a pending resource label in `pending_links` only while it has no destination. Remove it when the matching published link is added.
+- [ ] Verify impact, bullets, skills, and all links on the Research route.
+- [ ] Do not rely on the research image or organization logo to render on current Research cards.
+
+## Projects
+
+- [ ] Give each project an accurate title, optional subtitle, Home summary, and detail summary.
+- [ ] Keep `home_skills` at three or fewer ordered `name=icon` entries with valid lowercase icon keys.
+- [ ] Populate each numbered skill summary/details pair together and only for an existing skill position.
+- [ ] Verify project skill dialog copy describes the actual role of that technology.
+- [ ] Confirm link inference produces the intended `Source code` and optional `Live demo` actions on Home.
+- [ ] Verify problem, solution, impact, image, stack, and full links on the Projects route.
+
+## Skills
+
+- [ ] Use stable categories and `category_order` for category ordering.
+- [ ] Use `priority` and `order` for deterministic skill ordering.
+- [ ] Do not add filler to reach a fixed category or skill count; the schema requires neither.
+- [ ] Populate `proficiency`, `summary`, and `where_used` as a complete set for every skill that should open a dialog.
+- [ ] Ground proficiency and usage claims in visible public evidence.
+- [ ] Confirm `max_home_skill_items` is a sensible positive value when a limit is wanted.
 
 ## Recommendations
 
-- Add recommendations only when the text is public-safe and approved for display.
-- Required fields are `id`, `recommender_name`, and `full_quote`.
-- Keep the complete approved recommendation in `full_quote`; the detail route and single-card Home rows use four-line expansion, while multi-card Home rows may automatically show three lines for a taller-header card without changing the stored text.
-- For one inline quote link, populate `full_quote_link_label` and `full_quote_link_url` together, use an HTTPS URL, and confirm the case-sensitive label occurs exactly once in `full_quote`. Otherwise leave both fields blank.
-- Mark the intended first three rows `show_on_home=true` and order them with `home_order`; remaining rows stay available on the Recommendations route.
-- Use HTTPS verification links only.
-- Keep `show_empty_recommendations=false` until at least one recommendation row is ready, unless the empty page should be visible.
+- [ ] Publish only approved recommendation text.
+- [ ] Populate required `id`, `recommender_name`, and `full_quote` values.
+- [ ] Preserve the approved quote in `full_quote`; Home and detail cards both use it.
+- [ ] Populate `full_quote_link_label` and `full_quote_link_url` together, require HTTPS, and confirm the case-sensitive label occurs exactly once in the quote.
+- [ ] Use HTTPS for source and LinkedIn verification links.
+- [ ] Set `show_on_home`, `featured`, and ordering fields deliberately.
+- [ ] Choose a positive `max_home_recommendation_items`, or accept the fallback limit of three.
+- [ ] Keep `show_empty_recommendations=false` unless an empty Recommendations section and route should be visible.
+- [ ] Do not expect `home_quote`, `context`, or recommendation `skills` to render in the current UI.
 
-## Footer and legal
+## Site settings, footer, and contact
 
-- Set `copyright_owner` if it should differ from `profile.full_name`.
-- Set and verify `legal_contact_email`, `legal_effective_date`, `hosting_provider_name`, and the provider's HTTPS `hosting_privacy_url`.
-- Keep the footer-only Contact form link pointed at `/contact`, and keep the public direct-email link available as a fallback.
-- Confirm the Privacy and Security notices accurately describe Cloudflare Turnstile, the `/api/contact` Pages Function, Resend delivery, required email/optional phone fields, provider processing, and the lack of a contact database.
-- Confirm the software license separately from the rights reserved in portfolio content.
-- Audit tracked files and reachable Git history before making the repository public; stop on any unapproved credential, contact detail, asset, or configuration.
-- Set `repository_url` and `license_url` only after anonymous access to both destinations succeeds. Leave them blank to omit unavailable footer resources.
+- [ ] Set `site_title`, `site_description`, and a supported `default_theme`.
+- [ ] Review motion, skeleton, glass, and Recommendations feature flags.
+- [ ] Use positive Home limits where a cap is intended. Do not rely on `max_home_experience_items`; current Home experience is unlimited after selection.
+- [ ] Set `copyright_owner` if it should differ from `profile.full_name`.
+- [ ] Set and verify `legal_contact_email`, `legal_effective_date`, `hosting_provider_name`, and the provider's HTTPS `hosting_privacy_url`.
+- [ ] Keep the footer-only Contact form link pointed at `/contact`, and keep the public direct-email link available as a fallback.
+- [ ] Confirm the Privacy and Security notices accurately describe the visible initial Turnstile gate, the `/api/contact/verify` ticket endpoint, the `/api/contact` delivery endpoint, the short-lived essential cookie, Resend delivery, required email/optional phone fields, provider processing, and the lack of a contact database.
+- [ ] Confirm the software license separately from the rights reserved in portfolio content.
+- [ ] Set `repository_url` and `license_url` only after anonymous access to both destinations succeeds. Leave them blank to omit unavailable footer resources.
 
-## Private resume
+## Assets
 
-- Keep `resume_url` and `resume_download_label` blank in the local profile template and the public workbook's `profile` tab.
-- Keep `src/content/templates/resume.csv` header-only. Do not add a workbook `resume` tab or remote-source environment variable; the generator must always use the empty local template.
-- Remove resume-kind file-link rows and keep resume PDFs outside `public/`, generated content, tracked source, and deploy artifacts.
-- After content generation, search generated JSON, built HTML, and `out/` for old resume filenames and URLs before deployment.
-- Treat old deployments, CDN caches, repository history, and shared copies as a separate exposure review. Do not claim that deleting a current link retracts an already published file.
+- [ ] Store only publishable assets under `public/`.
+- [ ] Use safe root-relative paths or approved HTTP(S) destinations.
+- [ ] Check portrait, favicon, project image, research image, organization logo, and institution logo paths for 200 responses.
+- [ ] Confirm image dimensions, cropping, contrast, and alt behavior on desktop and mobile.
+- [ ] Remove unused sample assets when they are no longer referenced and removal is within the release scope.
 
-## Production strict mode
+## Local generation and review
 
-- Configure the one anonymous XLSX export URL as the `PORTFOLIO_WORKBOOK_URL` GitHub Actions secret for automatic runner-log redaction; the downloaded workbook must contain exactly the nine required visible named tabs. The resume source remains the intentionally empty local exception.
-- Keep `PORTFOLIO_REQUIRE_REMOTE_CONTENT=true` in production so demo fallback content can never deploy.
-- For local template changes, run `npm run generate:content`, review and commit the generated JSON with its source changes, then run `npm run verify`. For production workbook changes, let GitHub Actions verify and deploy the exact tested artifact; `/content-version.json`, not a repository commit, records the successful hash. Do not edit generated JSON directly.
+- [ ] Clear remote workbook variables when producing the tracked local snapshot.
+- [ ] Run `npm run generate:content`.
+- [ ] Review the template and generated JSON diff together.
+- [ ] Confirm `metadata.sourceMode` is `templates` for the tracked local snapshot.
+- [ ] Confirm optional fields, arrays, booleans, dates, references, and order normalized as expected.
+- [ ] Confirm `contentHash` behavior against [Content Pipeline](CONTENT_PIPELINE.md#content-hash); do not use `generatedAt` as the semantic change signal.
+- [ ] Run the site and inspect every affected Home and detail surface.
+- [ ] Run `npm run verify` before merge.
+
+## Workbook release
+
+- [ ] Test the exact XLSX URL anonymously and confirm it returns a valid workbook rather than HTML or a login response.
+- [ ] Run strict remote generation locally when practical.
+- [ ] Confirm `metadata.sourceMode` is `remote` and the nine public source entries are remote.
+- [ ] Run focused generation and content tests, then `npm run build:generated` on the deliberate snapshot.
+- [ ] Use the repository workflow for the release so CI downloads once and deploys the exact verified artifact.
+- [ ] Confirm the deployed `/content-version.json` reports the expected content hash and candidate commit.
+- [ ] Treat validation, test, build, artifact-integrity, and pre-Wrangler failures as non-deploying failures, then correct the source before retrying.
+- [ ] If Wrangler itself fails, verify the Cloudflare target before assuming which deployment remains active.
+- [ ] If post-Wrangler smoke checks fail, assume the new deployment may already be active, inspect the target, and perform an authorized rollback or corrective deployment when required.

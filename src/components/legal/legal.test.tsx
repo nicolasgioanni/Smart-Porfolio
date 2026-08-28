@@ -69,6 +69,7 @@ describe("legal document routes", () => {
     expect(screen.getByText(/contact-field values remain in your browser while you complete and review/)).toBeInTheDocument();
     expect(screen.getByText(/does not send the Turnstile response through Cloudflare verification a second time/)).toBeInTheDocument();
     expect(screen.getByText(/reviewed fields are locked so a failed or uncertain attempt/)).toBeInTheDocument();
+    expect(screen.getByText(/Cloudflare may additionally process request information for edge rate limiting/)).toBeInTheDocument();
     expect(screen.getByText(/Resend delivers a transactional confirmation/)).toBeInTheDocument();
     expect(screen.getByText(/does not intentionally add contact submissions to a first-party contact database/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Privacy Notice$/ })).toHaveAttribute(
@@ -88,9 +89,11 @@ describe("legal document routes", () => {
     expect(screen.getByText(/signing key is derived with domain-separated HKDF/)).toBeInTheDocument();
     expect(screen.getByText(/without calling Siteverify a second time/)).toBeInTheDocument();
     expect(screen.getByText(/byte-equivalent Resend payload required by idempotency/)).toBeInTheDocument();
-    expect(screen.getByText(/never placed behind an interactive Managed Challenge/)).toBeInTheDocument();
+    expect(screen.getByText(/application handlers do not implement request rate limiting/)).toBeInTheDocument();
+    expect(screen.getByText(/live configuration is not represented in this repository/)).toBeInTheDocument();
     expect(screen.getByText(/noreply@mail\.nicolasmgioanni\.dev/)).toBeInTheDocument();
     expect(screen.getByText(/private owner destination and all provider secrets remain server-side/)).toBeInTheDocument();
+    expect(screen.getByText(/validated visitor address receives the confirmation and is used as the reply-to address/)).toBeInTheDocument();
     expect(screen.getByText(/fail closed when required Turnstile, ticket, validation/)).toBeInTheDocument();
     expect(screen.getByText("The affected portfolio URL or asset.")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "No authorization, safe harbor, reward, or bug bounty" })).toBeInTheDocument();
