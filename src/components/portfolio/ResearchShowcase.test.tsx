@@ -11,6 +11,8 @@ const researchItems: ResearchItem[] = [
     homeTitle: "CytoCV",
     role: "Graduate Research Assistant",
     organization: "UW Bothell School of STEM",
+    organizationLogo: "/images/organizations/uwb_stem_logo.png",
+    organizationLogoAlt: "UW Bothell School of STEM logo",
     location: "Bothell, Washington, United States",
     startDate: "2024-08",
     endDate: "2026-08",
@@ -32,6 +34,8 @@ const researchItems: ResearchItem[] = [
     homeTitle: "Adversarial Machine Learning",
     role: "Undergraduate Researcher",
     organization: "UW Bothell School of STEM",
+    organizationLogo: "/images/organizations/uwb_stem_logo.png",
+    organizationLogoAlt: "UW Bothell School of STEM logo",
     bullets: [],
     skills: [],
     links: [
@@ -47,6 +51,8 @@ const researchItems: ResearchItem[] = [
     homeTitle: "Guide Donor Scheduler",
     role: "Research Assistant",
     organization: "UW Bothell School of STEM",
+    organizationLogo: "/images/organizations/uwb_stem_logo.png",
+    organizationLogoAlt: "UW Bothell School of STEM logo",
     bullets: [],
     skills: [],
     links: [{ label: "Source code", url: "https://github.com/BrentLagesse/GuideDonorScheduler" }],
@@ -70,11 +76,20 @@ describe("ResearchShowcase", () => {
     expect(screen.getByRole("button", { name: "Overview" })).toHaveAttribute("aria-pressed", "true");
     expect(projects).toHaveLength(3);
     expect(projects.map((project) => project.dataset.visualSide)).toEqual(["left", "right", "left"]);
-    expect(screen.getAllByRole("img").map((visual) => visual.getAttribute("aria-label"))).toEqual([
+    expect(screen.getAllByRole("img", { name: "UW Bothell School of STEM logo" })).toHaveLength(3);
+    expect(projects.map((project) => project.querySelector(".research-project__index")?.textContent)).toEqual([
+      "01",
+      "02",
+      "03"
+    ]);
+    expect(screen.getAllByRole("img").filter((image) => image.tagName === "svg").map((visual) => visual.getAttribute("aria-label"))).toEqual([
       "Multichannel yeast segmentation diagram",
       "Eight-prototype adversarial attack and defense matrix",
       "Guide and donor sequence design diagram"
     ]);
+    expect(screen.queryByText("Graduate Research Assistant")).not.toBeInTheDocument();
+    expect(screen.queryByText("Bothell, Washington, United States")).not.toBeInTheDocument();
+    expect(screen.queryByText("Research 01")).not.toBeInTheDocument();
   });
 
   it("keeps technical skills visible for research items without authored bullets", () => {
@@ -109,12 +124,12 @@ describe("ResearchShowcase", () => {
       "rel",
       "noopener noreferrer"
     );
-    expect(
-      within(cytocvProject!)
-        .getByText("Manuscript forthcoming")
-        .closest(".research-project__resource--pending")
-    ).toHaveAttribute("aria-disabled", "true");
+    const manuscript = within(cytocvProject!).getByRole("button", { name: "Manuscript — not yet published" });
+    expect(manuscript).toBeDisabled();
+    expect(manuscript).toHaveTextContent("Manuscript");
+    expect(manuscript).toHaveAttribute("title", "Not yet published");
     expect(within(cytocvProject!).queryByRole("link", { name: /Manuscript/i })).not.toBeInTheDocument();
+    expect(within(cytocvProject!).queryByText(/forthcoming/i)).not.toBeInTheDocument();
 
     const amlProject = screen.getByRole("heading", { level: 2, name: "Adversarial Machine Learning" }).closest("article");
     expect(within(amlProject!).getByRole("link", { name: "Reference manuscript for Adversarial Machine Learning" })).toBeInTheDocument();
