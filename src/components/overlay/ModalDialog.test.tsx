@@ -179,6 +179,8 @@ describe("ModalDialog", () => {
 
     fireEvent.keyDown(document, { key: "Escape" });
     expect(dialog.parentElement).toHaveAttribute("data-state", "closing");
+    expect(dialog).toHaveAttribute("aria-modal", "true");
+    expect(dialog.parentElement).not.toHaveAttribute("aria-hidden");
     fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
     expect(detailsLink).toHaveFocus();
 
