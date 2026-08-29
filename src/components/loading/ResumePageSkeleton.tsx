@@ -6,17 +6,17 @@ import { SkeletonText } from "@/components/loading/SkeletonText";
 export function ResumePageSkeleton() {
   return (
     <PageSkeleton>
-      <div className="skeleton-page__stack">
-        <section className="skeleton-page__section" aria-hidden="true">
+      <section aria-hidden="true" className="resume-skeleton">
+        <div className="resume-skeleton__content">
           <SkeletonBlock height={14} width={112} />
-          <SkeletonBlock height={34} width="46%" />
-          <SkeletonText rows={3} />
-          <div className="skeleton-page__actions">
-            <SkeletonButton width={210} />
-            <SkeletonButton width={190} />
-          </div>
-        </section>
-      </div>
+          <SkeletonBlock height={34} width="min(100%, 360px)" />
+          <SkeletonText rows={2} widths={["100%", "78%"]} />
+        </div>
+        <div className="resume-skeleton__actions">
+          <SkeletonButton width={210} />
+          <SkeletonButton width={190} />
+        </div>
+      </section>
     </PageSkeleton>
   );
 }

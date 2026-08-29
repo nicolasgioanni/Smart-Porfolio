@@ -812,7 +812,6 @@
   gap: var(--space-8);
 }
 
-.research-skeleton__intro,
 .research-skeleton__project {
   overflow: hidden;
   border: 1px solid var(--color-line);
@@ -824,7 +823,13 @@
 
 .research-skeleton__intro {
   position: relative;
+  overflow: hidden;
   padding: clamp(var(--space-6), 4vw, var(--space-10));
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface-strong);
+  box-shadow: var(--shadow-soft), var(--shadow-glow);
+  backdrop-filter: blur(var(--glass-blur-mobile));
 }
 
 .research-skeleton__intro-copy,
