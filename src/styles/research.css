@@ -650,6 +650,9 @@
   .research-project:hover,
   .research-project:focus-within {
     border-color: var(--detail-accent-border);
+  }
+
+  .research-project:hover {
     box-shadow: var(--shadow-soft), 0 0 64px var(--detail-accent-soft);
     transform: translate3d(0, -2px, 0);
   }

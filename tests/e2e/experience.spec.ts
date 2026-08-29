@@ -1,4 +1,8 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import {
+  expectDisclosureFocusToKeepRestingElevation,
+  findFirstExpandableCard
+} from "./cardFocusElevation";
 
 async function settleLayout(page: Page) {
   await page.waitForLoadState("networkidle");
@@ -21,17 +25,6 @@ async function expectExperienceCardsOrEmptyState(page: Page): Promise<Locator | 
   return cards;
 }
 
-async function getFirstCardWithDisclosure(cards: Locator): Promise<Locator | undefined> {
-  const cardCount = await cards.count();
-
-  for (let index = 0; index < cardCount; index += 1) {
-    const card = cards.nth(index);
-    if (await card.locator("button.detail-section__trigger").count()) return card;
-  }
-
-  return undefined;
-}
-
 async function expectNoHorizontalOverflow(page: Page) {
   await expect
     .poll(() =>
@@ -39,7 +32,6 @@ async function expectNoHorizontalOverflow(page: Page) {
     )
     .toBe(true);
 }
-
 test.describe("Experience showcase", () => {
   test("switches audience depth and keeps available chapters accessible", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
@@ -93,7 +85,7 @@ test.describe("Experience showcase", () => {
     await expect(liveStatus).toHaveText("Showing technical details.");
     await expect(liveStatus).toHaveClass(/visually-hidden/);
 
-    const disclosureCard = await getFirstCardWithDisclosure(cards);
+    const disclosureCard = await findFirstExpandableCard(cards);
     if (!disclosureCard) return;
 
     const disclosures = disclosureCard.locator("button.detail-section__trigger");
@@ -226,5 +218,19 @@ test.describe("Experience showcase", () => {
     expect(chapterBox).not.toBeNull();
     expect(triggerBox).not.toBeNull();
     expect(Math.abs(chapterBox!.width - triggerBox!.width)).toBeLessThanOrEqual(1);
+  });
+
+  test("keeps expanded cards at rest after focus and scrolling in every palette", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto("/experience");
+    await settleLayout(page);
+
+    const cards = await expectExperienceCardsOrEmptyState(page);
+    if (!cards) return;
+
+    const card = await findFirstExpandableCard(cards);
+    test.skip(!card, "Focus elevation regression requires an expandable Experience card.");
+
+    await expectDisclosureFocusToKeepRestingElevation(page, card!);
   });
 });
