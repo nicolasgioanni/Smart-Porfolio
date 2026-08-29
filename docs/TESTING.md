@@ -68,11 +68,11 @@ The validator uses only Node.js standard-library APIs and does not check externa
 
 | Area | Authoritative tests | Coverage |
 | --- | --- | --- |
-| CSV parsing and normalized content shape | `src/lib/content/content.test.ts` | Fields, IDs, URLs, dates, ordering, selection, empty states, and profile helpers |
+| CSV parsing and normalized content shape | `src/lib/content/content.test.ts` | Fields, IDs, URLs, research-media path and pairing rules, dates, ordering, selection, empty states, and profile helpers |
 | Workbook download boundary | `scripts/portfolioContentGeneration.test.ts` | Anonymous HTTPS URL, bounded retry and backoff, fresh attempt signals, stalled-body cancellation, byte cap, response validation, and strict failure behavior |
 | Workbook structure | `scripts/portfolioContentGeneration.test.ts` | Exact worksheets, normalized titles, visibility, headers, dimensions, cells, formulas, and schema errors |
-| Semantic hashing | `scripts/portfolioContentGeneration.test.ts` | Canonical normalized content subset and `generatedAt` preservation |
-| Public asset references | `scripts/demoAssets.test.mjs` | Referenced local assets exist and are non-empty |
+| Semantic hashing | `scripts/portfolioContentGeneration.test.ts` | Canonical normalized content subset, research-media fields, and `generatedAt` preservation |
+| Public asset references | `scripts/demoAssets.test.mjs` | Referenced local assets exist and are non-empty; configured research media stays under its allowlisted public directory and extensions |
 | Environment placeholders | `scripts/envConfiguration.test.mjs` | Supported variables, ignored local files, and removal of legacy variable families |
 | D1 configuration and schema | `scripts/d1Configuration.test.mjs`, `scripts/d1Reservation.integration.test.ts` | Distinct pinned remote UUIDs, local isolation, minimal reservation and payload-fingerprint columns, indexes, migration-before-deploy ordering, and real local-D1 changed-payload and third-reservation refusal |
 

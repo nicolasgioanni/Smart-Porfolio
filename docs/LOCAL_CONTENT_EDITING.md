@@ -166,6 +166,8 @@ Store only anonymously publishable assets under `public/`. Common locations are:
 
 Reference them from content with a safe root-relative path such as `/images/projects/example.png`. A file in `public/` is copied into the static export and is reachable without authentication.
 
+Research graphical abstracts and self-hosted videos belong in `public/images/research/`. Pair every `graphical_abstract` path with specific `graphical_abstract_alt` text. Use `.avif`, `.jpg`, `.jpeg`, `.png`, or `.webp` for an abstract and `.mp4` or `.webm` for optional video; video rows must also provide an abstract for the poster. Leave the fields blank until the reviewed public files are present.
+
 Use the relevant `_logo_alt` column when a logo needs meaningful alternative text. Current compact overview logos are decorative, while Home history lists use the supplied alt text or generate a label from the organization or institution name.
 
 ## Common failures

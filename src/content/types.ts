@@ -72,7 +72,9 @@ export type ResearchItem = {
   skills: string[];
   links: PortfolioContentLink[];
   pendingLinks?: string[];
-  image?: string;
+  graphicalAbstract?: string;
+  graphicalAbstractAlt?: string;
+  video?: string;
   featured: boolean;
   showOnHome: boolean;
   homeOrder?: number;

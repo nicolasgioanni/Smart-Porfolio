@@ -227,6 +227,22 @@ describe("visible portfolio content hashing", () => {
     expect(changed.content.metadata.generatedAt).toBe("2026-02-01T00:00:00.000Z");
     expect(legacy.contentChanged).toBe(true);
   });
+
+  it("includes every research media field in the semantic content hash", () => {
+    const content = contentFixture();
+    const expectedHash = createPortfolioContentHash(content);
+    const changes: Array<Partial<GeneratedPortfolioContent["research"][number]>> = [
+      { graphicalAbstract: "/images/research/cytocv-graphical-abstract.png" },
+      { graphicalAbstractAlt: "CytoCV graphical abstract." },
+      { video: "/images/research/cytocv-workflow.webm" }
+    ];
+
+    for (const change of changes) {
+      const changed = contentFixture();
+      Object.assign(changed.research[0]!, change);
+      expect(createPortfolioContentHash(changed)).not.toBe(expectedHash);
+    }
+  });
 });
 
 describe("strict XLSX download boundary", () => {
@@ -673,11 +689,32 @@ describe("XLSX workbook structure and cells", () => {
   });
 
   it("fails closed on header/schema violations, private resume aliases, and unknown key rows", async () => {
+    const missingResearchMediaHeaderScenarios = await Promise.all(
+      (["graphical_abstract", "graphical_abstract_alt", "video"] as const).map(async (header) => ({
+        bytes: await createWorkbookBytes({
+          mutate: (workbook) => {
+            const worksheet = getWorksheet(workbook, "research");
+            worksheet.getCell(1, findColumn(worksheet, header)).value = `missing_${header}`;
+          }
+        }),
+        error: /invalid header schema/
+      }))
+    );
     const scenarios: Array<{ bytes: Uint8Array; error: RegExp }> = [
       {
         bytes: await createWorkbookBytes({ mutate: (workbook) => { getWorksheet(workbook, "profile").getCell("C1").value = "extra"; } }),
         error: /invalid header schema/
       },
+      {
+        bytes: await createWorkbookBytes({
+          mutate: (workbook) => {
+            const worksheet = getWorksheet(workbook, "research");
+            worksheet.getCell(1, findColumn(worksheet, "graphical_abstract")).value = "image";
+          }
+        }),
+        error: /invalid header schema/
+      },
+      ...missingResearchMediaHeaderScenarios,
       {
         bytes: await createWorkbookBytes({
           mutate: (workbook) => {
