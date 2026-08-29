@@ -8,7 +8,12 @@ export function ResearchPageSkeleton() {
       <div aria-hidden="true" className="research-skeleton">
         <div className="research-skeleton__intro">
           <div className="research-skeleton__intro-copy">
-            <SkeletonBlock height={44} radius={14} width="min(100%, 330px)" />
+            <SkeletonBlock
+              className="skeleton-page__title"
+              height={28}
+              radius={14}
+              width="min(100%, 330px)"
+            />
             <SkeletonText rows={2} />
           </div>
           <div className="research-skeleton__intro-control">

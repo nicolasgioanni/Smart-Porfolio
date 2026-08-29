@@ -82,15 +82,19 @@ describe("skeleton components", () => {
     expect(container.querySelectorAll(".experience-skeleton__intro")).toHaveLength(1);
     expect(container.querySelector(".experience-skeleton__intro-copy")).toBeInTheDocument();
     expect(container.querySelector(".experience-skeleton__intro-control")).toBeInTheDocument();
-    expect(container.querySelector(".experience-skeleton__intro-copy .skeleton-block")).toHaveStyle({ height: "44px" });
+    expect(container.querySelector(".experience-skeleton__intro-copy .skeleton-page__title")).toHaveStyle({
+      height: "28px"
+    });
     expect(container.querySelectorAll(".experience-skeleton__card")).toHaveLength(5);
     expect(container.querySelector(".skeleton-page__header")).not.toBeInTheDocument();
   });
 
-  it("keeps the custom Research intro title footprint independent from generic page headings", () => {
+  it("keeps the custom Research intro title footprint aligned with shared page headings", () => {
     const { container } = render(<LoadingResearch />);
 
-    expect(container.querySelector(".research-skeleton__intro-copy .skeleton-block")).toHaveStyle({ height: "44px" });
+    expect(container.querySelector(".research-skeleton__intro-copy .skeleton-page__title")).toHaveStyle({
+      height: "28px"
+    });
   });
 
   it("covers every declared route with a local loading boundary and registered composition", () => {
@@ -196,6 +200,9 @@ describe("skeleton components", () => {
 
   it("uses route-local geometry for the interactive page bodies", () => {
     const { container, rerender } = render(<RouteSkeleton pathname="/contact" />);
+    expect(container.querySelector(".contact-skeleton__heading .skeleton-page__title")).toHaveStyle({
+      height: "28px"
+    });
     expect(container.querySelector(".contact-skeleton__gate")).toBeInTheDocument();
     expect(container.querySelector(".contact-skeleton__verification-well")).toHaveStyle({ height: "136px" });
     expect(container.querySelector(".contact-skeleton__progress")).not.toBeInTheDocument();

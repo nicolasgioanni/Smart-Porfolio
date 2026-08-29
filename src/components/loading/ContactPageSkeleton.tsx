@@ -7,7 +7,7 @@ export function ContactPageSkeleton() {
       <section aria-hidden="true" className="contact-skeleton">
         <div className="contact-skeleton__heading">
           <SkeletonBlock height={14} width={96} />
-          <SkeletonBlock height={44} width="min(100%, 320px)" />
+          <SkeletonBlock className="skeleton-page__title" height={28} width="min(100%, 320px)" />
           <SkeletonBlock height={20} width="min(100%, 440px)" />
         </div>
         <div className="contact-skeleton__gate">
