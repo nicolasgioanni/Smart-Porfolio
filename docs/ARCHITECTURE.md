@@ -117,7 +117,7 @@ The generated snapshot contains the full public content model. Selectors decide 
 - `selectHomeContent()` applies Home visibility, ordering, limits, group construction, and recommendation settings.
 - detail selectors sort complete research, project, experience, and recommendation collections.
 - `createProfileOverviewContent()` chooses current work, primary education, and profile research from explicit references and deterministic fallbacks.
-- display helpers format links, lists, dates, and summary fallback values.
+- display helpers format links, lists, dates, and summary fallback values. The shared `DisabledResourceButton` keeps unpublished resources semantically native across profile and Research surfaces.
 
 Home is the summary layer. Its implemented order is profile overview, experience, education, research, projects, skills, and recommendations when enabled. Focused routes provide deeper evidence.
 

@@ -3,10 +3,10 @@ import { GlassIconLink } from "@/components/glass/GlassIconLink";
 import { GlassSurface } from "@/components/glass/GlassSurface";
 import { LinkIcon } from "@/components/icons/LinkIcon";
 import { DetailDisclosureList } from "@/components/portfolio/DetailDisclosureList";
+import { DisabledResourceButton } from "@/components/portfolio/DisabledResourceButton";
 import { ResearchProjectVisual } from "@/components/portfolio/ResearchProjectVisual";
 import type { DetailMode } from "@/lib/content/detailNarratives";
 import { getLinkKind } from "@/lib/content/displayHelpers";
-import { formatProfileOverviewDateRange } from "@/lib/content/profileOverview";
 import {
   getResearchDisplayTitle,
   getResearchFormalTitle,
@@ -33,7 +33,6 @@ export function ResearchCard({ item, mode, onToggle, openSectionId, order }: Res
   const modeContent = getResearchModeContent(item, mode);
   const displayTitle = getResearchDisplayTitle(item);
   const formalTitle = getResearchFormalTitle(item);
-  const dateLabel = formatProfileOverviewDateRange(item.startDate, item.endDate);
   const displayLinks = item.links.map((link) => ({
     ...link,
     label: getResearchResourceLabel(item.id, link.label)
@@ -57,17 +56,24 @@ export function ResearchCard({ item, mode, onToggle, openSectionId, order }: Res
 
       <div className="research-project__content">
         <header className="research-project__header">
-          <div className="research-project__kicker-row">
-            <span className="research-project__kicker">Research {String(order + 1).padStart(2, "0")}</span>
-            {item.role ? <span className="research-project__role">{item.role}</span> : null}
+          <div className="research-project__identity">
+            <span aria-hidden="true" className="research-project__index">
+              {String(order + 1).padStart(2, "0")}
+            </span>
+            {item.organizationLogo ? (
+              <img
+                alt={item.organizationLogoAlt ?? `${item.organization ?? "Organization"} logo`}
+                className="research-project__organization-logo"
+                decoding="async"
+                height="44"
+                loading="lazy"
+                src={item.organizationLogo}
+                width="44"
+              />
+            ) : null}
           </div>
           <h2 className="research-project__title">{displayTitle}</h2>
           {formalTitle ? <p className="research-project__formal-title">{formalTitle}</p> : null}
-          <div className="research-project__metadata">
-            {item.organization ? <span>{item.organization}</span> : null}
-            {dateLabel ? <span>{dateLabel}</span> : null}
-            {item.location ? <span>{item.location}</span> : null}
-          </div>
         </header>
 
         <div className="research-project__body" key={mode}>
@@ -96,15 +102,14 @@ export function ResearchCard({ item, mode, onToggle, openSectionId, order }: Res
               />
             ))}
             {pendingLinks.map((label) => (
-              <span
-                aria-disabled="true"
+              <DisabledResourceButton
                 className="research-project__resource research-project__resource--pending"
                 key={`${item.id}-${label}`}
-                title={`${label} forthcoming`}
+                label={label}
               >
                 <LinkIcon kind="manuscript" />
-                <span>{label} forthcoming</span>
-              </span>
+                <span>{label}</span>
+              </DisabledResourceButton>
             ))}
           </div>
         ) : null}

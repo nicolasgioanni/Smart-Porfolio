@@ -149,6 +149,10 @@ describe("static portfolio security contracts", () => {
       path.join(projectRoot, "src", "components", "portfolio", "ProfileOverviewDetails.tsx"),
       "utf8"
     );
+    const disabledResourceButtonSource = readFileSync(
+      path.join(projectRoot, "src", "components", "portfolio", "DisabledResourceButton.tsx"),
+      "utf8"
+    );
     const detailsRule = portfolioCss.match(/\.profile-overview__details\s*{[^}]*}/s)?.[0] ?? "";
     const shellRule = portfolioCss.match(/\.profile-overview__shell\s*{[^}]*}/s)?.[0] ?? "";
     const photoColumnRule = portfolioCss.match(/\.profile-overview__photo-column\s*{[^}]*}/s)?.[0] ?? "";
@@ -294,7 +298,9 @@ describe("static portfolio security contracts", () => {
     expect(profileOverviewSource).toMatch(
       /profile-overview__metadata profile-overview__academic-footer[\s\S]*profile-overview__research-links profile-overview__academic-footer/
     );
-    expect(profileOverviewSource).toMatch(/<button[\s\S]*disabled[\s\S]*type="button"/);
+    expect(profileOverviewSource).toContain('import { DisabledResourceButton } from "@/components/portfolio/DisabledResourceButton";');
+    expect(disabledResourceButtonSource).toMatch(/<button[\s\S]*disabled[\s\S]*type="button"/);
+    expect(disabledResourceButtonSource).toMatch(/aria-label=\{`\$\{label\} — not yet published`\}/);
     expect(panelActionRule).toMatch(/text-decoration:\s*none/);
     expect(panelActionRule).not.toMatch(/background|border:/);
     expect(affiliationMarkRule).toMatch(/border:\s*0/);
