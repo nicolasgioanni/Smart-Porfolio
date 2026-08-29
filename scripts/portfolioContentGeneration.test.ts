@@ -102,6 +102,12 @@ function findColumn(worksheet: Worksheet, header: string): number {
   throw new Error(`Test worksheet ${worksheet.name} is missing column ${header}`);
 }
 
+function setLegacyResearchHeaders(worksheet: Worksheet): void {
+  const graphicalAbstractColumn = findColumn(worksheet, "graphical_abstract");
+  worksheet.spliceColumns(graphicalAbstractColumn + 1, 2);
+  worksheet.getCell(1, graphicalAbstractColumn).value = "image";
+}
+
 function findKeyValueCell(worksheet: Worksheet, key: string) {
   for (let rowIndex = 2; rowIndex <= worksheet.rowCount; rowIndex += 1) {
     if (worksheet.getCell(rowIndex, 1).text.trim() === key) return worksheet.getCell(rowIndex, 2);
@@ -767,5 +773,42 @@ describe("XLSX workbook structure and cells", () => {
       await expect(generateFromWorkbook(scenario.bytes, { outputFile })).rejects.toThrow(scenario.error);
       expect(await fileDoesNotExist(outputFile)).toBe(true);
     }
+  });
+
+  it("accepts the canonical research media schema", async () => {
+    const sheets = await parsePortfolioWorkbook(await createWorkbookBytes());
+
+    expect(sheets.research[0]).toHaveProperty("graphical_abstract", "");
+    expect(sheets.research[0]).toHaveProperty("graphical_abstract_alt", "");
+    expect(sheets.research[0]).toHaveProperty("video", "");
+    expect(sheets.research[0]).not.toHaveProperty("image");
+  });
+
+  it("accepts the temporary exact legacy research schema without inventing staged media", async () => {
+    const bytes = await createWorkbookBytes({
+      mutate: (workbook) => {
+        const worksheet = getWorksheet(workbook, "research");
+        setLegacyResearchHeaders(worksheet);
+        worksheet.getCell(2, findColumn(worksheet, "image")).value = "/images/research/legacy-workflow.png";
+      }
+    });
+
+    const sheets = await parsePortfolioWorkbook(bytes);
+
+    expect(sheets.research[0]).toMatchObject({ image: "/images/research/legacy-workflow.png" });
+    expect(sheets.research[0]).not.toHaveProperty("graphical_abstract");
+    expect(sheets.research[0]).not.toHaveProperty("graphical_abstract_alt");
+    expect(sheets.research[0]).not.toHaveProperty("video");
+  });
+
+  it("rejects hybrid research header schemas during the temporary compatibility window", async () => {
+    const bytes = await createWorkbookBytes({
+      mutate: (workbook) => {
+        const worksheet = getWorksheet(workbook, "research");
+        worksheet.getCell(1, findColumn(worksheet, "graphical_abstract_alt")).value = "image";
+      }
+    });
+
+    await expect(parsePortfolioWorkbook(bytes)).rejects.toThrow(/invalid header schema/);
   });
 });

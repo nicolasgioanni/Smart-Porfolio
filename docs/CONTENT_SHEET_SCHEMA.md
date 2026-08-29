@@ -216,6 +216,10 @@ The compact profile panel removes pending labels that duplicate a published link
 
 Research media is local-only. Graphical abstracts accept `.avif`, `.jpg`, `.jpeg`, `.png`, and `.webp`; videos accept `.mp4` and `.webm`. Paths cannot contain whitespace, query strings, fragments, remote origins, traversal, backslashes, or null bytes, including forms revealed after repeated percent decoding. Place the corresponding non-empty files under `public/images/research/` before publishing their paths.
 
+### Temporary live-workbook compatibility
+
+The generator temporarily accepts exactly one additional `research` header set for the current public XLSX: the former schema with a single `image` column in place of `graphical_abstract`, `graphical_abstract_alt`, and `video`. Legacy rows normalize without staged media; their `image` values do not become graphical abstracts. Unknown, mixed, or hybrid header sets are rejected. Remove this compatibility only after the anonymous public workbook has been migrated to the canonical media headers and the remote-generation CI job verifies that workbook successfully.
+
 ## `projects`
 
 Canonical header:
