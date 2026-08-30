@@ -25,6 +25,10 @@ const expectedActions = [
   "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1"
 ];
 
+async function readWorkflow() {
+  return (await readFile(workflowPath, "utf8")).replace(/\r\n?/g, "\n");
+}
+
 function section(source, start, end) {
   const startIndex = source.indexOf(start);
   const endIndex = end ? source.indexOf(end, startIndex + start.length) : source.length;
@@ -36,7 +40,7 @@ function section(source, start, end) {
 
 describe("skeleton visual baseline capture workflow", () => {
   it("is exactly a manual-only, read-only capture workflow", async () => {
-    const workflow = await readFile(workflowPath, "utf8");
+    const workflow = await readWorkflow();
     const trigger = section(workflow, "on:\n", "\npermissions:");
     const globalPermissions = section(workflow, "permissions:\n", "\njobs:").trim();
     const captureJob = section(workflow, "  capture:\n");
@@ -57,7 +61,7 @@ describe("skeleton visual baseline capture workflow", () => {
   });
 
   it("pins its complete action allowlist and executes only the expected steps", async () => {
-    const workflow = await readFile(workflowPath, "utf8");
+    const workflow = await readWorkflow();
     const actions = [...workflow.matchAll(/^\s+uses: ([^\n]+)$/gm)].map(([, action]) => action.trim());
     const steps = [...workflow.matchAll(/^ {6}- name: (.+)$/gm)].map(([, name]) => name);
     const directRunCommands = [...workflow.matchAll(/^ {8}run: (?!\|)(.+)$/gm)].map(([, command]) => command);
@@ -80,7 +84,7 @@ describe("skeleton visual baseline capture workflow", () => {
   });
 
   it("preflights the visual-only command and captures only the exact Linux baseline set", async () => {
-    const workflow = await readFile(workflowPath, "utf8");
+    const workflow = await readWorkflow();
     const preflight = section(
       workflow,
       "- name: Verify selected revision supports visual baseline capture",
