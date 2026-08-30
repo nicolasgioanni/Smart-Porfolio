@@ -20,7 +20,7 @@ import {
   type HomeRecommendationMetric
 } from "@/components/portfolio/recommendationLayout";
 
-const fallbackQuoteLineHeight = 24;
+const fallbackQuoteLineHeight = 22;
 const fallbackToggleHeight = 36;
 
 type RecommendationItemStyle = CSSProperties & {

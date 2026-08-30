@@ -6,6 +6,7 @@ import {
 import { siteRoutes } from "@/components/navigation/siteRoutes";
 
 const repositoryKinds = new Set(["repository", "source", "github_repository"]);
+const profileResourceKinds = new Set(["github", "linkedin"]);
 
 function stringSetting(value: string | number | boolean | undefined): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
@@ -24,6 +25,12 @@ function createResourceLinks(content: GeneratedPortfolioContent): ProgressiveFoo
   const licenseUrl = stringSetting(content.siteSettings.licenseUrl);
   const contactEmail = stringSetting(content.siteSettings.legalContactEmail) ?? content.profile.email;
   const links: ProgressiveFooterLink[] = [];
+
+  for (const link of content.links) {
+    if (link.showInFooter && profileResourceKinds.has(link.kind.toLowerCase())) {
+      links.push({ href: link.url, label: link.label });
+    }
+  }
 
   if (repositoryUrl) {
     links.push({ href: repositoryUrl, label: "Source Code" });
@@ -53,7 +60,7 @@ export function BlobFooter({ content }: { content: GeneratedPortfolioContent }) 
     <InteractiveBlobFooter
       closingStatement="Original portfolio content and media are protected. Site source code is licensed under the MIT License. Third-party names, marks, and materials remain the property of their respective owners."
       compactCopyright={`\u00a9 ${currentYear} ${owner}. All rights reserved except where otherwise stated.`}
-      identityDescription="Software engineering, research, and cybersecurity portfolio."
+      identityDescription={content.profile.headline}
       noticeLinks={[
         { href: "/terms", label: "Site Terms & Accuracy" },
         { href: "/privacy", label: "Privacy Notice" },

@@ -8,6 +8,7 @@ import { parseContentVersion } from "./writeContentVersion.mjs";
 const contentHashPattern = /^[a-f0-9]{64}$/;
 const gitShaPattern = /^[a-f0-9]{40}$/;
 const pagesDomainPattern = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.pages\.dev$/;
+const canonicalHomepageUrl = new URL("https://nicolasmgioanni.dev/");
 
 export function resolvePagesDeploymentUrl(pagesDomain, branch) {
   if (typeof pagesDomain !== "string" || !pagesDomainPattern.test(pagesDomain)) {
@@ -86,6 +87,23 @@ async function smokeAttempt(baseUrl, artifactDirectory, expectedContentHash, exp
   if (!rootResponse.headers.get("content-type")?.includes("text/html")) {
     throw new Error("Deployment root did not return HTML");
   }
+  const rootHtml = await rootResponse.text();
+  const canonicalTag = (rootHtml.match(/<link\b[^>]*>/gi) ?? []).find((tag) =>
+    /\brel\s*=\s*(["'])canonical\1/i.test(tag)
+  );
+  const canonicalHref = canonicalTag?.match(/\bhref\s*=\s*(["'])([^"']+)\1/i)?.[2];
+  assert.ok(canonicalHref, "Deployment root did not declare a canonical link");
+
+  let deployedCanonical;
+  try {
+    deployedCanonical = new URL(canonicalHref);
+  } catch {
+    throw new Error("Deployment root canonical link is not an absolute URL");
+  }
+  assert.equal(deployedCanonical.origin, canonicalHomepageUrl.origin, "Deployment root canonical origin is incorrect");
+  assert.equal(deployedCanonical.pathname, canonicalHomepageUrl.pathname, "Deployment root canonical path is incorrect");
+  assert.equal(deployedCanonical.search, "", "Deployment root canonical must not contain a query string");
+  assert.equal(deployedCanonical.hash, "", "Deployment root canonical must not contain a fragment");
 
   const versionResponse = await fetchNoCache(endpointUrl(baseUrl, "content-version.json", cacheBust));
   const deployedVersion = parseContentVersion(await versionResponse.json());
@@ -98,6 +116,30 @@ async function smokeAttempt(baseUrl, artifactDirectory, expectedContentHash, exp
     await readFile(path.join(path.resolve(artifactDirectory), artifactManifestFileName), "utf8")
   );
   assert.deepEqual(deployedManifest, localManifest, "Deployed artifact manifest does not match the verified upload");
+
+  const robotsResponse = await fetchNoCache(endpointUrl(baseUrl, "robots.txt", cacheBust));
+  assert.match(
+    robotsResponse.headers.get("content-type") ?? "",
+    /^text\/plain\b/i,
+    "/robots.txt did not return plain text"
+  );
+  assert.equal(
+    await robotsResponse.text(),
+    await readFile(path.join(path.resolve(artifactDirectory), "robots.txt"), "utf8"),
+    "Deployed robots.txt does not match the verified upload"
+  );
+
+  const sitemapResponse = await fetchNoCache(endpointUrl(baseUrl, "sitemap.xml", cacheBust));
+  assert.match(
+    sitemapResponse.headers.get("content-type") ?? "",
+    /^(?:application|text)\/(?:xml|[a-z0-9!#$&^_.+-]+\+xml)(?:\s*;|$)/i,
+    "/sitemap.xml did not return XML"
+  );
+  assert.equal(
+    await sitemapResponse.text(),
+    await readFile(path.join(path.resolve(artifactDirectory), "sitemap.xml"), "utf8"),
+    "Deployed sitemap.xml does not match the verified upload"
+  );
 
   for (const endpoint of ["api/contact/verify", "api/contact"]) {
     const apiResponse = await fetch(endpointUrl(baseUrl, endpoint, cacheBust), {

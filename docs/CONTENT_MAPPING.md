@@ -101,9 +101,9 @@ Link matching uses the declared `kind` and an inferred kind from label or URL. E
 
 General Home links first select rows where any of `is_primary`, `show_on_home`, or `show_in_header` is true. If none match, they fall back to all links. They use generic ordering and are capped at six before the profile identity mapper filters to supported identity kinds.
 
-Header links use only `show_in_header=true`, use generic ordering, and are capped at four. The same selected set is available in desktop and mobile header navigation.
+Header links use only `show_in_header=true`, use generic ordering, and are capped at four. The same selected set appears as persistent desktop header actions and mobile dock actions outside the route-navigation landmarks.
 
-`show_in_footer` and `icon` are normalized but have no current component consumer. Footer resource links come from `site_settings`, with one exception: if `repository_url` is blank, the footer can use the first link whose kind is `repository`, `source`, or `github_repository`. That fallback does not consult `show_in_footer`.
+Footer resources include GitHub and LinkedIn rows whose `show_in_footer` value is true, preserving generic link order. Other footer resource links come from `site_settings`, with one exception: if `repository_url` is blank, the footer can use the first link whose kind is `repository`, `source`, or `github_repository`. That repository fallback does not consult `show_in_footer`. `icon` is normalized but has no current footer consumer.
 
 ## Experience
 
@@ -111,7 +111,9 @@ Home shows the complete selected experience set and groups it by `organization.t
 
 Home displays organization, title, date range, location, and organization logo. It does not display type, summaries, bullets, or skills.
 
-The Experience route displays every row with title, organization, date range, location, type, featured status, detail summary with Home summary fallback, bullets, and skills. Organization logos are not rendered on the detail timeline.
+The Experience route displays every row as its own logo-led card with title, organization, date range, location, type, and current-role state. It does not render the Home grouping or the internal `featured` flag.
+
+Known role IDs use the curated plain-language and technical narratives in `src/lib/content/experienceNarratives.ts`. Each view supplies a summary plus role-specific evidence chapters; technical tools are attached to the chapter where they were used instead of appearing as one undifferentiated stack. The page-level selector changes every card together. Unknown IDs fall back to the row's Home/detail summaries, bullets, and skills, while rows with no published detail render identity metadata and `Details not yet available.`
 
 ## Education
 
@@ -156,7 +158,7 @@ The Home section and navigation item appear only when `enable_recommendations` i
 
 Home candidates use `show_on_home`, then featured, then all. They sort by featured, `home_order`, `recommendation_date` descending, then recommender name or ID. A positive `max_home_recommendation_items` sets the limit. A missing, zero, or negative value falls back to three.
 
-Home and detail cards both display the unchanged `full_quote`, recommender name, title, organization, recommendation date, relationship, optional inline full-quote link, LinkedIn link, and a distinct source link. Quote expansion and line clamping affect presentation only.
+Home and detail cards both display the unchanged `full_quote`, recommender name, title, organization, recommendation date, relationship, and optional inline full-quote link. `linkedin_url` is the recommender-profile destination exposed as `View profile`; `source_url` is the published-recommendation destination exposed through the provenance link and `View recommendation`. The provenance link reads `Verified` on Home and `Verified on LinkedIn` on the detail route. Home actions remain text-only, while detail actions may pair their visible labels with a decorative LinkedIn icon. Quote expansion and line clamping affect presentation only.
 
 `home_quote`, `context`, and recommendation `skills` are normalized but have no current UI consumer.
 

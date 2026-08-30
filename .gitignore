@@ -2,6 +2,9 @@ node_modules
 .next
 out
 coverage
+.wrangler
+playwright-report
+test-results
 .env
 .env.*
 !.env.example

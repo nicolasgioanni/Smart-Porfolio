@@ -537,7 +537,7 @@ describe("XLSX workbook structure and cells", () => {
     const isoBytes = await createWorkbookBytes();
     const displayedBytes = await createWorkbookBytes({
       mutate: (workbook) => {
-        findKeyValueCell(getWorksheet(workbook, "site_settings"), "legal_effective_date").value = "8/22/2026";
+        findKeyValueCell(getWorksheet(workbook, "site_settings"), "legal_effective_date").value = "8/30/2026";
       }
     });
     const { outputFile } = await createTemporaryPaths();
@@ -554,7 +554,7 @@ describe("XLSX workbook structure and cells", () => {
     expect(second.contentHash).toBe(first.contentHash);
     expect(second.contentChanged).toBe(false);
     expect(second.generatedAt).toBe("2026-07-01T00:00:00.000Z");
-    expect(generated.siteSettings.legalEffectiveDate).toBe("2026-08-22");
+    expect(generated.siteSettings.legalEffectiveDate).toBe("2026-08-30");
   });
 
   it("fails closed on header/schema violations, private resume aliases, and unknown key rows", async () => {

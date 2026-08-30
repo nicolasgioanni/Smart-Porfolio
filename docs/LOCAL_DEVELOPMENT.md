@@ -7,6 +7,7 @@ Smart Portfolio uses Node.js, npm, Next.js App Router, a build-time CSV or XLSX 
 - Node.js 22.13 or newer. Node.js 22 matches `.nvmrc` and GitHub Actions.
 - npm.
 - PowerShell for the Windows convenience commands, or Node.js for the cross-platform equivalents.
+- Chromium installed through Playwright when running browser navigation regressions.
 
 Clone the repository with its current slug:
 
@@ -61,6 +62,7 @@ The Node entry point accepts the equivalent `--force-install` and `--force-gener
 | Turnstile runtime | `TURNSTILE_SECRET_KEY`, `TURNSTILE_ALLOWED_HOSTNAMES` | Verification Function |
 | Delivery runtime | `RESEND_API_KEY`, `CONTACT_RECIPIENT_EMAIL`, `CONTACT_FROM_EMAIL`, `CONTACT_REPLY_TO_EMAIL` | Delivery Function |
 | Origin control | `CONTACT_ALLOWED_ORIGINS` | Both contact Functions |
+| Address quota | `CONTACT_RATE_LIMIT_DB` from `wrangler.jsonc` | Local D1 emulation; no environment variable |
 
 Leave `PORTFOLIO_WORKBOOK_URL` blank and `PORTFOLIO_REQUIRE_REMOTE_CONTENT=false` to use checked-in templates. A configured workbook URL is still an anonymous public download. Do not place production provider credentials or production contact secrets in the local file.
 
@@ -100,7 +102,7 @@ For direct Next.js development:
 npm run dev
 ```
 
-These Next.js modes support portfolio UI work, navigation, themes, motion, and client-side form rendering. Requests to `/api/contact/verify` and `/api/contact` require the Wrangler mode below.
+These Next.js modes support portfolio UI work, the desktop header and mobile bottom dock, themes, motion, and client-side form rendering. Requests to `/api/contact/verify` and `/api/contact` require the Wrangler mode below.
 
 ## Content generation
 
@@ -125,7 +127,8 @@ The full flow needs a development Turnstile widget, development provider credent
 3. Set `TURNSTILE_SECRET_KEY` and `TURNSTILE_ALLOWED_HOSTNAMES` for that widget.
 4. Set both local origins in `CONTACT_ALLOWED_ORIGINS` only if both are used. Scheme and port are part of the comparison.
 5. Use restricted development delivery credentials and a controlled test destination.
-6. Build and serve the static output plus Functions:
+6. Keep the tracked `preview_database_id: contact-rate-limit-local`; do not substitute either remote D1 ID for local development.
+7. Build, migrate the local D1 database, and serve the static output plus Functions:
 
 ```bash
 npm run dev:pages
@@ -135,22 +138,24 @@ The package command runs:
 
 ```bash
 npm run build
+npm run db:migrate:local
 npx --no-install wrangler pages dev out --env-file .env
 ```
 
-Wrangler normally serves at `http://localhost:8788`. It reads local Function values from `.env`; Next.js and the content generator use the same file during the preceding build.
+Wrangler normally serves at `http://localhost:8788`. It reads local Function values from `.env`; Next.js and the content generator use the same file during the preceding build. D1 data persists under the ignored `.wrangler/` local state and does not contact production or preview unless a command explicitly requests remote mode.
 
 The flow is split across two same-origin endpoints:
 
 1. The browser sends a fresh Turnstile token and opaque submission ID to `/api/contact/verify`.
 2. The Function verifies the exact `portfolio_contact` action and allowed hostname, then sets a 30-minute signed, `HttpOnly`, `Secure`, `SameSite=Strict`, host-only ticket cookie bound to the submission ID.
 3. The browser submits the reviewed contact fields and the same ID to `/api/contact`.
-4. The delivery Function validates the signed ticket and does not call Siteverify again.
-5. Successful delivery clears the ticket. A delivery failure retains a still-valid ticket for a safe retry.
+4. The delivery Function validates the signed ticket, checks the mail domain, and reserves one of two rolling 24-hour local D1 slots without calling Siteverify again.
+5. It asks Resend to accept the visitor confirmation first and then the owner notification, using separate idempotency keys.
+6. Successful delivery clears the ticket. A delivery failure retains a still-valid ticket and reservation for a safe same-ID retry.
 
 Cloudflare dummy tokens report the action `test`, while the application requires `portfolio_contact`. Use a development widget that returns the configured action. Do not weaken action validation for local convenience.
 
-Wrangler local mode exercises the checked-in `_routes.json` and `_headers` files. It does not prove production WAF, custom-domain, provider-secret, or email-delivery configuration.
+Wrangler local mode exercises the checked-in `_routes.json`, `_headers`, D1 binding, and migrations. It does not prove remote D1 bindings or migration state, production DNS and WAF behavior, custom-domain configuration, provider secrets, or mailbox delivery.
 
 ## Verification
 
@@ -161,6 +166,16 @@ npm run verify
 ```
 
 `verify` runs documentation integrity, lint, typecheck, the full Vitest suite, and a production build. The build regenerates content through `prebuild`.
+
+Run the focused navigation unit and browser regressions separately:
+
+```bash
+npm run test:navigation
+npx playwright install chromium
+npm run test:e2e:navigation
+```
+
+The Playwright command starts Next.js on port `3100` by default. Set `PLAYWRIGHT_PORT` to choose another port. Browser artifacts are written to ignored `test-results/` and `playwright-report/` directories. The normal `verify` command does not install Chromium or run Playwright.
 
 The smart local wrapper prepares dependencies when needed, explicitly regenerates content, and then runs the same gate:
 
@@ -192,7 +207,7 @@ Do not treat ignored local `out/` files as a verified deployment artifact. CI cr
 
 ## Cleaning local artifacts
 
-Default cleanup removes `.next` and `out`:
+Default cleanup removes `.next` and `out`. Playwright output directories are ignored but are not removed by the cleanup helpers:
 
 ```powershell
 npm run clean:local

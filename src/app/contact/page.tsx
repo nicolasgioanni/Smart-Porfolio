@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ContactForm } from "@/components/contact/ContactForm";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { siteRoutes } from "@/components/navigation/siteRoutes";
 import { createPageMetadata } from "@/lib/content/createPageMetadata";
 import { getPortfolioContent } from "@/lib/content/getPortfolioContent";
 
@@ -9,13 +10,11 @@ const pageDescription =
   "Send Nicolas Gioanni a prioritized professional contact request.";
 
 export function generateMetadata(): Metadata {
-  return {
-    ...createPageMetadata(getPortfolioContent(), pageTitle, pageDescription),
-    robots: {
-      index: false,
-      follow: true
-    }
-  };
+  return createPageMetadata(getPortfolioContent(), {
+    pathname: siteRoutes.contact,
+    title: pageTitle,
+    description: pageDescription
+  });
 }
 
 export default function ContactPage() {

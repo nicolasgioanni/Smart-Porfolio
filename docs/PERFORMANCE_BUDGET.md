@@ -23,6 +23,7 @@ Current intentional client features include:
 - header and footer state;
 - profile image preview;
 - role rotation and optional scroll reveals;
+- experience depth switching and chapter expansion;
 - skills dialogs and recommendation expansion;
 - contact verification and submission.
 
@@ -33,7 +34,7 @@ Avoid large client-only trees or framework additions when native browser and Rea
 Keep motion CSS-first. Do not add an animation library to the core experience without a measured need.
 
 - Prefer opacity and transform.
-- Keep documented layout transitions bounded to the header, recommendation disclosure, and footer.
+- Keep documented layout transitions bounded to the header, experience disclosure, recommendation disclosure, and footer.
 - Do not blur text.
 - Do not add continuous scroll interpolation.
 - Respect reduced motion for every new effect.
@@ -61,7 +62,7 @@ Skeletons support route transitions and deferred UI. They do not replace static 
 
 ## Contact runtime
 
-Keep Function requests narrow and time-bounded. Preserve body limits, no-store responses, Turnstile and Resend timeouts, one Turnstile verification per contact session, and one Resend batch per accepted submission.
+Keep Function requests narrow and time-bounded. Preserve body limits, no-store responses, bounded Turnstile, DNS, and Resend work, one Turnstile verification per contact session, and at most two sequential Resend requests per accepted submission.
 
 Edge rate limiting is an operator control. It does not justify heavier application processing or replace server validation.
 
