@@ -895,7 +895,7 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
         </div>
 
         <p className="contact-email-fallback">
-          This form is the quickest way to reach me. Need another option?{" "}
+          Need another option?{" "}
           <SmartLink href={mailtoHref}>Email {contactEmail}</SmartLink>
         </p>
       </form>
