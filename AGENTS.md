@@ -12,6 +12,12 @@
 - `ThemePreferenceScript` and the first hydrated preference reconciliation must remain immediate so the selected palette is in place before paint. Later eligible changes use only the shared native View Transition opacity fade.
 - Keep the transition at `160ms`, opacity-only, and progressive. Reduced-motion, hidden-document, unsupported, failed, and unchanged-palette cases must update immediately without timers, transforms, blur, gradients, or layout animation.
 
+## Surface language
+
+- Build hierarchy from semantic, solid surface tiers. Light needs distinct off-white, light-gray, and blue-gray layers; Dark needs distinct charcoal and slate layers; preserve the existing navy palette as its own tiered mode.
+- Do not add CSS gradients, glow shadows, decorative highlights or overlays, backdrop blur, or CSS mask fades or soft clipping. Use restrained neutral shadows and one-pixel borders only when they clarify elevation or separation.
+- Accent colors belong to meaningful controls and states, never to ambient page decoration. Preserve focus and validation rings. Purposeful hard `overflow` clipping may contain content without a fade; SVG `clipPath` is reserved only for intentional diagram or media geometry.
+
 ## Dialogs and media
 
 - Use `src/components/overlay/ModalDialog.tsx` for modal previews and evidence dialogs. Do not duplicate portal, focus-trap, Escape, backdrop, scroll-lock, reduced-motion, or focus-restoration logic.

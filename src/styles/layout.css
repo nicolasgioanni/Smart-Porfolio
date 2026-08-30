@@ -147,16 +147,6 @@
   margin-top: var(--space-12);
 }
 
-.home-overview-grid::before {
-  position: absolute;
-  inset: -6rem 8% auto;
-  height: 280px;
-  pointer-events: none;
-  content: "";
-  background: var(--gradient-home-accent);
-  z-index: -1;
-}
-
 .home-section--wide {
   grid-column: 1 / -1;
 }
@@ -168,18 +158,6 @@
 
 .page-container--recommendations {
   position: relative;
-}
-
-.page-container--recommendations::before {
-  position: absolute;
-  inset: 6rem auto auto 50%;
-  width: min(620px, 70vw);
-  height: 300px;
-  pointer-events: none;
-  content: "";
-  background: var(--gradient-recommendation-accent);
-  transform: translateX(-50%);
-  z-index: -1;
 }
 
 .home-section__surface {

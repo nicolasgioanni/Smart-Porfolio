@@ -100,9 +100,9 @@ The recommendation route and navigation item remain discoverable only when recom
 
 Focused client behavior includes the configured role rotation, modal media and skills dialogs, recommendation measurement and expansion, optional scroll reveals, and the shared shell interactions. Content rendering remains server-generated. Modal consumers provide their content and geometry while `src/components/overlay/ModalDialog.tsx` provides the common accessible interaction contract.
 
-### Glass and loading primitives
+### Surface and loading primitives
 
-`src/components/glass/` owns reusable surfaces, cards, controls, links, chips, dividers, and blobs. `src/components/loading/` owns route-level skeleton composition. Components consume semantic values from `src/styles/` rather than defining theme colors locally.
+`src/components/glass/` owns reusable solid surfaces, cards, controls, links, chips, dividers, and blobs. `src/components/loading/` owns route-level skeleton composition. Components consume semantic values from `src/styles/` rather than defining theme colors locally.
 
 Shared dialog lifecycle and transition state live in `src/components/overlay/ModalDialog.tsx` and `src/styles/dialog.css`. Consumer style sheets define only domain-specific backdrop color, frame size, and internal presentation.
 
@@ -130,14 +130,14 @@ The local `resume.csv` compatibility template must remain header-only. It is nev
 
 | File | Scope |
 | --- | --- |
-| `tokens.css` | Typography, spacing, radii, timing, semantic colors, theme values, shadows, and gradients. |
+| `tokens.css` | Typography, spacing, radii, timing, semantic colors, solid surface tiers, theme values, borders, and restrained shadows. |
 | `base.css` | Document defaults, body, typography, links, and focus foundations. |
 | `layout.css` | Shell, containers, page introductions, header, and footer layout. |
-| `glass.css` | Glass surfaces, cards, buttons, links, chips, dividers, and blobs. |
+| `glass.css` | Solid surface primitives, cards, buttons, links, chips, dividers, and blobs. |
 | `navigation.css` | Desktop and mobile navigation, theme disclosure, profile preview, and route indicator. |
 | `portfolio.css` | Home profile, cards, timelines, skills, recommendations, and detail layouts. |
 | `motion.css` | CSS-only page entrance plus scroll reveal and compression states. |
-| `skeletons.css` | Loading placeholders and shimmer behavior. |
+| `skeletons.css` | Static solid loading placeholders. |
 | `contact.css` | Contact wizard, fields, review, consent, status, and responsive rules. |
 | `interactions.css` | Shared Hover Base states and reduced-motion behavior. |
 | `utilities.css` | Small reusable utility classes. |
@@ -170,7 +170,7 @@ Vitest discovers the complete suite. ESLint, TypeScript, the static build, docum
 | Add a Home section | `HomeOverview.tsx` and a focused portfolio component | Home selector, skeleton, responsive CSS, accessibility, tests, mapping |
 | Add a detail route | `src/app/<route>/` and `siteRoutes.ts` | Navigation, metadata, loading state, tests, smoke coverage |
 | Change a theme token | `src/styles/tokens.css` | All themes, focus states, contrast, design system, theme tests |
-| Add a glass primitive | `src/components/glass/` and `glass.css` | Hover Base state, semantics, reduced motion, design system |
+| Add a surface primitive | `src/components/glass/` and `glass.css` | Hover Base state, semantics, reduced motion, solid-tier design system |
 | Change navigation or footer behavior | layout and navigation components plus CSS | Keyboard behavior, route tests, footer regressions, accessibility |
 | Change contact behavior | contact components, Functions, migrations, and contact tests | Privacy and security pages, Function routes, D1 retention, WAF review, contact docs |
 | Add a runtime endpoint | `functions/` and `public/_routes.json` | Threat model, limits, rate limiting, headers, tests, operations |

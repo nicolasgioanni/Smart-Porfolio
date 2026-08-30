@@ -44,7 +44,6 @@ describe("contact wizard styles", () => {
     expect(tokenStyles.match(/--contact-field-focus-ring:/g)).toHaveLength(3);
     expect(tokenStyles.match(/--color-control-border:/g)).toHaveLength(3);
     expect(tokenStyles.match(/--color-control-border-strong:/g)).toHaveLength(3);
-    expect(tokenStyles.match(/--color-field-inset-highlight:/g)).toHaveLength(3);
     expect(tokenStyles.match(/--contact-field-focus-ring:\s*0 0 0 2px[^;]+0 0 0 5px/g)).toHaveLength(3);
     expect(contactStyles).toMatch(
       /\.contact-field input,\s*\.contact-field textarea\s*{[^}]*border:\s*1px solid var\(--color-control-border\)/s
@@ -55,7 +54,8 @@ describe("contact wizard styles", () => {
     expect(contactStyles).toMatch(
       /\.contact-field input:focus-visible,\s*\.contact-field textarea:focus-visible\s*{[^}]*border-color: var\(--color-contact-field-focus\)[^}]*box-shadow: var\(--contact-field-focus-ring\)/s
     );
-    expect(contactStyles).toMatch(/box-shadow:\s*inset 0 1px 0 var\(--color-field-inset-highlight\)/);
+    expect(tokenStyles).not.toMatch(/--color-field-inset-highlight/);
+    expect(contactStyles).not.toMatch(/inset 0 1px 0|field-inset-highlight/);
   });
 
   it("shows invalid fields in the danger color without removing the focus ring", () => {
@@ -86,14 +86,15 @@ describe("contact wizard styles", () => {
     );
   });
 
-  it("provides checked, keyboard-focus, glass-disabled, and reduced-motion states", () => {
+  it("provides checked, keyboard-focus, solid fallback, and reduced-motion states", () => {
     expect(contactStyles).toMatch(/\.contact-consent-card:focus-within\s*{[^}]*var\(--focus-ring\)/);
     expect(contactStyles).toMatch(
       /\.contact-consent-card\[data-checked="true"\]\s*{[^}]*var\(--hover-base-1-selected-surface\)/s
     );
     expect(contactStyles).toMatch(
-      /\.site-shell\[data-glass-effects="false"\] \.contact-field :is\(input, textarea\)[\s\S]*?backdrop-filter: none/
+      /\.site-shell\[data-glass-effects="false"\] \.contact-field :is\(input, textarea\),[\s\S]*?background:\s*var\(--color-background-elevated\)/s
     );
+    expect(contactStyles).not.toMatch(/backdrop-filter|gradient|mask-image/);
     expect(contactStyles).toMatch(
       /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.contact-field textarea,[\s\S]*?\.contact-consent-card\s*{[^}]*transition: none/
     );

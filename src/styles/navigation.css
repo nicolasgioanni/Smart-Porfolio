@@ -61,7 +61,7 @@
   border: 1px solid var(--color-brand-mark-border);
   border-radius: var(--radius-pill);
   color: var(--color-brand-mark-text);
-  background: var(--gradient-brand-mark);
+  background: var(--color-brand-mark-surface);
   cursor: pointer;
   font: inherit;
   font-weight: var(--font-weight-heavy);
@@ -262,7 +262,6 @@
 
   padding: var(--space-4);
   background: var(--color-profile-preview-backdrop);
-  backdrop-filter: blur(8px);
   cursor: pointer;
 }
 
@@ -330,17 +329,6 @@
   max-width: var(--container-width);
   margin: var(--space-16) auto var(--space-8);
   position: relative;
-}
-
-.blob-footer::before {
-  position: absolute;
-  inset: auto 8% -3rem auto;
-  width: min(440px, 70vw);
-  height: 180px;
-  pointer-events: none;
-  content: "";
-  background: var(--gradient-footer-accent);
-  z-index: -1;
 }
 
 .blob-footer__runway,
@@ -589,7 +577,6 @@
   border-radius: var(--radius-dock);
   background: var(--color-menu-surface);
   box-shadow: var(--shadow-soft);
-  backdrop-filter: blur(var(--glass-blur)) saturate(135%);
 }
 
 .theme-switcher__option {
@@ -652,6 +639,8 @@
   .blob-header--compact .blob-header__island {
     grid-template-columns: minmax(0, 1fr);
     gap: 0;
+    min-width: 0;
+    width: 100%;
     padding: var(--space-2);
   }
 
@@ -667,6 +656,7 @@
     align-items: center;
     gap: var(--space-1);
     width: 100%;
+    max-width: 100%;
     min-width: 0;
     margin: 0;
     padding: 0 var(--space-2);
@@ -687,26 +677,6 @@
 
   .mobile-navigation__rail[data-automating] {
     scroll-snap-type: none;
-  }
-
-  .mobile-navigation__rail[data-edge="end"] {
-    -webkit-mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 24px), transparent 100%);
-    mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 24px), transparent 100%);
-  }
-
-  .mobile-navigation__rail[data-edge="both"] {
-    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
-    mask-image: linear-gradient(to right, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
-  }
-
-  .mobile-navigation__rail[data-edge="start"] {
-    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 24px, #000 100%);
-    mask-image: linear-gradient(to right, transparent 0, #000 24px, #000 100%);
-  }
-
-  .mobile-navigation__rail[data-edge="none"] {
-    -webkit-mask-image: none;
-    mask-image: none;
   }
 
   .mobile-navigation__routes {

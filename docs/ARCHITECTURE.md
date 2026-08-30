@@ -9,7 +9,7 @@ Smart Portfolio is a static-first Next.js application with a build-time content 
 - Reject structurally or semantically invalid workbook content before build.
 - Deploy the exact candidate that passed tests and artifact-integrity checks.
 - Keep request-time code limited to the contact verification and delivery boundary.
-- Preserve readable, keyboard-operable content when motion or glass effects are disabled.
+- Preserve readable, keyboard-operable content when motion is disabled.
 
 ## System context
 
@@ -131,9 +131,9 @@ After hydration, `useThemePreference` tracks the preference and effective palett
 
 All hydrated effective-palette writes pass through `applyTheme` in `src/lib/theme/themeTransition.ts`. The first reconciliation is a direct write because the head script already selected the correct prepaint palette. Later manual, live-system, and storage-driven changes progressively invoke the native View Transitions API for one `160ms` opacity-only root snapshot fade. Reduced-motion, hidden-document, unavailable, failed, and unchanged-palette paths write directly, so preference semantics, static rendering, and no-flash behavior do not depend on the enhancement.
 
-Semantic values in `tokens.css` isolate components from theme-specific colors. Glass surfaces, cards, blobs, controls, navigation, motion, loading states, and the Hover Base interaction system compose those values through focused style sheets. The application remains usable when generated settings disable glass effects or scroll motion.
+Semantic values in `tokens.css` isolate components from theme-specific colors. Surface primitives, cards, blobs, controls, navigation, motion, loading states, and the Hover Base interaction system compose those values through focused style sheets. Light uses distinct off-white, light-gray, and blue-gray tiers; Dark uses distinct charcoal and slate tiers. The application remains usable when generated settings disable legacy glass effects or scroll motion, with both surface paths staying opaque and solid.
 
-Above `980px`, the sticky header owns profile identity, desktop routes, social links, theme selection, and compact-on-scroll behavior. At `980px` and below, the identity and desktop route list are hidden and the same glass island becomes a fixed bottom dock. One native horizontal rail contains the canonical route navigation followed by the configured GitHub, LinkedIn, Email, and theme controls. The route links retain their own navigation landmark, while the action controls remain outside that landmark. The theme popover is positioned above its moving trigger without being clipped by the rail. Safe-area insets and shell bottom clearance prevent the dock from covering route content.
+Above `980px`, the sticky header owns profile identity, desktop routes, social links, theme selection, and compact-on-scroll behavior. At `980px` and below, the identity and desktop route list are hidden and the same surface island becomes a fixed bottom dock. One native horizontal rail contains the canonical route navigation followed by the configured GitHub, LinkedIn, Email, and theme controls. The route links retain their own navigation landmark, while the action controls remain outside that landmark. The theme popover is positioned above its moving trigger without being clipped by the rail. Safe-area insets and shell bottom clearance prevent the dock from covering route content.
 
 See [Design system](DESIGN_SYSTEM.md), [Accessibility](ACCESSIBILITY.md), and [Animation guidelines](ANIMATION_GUIDELINES.md).
 

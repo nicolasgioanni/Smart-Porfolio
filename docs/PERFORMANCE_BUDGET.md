@@ -47,9 +47,9 @@ Reserve image dimensions to avoid layout shift. Keep the shared page background 
 
 Every public asset is anonymously retrievable. Asset privacy is a security requirement, not a performance technique.
 
-## Glass effects
+## Surface rendering
 
-Limit `backdrop-filter` to bounded cards, navigation, footer, dialogs, and section panels. Mobile tokens reduce blur. The `enable_glass_effects` setting must leave an opaque, readable surface when effects are disabled.
+Use opaque semantic surface tiers for cards, navigation, footer, dialogs, and section panels. Do not introduce `backdrop-filter`, CSS gradients, decorative overlays, glow shadows, or mask fades. The legacy `enable_glass_effects` setting must leave the same readable opaque hierarchy when disabled.
 
 ## Skeleton loading
 
@@ -57,7 +57,7 @@ Skeletons support route transitions and deferred UI. They do not replace static 
 
 - Match final layout dimensions.
 - Contain no real text or fake controls.
-- Disable shimmer under reduced motion.
+- Keep skeletons static; never add shimmer.
 - Do not introduce an artificial delay.
 
 ## Contact runtime
