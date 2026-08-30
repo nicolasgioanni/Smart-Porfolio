@@ -111,7 +111,9 @@ Home shows the complete selected experience set and groups it by `organization.t
 
 Home displays organization, title, date range, location, and organization logo. It does not display type, summaries, bullets, or skills.
 
-The Experience route displays every row with title, organization, date range, location, type, featured status, detail summary with Home summary fallback, bullets, and skills. Organization logos are not rendered on the detail timeline.
+The Experience route displays every row as its own logo-led card with title, organization, date range, location, type, and current-role state. It does not render the Home grouping or the internal `featured` flag.
+
+Known role IDs use the curated plain-language and technical narratives in `src/lib/content/experienceNarratives.ts`. Each view supplies a summary plus role-specific evidence chapters; technical tools are attached to the chapter where they were used instead of appearing as one undifferentiated stack. The page-level selector changes every card together. Unknown IDs fall back to the row's Home/detail summaries, bullets, and skills, while rows with no published detail render identity metadata and `Details not yet available.`
 
 ## Education
 

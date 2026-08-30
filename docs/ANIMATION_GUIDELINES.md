@@ -4,7 +4,7 @@ Motion is restrained, legible, and tied to comprehension or state. It must not d
 
 ## Preferred properties
 
-Animate `transform` and `opacity` first. Recommendation disclosure, footer grid rows, and the small header island are explicit bounded exceptions. Do not introduce layout animation elsewhere without documenting why it communicates state better than an immediate change.
+Animate `transform` and `opacity` first. Experience disclosure, recommendation disclosure, footer grid rows, and the small header island are explicit bounded exceptions. Do not introduce layout animation elsewhere without documenting why it communicates state better than an immediate change.
 
 ## Reduced motion
 
@@ -65,6 +65,12 @@ Pointer, swipe, wheel, keyboard, or focus interaction inside the rail permanentl
 Use `IntersectionObserver` as the baseline for reveal and compression behavior. Do not introduce page-wide scroll-timeline effects without a clear readability benefit and static fallback.
 
 Scroll motion must not blur text. The `enable_scroll_motion` setting gates scroll reveals and section motion. When false, those elements render immediately. It does not disable role rotation; the operating-system reduced-motion preference does.
+
+## Experience disclosure
+
+The Experience audience lens translates over `260ms`; selected text changes immediately through `aria-pressed`. Switching views settles the new card copy with a short opacity and vertical-transform transition. Opening a chapter uses one bounded `300ms` grid-row transition, while its refraction line, copy, and chevron use opacity or transform. Only one chapter per role can be open, which bounds layout work. Fine-pointer card lift and logo-highlight movement are decorative and never required to find content.
+
+Reduced motion removes audience, card, highlight, chapter, and chevron transitions while preserving selected and expanded state. The global scroll-motion setting controls only the optional staggered card entrance; user-triggered audience and disclosure behavior remains available regardless of that setting.
 
 ## Footer disclosure
 

@@ -104,6 +104,7 @@ The interface uses glass-inspired surfaces as restrained hierarchy, not as a ful
 - Home combines a profile overview with experience, education, research, projects, skills, and recommendations.
 - The role line can rotate through spreadsheet-configured titles while exposing one stable accessible label.
 - Skills with complete evidence open keyboard-managed dialogs; incomplete legacy rows remain static badges.
+- Experience offers one page-wide plain-language or technical view and expandable, role-specific evidence chapters.
 - Long recommendations expand in place with measured overflow and reduced-motion support.
 - The footer is an explicit progressive disclosure that remains in normal document flow.
 - Route skeletons mirror final layouts without hiding available static content.
@@ -118,7 +119,7 @@ Page routes are statically exported. This table covers the visitor flows documen
 | Route | Purpose | Rendering and interaction |
 | --- | --- | --- |
 | `/` | Portfolio overview | Static content with role, skills, recommendation, motion, and shared-shell hydration. |
-| `/experience` | Detailed experience timeline | Static evidence cards with shared-shell and optional reveal behavior. |
+| `/experience` | Detailed experience showcase | Logo-led role cards with a page-wide audience switch and inline evidence disclosures. |
 | `/research` | Detailed research work | Static evidence cards and verified external resources. |
 | `/projects` | Detailed engineering projects | Static evidence cards with project-skill dialogs where configured. |
 | `/recommendations` | Complete recommendation collection | Static cards with expandable long quotes; navigation is content-dependent. |
