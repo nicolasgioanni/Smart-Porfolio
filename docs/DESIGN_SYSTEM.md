@@ -55,19 +55,25 @@ Aliases such as `--color-canvas`, `--color-ink`, `--color-surface`, and `--color
 
 ## Typography
 
-Inter is loaded through `next/font` with Segoe UI, Arial, and sans-serif fallbacks. The token scale ranges from eyebrow and caption text through body, card, section, page, and hero titles.
+Space Grotesk is loaded through `next/font` with Segoe UI and sans-serif fallbacks. The 16px root remains the conversion basis, while user-facing text follows a compact semantic ladder derived from the CytoCV interface.
 
-| Use | Token |
-| --- | --- |
-| Eyebrow labels | `--font-size-eyebrow` |
-| Supporting metadata | `--font-size-caption` and `--font-size-small` |
-| Primary copy | `--font-size-body` and `--font-size-body-large` |
-| Card headings | `--font-size-card-title` |
-| Section headings | `--font-size-section-title` |
-| Route titles | `--font-size-page-title` |
-| Home greeting | `--font-size-hero-title` |
+| Use | Token | Size |
+| --- | --- | --- |
+| Eyebrow and step labels | `--font-size-eyebrow` | `0.6875rem` (11px) |
+| Captions, validation errors, and utility footer text | `--font-size-caption` | `0.75rem` (12px) |
+| Supporting metadata | `--font-size-small` | `0.8125rem` (13px) |
+| Primary copy, navigation, and form controls | `--font-size-body` | `0.875rem` (14px) |
+| Prominent copy and quotation emphasis | `--font-size-body-large`, `--font-size-quote` | `0.9375rem` (15px) |
+| Feature leads | `--font-size-lead` | `1.0625rem` (17px) |
+| Card headings | `--font-size-card-title` | `1.25rem` (20px) |
+| Section headings | `--font-size-section-title` | `1.375rem` (22px) |
+| Resume and compact flow titles | `--font-size-resume-title` | `1.625rem` (26px) |
+| Route and form titles | `--font-size-page-title` | 24-26px, responsive |
+| Home greeting | `--font-size-hero-title` | Fluid 30-44px |
 
-Body copy uses normal or relaxed line height. Keep paragraph width and spacing readable instead of shrinking type to fit a card. Heading levels express document structure; visual size comes from classes and tokens.
+Use four supported font weights: `--font-weight-regular` at 400, `--font-weight-medium` at 500, `--font-weight-semibold` and `--font-weight-bold` at 600, and `--font-weight-heavy` at 700. Do not introduce fractional intermediate weights.
+
+Body copy uses normal or relaxed line height. Keep paragraph width and spacing readable instead of shrinking type to fit a card. Heading levels express document structure; visual size comes from classes and tokens. Decorative or icon-sized text must not replace a semantic text token for readable content.
 
 ## Spacing and radii
 

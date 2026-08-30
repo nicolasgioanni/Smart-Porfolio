@@ -139,7 +139,7 @@ function createRecommendations(): RecommendationItem[] {
 
 describe("Home recommendation overflow layout", () => {
   const resizeCallbacks: ResizeObserverCallback[] = [];
-  let actualHomeHeight = 258;
+  let actualHomeHeight = 250;
   let animationFrameId = 0;
   let responsiveMode: ReturnType<typeof installMatchMedia>;
 
@@ -152,7 +152,7 @@ describe("Home recommendation overflow layout", () => {
   }
 
   beforeEach(() => {
-    actualHomeHeight = 258;
+    actualHomeHeight = 250;
     animationFrameId = 0;
     resizeCallbacks.length = 0;
     responsiveMode = installMatchMedia();
@@ -217,7 +217,7 @@ describe("Home recommendation overflow layout", () => {
 
     await waitFor(() => {
       expect(section).toHaveAttribute("data-recommendation-overflow-layout", "ready");
-      expect(section?.style.getPropertyValue("--home-recommendations-panel-height")).toBe("298px");
+      expect(section?.style.getPropertyValue("--home-recommendations-panel-height")).toBe("290px");
       expect(section?.style.getPropertyValue("--home-recommendations-overflow-reserve")).toBe("0px");
     });
 
@@ -230,12 +230,12 @@ describe("Home recommendation overflow layout", () => {
 
     await waitFor(() => {
       expect(expanders.map((expander) => expander.dataset.expanded)).toEqual(["true", "false"]);
-      expect(section?.style.getPropertyValue("--home-recommendations-panel-height")).toBe("298px");
-      expect(section?.style.getPropertyValue("--home-recommendations-overflow-reserve")).toBe("152px");
+      expect(section?.style.getPropertyValue("--home-recommendations-panel-height")).toBe("290px");
+      expect(section?.style.getPropertyValue("--home-recommendations-overflow-reserve")).toBe("160px");
     });
 
     fireEvent.click(firstToggle);
-    actualHomeHeight = 258;
+    actualHomeHeight = 250;
     triggerResizeObservers();
 
     await waitFor(() => {
@@ -322,7 +322,7 @@ describe("Home recommendation overflow layout", () => {
 
     await waitFor(() => {
       expect(section).toHaveAttribute("data-recommendation-overflow-layout", "ready");
-      expect(section?.style.getPropertyValue("--home-recommendations-panel-height")).toBe("298px");
+      expect(section?.style.getPropertyValue("--home-recommendations-panel-height")).toBe("290px");
     });
 
     responsiveMode.setMobileMatch(true);
@@ -338,7 +338,7 @@ describe("Home recommendation overflow layout", () => {
 
     await waitFor(() => {
       expect(section).toHaveAttribute("data-recommendation-overflow-layout", "ready");
-      expect(section?.style.getPropertyValue("--home-recommendations-panel-height")).toBe("298px");
+      expect(section?.style.getPropertyValue("--home-recommendations-panel-height")).toBe("290px");
       expect(section?.style.getPropertyValue("--home-recommendations-overflow-reserve")).toBe("0px");
       expect(vi.mocked(window.requestAnimationFrame).mock.calls.length).toBeGreaterThan(
         scheduledFramesBeforeDesktopReturn

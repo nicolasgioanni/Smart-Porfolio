@@ -156,7 +156,7 @@ The Home section and navigation item appear only when `enable_recommendations` i
 
 Home candidates use `show_on_home`, then featured, then all. They sort by featured, `home_order`, `recommendation_date` descending, then recommender name or ID. A positive `max_home_recommendation_items` sets the limit. A missing, zero, or negative value falls back to three.
 
-Home and detail cards both display the unchanged `full_quote`, recommender name, title, organization, recommendation date, relationship, optional inline full-quote link, LinkedIn link, and a distinct source link. Quote expansion and line clamping affect presentation only.
+Home and detail cards both display the unchanged `full_quote`, recommender name, title, organization, recommendation date, relationship, and optional inline full-quote link. `linkedin_url` is the recommender-profile destination exposed as `View profile`; `source_url` is the published-recommendation destination exposed through the provenance link and `View recommendation`. The provenance link reads `Verified` on Home and `Verified on LinkedIn` on the detail route. Home actions remain text-only, while detail actions may pair their visible labels with a decorative LinkedIn icon. Quote expansion and line clamping affect presentation only.
 
 `home_quote`, `context`, and recommendation `skills` are normalized but have no current UI consumer.
 

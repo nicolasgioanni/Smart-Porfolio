@@ -109,8 +109,8 @@
   overflow: hidden;
   color: var(--color-ink-strong);
   font-size: var(--font-size-body);
-  font-weight: var(--font-weight-heavy);
-  letter-spacing: var(--letter-spacing-normal);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-heading);
   text-overflow: ellipsis;
   white-space: nowrap;
   transition:
@@ -503,12 +503,15 @@
 .blob-footer__owner {
   color: var(--color-ink-strong);
   font-size: var(--font-size-card-title);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-heading);
   line-height: var(--line-height-heading);
 }
 
 .blob-footer__heading {
   color: var(--color-ink-strong);
   font-size: var(--font-size-small);
+  font-weight: var(--font-weight-bold);
   line-height: var(--line-height-heading);
 }
 

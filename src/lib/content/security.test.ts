@@ -401,7 +401,7 @@ describe("static portfolio security contracts", () => {
     const recommendationQuoteRule =
       portfolioCss.match(/\.recommendation-expandable__quote\s*{\s*color:[^}]*}/s)?.[0] ?? "";
     const recommendationLinkRule =
-      portfolioCss.match(/\.recommendation-card__links \.glass-icon-link\s*{[^}]*}/s)?.[0] ?? "";
+      portfolioCss.match(/\.recommendation-card__links \.glass-button\s*{[^}]*}/s)?.[0] ?? "";
     const researchSummaryRule =
       portfolioCss.match(/\.home-research-card__summary\s*{\s*color:[^}]*}/s)?.[0] ?? "";
     const projectSummaryRule =
@@ -427,7 +427,7 @@ describe("static portfolio security contracts", () => {
     expect(projectShowcaseRule).toMatch(/max-width:\s*100%/);
     expect(projectBadgeRule).toMatch(/min-height:\s*32px/);
     expect(projectBadgeRule).toMatch(/padding:\s*5px 7px/);
-    expect(projectBadgeLabelRule).toMatch(/font-size:\s*0\.6875rem/);
+    expect(projectBadgeLabelRule).toMatch(/font-size:\s*var\(--font-size-eyebrow\)/);
     expect(projectBadgeLabelRule).toMatch(/white-space:\s*nowrap/);
     expect(portfolioCss).toMatch(
       /@media\s*\(max-width:\s*620px\)[\s\S]*?\.home-project-card__skills\s+\.project-skill-showcase\s*{[^}]*flex-wrap:\s*wrap[^}]*}/s

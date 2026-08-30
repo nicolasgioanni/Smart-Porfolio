@@ -27,6 +27,9 @@ import { RecommendationsList } from "@/components/portfolio/RecommendationsList"
 import { ResearchList } from "@/components/portfolio/ResearchList";
 import { createProfileOverviewContent } from "@/lib/content/profileOverview";
 
+const linkedInRecommendationsUrl =
+  "https://www.linkedin.com/in/nicolas-gioanni/details/recommendations/";
+
 const recommendation: RecommendationItem = {
   id: "recommendation-a",
   recommenderName: "Alex Manager",
@@ -35,8 +38,8 @@ const recommendation: RecommendationItem = {
   relationship: "Managed the internship project.",
   recommendationDate: "2025-09",
   source: "LinkedIn",
-  sourceUrl: "https://www.linkedin.com/in/example",
-  linkedinUrl: "https://www.linkedin.com/in/example/details/recommendations/",
+  sourceUrl: linkedInRecommendationsUrl,
+  linkedinUrl: "https://www.linkedin.com/in/alex-manager/",
   homeQuote: "A thoughtful engineer who communicates clearly.",
   fullQuote: "A thoughtful engineer who communicates clearly and turns ambiguous product goals into maintainable software.",
   context: "Worked together during a summer internship.",
@@ -549,9 +552,59 @@ describe("portfolio UI helpers", () => {
 
     rerender(<RecommendationsList items={[recommendation]} />);
 
-    expect(screen.getByText("Alex Manager")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /view on linkedin/i })).toHaveAttribute("rel", "noopener noreferrer");
+    const card = container.querySelector<HTMLElement>(".recommendation-card--detail");
+    const verificationLink = within(card!).getByRole("link", {
+      name: "View Alex Manager's verified recommendation on LinkedIn"
+    });
+    const cardActions = Array.from(card!.querySelectorAll<HTMLAnchorElement>(".recommendation-card__links a"));
+
+    expect(within(card!).getByText("Alex Manager")).toBeInTheDocument();
+    expect(verificationLink).toHaveTextContent("Verified on LinkedIn");
+    expect(verificationLink).toHaveAttribute("href", linkedInRecommendationsUrl);
+    expect(cardActions.map((link) => link.textContent?.trim())).toEqual(["View profile", "View recommendation"]);
+    expect(cardActions.map((link) => link.getAttribute("href"))).toEqual([
+      recommendation.linkedinUrl,
+      linkedInRecommendationsUrl
+    ]);
+    expect(cardActions.every((link) => link.target === "_blank" && link.rel === "noopener noreferrer")).toBe(true);
+    expect(cardActions.every((link) => link.querySelector("svg") !== null)).toBe(true);
     expect(container.querySelector(".recommendation-expandable")).toHaveAttribute("data-collapsed-lines", "4");
+  });
+
+  it("renders recommendation provenance and actions independently when URLs are missing", () => {
+    const recommendations = [
+      { ...recommendation, id: "profile-only", sourceUrl: undefined },
+      {
+        ...recommendation,
+        id: "source-only",
+        recommenderName: "Taylor Collaborator",
+        linkedinUrl: undefined
+      },
+      {
+        ...recommendation,
+        id: "no-links",
+        recommenderName: "Jordan Peer",
+        linkedinUrl: undefined,
+        sourceUrl: undefined
+      }
+    ];
+    const { container } = render(<RecommendationsList items={recommendations} />);
+    const cards = Array.from(container.querySelectorAll<HTMLElement>(".recommendation-card--detail"));
+
+    expect(cards).toHaveLength(3);
+    expect(cards[0]!.querySelector(".recommendation-verification-link")).not.toBeInTheDocument();
+    expect(Array.from(cards[0]!.querySelectorAll(".recommendation-card__links a")).map((link) => link.textContent)).toEqual([
+      "View profile"
+    ]);
+    expect(within(cards[1]!).getByRole("link", { name: /verified recommendation on linkedin/i })).toHaveAttribute(
+      "href",
+      linkedInRecommendationsUrl
+    );
+    expect(Array.from(cards[1]!.querySelectorAll(".recommendation-card__links a")).map((link) => link.textContent)).toEqual([
+      "View recommendation"
+    ]);
+    expect(cards[2]!.querySelector(".recommendation-verification-link")).not.toBeInTheDocument();
+    expect(cards[2]!.querySelector(".recommendation-card__links")).not.toBeInTheDocument();
   });
 
   it("passes a structured inline quote link through recommendation cards", () => {
@@ -574,9 +627,22 @@ describe("portfolio UI helpers", () => {
 
   it("renders full Home recommendations with a detail route link", () => {
     const { container } = render(<HomeRecommendations items={[recommendation]} />);
+    const card = container.querySelector<HTMLElement>(".recommendation-card--summary");
+    const verificationLink = within(card!).getByRole("link", {
+      name: "View Alex Manager's verified recommendation on LinkedIn"
+    });
+    const cardActions = Array.from(card!.querySelectorAll<HTMLAnchorElement>(".recommendation-card__links a"));
 
     expect(screen.getByText(recommendation.fullQuote)).toBeInTheDocument();
     expect(screen.getByText("Engineering Manager at Example Company")).toBeInTheDocument();
+    expect(verificationLink).toHaveTextContent(/^Verified$/);
+    expect(verificationLink).toHaveAttribute("href", linkedInRecommendationsUrl);
+    expect(cardActions.map((link) => link.textContent?.trim())).toEqual(["View profile", "View recommendation"]);
+    expect(cardActions.map((link) => link.getAttribute("href"))).toEqual([
+      recommendation.linkedinUrl,
+      linkedInRecommendationsUrl
+    ]);
+    expect(cardActions.every((link) => link.querySelector("svg") === null)).toBe(true);
     expect(screen.getByRole("link", { name: /see all recommendations/i })).toHaveAttribute("href", "/recommendations");
     expect(container.querySelector(".recommendation-expandable")).toHaveAttribute("data-collapsed-lines", "4");
   });
