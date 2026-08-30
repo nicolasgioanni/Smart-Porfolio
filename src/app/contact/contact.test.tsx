@@ -299,6 +299,50 @@ describe("contact route", () => {
     expect(within(review).getByText("Please contact me about my resume.")).toBeInTheDocument();
   });
 
+  it("replays the validation shake for persistent name and contact errors", async () => {
+    render(<ContactPage />);
+    await completeVerification();
+
+    const next = screen.getByRole("button", { name: "Next" });
+    const form = next.closest("form");
+    const firstName = screen.getByLabelText(/First name/i);
+    const lastName = screen.getByLabelText(/Last name/i);
+    expect(form).toHaveAttribute("data-validation-shake", "a");
+
+    fireEvent.click(next);
+    expect(form).toHaveAttribute("data-validation-shake", "b");
+    expect(firstName).toHaveAttribute("aria-invalid", "true");
+    expect(lastName).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByText("Enter your first name")).toHaveAttribute("role", "alert");
+    expect(screen.getByText("Enter your last name")).toHaveAttribute("role", "alert");
+    await waitFor(() => expect(firstName).toHaveFocus());
+
+    fireEvent.click(next);
+    expect(form).toHaveAttribute("data-validation-shake", "a");
+    expect(firstName).toHaveAccessibleDescription("Enter your first name");
+    expect(lastName).toHaveAccessibleDescription("Enter your last name");
+    await waitFor(() => expect(firstName).toHaveFocus());
+
+    fireEvent.change(firstName, { target: { value: "Avery" } });
+    fireEvent.change(lastName, { target: { value: "Nguyen" } });
+    fireEvent.click(next);
+
+    const review = screen.getByRole("button", { name: "Review" });
+    const email = screen.getByLabelText(/Email address/i);
+    const message = screen.getByRole("textbox", { name: /Message/i });
+    fireEvent.click(review);
+    expect(form).toHaveAttribute("data-validation-shake", "b");
+    expect(email).toHaveAttribute("aria-invalid", "true");
+    expect(message).toHaveAttribute("aria-invalid", "true");
+    await waitFor(() => expect(email).toHaveFocus());
+
+    fireEvent.click(review);
+    expect(form).toHaveAttribute("data-validation-shake", "a");
+    expect(email).toHaveAccessibleDescription("Enter your email address");
+    expect(message).toHaveAccessibleDescription("Enter a message");
+    await waitFor(() => expect(email).toHaveFocus());
+  });
+
   it("renders three clickable required acknowledgment cards and locks submission until all are accepted", async () => {
     render(<ContactPage />);
     await reachReview({ phone: "+44 20 7946 0958" });

@@ -6,14 +6,42 @@ const contactStyles = readFileSync(path.join(process.cwd(), "src", "styles", "co
 const tokenStyles = readFileSync(path.join(process.cwd(), "src", "styles", "tokens.css"), "utf8");
 
 describe("contact wizard styles", () => {
+  it("uses the CytoCV blue focus treatment for fields in every theme", () => {
+    expect(tokenStyles).toMatch(/--color-contact-field-focus:\s*#007bff/);
+    expect(tokenStyles).toMatch(/--contact-field-focus-ring:\s*0 0 0 3px rgba\(0, 123, 255, 0\.2\)/);
+    expect(tokenStyles.match(/--color-contact-field-focus:/g)).toHaveLength(1);
+    expect(tokenStyles.match(/--contact-field-focus-ring:/g)).toHaveLength(1);
+    expect(contactStyles).toMatch(
+      /\.contact-field input:focus-visible,\s*\.contact-field textarea:focus-visible\s*{[^}]*border-color: var\(--color-contact-field-focus\)[^}]*box-shadow: var\(--contact-field-focus-ring\)/s
+    );
+  });
+
   it("shows invalid fields in the danger color without removing the focus ring", () => {
     expect(contactStyles).toMatch(
       /\.contact-field :is\(input, textarea\)\[aria-invalid="true"\]\s*{[^}]*border-color: var\(--color-danger\)[^}]*box-shadow: 0 0 0 1px var\(--color-danger\)/s
     );
     expect(contactStyles).toMatch(
-      /\.contact-field :is\(input, textarea\)\[aria-invalid="true"\]:focus-visible\s*{[^}]*var\(--focus-ring\)[^}]*var\(--color-danger\)/s
+      /\.contact-field :is\(input, textarea\)\[aria-invalid="true"\]:focus-visible\s*{[^}]*var\(--contact-field-focus-ring\)[^}]*var\(--color-danger\)/s
     );
     expect(contactStyles).toMatch(/\.contact-field__error\s*{[^}]*color: var\(--color-danger\)/s);
+  });
+
+  it("replays a restrained shake on invalid controls and their messages", () => {
+    expect(contactStyles).toMatch(
+      /\.contact-form\[data-validation-shake="a"\] \.contact-field :is\(input, textarea\)\[aria-invalid="true"\],\s*\.contact-form\[data-validation-shake="a"\] \.contact-field__error\s*{[^}]*animation: contact-validation-shake-a 180ms ease-in-out 2/s
+    );
+    expect(contactStyles).toMatch(
+      /\.contact-form\[data-validation-shake="b"\] \.contact-field :is\(input, textarea\)\[aria-invalid="true"\],\s*\.contact-form\[data-validation-shake="b"\] \.contact-field__error\s*{[^}]*animation: contact-validation-shake-b 180ms ease-in-out 2/s
+    );
+    expect(contactStyles).toMatch(
+      /@keyframes contact-validation-shake-a[\s\S]*?translateX\(-2px\)[\s\S]*?translateX\(2px\)/
+    );
+    expect(contactStyles).toMatch(
+      /@keyframes contact-validation-shake-b[\s\S]*?translateX\(-2px\)[\s\S]*?translateX\(2px\)/
+    );
+    expect(contactStyles).toMatch(
+      /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.contact-field :is\(input, textarea\)\[aria-invalid="true"\],[\s\S]*?\.contact-field__error\s*{[^}]*animation: none/s
+    );
   });
 
   it("provides checked, keyboard-focus, glass-disabled, and reduced-motion states", () => {

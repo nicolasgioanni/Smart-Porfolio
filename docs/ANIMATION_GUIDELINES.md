@@ -10,6 +10,10 @@ Animate `transform` and `opacity` first. Recommendation disclosure, footer grid 
 
 Always respect `prefers-reduced-motion`. Disable or simplify shimmer, entrance motion, scroll effects, disclosure transitions, and decorative travel for motion-sensitive users. State, content, focus, and controls must remain available.
 
+## Form validation feedback
+
+After each invalid Next or Review attempt, shake each invalid control and its validation message for `180ms` with `ease-in-out`, two iterations, and no more than `2px` of horizontal travel in either direction. Replay the shake for every invalid attempt even when the validation text has not changed. Under `prefers-reduced-motion: reduce`, disable the shake while preserving the error message, red field treatment, and focus behavior.
+
 ## Home role rotation
 
 The desktop Home role uses a fixed-height, overflow-hidden window sized for the widest configured role so neither the line nor surrounding layout shifts. Server rendering and initial hydration show the first configured engineer role. A subtle CSS mask may soften the desktop window edges, but text stays sharp. Do not animate `filter`, backdrop blur, or text blur.
@@ -28,7 +32,9 @@ Recommendation quotes display four lines while collapsed by default. Within a mu
 
 Overflowing quotes use a true alpha mask over the lower half of the final visible line. `Show more` and `Show less` animate the clipped viewport over `520ms` and lightly fade the quote over `320ms`, both with `cubic-bezier(0.22, 1, 0.36, 1)`.
 
-The button retains `aria-expanded` and `aria-controls`; quote text is not duplicated into a live region. Above `980px`, only the selected Home card protrudes beyond the fixed desktop panel and an invisible reserve keeps later rows and the footer in normal document flow. At `max-width: 980px`, the fixed-panel sizing and reserve are removed so the recommendation card and containing surface grow together in natural flow. Reduced motion applies the open or closed state immediately.
+The button retains `aria-expanded` and `aria-controls`; quote text is not duplicated into a live region. Above `980px`, a selected Home card may protrude beyond its fixed panel while an invisible reserve keeps later sections in normal document flow. On the detail route, the expanded card becomes an opaque overlay while every collapsed grid slot retains its measured height, so later recommendation rows do not move. Recalculate overlap during expansion and dim only cards physically covered by the overlay to approximately `0.58` opacity; add trailing reserve only when a bottom-row overlay would otherwise cover the footer.
+
+At `max-width: 980px`, remove fixed-slot, overlay, reserve, and overlap-dimming behavior so the recommendation card and containing surface grow together in natural flow. Reduced motion applies open, closed, and overlap states immediately without height or opacity transitions.
 
 ## Hover Base 1
 
