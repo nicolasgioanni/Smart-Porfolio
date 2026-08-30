@@ -125,9 +125,9 @@ See [Content mapping](CONTENT_MAPPING.md) for field-to-component ownership and [
 
 ## Theme and visual composition
 
-The server fallback theme is resolved from generated site settings. A synchronous `ThemePreferenceScript` runs in the document head before hydration. It applies a valid stored `navy`, `light`, or `dark` override from `portfolio-theme`; without one, it maps `(prefers-color-scheme: dark)` to Dark or Light before body paint. The generated value remains the no-JavaScript and unavailable-media-query fallback. The visitor-facing label for the stable `navy` identifier is Gioanni.
+The server fallback theme is resolved from generated site settings. A synchronous `ThemePreferenceScript` runs in the document head before hydration. It applies a valid stored `navy`, `light`, or `dark` override from `portfolio-theme`; without one, it maps `(prefers-color-scheme: dark)` to Dark or Light before body paint. The generated value remains the no-JavaScript and unavailable-media-query fallback. The visitor-facing label for the stable `navy` identifier is My mode.
 
-After hydration, `useThemePreference` tracks the preference and effective palette separately. System mode listens for live device color-scheme changes. A manual Light, Gioanni, or Dark choice takes precedence and is synchronized across tabs through browser storage events. Choosing System removes the stored override and immediately resumes device following; a cleared or invalid cross-tab value has the same effect.
+After hydration, `useThemePreference` tracks the preference and effective palette separately. System mode listens for live device color-scheme changes. A manual Light, My mode, or Dark choice takes precedence and is synchronized across tabs through browser storage events. Choosing System removes the stored override and immediately resumes device following; a cleared or invalid cross-tab value has the same effect.
 
 Semantic values in `tokens.css` isolate components from theme-specific colors. Glass surfaces, cards, blobs, controls, navigation, motion, loading states, and the Hover Base interaction system compose those values through focused style sheets. The application remains usable when generated settings disable glass effects or scroll motion.
 

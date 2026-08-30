@@ -101,10 +101,10 @@ describe("ThemeSwitcher", () => {
 
     const group = screen.getByRole("group", { name: "Color theme preference" });
     const options = within(group).getAllByRole("button");
-    expect(options.map((option) => option.textContent)).toEqual(["SystemAuto", "Light", "Gioanni", "Dark"]);
+    expect(options.map((option) => option.textContent)).toEqual(["SystemAuto", "Light", "My mode", "Dark"]);
     options.forEach((option) => expect(option).toHaveClass("hover-base-1", "hover-base-1--compact", "hover-base-1--inline"));
-    expect(within(group).getByRole("button", { name: "Gioanni" })).toHaveAttribute("aria-pressed", "true");
-    expect(trigger).toHaveAccessibleName("Choose color theme. Current setting: Gioanni");
+    expect(within(group).getByRole("button", { name: "My mode" })).toHaveAttribute("aria-pressed", "true");
+    expect(trigger).toHaveAccessibleName("Choose color theme. Current setting: My mode");
 
     fireEvent.click(within(group).getByRole("button", { name: "Light" }));
 
@@ -114,12 +114,12 @@ describe("ThemeSwitcher", () => {
     expect(trigger).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("group", { name: "Color theme preference" })).toBeInTheDocument();
 
-    fireEvent.click(within(group).getByRole("button", { name: "Gioanni" }));
+    fireEvent.click(within(group).getByRole("button", { name: "My mode" }));
 
     expect(document.documentElement.dataset.theme).toBe("navy");
     expect(window.localStorage.getItem(themeStorageKey)).toBe("navy");
-    expect(within(group).getByRole("button", { name: "Gioanni" })).toHaveAttribute("aria-pressed", "true");
-    expect(trigger).toHaveAccessibleName("Choose color theme. Current setting: Gioanni");
+    expect(within(group).getByRole("button", { name: "My mode" })).toHaveAttribute("aria-pressed", "true");
+    expect(trigger).toHaveAccessibleName("Choose color theme. Current setting: My mode");
   });
 
   it("restores a valid stored preference after hydration", async () => {
@@ -163,7 +163,7 @@ describe("ThemeSwitcher", () => {
     const media = setMediaPreferences({ systemDark: false });
     render(<ThemeSwitcher initialTheme="navy" />);
     fireEvent.click(screen.getByRole("button", { name: /choose color theme/i }));
-    fireEvent.click(screen.getByRole("button", { name: "Gioanni" }));
+    fireEvent.click(screen.getByRole("button", { name: "My mode" }));
 
     expect(window.localStorage.getItem(themeStorageKey)).toBe("navy");
     expect(document.documentElement.dataset.theme).toBe("navy");
@@ -171,7 +171,7 @@ describe("ThemeSwitcher", () => {
     act(() => media.setSystemDark(true));
 
     expect(document.documentElement.dataset.theme).toBe("navy");
-    expect(screen.getByRole("button", { name: "Gioanni" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "My mode" })).toHaveAttribute("aria-pressed", "true");
   });
 
   it("removes a manual override when System is selected and resumes live following", () => {
