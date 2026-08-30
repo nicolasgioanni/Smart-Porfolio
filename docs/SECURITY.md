@@ -29,6 +29,10 @@ Documentation is not evidence that an external control is active. Treat the impl
 | Build-time public values and deployment flow | `.github/workflows/ci.yml` |
 | Contact behavior reference | `docs/CONTACT_SYSTEM.md` |
 
+## CSV parsing boundary
+
+CSV content is untrusted build input. `csv-parse` must resolve to `7.0.2` or later to remediate [GHSA-8cw4-87c7-c6xx](https://github.com/advisories/GHSA-8cw4-87c7-c6xx). Local CSV headers also reject empty, duplicate, and prototype-sensitive names (`__proto__`, `constructor`, and `prototype`) before the parser creates row objects. Keep this validation at the parsing boundary as defense in depth; downstream content validation is not a substitute for safe object construction.
+
 ## Threat model
 
 Assume that a visitor can bypass all browser controls, construct arbitrary requests, replay cookies, alter JSON, omit headers, and send traffic directly to a Function. Also assume that public static files, browser bundles, repository contents, response headers, and client-visible environment values can be inspected.

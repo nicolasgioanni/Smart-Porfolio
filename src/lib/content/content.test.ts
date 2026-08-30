@@ -304,6 +304,18 @@ describe("CSV parsing and field normalization", () => {
     expect(parseCsv("id,label\none,Example\n")).toEqual([{ id: "one", label: "Example" }]);
   });
 
+  it("fails closed on malformed and prototype-sensitive CSV headers", () => {
+    for (const header of ["__proto__", "constructor", "prototype"]) {
+      expect(() => parseCsv(`${header},label\nvalue,Example\n`)).toThrow(/unsafe field names/);
+    }
+
+    expect(() => parseCsv("id,,label\none,ignored,Example\n")).toThrow(/empty field name/);
+    expect(() => parseCsv("id,id\none,two\n")).toThrow(/duplicate field names/);
+    expect(() => parseCsv(" id , id \none,two\n")).toThrow(/duplicate field names/);
+    expect(() => parseCsv(" __proto__ ,label\nvalue,Example\n")).toThrow(/unsafe field names/);
+    expect(parseCsv(" id , label \none,Example\n")).toEqual([{ id: "one", label: "Example" }]);
+  });
+
   it("normalizes pipe-delimited lists and links", () => {
     expect(normalizePipeDelimitedList("Python| TypeScript |Next.js")).toEqual(["Python", "TypeScript", "Next.js"]);
     expect(normalizeLinkList("GitHub=https://github.com/example|https://example.com")).toEqual([
