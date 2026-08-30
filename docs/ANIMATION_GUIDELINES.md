@@ -58,7 +58,7 @@ Above `980px`, header expansion and compaction are state-driven, not continuousl
 
 The theme disclosure fades and settles over `200ms` with opacity and transform. Its shell provides pointer grace, and one cancellable `240ms` leave delay prevents accidental dismissal. Re-entry cancels the close. The header holds its current geometry while the disclosure is open so the trigger does not move away from the pointer. The panel settles below its trigger on desktop and above it in the mobile dock.
 
-Theme selection updates colors without closing the panel. Reduced motion preserves visibility and selection without settle transitions.
+Theme selection updates colors without closing the panel. After hydration, an eligible palette change uses the shared `160ms` native View Transition fade with `cubic-bezier(0.2, 0, 0, 1)`: the previous snapshot stays still and the new snapshot changes only opacity. The snapshot layer never receives pointer events; after a verified fine-pointer selection, the disclosure ignores exactly one synthetic pointer leave and clears stale handling on completion or interruption, while genuine outside-pointer dismissal remains available throughout. It has no transform, blur, gradient, layout animation, per-element transition, timer, or persistent compositing hint. The synchronous head selection and the first hydrated reconciliation remain immediate to prevent a theme flash. Reduced motion, hidden documents, unsupported browsers, failed transitions, and unchanged palettes also update immediately while preserving selection, focus, and system-following behavior.
 
 ## Modal dialogs
 

@@ -10,6 +10,7 @@ import {
   themeStorageKey,
   type ThemePreference
 } from "@/lib/theme/themePreference";
+import { applyTheme } from "@/lib/theme/themeTransition";
 
 type ThemePreferenceState = {
   selectedPreference: ThemePreference;
@@ -32,10 +33,6 @@ function readSystemMediaQuery(): MediaQueryList | null {
   }
 }
 
-function applyTheme(theme: ThemeName) {
-  document.documentElement.dataset.theme = theme;
-}
-
 export function useThemePreference(initialTheme: ThemeName) {
   const [themeState, setThemeState] = useState<ThemePreferenceState>({
     selectedPreference: initialTheme,
@@ -44,11 +41,16 @@ export function useThemePreference(initialTheme: ThemeName) {
   const selectedPreferenceRef = useRef<ThemePreference>(initialTheme);
 
   const commitPreference = useCallback(
-    (selectedPreference: ThemePreference, systemPrefersDark: boolean | null, fallback = initialTheme) => {
+    (
+      selectedPreference: ThemePreference,
+      systemPrefersDark: boolean | null,
+      fallback = initialTheme,
+      animate = false
+    ) => {
       const selectedTheme = resolveEffectiveTheme(selectedPreference, systemPrefersDark, fallback);
       selectedPreferenceRef.current = selectedPreference;
       setThemeState({ selectedPreference, selectedTheme });
-      applyTheme(selectedTheme);
+      return applyTheme(selectedTheme, { animate });
     },
     [initialTheme]
   );
@@ -63,14 +65,14 @@ export function useThemePreference(initialTheme: ThemeName) {
     function handleSystemPreferenceChange(event: MediaQueryListEvent) {
       if (selectedPreferenceRef.current !== systemThemePreference) return;
 
-      commitPreference(systemThemePreference, event.matches);
+      commitPreference(systemThemePreference, event.matches, initialTheme, true);
     }
 
     function handleStorage(event: StorageEvent) {
       if (event.key !== themeStorageKey && event.key !== null) return;
 
       const nextPreference = resolveThemePreference(event.key === null ? null : event.newValue);
-      commitPreference(nextPreference, mediaQuery?.matches ?? null);
+      commitPreference(nextPreference, mediaQuery?.matches ?? null, initialTheme, true);
     }
 
     if (typeof mediaQuery?.addEventListener === "function") {
@@ -93,7 +95,7 @@ export function useThemePreference(initialTheme: ThemeName) {
   const updateThemePreference = useCallback(
     (preference: ThemePreference) => {
       const mediaQuery = readSystemMediaQuery();
-      commitPreference(preference, mediaQuery?.matches ?? null);
+      const transition = commitPreference(preference, mediaQuery?.matches ?? null, initialTheme, true);
 
       try {
         if (preference === systemThemePreference) {
@@ -104,8 +106,10 @@ export function useThemePreference(initialTheme: ThemeName) {
       } catch {
         // Theme changes remain fully functional for this visit when storage is unavailable.
       }
+
+      return transition;
     },
-    [commitPreference]
+    [commitPreference, initialTheme]
   );
 
   return { ...themeState, updateThemePreference };

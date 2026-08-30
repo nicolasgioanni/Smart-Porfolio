@@ -9,7 +9,12 @@ import { systemThemeMediaQuery, themeStorageKey } from "@/lib/theme/themePrefere
 
 type MediaQueryChangeListener = (event: MediaQueryListEvent) => void;
 
-function setMediaPreferences({ finePointer = true, legacySystem = false, systemDark = false } = {}) {
+function setMediaPreferences({
+  finePointer = true,
+  legacySystem = false,
+  reducedMotion = false,
+  systemDark = false
+} = {}) {
   let prefersDark = systemDark;
   const systemListeners = new Set<MediaQueryChangeListener>();
   const addSystemEventListener = vi.fn((eventName: string, listener: MediaQueryChangeListener) => {
@@ -43,7 +48,16 @@ function setMediaPreferences({ finePointer = true, legacySystem = false, systemD
 
   Object.defineProperty(window, "matchMedia", {
     configurable: true,
-    value: vi.fn((query: string) => (query === systemThemeMediaQuery ? systemQuery : pointerQuery))
+    value: vi.fn((query: string) => {
+      if (query === systemThemeMediaQuery) return systemQuery;
+      if (query === "(prefers-reduced-motion: reduce)") {
+        return {
+          matches: reducedMotion,
+          media: query
+        } as MediaQueryList;
+      }
+      return pointerQuery;
+    })
   });
 
   return {
@@ -70,6 +84,7 @@ describe("ThemeSwitcher", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
+    Reflect.deleteProperty(document, "startViewTransition");
     window.localStorage.clear();
     delete document.documentElement.dataset.theme;
   });
@@ -133,6 +148,201 @@ describe("ThemeSwitcher", () => {
     });
   });
 
+  it("keeps the initial reconciliation immediate and animates later hydrated changes", () => {
+    const media = setMediaPreferences({ systemDark: false });
+    const startViewTransition = vi.fn((update: () => void) => update());
+    vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    Object.defineProperty(document, "startViewTransition", {
+      configurable: true,
+      value: startViewTransition
+    });
+
+    render(<ThemeSwitcher initialTheme="navy" />);
+
+    expect(document.documentElement.dataset.theme).toBe("light");
+    expect(startViewTransition).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: /choose color theme/i }));
+    fireEvent.click(screen.getByRole("button", { name: "My mode" }), { detail: 1 });
+    expect(startViewTransition).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole("button", { name: /system, follows device setting/i }));
+    expect(startViewTransition).toHaveBeenCalledTimes(2);
+
+    act(() => media.setSystemDark(true));
+    expect(startViewTransition).toHaveBeenCalledTimes(3);
+
+    act(() => {
+      window.dispatchEvent(new StorageEvent("storage", { key: themeStorageKey, newValue: "navy" }));
+    });
+    expect(startViewTransition).toHaveBeenCalledTimes(4);
+  });
+
+  it("clears unused palette-fade leave suppression when the active transition finishes", async () => {
+    vi.useFakeTimers();
+    let finishTransition: (() => void) | undefined;
+    const finished = new Promise<void>((resolve) => {
+      finishTransition = resolve;
+    });
+    Object.defineProperty(document, "startViewTransition", {
+      configurable: true,
+      value: vi.fn((update: () => void) => {
+        update();
+        return { finished };
+      })
+    });
+    vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    const { container } = render(<ThemeSwitcher initialTheme="navy" />);
+    const root = container.querySelector(".theme-switcher");
+
+    fireEvent.pointerEnter(root as Element, { pointerType: "mouse" });
+    fireEvent.pointerDown(screen.getByRole("button", { name: "My mode" }), { pointerType: "mouse" });
+    fireEvent.click(screen.getByRole("button", { name: "My mode" }), { detail: 1 });
+
+    await act(async () => {
+      finishTransition?.();
+      await Promise.resolve();
+    });
+    fireEvent.pointerLeave(root as Element, { pointerType: "mouse" });
+    act(() => vi.advanceTimersByTime(themeMenuCloseDelayMs));
+
+    expect(screen.getByRole("button", { name: /choose color theme/i })).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("suppresses only one transition-generated fine-pointer leave", () => {
+    vi.useFakeTimers();
+    Object.defineProperty(document, "startViewTransition", {
+      configurable: true,
+      value: vi.fn((update: () => void) => {
+        update();
+        return { finished: new Promise(() => {}) };
+      })
+    });
+    vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    const { container } = render(<ThemeSwitcher initialTheme="navy" />);
+    const root = container.querySelector(".theme-switcher");
+
+    fireEvent.pointerEnter(root as Element, { pointerType: "mouse" });
+    fireEvent.click(screen.getByRole("button", { name: "My mode" }), { detail: 1 });
+    fireEvent.pointerLeave(root as Element, { pointerType: "mouse" });
+    act(() => vi.advanceTimersByTime(themeMenuCloseDelayMs));
+    expect(screen.getByRole("button", { name: /choose color theme/i })).toHaveAttribute("aria-expanded", "true");
+
+    fireEvent.pointerLeave(root as Element, { pointerType: "mouse" });
+    act(() => vi.advanceTimersByTime(themeMenuCloseDelayMs));
+    expect(screen.getByRole("button", { name: /choose color theme/i })).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it.each([
+    ["reduced motion", { reducedMotion: true }],
+    ["an unsupported API", {}]
+  ])("does not suppress a genuine fine-pointer leave for %s", (_name, mediaPreferences) => {
+    vi.useFakeTimers();
+    setMediaPreferences(mediaPreferences);
+    const { container } = render(<ThemeSwitcher initialTheme="navy" />);
+    const root = container.querySelector(".theme-switcher");
+
+    fireEvent.pointerEnter(root as Element, { pointerType: "mouse" });
+    fireEvent.pointerDown(screen.getByRole("button", { name: "My mode" }), { pointerType: "mouse" });
+    fireEvent.click(screen.getByRole("button", { name: "My mode" }));
+    fireEvent.pointerLeave(root as Element, { pointerType: "mouse" });
+    act(() => vi.advanceTimersByTime(themeMenuCloseDelayMs));
+
+    expect(screen.getByRole("button", { name: /choose color theme/i })).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("does not suppress a genuine leave after a keyboard theme selection", () => {
+    vi.useFakeTimers();
+    Object.defineProperty(document, "startViewTransition", {
+      configurable: true,
+      value: vi.fn((update: () => void) => {
+        update();
+        return { finished: new Promise(() => {}) };
+      })
+    });
+    vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    const { container } = render(<ThemeSwitcher initialTheme="navy" />);
+    const root = container.querySelector(".theme-switcher");
+
+    fireEvent.pointerEnter(root as Element, { pointerType: "mouse" });
+    fireEvent.click(screen.getByRole("button", { name: "My mode" }), { detail: 0 });
+    fireEvent.pointerLeave(root as Element, { pointerType: "mouse" });
+    act(() => vi.advanceTimersByTime(themeMenuCloseDelayMs));
+
+    expect(screen.getByRole("button", { name: /choose color theme/i })).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it.each([
+    ["a throwing API", () => {
+      Object.defineProperty(document, "startViewTransition", {
+        configurable: true,
+        value: vi.fn(() => {
+          throw new Error("View transitions unavailable");
+        })
+      });
+    }, "My mode"],
+    ["an unchanged palette", () => {
+      document.documentElement.dataset.theme = "light";
+    }, "Light"]
+  ])("keeps fine-pointer dismissal available after %s", (_name, arrange, optionName) => {
+    vi.useFakeTimers();
+    arrange();
+    vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    const { container } = render(<ThemeSwitcher initialTheme="light" />);
+    const root = container.querySelector(".theme-switcher");
+
+    fireEvent.pointerEnter(root as Element, { pointerType: "mouse" });
+    fireEvent.click(screen.getByRole("button", { name: optionName }), { detail: 1 });
+    fireEvent.pointerLeave(root as Element, { pointerType: "mouse" });
+    act(() => vi.advanceTimersByTime(themeMenuCloseDelayMs));
+
+    expect(screen.getByRole("button", { name: /choose color theme/i })).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("keeps the latest transition active when an earlier one is interrupted", async () => {
+    vi.useFakeTimers();
+    const transitions: Array<{ reject: (reason?: unknown) => void; resolve: () => void }> = [];
+    Object.defineProperty(document, "startViewTransition", {
+      configurable: true,
+      value: vi.fn((update: () => void) => {
+        update();
+        let resolve = () => {};
+        let reject: (reason?: unknown) => void = () => {};
+        const finished = new Promise<void>((nextResolve, nextReject) => {
+          resolve = nextResolve;
+          reject = nextReject;
+        });
+        transitions.push({ reject, resolve });
+        return { finished };
+      })
+    });
+    vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    const { container } = render(<ThemeSwitcher initialTheme="navy" />);
+    const root = container.querySelector(".theme-switcher");
+
+    fireEvent.pointerEnter(root as Element, { pointerType: "mouse" });
+    fireEvent.click(screen.getByRole("button", { name: "My mode" }), { detail: 1 });
+    fireEvent.click(screen.getByRole("button", { name: "Dark" }), { detail: 1 });
+    expect(document.documentElement).toHaveAttribute("data-theme", "dark");
+    expect(transitions).toHaveLength(2);
+
+    await act(async () => {
+      transitions[0]?.reject(new Error("Interrupted by a newer palette"));
+      await Promise.resolve();
+    });
+    fireEvent.pointerLeave(root as Element, { pointerType: "mouse" });
+    act(() => vi.advanceTimersByTime(themeMenuCloseDelayMs));
+    expect(screen.getByRole("button", { name: /choose color theme/i })).toHaveAttribute("aria-expanded", "true");
+
+    await act(async () => {
+      transitions[1]?.resolve();
+      await Promise.resolve();
+    });
+    fireEvent.pointerLeave(root as Element, { pointerType: "mouse" });
+    act(() => vi.advanceTimersByTime(themeMenuCloseDelayMs));
+    expect(screen.getByRole("button", { name: /choose color theme/i })).toHaveAttribute("aria-expanded", "false");
+  });
+
   it("uses the system preference by default and follows live light and dark changes", () => {
     const media = setMediaPreferences({ systemDark: false });
     render(<ThemeSwitcher initialTheme="navy" />);
@@ -157,6 +367,26 @@ describe("ThemeSwitcher", () => {
     expect(screen.getByRole("button", { name: /choose color theme/i })).toHaveAccessibleName(
       "Choose color theme. Current setting: System; using Dark"
     );
+  });
+
+  it("contains an interrupted native lifecycle during a live system update", async () => {
+    const media = setMediaPreferences({ systemDark: false });
+    Object.defineProperty(document, "startViewTransition", {
+      configurable: true,
+      value: vi.fn((update: () => void) => {
+        update();
+        return { finished: Promise.reject(new Error("Interrupted system transition")) };
+      })
+    });
+    vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    render(<ThemeSwitcher initialTheme="navy" />);
+
+    act(() => media.setSystemDark(true));
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(document.documentElement).toHaveAttribute("data-theme", "dark");
   });
 
   it("keeps a manual choice stable across system changes", () => {
