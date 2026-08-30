@@ -34,7 +34,7 @@ Use this checklist when replacing local sample content or preparing a public wor
 - [ ] Add only verified public destinations and use a meaningful `kind`.
 - [ ] Use `is_primary`, `show_on_home`, and `show_in_header` deliberately. Header output is capped at four and general Home selection at six before identity filtering.
 - [ ] Confirm profile identity links appear in the intended fixed order: location, timezone, email, portfolio or website, LinkedIn, GitHub.
-- [ ] Do not rely on `show_in_footer` or `icon` for current rendering; neither has a current component consumer.
+- [ ] Set `show_in_footer=true` for the GitHub and LinkedIn profile links that should appear in footer resources. Do not rely on `icon` for footer rendering.
 - [ ] Set `repository_url` in `site_settings` when the footer must use an exact repository destination. Otherwise, understand the footer's repository-kind link fallback.
 
 ## Experience and education
