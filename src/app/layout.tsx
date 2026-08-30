@@ -13,9 +13,11 @@ import "@/styles/contact.css";
 import "@/styles/interactions.css";
 import "@/styles/utilities.css";
 import { SiteShell } from "@/components/layout/SiteShell";
+import { siteRoutes } from "@/components/navigation/siteRoutes";
 import { ThemePreferenceScript } from "@/components/theme/ThemePreferenceScript";
 import { createPageMetadata } from "@/lib/content/createPageMetadata";
 import { getPortfolioContent } from "@/lib/content/getPortfolioContent";
+import { SITE_LANGUAGE } from "@/lib/seo/siteConfig";
 import { resolveThemeName } from "@/lib/theme/resolveThemeName";
 
 const spaceGrotesk = Space_Grotesk({
@@ -27,7 +29,7 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export function generateMetadata(): Metadata {
-  return createPageMetadata(getPortfolioContent());
+  return createPageMetadata(getPortfolioContent(), { pathname: siteRoutes.home });
 }
 
 export const viewport: Viewport = {
@@ -41,7 +43,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   const initialTheme = resolveThemeName(content.siteSettings.defaultTheme);
 
   return (
-    <html lang="en" data-theme={initialTheme}>
+    <html lang={SITE_LANGUAGE} data-theme={initialTheme}>
       <body className={`${spaceGrotesk.className} ${spaceGrotesk.variable}`}>
         <ThemePreferenceScript initialTheme={initialTheme} />
         <SiteShell content={content} initialTheme={initialTheme}>

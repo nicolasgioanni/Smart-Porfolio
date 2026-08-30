@@ -1,12 +1,17 @@
 import type { Metadata } from "next";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { siteRoutes } from "@/components/navigation/siteRoutes";
 import { ProjectList } from "@/components/portfolio/ProjectList";
 import { createPageMetadata } from "@/lib/content/createPageMetadata";
 import { getPortfolioContent } from "@/lib/content/getPortfolioContent";
 import { selectProjectDetailContent } from "@/lib/content/selectHomeContent";
 
 export function generateMetadata(): Metadata {
-  return createPageMetadata(getPortfolioContent(), "Projects", "Engineering projects with problem framing, decisions, stack, links, and impact.");
+  return createPageMetadata(getPortfolioContent(), {
+    pathname: siteRoutes.projects,
+    title: "Projects",
+    description: "Engineering projects with problem framing, decisions, stack, links, and impact."
+  });
 }
 
 export default function ProjectsPage() {

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LegalDocument, resolveLegalContactEmail, resolveLegalEffectiveDate } from "@/components/legal/LegalDocument";
+import { siteRoutes } from "@/components/navigation/siteRoutes";
 import { SmartLink } from "@/components/navigation/SmartLink";
 import { createPageMetadata } from "@/lib/content/createPageMetadata";
 import { getPortfolioContent } from "@/lib/content/getPortfolioContent";
@@ -9,7 +10,11 @@ const pageDescription =
   "Notice for this informational portfolio, including accuracy, verification, intellectual property, and availability information.";
 
 export function generateMetadata(): Metadata {
-  return createPageMetadata(getPortfolioContent(), pageTitle, pageDescription);
+  return createPageMetadata(getPortfolioContent(), {
+    pathname: siteRoutes.terms,
+    title: pageTitle,
+    description: pageDescription
+  });
 }
 
 export default function TermsPage() {

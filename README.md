@@ -59,6 +59,7 @@ Deep dives:
 - [Architecture](docs/ARCHITECTURE.md)
 - [Content pipeline](docs/CONTENT_PIPELINE.md)
 - [Deployment](docs/DEPLOYMENT.md)
+- [Search indexing](docs/SEARCH_INDEXING.md)
 - [Contact system](docs/CONTACT_SYSTEM.md)
 
 ## Content workflow
@@ -291,7 +292,7 @@ The deployment design makes GitHub Actions the sole deployment owner. Operators 
 
 Configured production URLs are [nicolasmgioanni.dev](https://nicolasmgioanni.dev) and Cloudflare's assigned `smart-portfolio-bds.pages.dev` domain. The configured stable preview alias is `develop.smart-portfolio-bds.pages.dev`.
 
-The workflow checks that a production candidate still matches current `main`, verifies the downloaded artifact, validates the environment-specific D1 binding, applies pending migrations, runs pinned local Wrangler from repository root, and smoke-tests the deployed root, content manifest, integrity manifest, and GET rejection from both contact Functions. Generated production content and deployment state are not committed after upload. The active `/content-version.json` records current deployed content and candidate metadata; it does not prove that a post-upload smoke test succeeded or that a remote D1 migration is active.
+The workflow checks that a production candidate still matches current `main`, verifies the downloaded artifact, validates the environment-specific D1 binding, applies pending migrations, runs pinned local Wrangler from repository root, and smoke-tests the deployed root, robots file, sitemap, content manifest, integrity manifest, and GET rejection from both contact Functions. Generated production content and deployment state are not committed after upload. The active `/content-version.json` records current deployed content and candidate metadata; it does not prove that a post-upload smoke test succeeded or that a remote D1 migration is active.
 
 See [Deployment](docs/DEPLOYMENT.md) for setup and [Operations](docs/OPERATIONS.md) for event behavior, no-ops, retries, manifests, and rollback considerations.
 
