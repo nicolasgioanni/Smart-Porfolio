@@ -174,7 +174,7 @@ Home and detail cards both display the unchanged `full_quote`, recommender name,
 | --- | --- |
 | `site_title` | Metadata title, with profile full name fallback. |
 | `site_description` | Default metadata description, with short bio fallback. |
-| `default_theme` | Server-rendered and no-JavaScript fallback using `navy`, `light`, or `dark`; unsupported values resolve to `navy`. With scripting and media-query support, visitors without a saved override follow their device Light or Dark preference. The `navy` identifier is displayed as Gioanni. |
+| `default_theme` | Server-rendered and no-JavaScript fallback using `navy`, `light`, or `dark`; unsupported values resolve to `navy`. With scripting and media-query support, visitors without a saved override follow their device Light or Dark preference. The `navy` identifier is displayed as My mode. |
 | `enable_skeletons` | Loading fallback behavior. |
 | `enable_scroll_motion` | Page and section motion behavior. |
 | `enable_glass_effects` | `data-glass-effects` value on the site shell. |

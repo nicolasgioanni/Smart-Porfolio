@@ -138,7 +138,7 @@ test("follows the system color scheme until a visitor chooses an override", asyn
   await expect(root).toHaveAttribute("data-theme", "light");
   await expect(trigger).toHaveAccessibleName("Choose color theme. Current setting: System; using Light");
 
-  await group.getByRole("button", { name: "Gioanni", exact: true }).click();
+  await group.getByRole("button", { name: "My mode", exact: true }).click();
   await expect(root).toHaveAttribute("data-theme", "navy");
   await expect.poll(() => page.evaluate(() => window.localStorage.getItem("portfolio-theme"))).toBe("navy");
 

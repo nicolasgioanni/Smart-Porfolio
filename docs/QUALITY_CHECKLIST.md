@@ -21,7 +21,7 @@ Run this checklist before shipping meaningful changes.
 
 - Links have clear labels.
 - External new-tab links use safe `rel` attributes.
-- Text contrast remains strong across the Light, Gioanni, and Dark surface layers.
+- Text contrast remains strong across the Light, My mode, and Dark surface layers.
 - Dual-layer focus states remain visible on each palette's canvas, panels, cards, and controls.
 - System resolves device light and dark preferences, follows live changes, and never marks an effective palette as a manual selection.
 - Reduced-motion users do not receive entrance, compression, or shimmer effects.
