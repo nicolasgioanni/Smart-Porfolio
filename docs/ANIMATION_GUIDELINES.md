@@ -42,15 +42,17 @@ Reduced motion disables sheen, lift, arrow travel, and route-indicator travel wh
 
 ## Header and theme disclosure
 
-Above `980px`, header expansion and compaction are state-driven, not continuously scroll-linked. Scroll input changes state only after the implemented direction and distance thresholds. Header pieces share the centralized `460ms` transition token. Keep the property list explicit and confined to the header island. At `max-width: 980px`, the header remains expanded and its scroll/pointer geometry transitions are disabled; Theme and Menu disclosures keep their own motion.
+Above `980px`, header expansion and compaction are state-driven, not continuously scroll-linked. Scroll input changes state only after the implemented direction and distance thresholds. Header pieces share the centralized `460ms` transition token. Keep the property list explicit and confined to the header island. At `max-width: 980px`, the header becomes a fixed bottom dock, remains expanded, and disables scroll and pointer geometry transitions.
 
-The theme disclosure fades and settles over `200ms` with opacity and transform. Its shell provides pointer grace, and one cancellable `240ms` leave delay prevents accidental dismissal. Re-entry cancels the close. The header holds its current geometry while the disclosure is open so the trigger does not move away from the pointer.
+The theme disclosure fades and settles over `200ms` with opacity and transform. Its shell provides pointer grace, and one cancellable `240ms` leave delay prevents accidental dismissal. Re-entry cancels the close. The header holds its current geometry while the disclosure is open so the trigger does not move away from the pointer. The panel settles below its trigger on desktop and above it in the mobile dock.
 
 Theme selection updates colors without closing the panel. Reduced motion preserves visibility and selection without settle transitions.
 
-## Mobile navigation disclosure
+## Mobile navigation rail
 
-The mobile navigation panel remains mounted so it can fade both in and out over `160ms` using opacity and a `3px` vertical settle. Closed state also uses `visibility`, `pointer-events`, `aria-hidden`, and `inert`, so transparent links are never clickable, focusable, or announced. Outside pointer interaction, Escape, route selection, pathname changes, and leaving the mobile breakpoint all close through the same state. Reduced motion applies visibility immediately without translation or transition.
+At `max-width: 980px`, route links remain in one native horizontal rail. After each pathname loads, automatic motion waits exactly `3000ms`. If the rail overflows and has not been touched, it returns to the Home edge over `420ms`, then drifts at approximately `20px` per second and reverses at each boundary. Links are never cloned or reordered, and the motion has no live announcement.
+
+Pointer, swipe, wheel, keyboard, or focus interaction inside the rail permanently stops automatic motion for the current pathname. A new pathname enables the initial idle behavior again. Pause while the document is hidden, and cancel timers and animation frames when the mobile breakpoint exits or the component unmounts. Reduced motion disables the automatic return and drift while preserving manual horizontal scrolling. Edge fades reflect the current overflow boundary without animating content opacity.
 
 ## Scroll reveal
 
@@ -60,7 +62,7 @@ Scroll motion must not blur text. The `enable_scroll_motion` setting gates scrol
 
 ## Footer disclosure
 
-The footer expands into reserved normal-flow space. Its transition may animate width, padding, grid-row height, opacity, and a small vertical translation over roughly `420ms`. It must not animate blur or scale, change total document length, block native scrolling, or hide focused details. Reduced motion applies compact or expanded state immediately.
+The footer expands into reserved normal-flow space. Each pathname owns a fresh compact disclosure, and automatic expansion requires new user scroll intent on that route plus a fully visible runway activation band. Observer callbacks, loading-layout changes, scroll restoration, and programmatic scrolling must not initiate the transition. The transition may animate width, padding, grid-row height, opacity, and a small vertical translation over roughly `420ms`. It must not animate blur or scale, change total document length, block native scrolling, or hide focused details. Reduced motion applies compact or expanded state immediately.
 
 ## Glass and blur
 

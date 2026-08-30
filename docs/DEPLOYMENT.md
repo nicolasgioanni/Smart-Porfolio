@@ -31,7 +31,7 @@ The repository cannot verify Cloudflare or GitHub dashboard state. Operators mus
 
 - Cloudflare Pages Git integration remains disconnected.
 - No legacy provider continues to publish the custom domain.
-- Cloudflare runtime secrets exist in the correct production and preview environments.
+- Cloudflare runtime secrets and separate D1 bindings exist in the correct production and preview environments.
 - WAF rate limiting covers both contact endpoints, and the selected Cloudflare plan or provider-compatible control preserves the JSON API contract.
 - `main` branch protection requires the `verify` check and blocks force-push and deletion.
 - Custom-domain bindings, redirects, certificates, and DNS remain healthy.
@@ -86,7 +86,7 @@ The workflow fails before downloading the workbook if either Pages target variab
 | Secret | Purpose |
 | --- | --- |
 | `PORTFOLIO_WORKBOOK_URL` | Anonymous HTTPS XLSX source, stored as a secret for runner-log redaction |
-| `CLOUDFLARE_API_TOKEN` | Restricted Cloudflare token with Pages edit authority |
+| `CLOUDFLARE_API_TOKEN` | Restricted Cloudflare token with Pages and D1 edit authority for this account |
 | `CLOUDFLARE_ACCOUNT_ID` | Target Cloudflare account identifier |
 
 The workbook source is supplied only to non-PR content generation. Cloudflare deployment secrets are supplied only to the deploy job.
@@ -112,25 +112,43 @@ Do not add a separate verification-ticket key. The Function derives its signing 
 
 The top-level values cover production. `env.preview.vars` narrows the preview environment to the stable `develop` hostname and origin. The file also pins `pages_build_output_dir` to `./out` and the Cloudflare compatibility date.
 
+### D1 contact-rate bindings
+
+`wrangler.jsonc` declares `CONTACT_RATE_LIMIT_DB` twice:
+
+- top-level `smart-portfolio-contact-rate-limit-production` for production;
+- `env.preview` `smart-portfolio-contact-rate-limit-preview` for every Pages preview deployment.
+
+The tracked all-zero `database_id` values are deliberate non-deployable sentinels. Create both resources, then replace each sentinel with the distinct UUID printed by its command:
+
+```powershell
+npx --no-install wrangler d1 create smart-portfolio-contact-rate-limit-production
+npx --no-install wrangler d1 create smart-portfolio-contact-rate-limit-preview
+```
+
+Do not commit a shared ID for both environments. `preview_database_id: contact-rate-limit-local` is a local-emulation identifier, not a remote database. The deploy job validates the selected binding, rejects either sentinel and any shared remote ID, then applies tracked migrations to the selected database before uploading Pages.
+
 ## Initial environment setup
 
 The tracked workflow is configured to use Cloudflare Pages Direct Upload. The current Cloudflare dashboard state is external and unverified by the repository. These steps define the required state when rebuilding the configuration in a new account or auditing the existing one.
 
 1. Use a Pages Direct Upload project named `smart-portfolio` with production branch `main`. Do not create a second project to match the assigned `smart-portfolio-bds.pages.dev` hostname.
 2. Keep Cloudflare Git integration disconnected. GitHub Actions owns the content fetch, quality gate, build, and upload.
-3. Add the four repository variables and three Actions secrets listed above.
-4. Apply the reviewed non-secret values from `wrangler.jsonc` and configure encrypted runtime secrets separately for production and preview.
-5. Configure the Turnstile widgets for their exact production or preview hostnames. Production credentials must not authorize local-development hosts.
-6. Verify the Resend sending identity and keep the recipient value server-only.
-7. Configure external WAF rate limiting for both JSON endpoints. A combined expression may match:
+3. Add the four repository variables and three Actions secrets listed above. Restrict the Cloudflare token to the target account with Pages edit and D1 edit; do not grant unrelated zone or account authority.
+4. Create distinct production and preview D1 databases, replace the all-zero IDs in `wrangler.jsonc`, and commit the reviewed configuration. Keep the binding name exactly `CONTACT_RATE_LIMIT_DB` in both environments.
+5. Apply the reviewed non-secret values from `wrangler.jsonc` and configure encrypted runtime secrets separately for production and preview.
+6. Configure the Turnstile widgets for their exact production or preview hostnames. Production credentials must not authorize local-development hosts.
+7. Verify the Resend sending identity, check its suppression and bounce state, and keep the owner recipient value server-only.
+8. Configure external WAF rate limiting for both JSON endpoints. A combined expression may match:
 
    ```text
    http.request.uri.path in {"/api/contact/verify" "/api/contact"}
    ```
 
    Count by source IP. A Free-plan baseline of 5 requests per 10 seconds with a 10-second block can reduce abuse, but Cloudflare custom rate-limit responses require Pro or higher. Free-plan rate limiting therefore cannot guarantee the required `application/json` response and must not be documented as fully satisfying the contact API contract. On Pro or higher, explicitly configure the rate-limit or block action for both endpoints with the required JSON response and verify the live status, content type, and body. Plan eligibility alone does not satisfy the prerequisite. Otherwise, use another provider-compatible control that preserves the JSON contract. Do not use an interactive Managed Challenge on either endpoint.
-8. Confirm the active custom-domain, redirect, DNS, and TLS state in Cloudflare. The repository allowlists do not attach a domain.
-9. Run a manual dispatch with `force_deploy=true`, then perform the automated and manual checks described below.
+9. Confirm the active custom-domain, redirect, DNS, and TLS state in Cloudflare. The repository allowlists do not attach a domain.
+10. Push the reviewed change to `develop`. Confirm the workflow applies `migrations/0001_contact_rate_reservations.sql` to the preview database before Pages upload, then perform a controlled contact test with an owned mailbox.
+11. Merge the verified change to `main`. Confirm the same migration is applied to the production database before Pages upload, then perform the automated and manual checks described below.
 
 The WAF rule, active Cloudflare plan, runtime secret presence, branch protection, and provider integration state are external prerequisites. Their desired values are documented here, but their current live state is unverified by the tracked files.
 
@@ -157,8 +175,10 @@ flowchart TD
     G --> H[Upload artifact]
     H --> I[Verify downloaded artifact]
     I --> J[Recheck branch SHA]
-    J --> K[Deploy with Wrangler]
-    K --> L[Smoke test stable Pages alias]
+    J --> K[Validate D1 target]
+    K --> L[Apply D1 migrations]
+    L --> M[Deploy with Wrangler]
+    M --> N[Smoke test stable Pages alias]
 ```
 
 `npm run build:generated` invokes Next.js and the content-version writer without running the `prebuild` content generator. This is what makes the CI path a one-fetch pipeline. The deploy job does not rebuild or download the workbook.
@@ -174,7 +194,20 @@ The verify job runs these required checks against the candidate snapshot:
 
 For production and preview builds, `DEPLOYMENT_COMMIT_SHA` binds deployment metadata to the candidate. Production receives only the production Turnstile site key. Preview receives only the optional preview key.
 
-The deploy job checks out the same SHA so `functions/` and `wrangler.jsonc` match the tested source. It installs the locked local Wrangler version with `npm ci`, downloads the verified `out/` artifact, validates it, rechecks the branch tip, and runs Wrangler from the repository root.
+The deploy job checks out the same SHA so `functions/`, `migrations/`, and `wrangler.jsonc` match the tested source. It installs the locked local Wrangler version with `npm ci`, downloads the verified `out/` artifact, validates it, rechecks the branch tip, validates the environment-specific D1 ID, applies any pending migrations, and runs Wrangler from the repository root. Migration targeting uses the fixed database names rather than an interchangeable binding name.
+
+## D1 migration lifecycle
+
+Tracked SQL files under `migrations/` are append-only deployment inputs. `0001_contact_rate_reservations.sql` creates the four-column reservation table plus indexes for email-and-expiry lookup and expiry cleanup. Timestamps are Unix epoch seconds. D1 records successful files in its migration ledger, so a later deploy applies only pending migrations.
+
+The workflow commands are:
+
+```powershell
+npx --no-install wrangler d1 migrations apply smart-portfolio-contact-rate-limit-preview --env preview --remote
+npx --no-install wrangler d1 migrations apply smart-portfolio-contact-rate-limit-production --remote
+```
+
+The release process must migrate and verify preview before production. CI routes preview and production deployments independently, so this ordering is an operator release requirement rather than a workflow-enforced invariant. Never use `--local` for a release migration, never point preview at the production ID, and never edit an already-applied SQL file. Add a new numbered migration for a future schema change. Review destructive SQL separately and design migrations to remain compatible with the previously deployed Function while the Pages upload is in flight.
 
 ## Deployment metadata
 
@@ -221,7 +254,7 @@ Each successful attempt proves:
 4. `GET /api/contact/verify` returns HTTP `405`, an `application/json` content type, and `{ "ok": false, "error": "method_not_allowed" }`.
 5. `GET /api/contact` returns the same exact method-rejection contract.
 
-The automated smoke test does not request every static route, test the custom domain, inspect the static security headers, submit a valid Turnstile token, send email, exercise WAF rules, or prove end-to-end contact delivery. Those checks remain part of release and operations verification.
+The automated smoke test does not request every static route, test the custom domain, inspect the static security headers, submit a valid Turnstile token, inspect D1 rows, exercise DNS validation, send email, exercise WAF rules, or prove end-to-end contact delivery. Those checks remain part of release and operations verification.
 
 ## Routing and response headers
 
@@ -238,7 +271,9 @@ Pages `_headers` rules do not apply to Function responses. Both Functions set th
 
 Failure behavior depends on where the run stops:
 
-- A stale candidate, invalid target, content failure, quality-gate failure, build failure, artifact failure, or pre-Wrangler branch mismatch does not change the active Pages deployment.
+- A stale candidate, invalid target, content failure, quality-gate failure, build failure, artifact failure, or pre-migration branch mismatch does not change the active Pages deployment or D1 schema.
+- A D1 target-validation failure changes neither database nor Pages. A migration failure rolls back the failing migration and stops before Pages upload; earlier migrations may already be active.
+- A successful migration followed by a Pages upload failure leaves the forward-compatible schema active while the prior Pages deployment normally remains active. D1 migrations are not undone by Pages rollback.
 - A Wrangler failure normally leaves the prior successful deployment active, but the Cloudflare result remains authoritative.
 - A smoke failure occurs only after Wrangler has successfully created the candidate deployment. The candidate may already be serving through the stable alias, and a failed GitHub job does not undo or roll back that upload. Identify the active deployment from Cloudflare history and live metadata before taking recovery action.
 - A changed workbook hash that fails before deployment differs from the active manifest, so a later scheduled run attempts it again.

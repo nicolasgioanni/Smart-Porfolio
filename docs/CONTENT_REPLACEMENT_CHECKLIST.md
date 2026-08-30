@@ -99,7 +99,7 @@ Use this checklist when replacing local sample content or preparing a public wor
 - [ ] Set `copyright_owner` if it should differ from `profile.full_name`.
 - [ ] Set and verify `legal_contact_email`, `legal_effective_date`, `hosting_provider_name`, and the provider's HTTPS `hosting_privacy_url`.
 - [ ] Keep the footer-only Contact form link pointed at `/contact`, and keep the public direct-email link available as a fallback.
-- [ ] Confirm the Privacy and Security notices accurately describe the visible initial Turnstile gate, the `/api/contact/verify` ticket endpoint, the `/api/contact` delivery endpoint, the short-lived essential cookie, Resend delivery, required email/optional phone fields, provider processing, and the lack of a contact database.
+- [ ] Confirm the Privacy and Security notices accurately describe the visible initial Turnstile gate, the `/api/contact/verify` ticket endpoint, the `/api/contact` delivery endpoint, the short-lived essential cookie, bounded mail-domain DNS validation, the pseudonymous D1 quota reservation, sequential Resend delivery, required email/optional phone fields, and provider processing.
 - [ ] Confirm the software license separately from the rights reserved in portfolio content.
 - [ ] Set `repository_url` and `license_url` only after anonymous access to both destinations succeeds. Leave them blank to omit unavailable footer resources.
 

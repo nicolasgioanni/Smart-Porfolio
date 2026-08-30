@@ -6,7 +6,7 @@ import { getPortfolioContent } from "@/lib/content/getPortfolioContent";
 
 const pageTitle = "Site Terms & Accuracy Notice";
 const pageDescription =
-  "Terms governing this informational portfolio, including accuracy, verification, intellectual property, and availability notices.";
+  "Notice for this informational portfolio, including accuracy, verification, intellectual property, and availability information.";
 
 export function generateMetadata(): Metadata {
   return createPageMetadata(getPortfolioContent(), pageTitle, pageDescription);
@@ -46,7 +46,7 @@ export default function TermsPage() {
         </p>
         <p>
           Employment, education, credentials, metrics, authorship, project status, and availability should be independently
-          confirmed through Nicolas Gioanni at <SmartLink href="mailto:ngioanni@uw.edu">ngioanni@uw.edu</SmartLink> and,
+          confirmed through Nicolas Gioanni at <SmartLink href={`mailto:${contactEmail}`}>{contactEmail}</SmartLink> and,
           where appropriate, the relevant institution or organization before being relied upon for a material decision.
         </p>
         <p>
@@ -59,9 +59,27 @@ export default function TermsPage() {
         <h2>External destinations</h2>
         <p>
           Links to repositories, demonstrations, publications, institutions, employers, and other third-party destinations
-          are provided for context and convenience. Those destinations are independently controlled, may change without
-          notice, and are governed by their own terms, privacy notices, security practices, and availability. A link does not
-          imply endorsement of every statement, product, or practice at the destination.
+          are provided for context and convenience. Use of a third-party destination may be subject to that operator&apos;s
+          then-current terms, privacy notice, security practices, and availability. Those materials are independently
+          maintained and are not incorporated into this Notice. A link does not imply endorsement of every statement,
+          product, or practice at the destination.
+        </p>
+        <p>
+          Processing associated with this portfolio and its contact methods is described in the{" "}
+          <SmartLink href="/privacy">Privacy Notice</SmartLink>. Provider terms, data-processing materials, and technical or
+          security documents cited there or in the Security &amp; Responsible Disclosure Notice are supplied for transparency and
+          reference. They govern the relevant provider relationship only where applicable and do not become visitor
+          obligations merely because they are linked.
+        </p>
+      </section>
+
+      <section>
+        <h2>Contact requests</h2>
+        <p>
+          A contact request is an invitation to communicate and does not by itself create an employment, advisory, fiduciary,
+          contractual, confidential, or other professional relationship. The contact form asks visitors to acknowledge this
+          Notice and confirm that they have reviewed the Privacy Notice; it does not require visitors to accept a service
+          provider&apos;s separate terms.
         </p>
       </section>
 
@@ -84,16 +102,17 @@ export default function TermsPage() {
       <section>
         <h2>Availability and changes</h2>
         <p>
-          The site and its linked materials are provided on an as-available basis. Content, links, functionality, and these
-          terms may be corrected, updated, suspended, or removed without prior notice. Continued availability of any project,
-          demonstration, repository, manuscript, resume, or third-party destination is not guaranteed.
+          This Notice may be revised by posting an updated version with a new effective date. The site and its linked materials
+          are provided on an as-available basis, and content, links, or functionality may be corrected, updated, suspended, or
+          removed. Continued availability of any project, demonstration, repository, manuscript, resume, or third-party
+          destination is not guaranteed.
         </p>
       </section>
 
       <section>
         <h2>Contact</h2>
         <p>
-          For verification, attribution, correction, permission, or questions about this notice, contact Nicolas Gioanni at{" "}
+          For verification, attribution, correction, permission, or questions about this Notice, contact Nicolas Gioanni at{" "}
           <SmartLink href={`mailto:${contactEmail}`}>{contactEmail}</SmartLink>.
         </p>
       </section>

@@ -197,9 +197,25 @@ jobs:
         if: steps.decision.outputs.should_verify == 'true'
         run: npm run test:footer
 
+      - name: Navigation regression tests
+        if: steps.decision.outputs.should_verify == 'true'
+        run: npm run test:navigation
+
       - name: Full test suite
         if: steps.decision.outputs.should_verify == 'true'
         run: npm run test
+
+      - name: Install Chromium for browser regressions
+        if: steps.decision.outputs.should_verify == 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser navigation regression tests
+        if: steps.decision.outputs.should_verify == 'true'
+        run: npm run test:e2e:navigation
+
+      - name: Browser footer regression tests
+        if: steps.decision.outputs.should_verify == 'true'
+        run: npm run test:e2e:footer
 
       - name: Build the pull-request snapshot without remote credentials
         if: steps.decision.outputs.should_verify == 'true' && steps.decision.outputs.deploy_target == 'none'
@@ -288,6 +304,45 @@ jobs:
           if [[ "$latest_sha" != "$CANDIDATE_SHA" ]]; then
             echo "Refusing to deploy stale $CANDIDATE_BRANCH revision $CANDIDATE_SHA; the branch is now $latest_sha."
             exit 1
+          fi
+
+      - name: Validate the environment-specific D1 binding and apply migrations
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          DEPLOY_TARGET: ${{ needs.verify.outputs.deploy_target }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { readFileSync } from "node:fs";
+
+          const config = JSON.parse(readFileSync("wrangler.jsonc", "utf8"));
+          const placeholderId = "00000000-0000-0000-0000-000000000000";
+          const production = config.d1_databases?.find(({ binding }) => binding === "CONTACT_RATE_LIMIT_DB");
+          const preview = config.env?.preview?.d1_databases?.find(
+            ({ binding }) => binding === "CONTACT_RATE_LIMIT_DB"
+          );
+
+          if (!['production', 'preview'].includes(process.env.DEPLOY_TARGET ?? '')) {
+            throw new Error(`Unexpected D1 deployment target: ${process.env.DEPLOY_TARGET ?? 'missing'}.`);
+          }
+          for (const [environment, binding] of [['production', production], ['preview', preview]]) {
+            if (!binding?.database_id || binding.database_id === placeholderId) {
+              throw new Error(
+                `CONTACT_RATE_LIMIT_DB for ${environment} still has the non-deployable placeholder database ID.`
+              );
+            }
+          }
+          if (production?.database_id === preview?.database_id) {
+            throw new Error("Production and preview must use separate CONTACT_RATE_LIMIT_DB databases.");
+          }
+          NODE
+
+          if [[ "$DEPLOY_TARGET" == "preview" ]]; then
+            npx --no-install wrangler d1 migrations apply smart-portfolio-contact-rate-limit-preview --env preview --remote
+          else
+            npx --no-install wrangler d1 migrations apply smart-portfolio-contact-rate-limit-production --remote
           fi
 
       - name: Deploy the verified export and Pages Function with pinned Wrangler

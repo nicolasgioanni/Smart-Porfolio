@@ -28,7 +28,7 @@ The workbook is a lightweight content-authoring surface rather than a general-pu
 | Static-first delivery | Keeps portfolio data out of request-time APIs and serves the core experience from Cloudflare's edge. |
 | Exact tested artifact | Deploys the same export that passed the quality gate, with a SHA-256 manifest checked before upload. |
 | Focused interaction | Adds theme, navigation, skills, recommendation, and motion behavior without moving content rendering into the browser. |
-| Isolated contact flow | Uses a server-verified Turnstile gate, short-lived signed ticket, strict request validation, and Resend delivery. |
+| Isolated contact flow | Uses a server-verified Turnstile gate, short-lived signed ticket, strict validation, a pseudonymous rolling quota, and sequential Resend delivery. |
 | Preview and production isolation | Keeps `develop` deployments, browser keys, origins, hostnames, and production aliases separate. |
 
 ## Architecture at a glance
@@ -47,6 +47,8 @@ flowchart TB
     Browser --> Verify[/api/contact/verify]
     Verify --> Turnstile[Cloudflare Turnstile]
     Browser --> Submit[/api/contact]
+    Submit --> DNS[Mail-domain DNS]
+    Submit --> D1[Cloudflare D1 quota]
     Submit --> Resend[Resend]
 ```
 
@@ -98,7 +100,7 @@ See [Content pipeline](docs/CONTENT_PIPELINE.md), [sheet schema](docs/CONTENT_SH
 The interface uses glass-inspired surfaces as restrained hierarchy, not as a full-screen effect. Text sits on quiet backgrounds, large panels use bounded blur, and nested cards reduce visual weight.
 
 - Navy, Light, and Dark themes share semantic color and interaction tokens.
-- A floating header provides desktop navigation, an accessible mobile menu, profile preview, social links, and theme selection.
+- A floating desktop header provides profile preview, navigation, social links, and theme selection. At `980px` and below, a safe-area-aware bottom dock replaces it with a swipeable route rail and persistent GitHub, LinkedIn, Email, and theme controls.
 - Home combines a profile overview with experience, education, research, projects, skills, and recommendations.
 - The role line can rotate through spreadsheet-configured titles while exposing one stable accessible label.
 - Skills with complete evidence open keyboard-managed dialogs; incomplete legacy rows remain static badges.
@@ -126,7 +128,7 @@ Page routes are statically exported. This table covers the visitor flows documen
 | `/terms` | Terms and accuracy notice | Static footer-only legal route. |
 | `/security` | Security and disclosure notice | Static footer-only legal route. |
 
-Primary navigation is assembled by [navigationItems.ts](src/components/navigation/navigationItems.ts) from the central route registry. Resume is always present, Recommendations is included only when configured, and Contact plus legal routes are intentionally available through the footer.
+Primary navigation is assembled by [navigationItems.ts](src/components/navigation/navigationItems.ts) from the central route registry. Resume is always present, Recommendations is included only when configured, and Contact plus legal routes are intentionally available through the footer. Mobile preserves the canonical route order in a native horizontal rail; edge fades expose hidden overflow, and idle drift stops permanently for the current pathname after direct interaction.
 
 ## Technology and project role
 
@@ -141,10 +143,10 @@ Primary navigation is assembled by [navigationItems.ts](src/components/navigatio
 | Interface | CSS custom properties and reusable glass primitives | Share semantic themes, geometry, surfaces, and interaction states without a UI framework. |
 | Icons | `simple-icons` and local semantic icons | Render configured technology and destination marks. |
 | Browser behavior | IntersectionObserver and native browser APIs | Drive focused reveal, footer, responsive, and preference behavior. |
-| Quality | ESLint, TypeScript, Vitest, Testing Library, and jsdom | Verify code, types, content, components, Functions, scripts, CSS contracts, and automation. |
+| Quality | ESLint, TypeScript, Vitest, Testing Library, jsdom, and Playwright Chromium | Verify code, types, content, components, Functions, scripts, CSS contracts, automation, responsive navigation, and footer lifecycle behavior in a real browser. |
 | Automation | GitHub Actions | Own candidate selection, verification, artifact transfer, deployment, and scheduled checks. |
 | Hosting | Cloudflare Pages and Wrangler | Serve the static export and compile the isolated Pages Functions through Direct Upload. |
-| Contact | Pages Functions, Turnstile, and Resend HTTPS API | Verify human interaction, validate requests, and deliver one email batch without a contact database. |
+| Contact | Pages Functions, Turnstile, D1, DNS, and Resend HTTPS API | Verify human interaction, validate mail routing, enforce a keyed rolling quota, and deliver two sequential messages. |
 
 ## Quick start
 
@@ -190,7 +192,7 @@ To test the built static export and contact Functions together, configure develo
 npm run dev:pages
 ```
 
-This command builds first, then starts Wrangler Pages development with the address printed by Wrangler. It does not require production credentials.
+This command builds first, applies pending migrations to Wrangler's local D1 state, then starts Pages development with the address printed by Wrangler. It does not require production credentials or a remote database.
 
 See [Local development](docs/LOCAL_DEVELOPMENT.md) for command flags, setup-state behavior, Function configuration, and safe cleanup.
 
@@ -244,7 +246,9 @@ Never copy real values into tracked documentation or `.env.example`.
 | `TURNSTILE_ALLOWED_HOSTNAMES` | Local `.env`; reviewed Wrangler variable | Exact accepted Siteverify hostnames. |
 | `CONTACT_ALLOWED_ORIGINS` | Local `.env`; reviewed Wrangler variable | Exact same-origin request allowlist. |
 | `CONTACT_FROM_EMAIL` | Local `.env`; reviewed Wrangler variable | Verified Resend sender identity. |
-| `CONTACT_REPLY_TO_EMAIL` | Local `.env`; reviewed Wrangler variable | Fixed public reply-to for visitor receipts. |
+| `CONTACT_REPLY_TO_EMAIL` | Local `.env`; reviewed Wrangler variable | Fixed public reply-to for visitor confirmations. |
+
+`CONTACT_RATE_LIMIT_DB` is a Wrangler D1 binding rather than an environment variable. Production and preview use distinct remote databases; local Pages development uses the `contact-rate-limit-local` emulation identifier. The all-zero remote IDs in the tracked configuration must be replaced with the created database UUIDs before deployment.
 
 Deployment credentials and immutable Cloudflare target variables are documented in [Deployment](docs/DEPLOYMENT.md). Secret placement and logging rules are documented in [Security](docs/SECURITY.md).
 
@@ -254,15 +258,19 @@ Deployment credentials and immutable Cloudflare target variables are documented 
 | --- | --- |
 | `npm run docs:check` | Markdown structure, local links and images, path case, private URL patterns, placeholders, and excluded local-only references. |
 | `npm run generate:content` | Source loading, normalization, validation, hashing, and generated snapshot. |
+| `npm run db:migrate:local` | Apply tracked migrations to Wrangler's local D1 state. |
 | `npm run lint` | Source, test, script, and configuration lint rules with zero warnings. |
 | `npm run typecheck` | Strict TypeScript checking without output. |
 | `npm run test:footer` | Focused footer behavior and style regressions. |
+| `npm run test:navigation` | Focused header, route rail, responsive navigation, and style-contract regressions. |
+| `npm run test:e2e:navigation` | Chromium coverage for the mobile bottom dock and unchanged desktop header. |
+| `npm run test:e2e:footer` | Chromium coverage for compact first render, route transitions, restored scroll, and user-scroll expansion. |
 | `npm run test` | Complete Vitest suite, including components, content, Functions, scripts, and automation contracts. |
 | `npm run build` | Regenerate content, create the static export, and write deployment version metadata. |
 | `npm run build:generated` | Build the existing generated snapshot without fetching content again. |
 | `npm run verify` | Documentation check, lint, typecheck, full tests, and normal build in sequence. |
 
-`verify` does not call `test:footer` separately because the full Vitest suite already includes those tests. CI keeps the focused footer step as a named early regression gate before running the full suite.
+`verify` does not call the focused Vitest scripts separately because the full suite already includes those files. CI keeps named footer and navigation gates, then installs Chromium and runs both Playwright suites. Run `npm run test:e2e:navigation` and `npm run test:e2e:footer` separately during local verification because `verify` does not install or launch a browser.
 
 Pull requests generate from checked-in templates without deployment credentials, then run the complete verification path and static build. Deployable branch candidates use one strict remote snapshot. Artifact checks and live smoke tests run as deployment-specific stages.
 
@@ -282,7 +290,7 @@ The deployment design makes GitHub Actions the sole deployment owner. Operators 
 
 Configured production URLs are [nicolasmgioanni.dev](https://nicolasmgioanni.dev) and Cloudflare's assigned `smart-portfolio-bds.pages.dev` domain. The configured stable preview alias is `develop.smart-portfolio-bds.pages.dev`.
 
-The workflow checks that a production candidate still matches current `main`, verifies the downloaded artifact, runs pinned local Wrangler from repository root, and smoke-tests the deployed root, content manifest, integrity manifest, and GET rejection from both contact Functions. Generated production content and deployment state are not committed after upload. The active `/content-version.json` records current deployed content and candidate metadata; it does not prove that a post-upload smoke test succeeded.
+The workflow checks that a production candidate still matches current `main`, verifies the downloaded artifact, validates the environment-specific D1 binding, applies pending migrations, runs pinned local Wrangler from repository root, and smoke-tests the deployed root, content manifest, integrity manifest, and GET rejection from both contact Functions. Generated production content and deployment state are not committed after upload. The active `/content-version.json` records current deployed content and candidate metadata; it does not prove that a post-upload smoke test succeeded or that a remote D1 migration is active.
 
 See [Deployment](docs/DEPLOYMENT.md) for setup and [Operations](docs/OPERATIONS.md) for event behavior, no-ops, retries, manifests, and rollback considerations.
 
@@ -293,12 +301,13 @@ The contact page is static, but its submission path crosses a narrow server trus
 1. The browser renders Turnstile with a public site key.
 2. `/api/contact/verify` accepts JSON POST from an exact allowed origin, verifies the token's success, action, and hostname, then sets a short-lived signed host-only ticket.
 3. The visitor completes name, contact details, message, review, and three acknowledgements.
-4. `/api/contact` validates method, media type, origin, request size, strict fields, timing, honeypot, acknowledgements, and ticket binding.
-5. One Resend batch sends the owner notification and visitor receipt with submission-scoped idempotency.
+4. `/api/contact` validates method, media type, origin, request size, strict fields, timing, honeypot, acknowledgements, ticket binding, and the submitted address's mail-domain routing.
+5. D1 reserves one of two slots for a keyed normalized address during a rolling 24-hour window, without storing raw contact fields.
+6. Resend accepts the visitor confirmation first and then the owner notification, each with a separate submission-scoped idempotency key.
 
-The Functions return generic JSON errors, set their own no-store and security headers, keep the recipient and provider credentials server-side, and do not use a first-party contact database. Request bodies and personal fields must not be logged.
+The Functions return specific safe error codes with generic provider details, set their own no-store and security headers, and keep the recipient and provider credentials server-side. Full submissions are not stored in D1; it contains only the submission UUID, address HMAC, and reservation timestamps. Request bodies and personal fields must not be logged.
 
-Cloudflare WAF rate limiting for both JSON paths is an operator-managed requirement. Repository code and tests cannot prove the live rule or the response customization available on the active Cloudflare plan.
+The D1 quota limits a supplied address but cannot authenticate its owner or collapse every alias. Cloudflare WAF rate limiting for both JSON paths remains an operator-managed defense in depth. Repository code and tests cannot prove the live rule or the response customization available on the active Cloudflare plan.
 
 See [Contact system](docs/CONTACT_SYSTEM.md), [Security](docs/SECURITY.md), and [Security checklist](docs/SECURITY_CHECKLIST.md).
 
@@ -308,8 +317,10 @@ See [Contact system](docs/CONTACT_SYSTEM.md), [Security](docs/SECURITY.md), and 
 .github/             GitHub Actions workflow
 docs/                Guides, references, and checklists
 functions/           Cloudflare contact verification and delivery
+migrations/          Versioned Cloudflare D1 contact-rate schema
 public/              Static assets, headers, and Function route allowlist
 scripts/             Content, local automation, manifests, smoke checks, tests
+tests/e2e/            Playwright browser regressions
 src/app/             Static Next.js routes and loading files
 src/components/      Layout, navigation, theme, glass, portfolio, and contact UI
 src/content/         Types, local templates, and generated snapshot

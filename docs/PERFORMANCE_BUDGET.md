@@ -61,7 +61,7 @@ Skeletons support route transitions and deferred UI. They do not replace static 
 
 ## Contact runtime
 
-Keep Function requests narrow and time-bounded. Preserve body limits, no-store responses, Turnstile and Resend timeouts, one Turnstile verification per contact session, and one Resend batch per accepted submission.
+Keep Function requests narrow and time-bounded. Preserve body limits, no-store responses, bounded Turnstile, DNS, and Resend work, one Turnstile verification per contact session, and at most two sequential Resend requests per accepted submission.
 
 Edge rate limiting is an operator control. It does not justify heavier application processing or replace server validation.
 

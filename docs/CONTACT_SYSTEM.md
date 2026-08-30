@@ -18,6 +18,7 @@ Use this guide for the complete request contract and trust boundary. See [Securi
 | Function route allowlist | `public/_routes.json` |
 | Static response headers | `public/_headers` |
 | Production and preview non-secret values | `wrangler.jsonc` |
+| Contact-rate reservation schema | `migrations/` |
 | Build-time site-key selection | `.github/workflows/ci.yml` |
 
 Implementation and configuration are authoritative when prose differs from the current code.
@@ -31,6 +32,8 @@ sequenceDiagram
     participant Verify as /api/contact/verify
     participant Turnstile as Cloudflare Siteverify
     participant Deliver as /api/contact
+    participant DNS as DNS resolver
+    participant D1 as Cloudflare D1
     participant Resend
 
     Visitor->>Browser: Complete visible Turnstile check
@@ -42,8 +45,14 @@ sequenceDiagram
     Visitor->>Browser: Enter, review, acknowledge, and send
     Browser->>Deliver: POST contact JSON with same UUID and cookie
     Deliver->>Deliver: Validate body, timing, ticket, and binding
-    Deliver->>Resend: One idempotent two-message batch
-    Resend-->>Deliver: Delivery result
+    Deliver->>DNS: Validate mail-domain routing
+    DNS-->>Deliver: MX or address-routing result
+    Deliver->>D1: Reserve one of two rolling 24-hour slots
+    D1-->>Deliver: New or same-ID reservation
+    Deliver->>Resend: Idempotent visitor confirmation
+    Resend-->>Deliver: Accepted
+    Deliver->>Resend: Idempotent owner notification
+    Resend-->>Deliver: Accepted
     Deliver-->>Browser: 200 and clear cookie, or retryable failure
 ```
 
@@ -84,7 +93,7 @@ Draft contact values live only in React state. The contact form does not read or
 
 The browser trims the visible text fields and sends the final JSON to `/api/contact`. It does not send the Turnstile token again.
 
-After the first delivery attempt starts, the review Back button and acknowledgment controls are locked. A failed or uncertain retry therefore reuses the same submission UUID, `startedAt` value, acknowledgments, and byte-equivalent JSON payload. This matches Resend's requirement that a repeated idempotency key use the same request payload.
+The review Back button and acknowledgment controls are locked while a delivery request is pending. A pre-delivery correction or service result can unlock the form because no provider request was made. After a provider or delivery-network failure makes the outcome ambiguous or partial, the browser keeps the reviewed payload locked for safe retry. It preserves the original submission UUID, `startedAt` value, acknowledgments, and byte-equivalent JSON payload. This matches Resend's requirement that a repeated idempotency key use the same request payload.
 
 Client behavior depends on the response:
 
@@ -92,9 +101,14 @@ Client behavior depends on the response:
 | --- | --- |
 | Verification succeeds | Advance to data entry and retain the UUID for delivery. |
 | Verification fails or cannot be reached | Clear the UUID, reset the widget, remain at the gate, and offer direct email. |
-| Delivery returns `verification_required` | Return to the gate, preserve the draft, unlock it for the new verified session, and create a new UUID. |
-| Any other delivery or network failure | Stay on the locked review step and allow a same-payload retry with the current ticket and UUID. |
-| Delivery succeeds | Show the receipt state, clear local draft state, and rely on the server response to clear the cookie. |
+| Delivery returns `verification_required` before any ambiguous or partial delivery | Return to the gate, preserve the draft, clear the prior UUID, and unlock it after a new verified session creates a new UUID. |
+| Delivery returns `verification_required` after an ambiguous or partial delivery | Return to the gate only to refresh the ticket. Keep the reviewed payload locked and preserve the original UUID and `startedAt`; verification and the later delivery retry reuse that UUID so both Resend idempotency keys and the request body remain unchanged. |
+| Delivery returns `invalid_email` | Return to the editable details step and show the red correction notice. No quota slot or email is created. |
+| Delivery returns `rate_limited` | Keep the form editable and show the red rolling-limit notice. Honor the response's `Retry-After` value. |
+| DNS validation is temporarily unavailable | Keep the form editable and show a red retry notice. No quota slot or email is created. |
+| Configuration or quota storage is unavailable | Show a red service failure notice and fail closed without email delivery. |
+| Provider or delivery network failure | Stay on the locked review step and allow a same-payload retry with the current ticket and UUID. |
+| Delivery succeeds | Reset to human verification, clear local draft and verification state, and show the persistent green success notice including the submitted email address. Within the current page session, keep the notice until the visitor explicitly starts another verification. |
 
 ## Endpoint contract
 
@@ -108,7 +122,7 @@ Both handlers use the same request envelope rules:
 - The byte stream must be valid UTF-8 and valid JSON.
 - A configured allowlist is valid only when every comma-separated entry is valid. One malformed origin or hostname makes the corresponding configuration check fail closed.
 
-The handlers do not implement a request-body timeout, whole-request timeout, or client-side fetch timeout. Cloudflare platform limits still apply. Explicit timeouts exist only for the two outbound provider requests described below.
+The handlers do not implement a request-body timeout, whole-request timeout, or client-side fetch timeout. Cloudflare platform limits still apply. Bounded timeouts apply to Siteverify, mail-domain DNS validation, and each Resend request.
 
 ### `POST /api/contact/verify`
 
@@ -139,7 +153,7 @@ The delivery handler allows only the following keys. Unknown keys are rejected. 
 | `submissionId` | Required trimmed UUID matching the signed ticket. |
 | `firstName` | Required trimmed text, at most 80 characters. |
 | `lastName` | Required trimmed text, at most 80 characters. |
-| `email` | Required trimmed address, at most 254 characters. It must have one `@`, a valid local part of at most 64 characters, and a dot-bearing DNS-style domain. |
+| `email` | Required trimmed address, at most 254 characters. It must have one `@`, a valid local part of at most 64 characters, and a dot-bearing DNS-style domain. After ticket validation, the domain must also advertise a usable mail route through MX or the documented A/AAAA fallback. |
 | `phone` | Optional string, trimmed, at most 40 characters. A non-empty value may use the supported international-friendly character set and must contain 7 to 20 digits. |
 | `message` | Required text, normalized to line-feed newlines, trimmed, and at most 3,000 characters. |
 | `contactConsent` | Must be boolean `true`. |
@@ -159,6 +173,8 @@ The handler evaluates the honeypot and timing signals while parsing the payload,
 
 The silent success response prevents these low-cost bot signals from becoming a tuning oracle. It also means `200` is intentionally not proof that a honeypot or implausibly fast request produced email.
 
+For a normal verified request, the server performs bounded DNS validation before creating a quota reservation. An explicit nonexistent domain, null MX, or domain with neither usable MX nor address fallback returns `422 invalid_email`. A timeout, transient resolver failure, or indeterminate result returns `503 email_validation_unavailable`. DNS validation establishes domain routing only; it cannot prove that the mailbox exists, is deliverable, or belongs to the submitter.
+
 ## Verification ticket
 
 Successful Siteverify validation sets `__Host-portfolio_contact_ticket`. The cookie has:
@@ -174,22 +190,39 @@ The ticket payload contains only schema version `1`, the submission UUID, an iss
 
 The signing key is derived from `TURNSTILE_SECRET_KEY` with domain-separated HKDF-SHA-256, then used for HMAC-SHA-256. No additional ticket secret is configured. The delivery endpoint rejects an absent ticket, duplicate cookie name, malformed or non-canonical encoding, oversized ticket, wrong signature size, invalid signature, wrong version, future-issued ticket beyond the 30-second allowance, altered lifetime, expired ticket, or mismatched submission UUID.
 
-The application has no server-side ticket store, consumed-ticket record, or revocation list. Successful delivery instructs the browser to clear the cookie. A failed delivery leaves it intact until expiry. Provider idempotency, the locked byte-equivalent retry payload, exact origin enforcement, and the short lifetime limit duplicate-delivery risk; they do not turn the ticket itself into a database-backed single-use credential. Rotating `TURNSTILE_SECRET_KEY` invalidates outstanding tickets.
+The application has no server-side ticket store, consumed-ticket record, or revocation list. The D1 quota row recognizes a submission UUID for same-address retries, but it is not a record of ticket consumption or final mail delivery. Successful delivery instructs the browser to clear the cookie. A failed delivery leaves it intact until expiry. Provider idempotency, the locked retry payload, exact origin enforcement, and the short lifetime limit duplicate-delivery risk; they do not turn the ticket itself into a database-backed single-use credential. Rotating `TURNSTILE_SECRET_KEY` invalidates outstanding tickets and changes the derived quota-hash key.
+
+## Mail-domain validation and rolling quota
+
+After payload and ticket validation, the handler validates only the domain portion of the normalized email address through bounded DNS lookups. It prefers MX records and falls back to A and AAAA only when the domain has no MX result. A null MX explicitly rejects mail. Resolver outages fail as a retryable service condition instead of treating the address as invalid.
+
+Before calling Resend, the handler atomically reserves a slot in the `CONTACT_RATE_LIMIT_DB` D1 binding. The `contact_rate_reservations` table contains only:
+
+| Column | Stored value |
+| --- | --- |
+| `submission_id` | Opaque submission UUID and primary key. |
+| `email_hash` | HMAC-SHA-256 of `email.trim().toLowerCase()`. |
+| `reserved_at` | Reservation time as Unix epoch seconds. |
+| `expires_at` | Rolling-window expiry as Unix epoch seconds. |
+
+The HMAC key is derived from `TURNSTILE_SECRET_KEY` with its own domain-separated HKDF context. No provider-specific dot removal or plus-alias rewriting occurs. D1 never receives the raw email address, name, phone number, or message.
+
+Expired rows are removed during reservation cleanup. Fewer than two unexpired rows for an email hash permits a new reservation; a third returns `429 rate_limited` with `Retry-After` set to the remaining time until the earliest applicable expiry. Reusing the same submission UUID with the same email hash is a free retry. Reusing it with a different hash is rejected. A reservation is created before provider delivery and remains after a provider or network failure, while same-ID retries consume no additional slot. Missing or unavailable D1 configuration fails closed with `503 service_unavailable`.
 
 ## Email delivery and idempotency
 
-After payload and ticket validation, the handler sends one JSON request to `https://api.resend.com/emails/batch` with server-only bearer authorization and an 8-second timeout. The batch has two messages:
+After DNS validation and quota reservation, the handler makes up to two sequential `POST https://api.resend.com/emails` requests with server-only bearer authorization and bounded timeouts. It sends the visitor confirmation first and sends the owner notification only after Resend accepts the confirmation request:
 
 | Message | Destination | Reply-to | Content |
 | --- | --- | --- | --- |
-| Owner notification | Private `CONTACT_RECIPIENT_EMAIL` | Validated visitor email | Name, email, optional phone, message, and acknowledgment summary. |
-| Visitor receipt | Validated visitor email | Fixed public `CONTACT_REPLY_TO_EMAIL` | A copy of the submitted name, email, optional phone, and message, plus follow-up instructions. |
+| Visitor confirmation | Validated visitor email | Fixed public `CONTACT_REPLY_TO_EMAIL` | Professional navy receipt with submitted name, email, optional phone, message, correction instructions, and absolute Privacy and Terms links. |
+| Owner notification | Private `CONTACT_RECIPIENT_EMAIL` | Validated visitor email | Compact name, clickable email, optional phone or “Not provided,” and message. |
 
-Both messages use the configured `CONTACT_FROM_EMAIL` sender and fixed subjects. User-controlled HTML is escaped before it enters the HTML templates. Plain-text alternatives are also sent. For the owner notification, the visitor controls only the validated `reply_to`; the sender, private owner destination, subject, and remaining headers are fixed.
+Both messages use the configured `CONTACT_FROM_EMAIL` sender. The visitor subject is `I received your message!`; the owner subject is `New contact request from {FirstName} {LastName}` using already validated names. User-controlled HTML is escaped before it enters inline-styled, email-safe HTML, and both messages include plain-text alternatives. The visitor template contains no external images or tracking pixels. For the owner notification, the visitor controls only the validated `reply_to`; the sender, private owner destination, and remaining headers are fixed.
 
-The request header `Idempotency-Key` is `portfolio-contact/<submissionId>`. The application does not keep its own delivery ledger. Resend currently documents a 24-hour idempotency window for batch requests, returns the original result for an identical retry, and rejects reuse of the same key with a different payload. See [Resend idempotency keys](https://resend.com/docs/dashboard/emails/idempotency-keys).
+The visitor request uses `Idempotency-Key: portfolio-contact/visitor/<submissionId>` and the owner request uses `Idempotency-Key: portfolio-contact/owner/<submissionId>`. If the owner request fails after visitor acceptance, the browser keeps its locked payload and still-valid ticket; a retry repeats both calls, and the visitor key returns the original accepted result before the owner call is retried. If the ticket expires first, the browser refreshes verification with the original UUID and then repeats the same locked delivery request, preserving both provider keys and the byte-equivalent body. Resend currently documents a 24-hour idempotency window, returns the original result for an identical retry, and rejects reuse of the same key with a different payload. See [Resend idempotency keys](https://resend.com/docs/dashboard/emails/idempotency-keys).
 
-Any network failure, timeout, or non-success provider response becomes `502 delivery_failed`. The handler does not parse or return provider response bodies or email identifiers.
+Any network failure, timeout, or non-success provider response becomes `502 delivery_failed`. The handler reads only what it needs to establish provider acceptance and does not return provider response bodies or email identifiers. Acceptance is not mailbox verification: asynchronous rejection or bounce can still occur after the API call succeeds.
 
 ## Responses and headers
 
@@ -203,6 +236,9 @@ Any network failure, timeout, or non-success provider response becomes `502 deli
 | Malformed JSON or invalid schema | `400` | `invalid_request` |
 | Turnstile rejection or provider verification failure | `400` | `verification_failed` |
 | Missing, invalid, expired, or mismatched ticket | `401` | `verification_required` |
+| Unroutable or null-MX email domain | `422` | `invalid_email` |
+| Two active reservations for the normalized address | `429` | `rate_limited`, with `Retry-After` |
+| DNS lookup unavailable or indeterminate | `503` | `email_validation_unavailable` |
 | Resend failure or timeout | `502` | `delivery_failed` |
 | Accepted verification or delivery | `200` | none; body is `{"ok":true}` |
 | Honeypot or implausibly fast delivery request | `200` | none; body is `{"ok":true}` without provider delivery |
@@ -238,10 +274,11 @@ Pull-request builds receive neither deployment site key. Production and preview 
 | `CONTACT_ALLOWED_ORIGINS` | Reviewed Wrangler variable | Both endpoints |
 | `CONTACT_FROM_EMAIL` | Reviewed Wrangler variable | Delivery only |
 | `CONTACT_REPLY_TO_EMAIL` | Reviewed Wrangler variable | Delivery only |
+| `CONTACT_RATE_LIMIT_DB` | Environment-specific D1 binding | Delivery quota and retry identity only |
 
 `/api/contact/verify` can issue a ticket when delivery configuration is unavailable because it requires only the Turnstile secret, valid hostname allowlist, and valid origin allowlist. `/api/contact` does not need the hostname allowlist after a ticket exists, but it still needs the Turnstile secret to verify the ticket signature.
 
-The production Wrangler values allow the assigned Pages hostname, the apex custom hostname, and its `www` hostname with matching HTTPS origins. The preview override allows only the stable `develop` Pages hostname and its HTTPS origin. Secret values are configured separately in Cloudflare and are not present in `wrangler.jsonc`, so the repository cannot prove that they exist or are correct in a live environment.
+The production Wrangler values allow the assigned Pages hostname, the apex custom hostname, and its `www` hostname with matching HTTPS origins. The preview override allows only the stable `develop` Pages hostname and its HTTPS origin. Production and preview declare separate D1 database names and IDs. The tracked zero UUID is an intentionally non-deployable setup sentinel; replace both sentinels with the distinct IDs returned by `wrangler d1 create` before deployment. Secret values are configured separately in Cloudflare and are not present in `wrangler.jsonc`, so the repository cannot prove that they exist or are correct in a live environment.
 
 For local testing, copy the placeholder-only example into the ignored local environment file and follow [Local development](LOCAL_DEVELOPMENT.md#complete-contact-flow-development). Do not use production credentials locally.
 
@@ -258,12 +295,14 @@ For local testing, copy the placeholder-only example into the ignored local envi
 - honeypot and completion-time signals;
 - one server-side Turnstile validation with exact action and hostname;
 - signed, short-lived, submission-bound ticket;
-- provider idempotency key and locked same-payload retries;
+- bounded mail-domain DNS validation;
+- pseudonymous two-per-address rolling 24-hour D1 quota;
+- separate provider idempotency keys and locked same-payload retries;
 - generic, non-cacheable Function responses.
 
 ### External operator requirement
 
-The repository contains no application rate limiter, rate-limit binding, `429` response path, or Cloudflare WAF ruleset. Production requires an operator-managed Cloudflare rate-limit rule covering both exact paths, normally counted by source IP:
+The D1 quota is address-based and therefore does not replace an IP- or network-based edge control. Production also requires an operator-managed Cloudflare rate-limit rule covering both exact paths, normally counted by source IP:
 
 ```text
 http.request.uri.path in {"/api/contact/verify" "/api/contact"}
@@ -279,7 +318,7 @@ Cloudflare documents custom JSON rate-limit block responses as a Pro-plan-or-hig
 
 ## Privacy, storage, and logging
 
-The application has no contact database or storage binding. The browser holds the draft in memory. The signed cookie holds only the submission UUID and timing metadata. Cloudflare processes request metadata and the verification token; Siteverify also receives the optional Cloudflare-provided IP value. Resend and the receiving mail systems process the complete email messages and delivery metadata. The visitor receipt repeats the submitted contact details in email.
+The browser holds the draft in memory. The signed cookie holds only the submission UUID and timing metadata. D1 stores the opaque submission UUID, keyed normalized-email hash, and reservation and expiry times; it stores no raw contact fields or message. Expired rows stop counting at expiry and are removed during later reservation cleanup. Cloudflare processes request metadata and the verification token; Siteverify also receives the optional Cloudflare-provided IP value. DNS resolution processes the email domain. Resend and the receiving mail systems process the complete email messages and delivery metadata. The visitor confirmation repeats the submitted contact details in email.
 
 There are no explicit `console` calls or request-body logging in the two Functions. This repository-level absence does not disable Cloudflare, Resend, or mailbox-provider logs and retention. Do not add body, token, contact-field, provider-response, recipient, or credential logging. Coarse outcomes and non-sensitive timing are the maximum appropriate application telemetry if logging is added later.
 
@@ -289,9 +328,9 @@ The direct email link bypasses the two contact Functions, their ticket, and thei
 
 ## Verification coverage and limits
 
-The automated tests cover browser gating, exact client request bodies, locked retries, field validation, Turnstile widget callbacks, handler order, body and schema rejection, origin and configuration failure, ticket signing and tamper checks, provider calls, email escaping, idempotent retry, route allowlisting, and legal-page disclosures.
+The automated tests cover browser gating, exact client request bodies, notices and locked retries, field validation, Turnstile widget callbacks, handler order, body and schema rejection, origin and configuration failure, ticket signing and tamper checks, DNS outcomes, D1 reservation and concurrency behavior, sequential provider calls, email escaping, idempotent partial-failure retry, route allowlisting, and legal-page disclosures.
 
-Deployment smoke testing performs unauthenticated `GET` requests to both Function paths and requires `405` JSON responses. This proves that both routes are deployed and reject the wrong method. It does not prove live Turnstile validation, cookie acceptance, WAF state, Resend delivery, sender-domain verification, recipient correctness, or mailbox receipt.
+Deployment smoke testing performs unauthenticated `GET` requests to both Function paths and requires `405` JSON responses. This proves that both routes are deployed and reject the wrong method. It does not prove live Turnstile validation, cookie acceptance, D1 migration state, DNS behavior, WAF state, Resend delivery, sender-domain verification, recipient correctness, or mailbox receipt.
 
 Useful focused verification:
 

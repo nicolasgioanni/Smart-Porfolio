@@ -68,17 +68,20 @@ Use this checklist with [Contact System](CONTACT_SYSTEM.md), [Security](SECURITY
 - After the first delivery attempt starts, lock review navigation and acknowledgments.
 - Require same-ticket retries to reuse the same UUID, start time, acknowledgment values, and byte-equivalent JSON body.
 - On `verification_required`, return to the gate, preserve the draft, unlock it for a new session, and create a new UUID after verification.
-- Use one Resend batch request with an 8-second timeout and `Idempotency-Key: portfolio-contact/<submissionId>`.
+- Validate the mail domain with bounded MX lookup, documented A/AAAA fallback, explicit null-MX rejection, and distinct invalid-versus-unavailable errors.
+- Reserve no more than two slots per normalized-address HMAC during a rolling 24-hour window before provider delivery.
+- Send the visitor confirmation first with `Idempotency-Key: portfolio-contact/visitor/<submissionId>`; only after acceptance send the owner notification with the corresponding `/owner/` key.
 - Send the owner notification to the private configured recipient with only the validated visitor email as `reply_to`.
-- Send the visitor receipt to the validated visitor email with the fixed public reply-to.
-- Keep the sender and subjects fixed, escape user-controlled HTML, and include plain-text alternatives.
+- Send the visitor confirmation to the validated visitor email with the fixed public reply-to.
+- Keep the sender and subject formats server-controlled, reject header controls in names and addresses, escape user-controlled HTML, and include plain-text alternatives.
 - Treat provider timeout, network failure, and non-success status as generic `502 delivery_failed` without returning or logging provider details.
 
 ## Privacy, storage, and logging
 
 - Keep the contact draft out of local storage and session storage.
 - Keep contact fields out of the ticket and the verification request.
-- Confirm there is no first-party contact database, storage binding, delivery ledger, or consumed-ticket store unless the documentation and privacy disclosures are updated first.
+- Keep D1 limited to submission UUID, normalized-address HMAC, reservation epoch seconds, and expiry epoch seconds; store no raw contact fields or delivery content.
+- Confirm expired rows are removed during reservation cleanup, same-ID same-address retries are free, changed-address replay is rejected, and D1 failures fail closed.
 - Account for Cloudflare, Turnstile, Resend, receiving mailboxes, and the visitor's mailbox as processors or retention locations outside the repository.
 - Keep `TURNSTILE_SECRET_KEY`, `RESEND_API_KEY`, and `CONTACT_RECIPIENT_EMAIL` server-only.
 - Confirm the private recipient never appears in browser variables, generated content, build output, responses, analytics, or application logs.
@@ -88,7 +91,7 @@ Use this checklist with [Contact System](CONTACT_SYSTEM.md), [Security](SECURITY
 ## Abuse controls and WAF
 
 - Keep repository-enforced origin, body-size, schema, acknowledgment, honeypot, timing, Turnstile, ticket, and idempotency controls enabled.
-- Confirm the repository still has no application rate limiter, rate-limit binding, `429` response path, or deployable WAF ruleset before describing rate limiting as code-enforced.
+- Keep the repository-enforced D1 address quota and its `429` response distinct from the external IP-based WAF control.
 - Configure an external Cloudflare rate-limiting rule for both exact contact paths and review its counting characteristic, threshold, mitigation timeout, and action.
 - Treat live WAF state as unverified until checked in Cloudflare and through a controlled deployed test.
 - Do not place an interactive Managed Challenge on either JSON endpoint.
@@ -118,6 +121,7 @@ Use this checklist with [Contact System](CONTACT_SYSTEM.md), [Security](SECURITY
 - Expose only values deliberately named for the browser. No server secret may use a `NEXT_PUBLIC_` name.
 - Keep GitHub Actions build inputs and upload credentials separate from Cloudflare Function bindings.
 - Keep production and preview site keys, server secrets, hostnames, origins, provider keys, and recipient settings separate.
+- Keep production and preview `CONTACT_RATE_LIMIT_DB` IDs distinct, reject the all-zero setup sentinel, and apply tracked migrations before deploying each environment.
 - Verify live encrypted bindings without printing their values. Do not infer them from `wrangler.jsonc`.
 - Keep the build source as one anonymous HTTPS XLSX download without adding an OAuth grant, service account, or Google API credential.
 - Verify artifact integrity metadata and active content-version evidence during deployment.

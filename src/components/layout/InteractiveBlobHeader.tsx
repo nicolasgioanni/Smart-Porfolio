@@ -33,7 +33,6 @@ type InteractiveBlobHeaderProps = {
 
 export function InteractiveBlobHeader({ brand, initialTheme, navigationItems, primaryLinks }: InteractiveBlobHeaderProps) {
   const mobileUiMode = useMediaQuery(MOBILE_UI_QUERY);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [pointerNearHeader, setPointerNearHeaderState] = useState(false);
   const [profilePreviewOpen, setProfilePreviewOpen] = useState(false);
   const [scrollIntent, setScrollIntentState] = useState<HeaderScrollIntent>("expanded");
@@ -43,12 +42,11 @@ export function InteractiveBlobHeader({ brand, initialTheme, navigationItems, pr
   const profileImageAlt = `${brand.name} profile photo`;
   const finePointerRef = useRef(true);
   const lastScrollYRef = useRef(0);
-  const mobileMenuOpenRef = useRef(false);
   const pointerNearHeaderRef = useRef(false);
   const scrollIntentRef = useRef<HeaderScrollIntent>("expanded");
   const themeMenuOpenRef = useRef(false);
   const headerVisualStateRef = useRef<HeaderScrollIntent>("expanded");
-  const naturallyCompactHeader = !mobileUiMode && scrollIntent === "compact" && !pointerNearHeader && !mobileMenuOpen;
+  const naturallyCompactHeader = !mobileUiMode && scrollIntent === "compact" && !pointerNearHeader;
   const compactHeader = !mobileUiMode && (themeMenuOpen && themeMenuHeaderState ? themeMenuHeaderState === "compact" : naturallyCompactHeader);
   headerVisualStateRef.current = compactHeader ? "compact" : "expanded";
 
@@ -70,6 +68,7 @@ export function InteractiveBlobHeader({ brand, initialTheme, navigationItems, pr
     if (mobileUiMode) {
       finePointerRef.current = false;
       setPointerNearHeader(false);
+      setProfilePreviewOpen(false);
       return;
     }
 
@@ -107,7 +106,7 @@ export function InteractiveBlobHeader({ brand, initialTheme, navigationItems, pr
         return;
       }
 
-      if (mobileMenuOpenRef.current || nextScrollY <= compactScrollThreshold) {
+      if (nextScrollY <= compactScrollThreshold) {
         setScrollIntent("expanded");
       } else if (scrollDelta < -scrollDirectionThreshold) {
         setScrollIntent("expanded");
@@ -155,27 +154,10 @@ export function InteractiveBlobHeader({ brand, initialTheme, navigationItems, pr
     setPointerNearHeader(pointerStillNearHeader);
   }
 
-  const handleMobileMenuOpenChange = useCallback((open: boolean) => {
-    mobileMenuOpenRef.current = open;
-    setMobileMenuOpen(open);
-
-    if (open) {
-      themeMenuOpenRef.current = false;
-      setThemeMenuHeaderState(undefined);
-      setThemeMenuOpen(false);
-      setScrollIntent("expanded");
-    }
-  }, [setScrollIntent]);
-
   const handleThemeMenuOpenChange = useCallback((open: boolean) => {
     themeMenuOpenRef.current = open;
     setThemeMenuHeaderState(open ? headerVisualStateRef.current : undefined);
     setThemeMenuOpen(open);
-
-    if (open) {
-      mobileMenuOpenRef.current = false;
-      setMobileMenuOpen(false);
-    }
   }, []);
 
   function openProfilePreview() {
@@ -218,15 +200,10 @@ export function InteractiveBlobHeader({ brand, initialTheme, navigationItems, pr
             </span>
           </div>
           <MainNavigation items={navigationItems} />
+          <MobileNavigation items={navigationItems} />
           <div className="blob-header__actions">
             <SocialLinkGroup compact links={primaryLinks.slice(0, 4)} />
             <ThemeSwitcher initialTheme={initialTheme} onOpenChange={handleThemeMenuOpenChange} open={themeMenuOpen} />
-            <MobileNavigation
-              items={navigationItems}
-              links={primaryLinks}
-              onOpenChange={handleMobileMenuOpenChange}
-              open={mobileMenuOpen}
-            />
           </div>
         </div>
       </header>

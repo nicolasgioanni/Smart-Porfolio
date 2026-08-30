@@ -26,9 +26,10 @@ Desktop and mobile navigation are separate presentations of the same generated i
 - Both navigation landmarks have accessible labels.
 - The active route uses `aria-current="page"`.
 - The animated desktop indicator is decorative.
-- The mobile menu button exposes `aria-expanded` and `aria-controls`.
-- The closed mobile panel stays mounted but uses `aria-hidden`, `inert`, `data-state`, hidden visibility, and disabled pointer events.
-- Selecting a mobile route closes the panel.
+- The mobile bottom dock exposes every route as a direct link with no disclosure or duplicated accessible copy.
+- The route rail uses native horizontal scrolling, so touch, pointer, wheel, and keyboard users can reach hidden links in canonical order.
+- Edge fades are visual overflow cues and do not change link names, order, focusability, or semantics.
+- GitHub, LinkedIn, Email, and theme controls remain outside the scrolling rail so they stay available at every rail position.
 - External HTTP destinations that open a new tab use `noopener noreferrer`.
 
 The Contact, Privacy, Terms, and Security routes are intentionally available from the footer rather than primary navigation.
@@ -45,7 +46,7 @@ Theme changes must preserve readable text, visible focus, borders, disabled stat
 
 Interactive controls use shared focus-visible styles and semantic tokens. Do not remove outlines without providing an equally visible replacement. Hover-only behavior must have a keyboard equivalent, and selected state must not rely on color alone when an ARIA state is available.
 
-The header expands when focus enters it so compact visual behavior does not hide keyboard controls. The footer defers automatic collapse while focus remains inside expanded details.
+The desktop header expands when focus enters it so compact visual behavior does not hide keyboard controls. Focusing or otherwise interacting with the mobile rail permanently stops its automatic motion for the current pathname. The footer defers automatic collapse while focus remains inside expanded details, except that a route transition replaces the old disclosure with a fresh compact instance.
 
 ## Dialogs and disclosures
 
@@ -73,13 +74,13 @@ Long recommendations expose a native button with `aria-expanded`, `aria-controls
 
 ### Footer disclosure
 
-The footer's `Details` and `Collapse` button exposes `aria-expanded` and `aria-controls`. Collapsed detail content is `aria-hidden` and inert. The explicit button remains available even when scroll position also triggers expansion. Focused details are not hidden by automatic collapse.
+The footer's `Details` and `Collapse` button exposes `aria-expanded` and `aria-controls`. Collapsed detail content is `aria-hidden` and inert. Every route begins with a fresh compact disclosure; layout settling and restored or programmatic scrolling cannot open it. Downward wheel, touch, pointer-scroll, or scroll-key intent can activate automatic expansion when the runway is reached. The explicit button remains available for device-independent control, and focused details are not hidden by automatic collapse within the same route.
 
 ## Motion and reduced motion
 
 Motion is supplementary. Content remains present when motion is disabled.
 
-The `prefers-reduced-motion: reduce` rules and shared preference hook disable or simplify scroll reveals, Home role rotation, route-indicator travel, Hover Base sheen and lift, recommendation transitions, dialog fades, header and footer transitions, skeleton shimmer, and smooth scrolling.
+The `prefers-reduced-motion: reduce` rules and shared preference hook disable or simplify scroll reveals, Home role rotation, route-indicator travel, mobile rail return and drift, Hover Base sheen and lift, recommendation transitions, dialog fades, header and footer transitions, skeleton shimmer, and smooth scrolling. Manual mobile rail scrolling remains available.
 
 The `enable_scroll_motion` content setting controls decorative scroll reveals. It does not replace the operating-system preference.
 
@@ -110,7 +111,7 @@ Server validation remains authoritative. Accessible client feedback does not wea
 
 ## Responsive and zoom behavior
 
-Navigation, grids, profile panels, controls, and footer columns collapse at established breakpoints. Long links and labels may wrap. Primary glass buttons have a 44 CSS pixel minimum height, and narrower layouts expand controls where needed.
+Navigation, grids, profile panels, controls, and footer columns collapse at established breakpoints. At `980px` and below, the navigation dock stays fixed above the device safe area and the shell reserves matching bottom clearance. Long links and labels may wrap. Primary glass buttons have a 44 CSS pixel minimum height, and narrower layouts expand controls where needed.
 
 Verify meaningful UI changes at 200 percent zoom, at the 980 and 720 pixel layout transitions, and at a narrow mobile width. Check for clipped text, horizontal scrolling, obscured focus, dialog overflow, and controls that depend on hover.
 
@@ -124,6 +125,6 @@ Verify meaningful UI changes at 200 percent zoom, at the 980 and 720 pixel layou
 6. Repeat the interaction with reduced motion enabled.
 7. Inspect desktop, mobile, and 200 percent zoom layouts.
 8. Check image alt text and decorative-image handling.
-9. Run focused component tests and `npm run verify`.
+9. Run focused component tests, both `npm run test:e2e:navigation` and `npm run test:e2e:footer`, and `npm run verify`.
 
 Related guidance is in the [Design system](DESIGN_SYSTEM.md), [Animation guidelines](ANIMATION_GUIDELINES.md), [Quality checklist](QUALITY_CHECKLIST.md), and [Testing](TESTING.md).

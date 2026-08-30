@@ -84,7 +84,7 @@ Do not create a unique radius or near-duplicate spacing value for one component 
 
 ## Layout
 
-`--container-width` is 1180px. The header has separate full and compact widths, while `--header-offset` and `--scroll-margin-top` keep sticky navigation from covering anchored content.
+`--container-width` is 1180px. The desktop header has separate full and compact widths, while `--header-offset` and `--scroll-margin-top` keep sticky navigation from covering anchored content. Mobile uses `--mobile-dock-clearance` plus safe-area insets to reserve room below route content and anchored targets.
 
 `PageContainer`, `PageIntro`, `SectionHeader`, and `FeaturedGrid` own common route geometry. Home uses full-width top-level rows inside `home-overview-grid`; detail routes use evidence-specific lists and timelines.
 
@@ -121,11 +121,11 @@ Keep nested Home cards quieter than their outer section. A nested card should no
 
 ## Header and navigation
 
-The header is a sticky `GlassBlob` that server-renders expanded. Client behavior compacts it after downward scroll beyond the threshold, restores it on upward scroll or pointer proximity, and keeps it expanded while keyboard focus or the mobile menu requires the controls.
+Above `980px`, the header is a sticky `GlassBlob` that server-renders expanded. Client behavior compacts it after downward scroll beyond the threshold, restores it on upward scroll or pointer proximity, and keeps it expanded while keyboard focus or the theme disclosure requires stable controls.
 
-Desktop navigation uses a persistent animated route indicator plus `aria-current="page"`. Mobile navigation uses a button with `aria-expanded`, a hidden panel, the same route list, and up to four configured social links.
+Desktop navigation uses a persistent animated route indicator plus `aria-current="page"`. At `980px` and below, the glass island becomes a fixed bottom dock. The profile mark and name are hidden, while the left side presents the same route list as a native swipeable rail with scroll snapping, padded ends, hidden scrollbars, and dynamic edge fades. The non-scrolling right side keeps the configured GitHub, LinkedIn, Email, and theme controls visible.
 
-The profile mark opens an image preview only when an image exists. The theme disclosure and mobile menu close each other so their panels do not overlap. Header motion uses the centralized duration and easing tokens.
+The desktop profile mark opens an image preview only when an image exists. The theme disclosure opens below the desktop trigger and above the mobile dock trigger. The shell reserves safe-area-aware bottom clearance so neither route content nor anchored targets end beneath the dock. Header motion uses centralized duration and easing tokens.
 
 ## Profile overview
 
@@ -175,7 +175,7 @@ Quote links remain part of the prose. They become brighter and underlined on hov
 
 ## Footer
 
-The footer is a normal-flow progressive disclosure, not a fixed overlay. Its compact copyright row appears before the page reaches the end. Continued scrolling into a reserved runway can expand details into already-reserved space. The `Details` and `Collapse` button remains the device-independent control.
+The footer is a normal-flow progressive disclosure, not a fixed overlay. Every pathname starts with a fresh compact copyright row. New user downward-scroll intent can expand details when the reserved runway is reached; layout shifts, route restoration, and programmatic scroll changes cannot. The `Details` and `Collapse` button remains the device-independent control.
 
 Expanded details use identity, notices, and resources columns. Automatic collapse is deferred while focus remains inside. Manual collapse suppresses immediate reopening until the interaction region is exited. Route changes reset the disclosure state.
 
@@ -207,7 +207,7 @@ Use `aria-current`, `aria-pressed`, `aria-expanded`, or native disabled state to
 
 Motion supports state and orientation. Prefer opacity and transform. Recommendation disclosure and footer grid rows are documented exceptions where a bounded layout transition communicates state.
 
-The role rotation, route indicator, header state, theme disclosure, recommendation expansion, footer disclosure, scroll reveals, and skeleton shimmer have explicit reduced-motion behavior. See [Animation guidelines](ANIMATION_GUIDELINES.md) for exact timing and constraints.
+The role rotation, route indicator, header state, mobile rail drift, theme disclosure, recommendation expansion, footer disclosure, scroll reveals, and skeleton shimmer have explicit reduced-motion behavior. See [Animation guidelines](ANIMATION_GUIDELINES.md) for exact timing and constraints.
 
 ## Loading states
 
@@ -219,7 +219,8 @@ See [Skeleton loading guidelines](SKELETON_LOADING_GUIDELINES.md).
 
 The style system uses focused thresholds at 980, 860, 720, 620, 520, 480, and 380 CSS pixels.
 
-- Desktop navigation yields to mobile navigation below 980px.
+- Desktop navigation yields to the fixed mobile bottom dock at `980px` and below.
+- The mobile route rail owns horizontal overflow without creating document-level overflow, while the action cluster never scrolls away.
 - Profile and academic grids collapse as available width narrows.
 - Skills and featured grids reduce columns without changing content order.
 - Expanded footer columns become one column below 720px.

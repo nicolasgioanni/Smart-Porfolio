@@ -101,7 +101,7 @@ Link matching uses the declared `kind` and an inferred kind from label or URL. E
 
 General Home links first select rows where any of `is_primary`, `show_on_home`, or `show_in_header` is true. If none match, they fall back to all links. They use generic ordering and are capped at six before the profile identity mapper filters to supported identity kinds.
 
-Header links use only `show_in_header=true`, use generic ordering, and are capped at four. The same selected set is available in desktop and mobile header navigation.
+Header links use only `show_in_header=true`, use generic ordering, and are capped at four. The same selected set appears as persistent desktop header actions and mobile dock actions outside the route-navigation landmarks.
 
 `show_in_footer` and `icon` are normalized but have no current component consumer. Footer resource links come from `site_settings`, with one exception: if `repository_url` is blank, the footer can use the first link whose kind is `repository`, `source`, or `github_repository`. That fallback does not consult `show_in_footer`.
 
