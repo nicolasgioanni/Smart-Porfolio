@@ -204,7 +204,7 @@ Reviewed non-secret Function values belong in the correct `wrangler.jsonc` envir
 - `CONTACT_FROM_EMAIL`;
 - `CONTACT_REPLY_TO_EMAIL`.
 
-The `CONTACT_RATE_LIMIT_DB` D1 binding is also environment-specific reviewed configuration. Production and preview must use distinct database IDs, and both must have the tracked migrations applied before their Pages deployment. The all-zero IDs in the tracked configuration are non-deployable setup sentinels, not live resources.
+The `CONTACT_RATE_LIMIT_DB` D1 binding is also environment-specific reviewed configuration. Production and preview use distinct pinned database IDs, and both must have the tracked migrations applied before their Pages deployment. Missing, all-zero, and shared IDs remain non-deployable invalid states.
 
 Production and preview use separate exact hostnames, origins, and appropriate credentials. The tracked local example contains placeholders only. The ignored local environment file does not cross into GitHub Actions or Cloudflare automatically. Follow [Local development](LOCAL_DEVELOPMENT.md#complete-contact-flow-development) and do not use production credentials locally.
 

@@ -209,7 +209,7 @@ Use the first failing stage to decide whether production could have changed:
 | Static build or manifest creation | None | Reproduce locally with the documented command |
 | Artifact upload, download, or verification | None | Inspect artifact transfer and candidate SHA |
 | Branch recheck | None | Review the newer branch run |
-| D1 target validation | None | Replace the all-zero sentinel or correct environment isolation before retrying |
+| D1 target validation | None | Restore the reviewed database ID or correct environment isolation before retrying |
 | D1 migration | The failing migration is rolled back; an earlier migration may already be active | Inspect the selected database and migration ledger before retrying |
 | Wrangler | Usually prior deployment remains active | Check Cloudflare deployment history before retrying |
 | Post-Wrangler smoke | Candidate deployment exists and may already serve through the stable alias; the failed job does not roll it back | Inspect live metadata and Cloudflare history immediately |

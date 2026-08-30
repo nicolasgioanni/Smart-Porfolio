@@ -340,7 +340,7 @@ Confirm `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are present in GitHub
 
 ### D1 target validation rejects the deployment
 
-The selected binding still uses the all-zero setup sentinel, is absent, or shares a remote ID with the other environment. Create or select the intended database, update only its `database_id`, review the diff, and rerun verification. Never disable the validation step to deploy without quota storage; the contact handler is designed to fail closed.
+The selected binding is absent, all-zero, malformed, or shares a remote ID with the other environment. Restore the reviewed database ID, or deliberately create a replacement and update only that environment's `database_id`. Review the diff, apply the tracked migrations, and rerun verification. Never disable the validation step to deploy without quota storage; the contact handler is designed to fail closed.
 
 ### A D1 migration fails
 

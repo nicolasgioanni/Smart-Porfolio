@@ -71,7 +71,7 @@ The validator uses only Node.js standard-library APIs and does not check externa
 | Semantic hashing | `scripts/portfolioContentGeneration.test.ts` | Canonical normalized content subset and `generatedAt` preservation |
 | Public asset references | `scripts/demoAssets.test.mjs` | Referenced local assets exist and are non-empty |
 | Environment placeholders | `scripts/envConfiguration.test.mjs` | Supported variables, ignored local files, and removal of legacy variable families |
-| D1 configuration and schema | `scripts/d1Configuration.test.mjs` | Environment isolation, safe setup sentinels, minimal reservation columns, indexes, and migration-before-deploy ordering |
+| D1 configuration and schema | `scripts/d1Configuration.test.mjs` | Distinct pinned remote UUIDs, local isolation, minimal reservation columns, indexes, and migration-before-deploy ordering |
 
 These are unit and integration-style tests with temporary files and injected fetch implementations. They do not download the production workbook during pull-request verification.
 
