@@ -7,7 +7,7 @@
     {
       "binding": "CONTACT_RATE_LIMIT_DB",
       "database_name": "smart-portfolio-contact-rate-limit-production",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "8ae31be3-092e-4a86-86ed-c0729f27c61c",
       "preview_database_id": "contact-rate-limit-local",
       "migrations_dir": "migrations"
     }
@@ -24,7 +24,7 @@
         {
           "binding": "CONTACT_RATE_LIMIT_DB",
           "database_name": "smart-portfolio-contact-rate-limit-preview",
-          "database_id": "00000000-0000-0000-0000-000000000000",
+          "database_id": "963d761b-6055-4adb-9ac8-0bd8f14efad4",
           "migrations_dir": "migrations"
         }
       ],
