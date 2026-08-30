@@ -6,6 +6,12 @@
 - Keep domain content in its owning feature while moving repeated behavior into a narrowly scoped shared module.
 - Preserve static rendering and progressive enhancement; client code should add interaction rather than fetch portfolio content.
 
+## Theme transitions
+
+- Route every hydrated `data-theme` write through `src/lib/theme/themeTransition.ts`; do not add component-local color transitions or wildcard per-element transition rules.
+- `ThemePreferenceScript` and the first hydrated preference reconciliation must remain immediate so the selected palette is in place before paint. Later eligible changes use only the shared native View Transition opacity fade.
+- Keep the transition at `160ms`, opacity-only, and progressive. Reduced-motion, hidden-document, unsupported, failed, and unchanged-palette cases must update immediately without timers, transforms, blur, gradients, or layout animation.
+
 ## Dialogs and media
 
 - Use `src/components/overlay/ModalDialog.tsx` for modal previews and evidence dialogs. Do not duplicate portal, focus-trap, Escape, backdrop, scroll-lock, reduced-motion, or focus-restoration logic.
