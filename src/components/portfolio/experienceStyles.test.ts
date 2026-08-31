@@ -62,7 +62,8 @@ describe("shared detail styles", () => {
 
     expect(sharedAttentionRule).toMatch(/border-color:\s*var\(--color-line-strong\)/);
     expect(sharedAttentionRule).not.toMatch(/box-shadow|transform/);
-    expect(hoverElevationRule).toMatch(/box-shadow:\s*var\(--shadow-soft\),\s*var\(--shadow-glow\)/);
+    expect(hoverElevationRule).toMatch(/box-shadow:\s*var\(--shadow-soft\)/);
+    expect(hoverElevationRule).not.toMatch(/glow|gradient/);
     expect(hoverElevationRule).toMatch(/transform:\s*translate3d\(0, -2px, 0\)/);
   });
 });

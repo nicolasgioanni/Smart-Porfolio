@@ -16,13 +16,13 @@ Generated JSON is an output. Regenerate it instead of editing it by hand. Do not
 
 Prefer server components for static content. Use client components only for interaction, route state, or browser APIs.
 
-Keep components focused around one rendering job. Reuse glass primitives, content helpers, validators, formatting utilities, and interaction patterns before adding an abstraction.
+Keep components focused around one rendering job. Reuse surface primitives, content helpers, validators, formatting utilities, and interaction patterns before adding an abstraction.
 
 ## Styling
 
-Use semantic tokens from `src/styles/tokens.css`. Preserve readable surfaces, visible focus, responsive reflow, and reduced-motion behavior in Light, My mode, and Dark. Keep System as preference logic that resolves to Light or Dark; never introduce `data-theme="system"` or a fourth token palette.
+Use semantic tokens from `src/styles/tokens.css`. Preserve readable solid tiers, visible focus, responsive reflow, and reduced-motion behavior in Light, My mode, and Dark. Light must keep off-white, light-gray, and blue-gray separation; Dark must keep charcoal and slate separation. Keep System as preference logic that resolves to Light or Dark; never introduce `data-theme="system"` or a fourth token palette.
 
-Avoid heavy visual dependencies, full-screen blur, decorative animation systems, and low-contrast text.
+Avoid heavy visual dependencies, backdrop blur, CSS gradients, glow shadows, decorative overlays, CSS mask fades, decorative animation systems, and low-contrast text. Use accents for meaningful controls or states and retain focus and validation rings.
 
 ## Security
 

@@ -4,9 +4,7 @@
   min-height: 1rem;
   border: 1px solid var(--color-skeleton-border);
   border-radius: var(--radius-card);
-  background: var(--gradient-skeleton);
-  background-size: 220% 100%;
-  animation: skeleton-shimmer 1.9s ease-in-out infinite;
+  background: var(--color-skeleton-surface);
 }
 
 .skeleton-text {
@@ -35,7 +33,6 @@
   border-radius: var(--radius-card);
   background: var(--color-surface);
   box-shadow: var(--shadow-card);
-  backdrop-filter: blur(var(--glass-blur-mobile));
 }
 
 .skeleton-hero {
@@ -51,7 +48,6 @@
   border-radius: var(--radius-panel);
   background: var(--color-surface);
   box-shadow: var(--shadow-card);
-  backdrop-filter: blur(var(--glass-blur-mobile));
 }
 
 .skeleton-hero__main {
@@ -116,8 +112,7 @@
   border: 1px solid var(--color-line-strong);
   border-radius: var(--radius-panel);
   background: var(--color-surface-strong);
-  box-shadow: var(--shadow-soft), var(--shadow-glow);
-  backdrop-filter: blur(var(--glass-blur-mobile));
+  box-shadow: var(--shadow-soft);
 }
 
 .skeleton-page__section {
@@ -173,8 +168,7 @@
   border: 1px solid var(--color-line-strong);
   border-radius: var(--radius-panel);
   background: var(--color-surface-strong);
-  box-shadow: var(--shadow-soft), var(--shadow-glow);
-  backdrop-filter: blur(var(--glass-blur-mobile));
+  box-shadow: var(--shadow-soft);
 }
 
 .home-skeleton__profile {
@@ -258,7 +252,6 @@
   border-radius: var(--radius-panel);
   background: var(--color-surface);
   box-shadow: var(--shadow-card);
-  backdrop-filter: blur(var(--glass-blur-mobile));
 }
 
 .home-skeleton__section-header {
@@ -363,7 +356,6 @@
   border-radius: var(--radius-card);
   background: var(--color-card-surface-strong);
   box-shadow: var(--shadow-card);
-  backdrop-filter: blur(var(--glass-blur-mobile));
 }
 
 .detail-card-skeleton--project {
@@ -393,8 +385,7 @@
   border: 1px solid var(--color-line-strong);
   border-radius: var(--radius-card);
   background: var(--color-surface-strong);
-  box-shadow: var(--shadow-soft), var(--shadow-glow);
-  backdrop-filter: blur(var(--glass-blur-mobile));
+  box-shadow: var(--shadow-soft);
 }
 
 .resume-skeleton__content {
@@ -418,8 +409,7 @@
   border: 1px solid var(--color-line-strong);
   border-radius: var(--radius-panel);
   background: var(--color-surface-strong);
-  box-shadow: var(--shadow-soft), var(--shadow-glow);
-  backdrop-filter: blur(var(--glass-blur-mobile));
+  box-shadow: var(--shadow-soft);
 }
 
 .contact-skeleton__heading,
@@ -453,8 +443,7 @@
   border: 1px solid var(--color-line-strong);
   border-radius: var(--radius-panel);
   background: var(--color-surface-strong);
-  box-shadow: var(--shadow-soft), var(--shadow-glow);
-  backdrop-filter: blur(var(--glass-blur-mobile));
+  box-shadow: var(--shadow-soft);
 }
 
 .legal-skeleton__meta {
@@ -505,7 +494,6 @@
   border-color: var(--color-line);
   background: var(--color-background-elevated);
   box-shadow: var(--shadow-card);
-  backdrop-filter: none;
 }
 
 :where(html[data-glass-effects="false"], .site-shell[data-glass-effects="false"]) :is(
@@ -519,30 +507,13 @@
 ) {
   border-color: var(--color-line-strong);
   background: var(--color-surface-strong);
-  box-shadow: var(--shadow-soft), var(--shadow-glow);
-  backdrop-filter: none;
+  box-shadow: var(--shadow-soft);
 }
 
 :where(html[data-glass-effects="false"], .site-shell[data-glass-effects="false"]) .detail-card-skeleton {
   border-color: var(--color-line);
   background: var(--color-card-surface-strong);
   box-shadow: var(--shadow-card);
-  backdrop-filter: none;
-}
-
-@keyframes skeleton-shimmer {
-  0% {
-    background-position: 220% 0;
-  }
-  100% {
-    background-position: -220% 0;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .skeleton-block {
-    animation: none;
-  }
 }
 
 @media (max-width: 980px) {

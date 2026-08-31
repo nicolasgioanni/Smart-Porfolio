@@ -3,6 +3,7 @@ import {
   expectDisclosureFocusToKeepRestingElevation,
   findFirstExpandableCard
 } from "./cardFocusElevation";
+import { reloadWithStoredTheme } from "./themePreference";
 
 async function settleLayout(page: Page) {
   await page.waitForLoadState("networkidle");
@@ -209,6 +210,40 @@ test.describe("Research showcase", () => {
       resources.map((resource) => resource.getBoundingClientRect().height)
     );
     for (const height of resourceTargets) expect(height).toBeGreaterThanOrEqual(44);
+  });
+
+  test("renders research diagrams against opaque surfaces in every palette", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto("/research");
+    await settleLayout(page);
+
+    const projects = await expectResearchProjectsOrEmptyState(page);
+    if (!projects) return;
+
+    for (const theme of ["navy", "light", "dark"] as const) {
+      await reloadWithStoredTheme(page, theme);
+      await settleLayout(page);
+      const themedProjects = await expectResearchProjectsOrEmptyState(page);
+      if (!themedProjects) throw new Error("Research projects disappeared after selecting a stored palette.");
+
+      const visualSurfaces = await themedProjects.locator(".research-visual").evaluateAll((visuals) => {
+        return visuals.map((visual) => {
+          const styles = getComputedStyle(visual);
+          return {
+            backgroundColor: styles.backgroundColor,
+            backgroundImage: styles.backgroundImage,
+            opacity: styles.opacity
+          };
+        });
+      });
+
+      expect(visualSurfaces.length).toBeGreaterThan(0);
+      for (const surface of visualSurfaces) {
+        expect(surface.backgroundColor).toMatch(/^rgb\(\d+,\s*\d+,\s*\d+\)$/);
+        expect(surface.backgroundImage).toBe("none");
+        expect(surface.opacity).toBe("1");
+      }
+    }
   });
 
   test("removes research detail transitions when reduced motion is requested", async ({ page }) => {

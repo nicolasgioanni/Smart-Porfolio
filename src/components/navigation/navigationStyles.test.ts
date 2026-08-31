@@ -47,11 +47,11 @@ describe("responsive navigation styles", () => {
 
   it("uses one mobile rail for routes, social links, and the theme control", () => {
     expect(mobileStyles).toMatch(
-      /\.blob-header__island,\s*\.blob-header--compact \.blob-header__island\s*\{(?=[^}]*grid-template-columns:\s*minmax\(0, 1fr\))(?=[^}]*gap:\s*0)[^}]*\}/
+      /\.blob-header__island,\s*\.blob-header--compact \.blob-header__island\s*\{(?=[^}]*grid-template-columns:\s*minmax\(0, 1fr\))(?=[^}]*gap:\s*0)(?=[^}]*min-width:\s*0)(?=[^}]*width:\s*100%)[^}]*\}/
     );
     expect(mobileStyles).toMatch(/\.site-brand,\s*\.main-navigation\s*\{[^}]*display:\s*none/);
     expect(mobileStyles).toMatch(
-      /\.mobile-navigation\.mobile-navigation__rail\s*\{(?=[^}]*grid-column:\s*1)(?=[^}]*display:\s*flex)(?=[^}]*width:\s*100%)(?=[^}]*min-width:\s*0)(?=[^}]*overflow-x:\s*auto)[^}]*\}/
+      /\.mobile-navigation\.mobile-navigation__rail\s*\{(?=[^}]*grid-column:\s*1)(?=[^}]*display:\s*flex)(?=[^}]*width:\s*100%)(?=[^}]*max-width:\s*100%)(?=[^}]*min-width:\s*0)(?=[^}]*overflow-x:\s*auto)[^}]*\}/
     );
     expect(mobileStyles).toMatch(
       /\.mobile-navigation__routes\s*\{(?=[^}]*display:\s*flex)(?=[^}]*flex:\s*0 0 auto)(?=[^}]*min-width:\s*max-content)[^}]*\}/
@@ -80,17 +80,9 @@ describe("responsive navigation styles", () => {
     );
   });
 
-  it("changes the rail fade mask for every measured edge state", () => {
-    expect(mobileStyles).toMatch(
-      /\.mobile-navigation__rail\[data-edge="end"\]\s*\{[^}]*mask-image:\s*linear-gradient\(to right, #000 0, #000 calc\(100% - 24px\), transparent 100%\)/
-    );
-    expect(mobileStyles).toMatch(
-      /\.mobile-navigation__rail\[data-edge="both"\]\s*\{[^}]*mask-image:\s*linear-gradient\(to right, transparent 0, #000 24px, #000 calc\(100% - 24px\), transparent 100%\)/
-    );
-    expect(mobileStyles).toMatch(
-      /\.mobile-navigation__rail\[data-edge="start"\]\s*\{[^}]*mask-image:\s*linear-gradient\(to right, transparent 0, #000 24px, #000 100%\)/
-    );
-    expect(mobileStyles).toMatch(/\.mobile-navigation__rail\[data-edge="none"\]\s*\{[^}]*mask-image:\s*none/);
+  it("keeps measured edge state semantic while native overflow supplies the hard clipping", () => {
+    expect(mobileStyles).not.toMatch(/mask-image|gradient/);
+    expect(mobileStyles).toMatch(/\.mobile-navigation\.mobile-navigation__rail\s*\{[^}]*overflow-x:\s*auto/);
   });
 
   it("opens the mobile theme menu upward from the action edge", () => {

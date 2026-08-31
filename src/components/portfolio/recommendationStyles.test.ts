@@ -6,10 +6,9 @@ const portfolioStyles = readFileSync(path.join(process.cwd(), "src", "styles", "
 const tokenStyles = readFileSync(path.join(process.cwd(), "src", "styles", "tokens.css"), "utf8");
 
 describe("recommendation styles", () => {
-  it("uses a true lower-line alpha mask only for collapsed overflowing quotes", () => {
-    expect(portfolioStyles).toMatch(
-      /\.recommendation-expandable\[data-can-expand="true"\]\[data-expanded="false"\] \.recommendation-expandable__viewport\s*\{[\s\S]*-webkit-mask-image:[\s\S]*mask-image:[\s\S]*calc\(100% - 0\.78em\)[\s\S]*transparent 100%/
-    );
+  it("uses a hard clipped viewport and an explicit control for collapsed overflowing quotes", () => {
+    expect(portfolioStyles).toMatch(/\.recommendation-expandable__viewport\s*\{[^}]*overflow:\s*hidden/);
+    expect(portfolioStyles).not.toMatch(/mask-image|gradient/);
     expect(portfolioStyles).not.toMatch(/\.recommendation-expandable__viewport::after/);
   });
 
@@ -58,13 +57,13 @@ describe("recommendation styles", () => {
     }
 
     expect(portfolioStyles).toMatch(
-      /\.home-section--recommendations \.recommendation-card--summary\s*\{[^}]*background:\s*var\(--color-recommendation-card-solid\);[^}]*backdrop-filter:\s*none/
+      /\.home-section--recommendations \.recommendation-card--summary\s*\{[^}]*background:\s*var\(--color-recommendation-card-solid\)/
     );
     expect(portfolioStyles).toMatch(
       /\.recommendations-list\[data-layout-mode="overlay"\]\[data-overlay-ready="true"\][\s\S]*\.recommendations-list__item\s*\.recommendation-card--detail\s*\{[^}]*position:\s*absolute/
     );
     expect(portfolioStyles).toMatch(
-      /\.recommendations-list\[data-layout-mode="overlay"\]\[data-overlay-ready="true"\][\s\S]*\.recommendations-list__item\[data-expanded="true"\][\s\S]*\.recommendation-card--detail\s*\{[^}]*background:\s*var\(--color-recommendation-card-solid\);[^}]*box-shadow:[^}]*backdrop-filter:\s*none/
+      /\.recommendations-list\[data-layout-mode="overlay"\]\[data-overlay-ready="true"\][\s\S]*\.recommendations-list__item\[data-expanded="true"\][\s\S]*\.recommendation-card--detail\s*\{[^}]*background:\s*var\(--color-recommendation-card-solid\);[^}]*box-shadow:\s*var\(--shadow-soft\)/
     );
     expect(portfolioStyles).toMatch(
       /\.home-section__surface \.portfolio-card\s*\{[^}]*background:\s*var\(--color-card-surface\)/

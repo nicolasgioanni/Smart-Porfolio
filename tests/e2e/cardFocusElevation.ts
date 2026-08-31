@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page } from "@playwright/test";
+import { reloadWithStoredTheme } from "./themePreference";
 
 const themeNames = ["navy", "light", "dark"] as const;
 
@@ -55,6 +56,26 @@ async function readElevation(card: Locator): Promise<CardElevation> {
   });
 }
 
+async function hasStableElevation(card: Locator) {
+  return card.evaluate(async (element) => {
+    const read = () => {
+      const styles = window.getComputedStyle(element);
+      return `${styles.boxShadow}|${styles.transform}`;
+    };
+    const firstSample = read();
+
+    // Theme token changes can animate the card's restrained shadow. Sample
+    // several paints instead of assuming two frames have reached the final
+    // palette, then take the resting value used by this focus regression.
+    for (let frame = 0; frame < 4; frame += 1) {
+      await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+      if (read() !== firstSample) return false;
+    }
+
+    return true;
+  });
+}
+
 async function clearFocus(page: Page) {
   await page.evaluate(() => {
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
@@ -76,15 +97,13 @@ export async function expectDisclosureFocusToKeepRestingElevation(page: Page, ca
   const disclosure = card.locator("button.detail-section__trigger").first();
 
   for (const themeName of themeNames) {
-    await page.evaluate((theme) => {
-      document.documentElement.dataset.theme = theme;
-    }, themeName);
-    await expect(page.locator("html")).toHaveAttribute("data-theme", themeName);
+    await reloadWithStoredTheme(page, themeName);
 
     await card.scrollIntoViewIfNeeded();
     await clearFocus(page);
     await page.mouse.move(1, 1);
     await waitForPaint(page);
+    await expect.poll(() => hasStableElevation(card)).toBe(true);
 
     const restingElevation = await readElevation(card);
 

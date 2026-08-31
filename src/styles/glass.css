@@ -5,28 +5,7 @@
   border: 1px solid var(--color-line);
   background: var(--color-surface);
   box-shadow: var(--shadow-card);
-  backdrop-filter: blur(var(--glass-blur)) saturate(128%);
-  isolation: isolate;
   overflow: hidden;
-}
-
-.glass-surface::before,
-.glass-card::before,
-.glass-blob::before {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  content: "";
-  background: var(--gradient-glass-highlight);
-  opacity: 0.52;
-  z-index: 0;
-}
-
-.glass-surface > *,
-.glass-card > *,
-.glass-blob > * {
-  position: relative;
-  z-index: 1;
 }
 
 .site-shell[data-glass-effects="false"] .glass-surface,
@@ -34,13 +13,6 @@
 .site-shell[data-glass-effects="false"] .glass-blob {
   background: var(--glass-fallback-surface);
   box-shadow: var(--shadow-card);
-  backdrop-filter: none;
-}
-
-.site-shell[data-glass-effects="false"] .glass-surface::before,
-.site-shell[data-glass-effects="false"] .glass-card::before,
-.site-shell[data-glass-effects="false"] .glass-blob::before {
-  opacity: 0;
 }
 
 .glass-surface {
@@ -54,7 +26,7 @@
 
   background: var(--color-surface-strong);
   border-color: var(--color-line-strong);
-  box-shadow: var(--shadow-soft), var(--shadow-glow);
+  box-shadow: var(--shadow-soft);
 }
 
 .glass-surface--subtle {
@@ -92,14 +64,8 @@
 .glass-blob--nav {
   --glass-fallback-surface: var(--color-header-surface);
 
-  background-color: var(--color-header-surface);
-  background-image: var(--gradient-header-surface);
+  background: var(--color-header-surface);
   overflow: visible;
-}
-
-.glass-blob--nav::before {
-  border-radius: inherit;
-  opacity: calc(var(--opacity-header-highlight) * 0.72);
 }
 
 .glass-blob--footer {
@@ -132,7 +98,7 @@
 
 .glass-button--primary {
   border-color: var(--color-primary-button-border);
-  background: var(--gradient-primary-button);
+  background: var(--color-primary-button-surface);
   color: var(--color-primary-button-text);
 }
 
@@ -186,7 +152,7 @@
   height: 1px;
   margin: var(--space-4) 0;
   border: 0;
-  background: var(--gradient-divider);
+  background: var(--color-line-strong);
 }
 
 .glass-icon-link,
@@ -205,12 +171,4 @@
 
 .glass-icon-button {
   cursor: pointer;
-}
-
-@media (max-width: 860px) {
-  .glass-surface,
-  .glass-card,
-  .glass-blob {
-    backdrop-filter: blur(var(--glass-blur-mobile)) saturate(130%);
-  }
 }

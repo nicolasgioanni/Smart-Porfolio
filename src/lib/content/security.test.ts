@@ -105,10 +105,10 @@ describe("static portfolio security contracts", () => {
     expect(navigationCss).toMatch(/\.main-navigation__link\s*{[^}]*min-height:\s*var\(--header-nav-link-height\)[^}]*padding:\s*0\s+var\(--header-nav-link-padding-inline\)/s);
     expect(navigationCss).toMatch(/\.blob-header--compact\s+\.main-navigation__link\s*{[^}]*min-height:\s*var\(--header-nav-link-compact-height\)[^}]*padding:\s*0\s+var\(--header-nav-link-compact-padding-inline\)/s);
     expect(tokensCss.match(/--color-header-surface:/g)).toHaveLength(3);
-    expect(tokensCss.match(/--gradient-header-surface:/g)).toHaveLength(3);
-    expect(glassCss).toMatch(/\.glass-blob--nav\s*{[^}]*--glass-fallback-surface:\s*var\(--color-header-surface\)[^}]*background-color:\s*var\(--color-header-surface\)[^}]*background-image:\s*var\(--gradient-header-surface\)/s);
+    expect(tokensCss).not.toMatch(/--gradient-header-surface/);
+    expect(glassCss).toMatch(/\.glass-blob--nav\s*{[^}]*--glass-fallback-surface:\s*var\(--color-header-surface\)[^}]*background:\s*var\(--color-header-surface\)/s);
     expect(glassCss).toMatch(/\.glass-blob--nav\s*{[^}]*overflow:\s*visible/s);
-    expect(glassCss).toMatch(/\.glass-blob--nav::before\s*{[^}]*border-radius:\s*inherit/s);
+    expect(glassCss).not.toMatch(/\.glass-blob--nav::before/);
   });
 
   it("keeps Hover Base 1 theme-aware, layout-neutral, and motion-safe", () => {
@@ -117,29 +117,24 @@ describe("static portfolio security contracts", () => {
     const tokensCss = readFileSync(path.join(projectRoot, "src", "styles", "tokens.css"), "utf8");
 
     expect(layoutSource).toMatch(/import\s+"@\/styles\/interactions\.css"/);
-    expect(tokensCss).toMatch(/--hover-base-1-wave-duration:\s*1600ms/);
     expect(tokensCss).toMatch(/--hover-base-1-route-duration:\s*420ms/);
     expect(tokensCss).toMatch(/--hover-base-1-route-easing:\s*cubic-bezier\(0\.65,\s*0,\s*0\.35,\s*1\)/);
     expect(tokensCss.match(/--hover-base-1-hover-surface:/g)).toHaveLength(3);
     expect(tokensCss.match(/--hover-base-1-selected-surface:/g)).toHaveLength(3);
-    expect(tokensCss).toMatch(/:root,\s*\[data-theme="navy"\][\s\S]*--hover-base-1-hover-surface:\s*linear-gradient\(135deg,\s*#f4ddb0,\s*#c99d62\)/);
-    expect(tokensCss).toMatch(/\[data-theme="light"\][\s\S]*--hover-base-1-hover-surface:\s*linear-gradient\(135deg,\s*#1b547a,\s*#103c60\)/);
-    expect(tokensCss).toMatch(/\[data-theme="dark"\][\s\S]*--hover-base-1-hover-surface:\s*linear-gradient\(135deg,\s*#3864bd,\s*#654dbe\)/);
-    expect(interactionsCss).toMatch(/\.hover-base-1::before,\s*\.hover-base-1::after\s*{[^}]*pointer-events:\s*none/s);
+    expect(tokensCss).toMatch(/:root,\s*\[data-theme="navy"\][\s\S]*--hover-base-1-hover-surface:\s*#dfbd83/);
+    expect(tokensCss).toMatch(/\[data-theme="light"\][\s\S]*--hover-base-1-hover-surface:\s*#174968/);
+    expect(tokensCss).toMatch(/\[data-theme="dark"\][\s\S]*--hover-base-1-hover-surface:\s*#5266bd/);
+    expect(interactionsCss).toMatch(/\.hover-base-1::before\s*{[^}]*pointer-events:\s*none/s);
     expect(interactionsCss).toMatch(/\.hover-base-1::before\s*{(?=[^}]*background:\s*var\(--hover-base-1-hover-surface\))(?=[^}]*opacity:\s*0)[^}]*}/s);
     expect(interactionsCss).toMatch(/aria-current="page"[\s\S]*aria-pressed="true"[\s\S]*aria-expanded="true"[\s\S]*data-selected="true"/);
     expect(interactionsCss).toMatch(/\.hover-base-1--inset/);
     expect(interactionsCss).toMatch(/\.hover-base-1--compact/);
     expect(interactionsCss).toMatch(/\.hover-base-1--inline/);
     expect(interactionsCss).toMatch(/\.hover-base-1--solid/);
-    expect(interactionsCss).toMatch(/\.hover-base-1--no-wave::after\s*{[^}]*animation:\s*none[^}]*opacity:\s*0/s);
     expect(interactionsCss).toMatch(/\.hover-base-1--route/);
-    expect(interactionsCss).toMatch(/@media\s*\(hover:\s*hover\)\s*and\s*\(pointer:\s*fine\)[\s\S]*animation:\s*hover-base-1-wave\s+var\(--hover-base-1-wave-duration\)\s+linear\s+infinite/);
-    expect(interactionsCss).toMatch(/@keyframes\s+hover-base-1-wave\s*{[\s\S]*transform:\s*translate3d\([^;]+[\s\S]*opacity:/);
+    expect(interactionsCss).not.toMatch(/::after|@keyframes\s+hover-base-1-wave|gradient/);
     expect(interactionsCss).toMatch(/:active\s*{[^}]*transition-duration:\s*0ms[^}]*transform:\s*translateY\(0\)/s);
-    expect(interactionsCss).toMatch(
-      /@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*\.hover-base-1::after,\s*\.hover-base-1:not\(:disabled\):not\(\[aria-disabled="true"\]\):hover::after\s*{[^}]*animation:\s*none[^}]*opacity:\s*0/s
-    );
+    expect(interactionsCss).toMatch(/@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*\.hover-base-1,\s*\.hover-base-1::before,[\s\S]*?\.glass-link__arrow\s*{[^}]*transition:\s*none/s);
     expect(interactionsCss).toMatch(/@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*\.active-route-indicator\s*{[^}]*transition:\s*none[^}]*animation:\s*none/s);
   });
 
@@ -316,7 +311,7 @@ describe("static portfolio security contracts", () => {
     expect(roleWindowRule).toMatch(/overflow:\s*hidden/);
     expect(roleWindowRule).toMatch(/width:\s*100%/);
     expect(roleWindowRule).toMatch(/height:\s*1\.36em/);
-    expect(roleWindowRule).toMatch(/mask-image:\s*linear-gradient/);
+    expect(roleWindowRule).not.toMatch(/mask-image|gradient/);
     expect(roleWindowRule).toMatch(/perspective:\s*700px/);
     expect(prefixWindowRule).toMatch(/perspective:\s*700px/);
     expect(prefixRule).toMatch(/justify-self:\s*end/);
@@ -407,10 +402,6 @@ describe("static portfolio security contracts", () => {
       portfolioCss.match(/(?:^|\n)\.recommendation-expandable\s*{[^}]*}/s)?.[0] ?? "";
     const recommendationDividerRule =
       portfolioCss.match(/\.recommendation-expandable::before\s*{[^}]*}/s)?.[0] ?? "";
-    const recommendationMaskRule =
-      portfolioCss.match(
-        /\.recommendation-expandable\[data-can-expand="true"\]\[data-expanded="false"\] \.recommendation-expandable__viewport\s*{[^}]*}/s
-      )?.[0] ?? "";
     const recommendationQuoteRule =
       portfolioCss.match(/\.recommendation-expandable__quote\s*{\s*color:[^}]*}/s)?.[0] ?? "";
     const recommendationLinkRule =
@@ -489,14 +480,12 @@ describe("static portfolio security contracts", () => {
     expect(recommendationDividerRule).toMatch(/right:\s*var\(--space-2\)/);
     expect(recommendationDividerRule).toMatch(/left:\s*var\(--space-2\)/);
     expect(recommendationDividerRule).toMatch(/height:\s*1px/);
-    expect(recommendationDividerRule).toMatch(/background:\s*var\(--gradient-divider\)/);
+    expect(recommendationDividerRule).toMatch(/background:\s*var\(--color-line-strong\)/);
     expect(recommendationViewportRule).toMatch(/overflow:\s*hidden/);
     expect(recommendationViewportRule).toMatch(
       /transition:\s*max-height 520ms cubic-bezier\(0\.22,\s*1,\s*0\.36,\s*1\)/
     );
-    expect(recommendationMaskRule).toMatch(/-webkit-mask-image:\s*linear-gradient/);
-    expect(recommendationMaskRule).toMatch(/mask-image:\s*linear-gradient/);
-    expect(recommendationMaskRule).toMatch(/transparent 100%/);
+    expect(portfolioCss).not.toMatch(/mask-image|gradient/);
     expect(portfolioCss).not.toMatch(/\.recommendation-expandable__viewport::after/);
     expect(recommendationQuoteRule).toMatch(/font-size:\s*var\(--font-size-body\)/);
     expect(recommendationQuoteRule).toMatch(
@@ -513,7 +502,7 @@ describe("static portfolio security contracts", () => {
     expect(homeCardDividerRule).toMatch(/left:\s*var\(--space-2\)/);
     expect(homeCardDividerRule).toMatch(/height:\s*1px/);
     expect(homeCardDividerRule).toMatch(/pointer-events:\s*none/);
-    expect(homeCardDividerRule).toMatch(/background:\s*var\(--gradient-divider\)/);
+    expect(homeCardDividerRule).toMatch(/background:\s*var\(--color-line-strong\)/);
     expect(homeCardDividerRule).toMatch(/opacity:\s*0\.65/);
     expect(recommendationLinkRule).toMatch(/width:\s*auto/);
     expect(recommendationLinkRule).toMatch(/min-height:\s*36px/);

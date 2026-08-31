@@ -21,17 +21,6 @@ body {
   text-rendering: geometricPrecision;
 }
 
-body::before {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  content: "";
-  background: var(--overlay-page-background);
-  background-repeat: no-repeat;
-  background-size: cover;
-}
-
 h1,
 h2,
 h3,

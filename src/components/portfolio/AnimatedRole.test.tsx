@@ -119,22 +119,19 @@ describe("AnimatedRole", () => {
     const mobileLabelRule =
       mobileUiStyles.match(/\.profile-role__mobile-label\s*\{[^}]*}/s)?.[0] ?? "";
 
-    expect(portfolioStyles).toMatch(
-      /\.profile-role__window\s*\{[^}]*-webkit-mask-image:[^}]*mask-image:[^}]*perspective:\s*700px/s
-    );
+    expect(portfolioStyles).toMatch(/\.profile-role__window\s*\{[^}]*overflow:\s*hidden[^}]*perspective:\s*700px/s);
+    expect(portfolioStyles).not.toMatch(/mask-image|gradient/);
     expect(portfolioStyles).toMatch(
       /\.profile-role__prefix,\s*\.profile-role__engineer-line,\s*\.profile-role__alternate\s*\{[^}]*backface-visibility:\s*hidden;[^}]*transform-style:\s*preserve-3d/s
     );
     expect(mobileUiStyles).toMatch(/\.profile-role__window\s*\{[^}]*display:\s*none/);
     expect(mobileWindowRule).toMatch(/overflow:\s*visible/);
-    expect(mobileWindowRule).toMatch(/-webkit-mask-image:\s*none/);
-    expect(mobileWindowRule).toMatch(/mask-image:\s*none/);
     expect(mobileWindowRule).toMatch(/perspective:\s*none/);
     expect(mobileLabelRule).toMatch(/transition:\s*opacity 320ms var\(--profile-role-easing\)/);
     expect(mobileLabelRule).toMatch(/transform:\s*none/);
     expect(mobileLabelRule).toMatch(/will-change:\s*auto/);
     expect(mobileLabelRule).not.toMatch(
-      /rotateX|perspective|mask-image|backface-visibility|transform-style|filter|text-shadow/
+      /rotateX|perspective|backface-visibility|transform-style|filter|text-shadow/
     );
     expect(portfolioStyles).toMatch(
       /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.profile-role__mobile-label\s*\{[^}]*transition:\s*none/

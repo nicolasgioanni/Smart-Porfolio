@@ -23,8 +23,7 @@
   );
 }
 
-.hover-base-1::before,
-.hover-base-1::after {
+.hover-base-1::before {
   position: absolute;
   border-radius: inherit;
   content: "";
@@ -40,22 +39,6 @@
   transition:
     box-shadow var(--hover-base-1-transition-duration) var(--hover-base-1-easing),
     opacity var(--hover-base-1-transition-duration) var(--hover-base-1-easing);
-}
-
-.hover-base-1::after {
-  top: var(--hover-base-1-layer-inset);
-  bottom: var(--hover-base-1-layer-inset);
-  left: 0;
-  z-index: 2;
-  width: 38%;
-  background: linear-gradient(
-    105deg,
-    transparent 12%,
-    var(--hover-base-1-highlight) 50%,
-    transparent 88%
-  );
-  opacity: 0;
-  transform: translate3d(-260%, 0, 0) skewX(-16deg);
 }
 
 .hover-base-1 > * {
@@ -110,11 +93,6 @@
   box-shadow: none;
 }
 
-.hover-base-1:is(:disabled, [aria-disabled="true"])::after {
-  animation: none;
-  opacity: 0;
-}
-
 .hover-base-1--inset {
   --hover-base-1-layer-inset: 4px;
 }
@@ -129,8 +107,7 @@
   border-radius: var(--radius-card);
 }
 
-.hover-base-1--inline::before,
-.hover-base-1--inline::after {
+.hover-base-1--inline::before {
   border-radius: var(--radius-card);
 }
 
@@ -139,13 +116,7 @@
   --hover-base-1-selected-layer-opacity: 0.64;
 }
 
-.hover-base-1--no-wave::after {
-  animation: none;
-  opacity: 0;
-}
-
-.hover-base-1--route::before,
-.hover-base-1--route::after {
+.hover-base-1--route::before {
   border-radius: var(--radius-pill);
 }
 
@@ -218,10 +189,6 @@
     opacity: var(--hover-base-1-hover-layer-opacity);
   }
 
-  .hover-base-1:where(:not(:disabled):not([aria-disabled="true"]):not(.hover-base-1--no-wave):hover)::after {
-    animation: hover-base-1-wave var(--hover-base-1-wave-duration) linear infinite;
-  }
-
   .hover-base-1:not(:disabled):not([aria-disabled="true"]):hover .glass-link__arrow {
     transform: translateX(2px);
   }
@@ -232,30 +199,6 @@
 
   .hover-base-1:not(:disabled):not([aria-disabled="true"]):active {
     transform: translateY(0);
-  }
-}
-
-@keyframes hover-base-1-wave {
-  0% {
-    opacity: 0;
-    transform: translate3d(-260%, 0, 0) skewX(-16deg);
-  }
-
-  28% {
-    opacity: 0.12;
-  }
-
-  50% {
-    opacity: 0.24;
-  }
-
-  72% {
-    opacity: 0.1;
-  }
-
-  100% {
-    opacity: 0;
-    transform: translate3d(360%, 0, 0) skewX(-16deg);
   }
 }
 
@@ -271,12 +214,6 @@
   .hover-base-1:not(:disabled):not([aria-disabled="true"]):focus-visible,
   .hover-base-1:not(:disabled):not([aria-disabled="true"]):active {
     transform: none;
-  }
-
-  .hover-base-1::after,
-  .hover-base-1:not(:disabled):not([aria-disabled="true"]):hover::after {
-    animation: none;
-    opacity: 0;
   }
 
   .active-route-indicator {
