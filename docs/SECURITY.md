@@ -27,11 +27,18 @@ Documentation is not evidence that an external control is active. Treat the impl
 | Production and preview non-secret Function values | `wrangler.jsonc` |
 | Contact-rate reservation schema | `migrations/` |
 | Build-time public values and deployment flow | `.github/workflows/ci.yml` |
+| Research media paths and PNG sanitation | `src/lib/content/validatePortfolioContent.ts`, `src/lib/content/researchGraphicalAbstracts.ts`, `scripts/lib/pngMetadata.mjs` |
 | Contact behavior reference | `docs/CONTACT_SYSTEM.md` |
 
 ## CSV parsing boundary
 
 CSV content is untrusted build input. `csv-parse` must resolve to `7.0.2` or later to remediate [GHSA-8cw4-87c7-c6xx](https://github.com/advisories/GHSA-8cw4-87c7-c6xx). Local CSV headers also reject empty, duplicate, and prototype-sensitive names (`__proto__`, `constructor`, and `prototype`) before the parser creates row objects. Keep this validation at the parsing boundary as defense in depth; downstream content validation is not a substitute for safe object construction.
+
+## Research media boundary
+
+Canonical graphical abstracts must pass the same strict, root-relative `/images/research/` path guard during generated-content validation and direct presentation resolution. The guard rejects remote and protocol-relative URLs, traversal, repeated percent-encoded traversal, backslashes, null bytes, whitespace, query strings, fragments, and unsupported extensions. Curated fallback lookup accepts only own keys in the three-project registry; invalid or incomplete canonical input fails closed instead of falling back.
+
+Contributed PNG sanitation is a local publication tool, but its inputs remain untrusted. The CLI rejects files larger than 32 MiB from file metadata before reading. The parser independently caps input at 32 MiB, declared chunk data at 30 MiB, chunk count at 4,096, decoded image data at 64 MiB, each dimension at 16,384 pixels, and the canvas at 67,108,864 pixels. It requires nonzero dimensions, legal PNG color-type and bit-depth pairs, standard compression and filtering, supported noninterlaced or Adam7 scanlines, legal palette and critical-chunk ordering, a bounded valid zlib stream with exact filter-prefixed scanlines, consecutive nonempty image data, and a terminal `IEND`. Test-only limit overrides may lower protected ceilings but cannot raise or bypass them. Retained chunks remain byte-identical, and the sanitized output is parsed again before it can be written.
 
 ## Threat model
 

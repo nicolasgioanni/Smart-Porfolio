@@ -82,11 +82,21 @@ describe("ResearchShowcase", () => {
       "02",
       "03"
     ]);
-    expect(screen.getAllByRole("img").filter((image) => image.tagName === "svg").map((visual) => visual.getAttribute("aria-label"))).toEqual([
-      "Multichannel yeast segmentation diagram",
-      "Eight-prototype adversarial attack and defense matrix",
-      "Guide and donor sequence design diagram"
+    expect(
+      screen.getAllByRole("button", { name: /Open graphical abstract for/ }).map((button) => button.getAttribute("aria-label"))
+    ).toEqual([
+      "Open graphical abstract for CytoCV",
+      "Open graphical abstract for Adversarial Machine Learning",
+      "Open graphical abstract for Guide Donor Scheduler"
     ]);
+    expect(
+      projects.map((project) => project.querySelector(".research-abstract__thumbnail")?.getAttribute("src"))
+    ).toEqual([
+      "/images/research/cytocv-graphical-abstract.png",
+      "/images/research/independent-study-graphical-abstract.png",
+      "/images/research/guide-donor-scheduler-graphical-abstract.png"
+    ]);
+    expect(screen.queryByRole("img", { name: /segmentation diagram|attack and defense matrix|sequence design diagram/i })).not.toBeInTheDocument();
     expect(screen.queryByText("Graduate Research Assistant")).not.toBeInTheDocument();
     expect(screen.queryByText("Bothell, Washington, United States")).not.toBeInTheDocument();
     expect(screen.queryByText("Research 01")).not.toBeInTheDocument();

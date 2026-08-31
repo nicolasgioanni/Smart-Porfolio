@@ -96,7 +96,7 @@ The recommendation route and navigation item remain discoverable only when recom
 
 ### Portfolio components
 
-`src/components/portfolio/` contains the Home summary layer and evidence-focused route components. `HomeOverview.tsx` owns Home section order. `selectHomeContent.ts` and `profileOverview.ts` own content selection and fallback rules.
+`src/components/portfolio/` contains the Home summary layer and evidence-focused route components. `HomeOverview.tsx` owns Home section order. `selectHomeContent.ts` and `profileOverview.ts` own content selection and fallback rules. `ResearchGraphicalAbstractPreview.tsx` owns Research thumbnail and enlarged-preview composition while delegating lifecycle behavior to the shared dialog.
 
 Focused client behavior includes the configured role rotation, modal media and skills dialogs, recommendation measurement and expansion, optional scroll reveals, and the shared shell interactions. Content rendering remains server-generated. Modal consumers provide their content and geometry while `src/components/overlay/ModalDialog.tsx` provides the common accessible interaction contract.
 
@@ -117,8 +117,10 @@ Shared dialog lifecycle and transition state live in `src/components/overlay/Mod
 | `src/lib/content/normalizePortfolioContent.ts` | Conversion from source rows to typed content. |
 | `src/lib/content/validatePortfolioContent.ts` | Required values, references, URLs, and cross-field invariants. |
 | `src/lib/content/selectHomeContent.ts` | Home and detail selection, ordering, limits, and recommendation visibility. |
+| `src/lib/content/researchGraphicalAbstracts.ts` | Canonical graphical-abstract selection and checked-in fallback metadata for established Research IDs. |
 | `scripts/fetchPortfolioContent.ts` | Source-mode selection, anonymous workbook fetch, timeout and byte-cap enforcement, generated-file I/O, and command output. |
 | `scripts/lib/portfolioContentGeneration.ts` | Workbook URL and payload checks, XLSX parsing, worksheet and row validation, formula extraction, hashing, and metadata finalization. |
+| `scripts/lib/pngMetadata.mjs` and `scripts/stripPngMetadata.mjs` | Strict, resource-bounded PNG chunk parsing and lossless removal of non-rendering text, EXIF, and provenance chunks from contributed research media. |
 
 Deployment replaces the development snapshot with one strict workbook-derived candidate, tests it, and builds the exact static artifact without fetching again. It does not commit the deployed production or stable preview candidate. See [Content pipeline](CONTENT_PIPELINE.md).
 
@@ -136,6 +138,7 @@ The local `resume.csv` compatibility template must remain header-only. It is nev
 | `glass.css` | Solid surface primitives, cards, buttons, links, chips, dividers, and blobs. |
 | `navigation.css` | Desktop and mobile navigation, theme disclosure, profile preview, and route indicator. |
 | `portfolio.css` | Home profile, cards, timelines, skills, recommendations, and detail layouts. |
+| `research.css` | Research modules, evidence rows, graphical-abstract containment, and preview-dialog presentation. |
 | `motion.css` | CSS-only page entrance plus scroll reveal and compression states. |
 | `skeletons.css` | Static solid loading placeholders. |
 | `contact.css` | Contact wizard, fields, review, consent, status, and responsive rules. |

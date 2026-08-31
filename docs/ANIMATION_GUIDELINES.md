@@ -64,6 +64,8 @@ Theme selection updates colors without closing the panel. After hydration, an el
 
 Shared modal entry and exit use opacity plus a small consumer-configurable translation or scale over `180ms`. `src/styles/dialog.css` owns the lifecycle selectors so profile, skill, and media consumers do not duplicate timing or open-and-close state. Consumers may adjust geometry and the two entry-transform custom properties, but they must not add independent lifecycle timers.
 
+Research graphical-abstract thumbnails transition their shadow and transform for a two-pixel direct lift on fine-pointer hover and keyboard `:focus-visible`. Their palette-dependent border state remains immediate so palette changes stay within the shared page-level transition. The image stays contained and the surrounding research card does not inherit that lift. The enlarged abstract uses only the shared modal lifecycle.
+
 Reduced motion removes the transition and entry transform while preserving portal rendering, focus containment, dismissal, scroll locking, and focus restoration.
 
 ## Mobile navigation rail

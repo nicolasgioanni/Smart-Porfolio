@@ -51,7 +51,7 @@ export function ResearchCard({ item, mode, onToggle, openSectionId, order }: Res
       id={item.id}
     >
       <div className="research-project__visual">
-        <ResearchProjectVisual itemId={item.id} order={order} />
+        <ResearchProjectVisual item={item} order={order} title={displayTitle} />
       </div>
 
       <div className="research-project__content">
