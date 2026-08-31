@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import ExcelJS, { type Workbook, type Worksheet } from "exceljs";
 import { parse } from "csv-parse/sync";
+import JSZip from "jszip";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import generatedPortfolioContent from "../src/content/generated/portfolio.generated.json";
 import type { GeneratedPortfolioContent } from "../src/content/types";
@@ -175,13 +176,20 @@ describe("workbook dependency boundary", () => {
     ) as {
       dependencies?: Record<string, string>;
       devDependencies?: Record<string, string>;
+      overrides?: {
+        exceljs?: {
+          uuid?: string;
+        };
+      };
     };
     const dependencies = packageJson.dependencies ?? {};
     const devDependencies = packageJson.devDependencies ?? {};
     const directPackageNames = [...Object.keys(dependencies), ...Object.keys(devDependencies)];
 
     expect(devDependencies.exceljs).toBe("4.4.0");
+    expect(devDependencies.jszip).toBe("3.10.1");
     expect(dependencies.exceljs).toBeUndefined();
+    expect(packageJson.overrides).toEqual({ exceljs: { uuid: "11.1.1" } });
     expect(
       directPackageNames.filter((name) =>
         /google.*(?:api|auth|oauth|drive|sheet)|(?:api|auth|oauth|drive|sheet).*google/i.test(name)
@@ -559,6 +567,54 @@ describe("strict XLSX download boundary", () => {
 });
 
 describe("XLSX workbook structure and cells", () => {
+  it("writes and reads a data-bar workbook through ExcelJS's UUID-backed extension path", async () => {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("UUID data bars");
+    worksheet.addRows([["score"], [12], [64], [100]]);
+    worksheet.addConditionalFormatting({
+      ref: "A2:A4",
+      rules: [
+        {
+          type: "dataBar",
+          priority: 1,
+          cfvo: [{ type: "min" }, { type: "max" }],
+          color: "FF638EC6",
+          gradient: false
+        } as unknown as ExcelJS.ConditionalFormattingRule
+      ]
+    });
+
+    const bytes = await writeWorkbookBytes(workbook);
+    const conditionalFormattings = (worksheet as unknown as {
+      conditionalFormattings: Array<{ rules: Array<{ x14Id?: string }> }>;
+    }).conditionalFormattings;
+    const originalX14Id = conditionalFormattings[0]?.rules[0]?.x14Id;
+    const archive = await JSZip.loadAsync(bytes);
+    const worksheetFile = archive.file("xl/worksheets/sheet1.xml");
+    const worksheetXml = await worksheetFile?.async("string");
+    const reopened = new ExcelJS.Workbook();
+    await reopened.xlsx.load(bytesToArrayBuffer(bytes));
+    const reopenedWorksheet = reopened.getWorksheet("UUID data bars");
+    const reopenedConditionalFormattings = (reopenedWorksheet as unknown as {
+      conditionalFormattings: Array<{
+        rules: Array<{ type?: string; gradient?: boolean; x14Id?: string }>;
+      }>;
+    } | undefined)?.conditionalFormattings;
+
+    expect([...bytes.subarray(0, 4)]).toEqual([0x50, 0x4b, 0x03, 0x04]);
+    expect(originalX14Id).toMatch(
+      /^\{[0-9A-F]{8}-[0-9A-F]{4}-4[0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}\}$/
+    );
+    expect(worksheetXml).toContain(`id="${originalX14Id}"`);
+    expect(reopenedWorksheet?.getCell("A4").value).toBe(100);
+    expect(reopenedConditionalFormattings).toHaveLength(1);
+    expect(reopenedConditionalFormattings?.[0]?.rules[0]).toMatchObject({
+      type: "dataBar",
+      gradient: false,
+      x14Id: originalX14Id
+    });
+  });
+
   it("matches trimmed titles case-insensitively and independently of tab order", async () => {
     const bytes = await createWorkbookBytes({
       sheetOrder: [...portfolioWorkbookSheetNames].reverse(),
