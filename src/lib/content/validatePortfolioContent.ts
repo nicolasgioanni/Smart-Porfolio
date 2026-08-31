@@ -71,6 +71,10 @@ function isSupportedResearchMediaPath(value: string, extensions: readonly string
   );
 }
 
+export function isSupportedResearchGraphicalAbstractPath(value: string): boolean {
+  return isSupportedResearchMediaPath(value, supportedResearchAbstractExtensions);
+}
+
 export function isSupportedUrl(value: string, options: { allowMailto?: boolean; allowRootRelative?: boolean } = {}): boolean {
   const allowMailto = options.allowMailto ?? true;
   const allowRootRelative = options.allowRootRelative ?? true;
@@ -219,7 +223,7 @@ function validateResearch(items: ResearchItem[], errors: string[]): void {
 
     if (
       item.graphicalAbstract &&
-      !isSupportedResearchMediaPath(item.graphicalAbstract, supportedResearchAbstractExtensions)
+      !isSupportedResearchGraphicalAbstractPath(item.graphicalAbstract)
     ) {
       errors.push(`research.${item.id} has an invalid graphicalAbstract path: ${item.graphicalAbstract}`);
     }

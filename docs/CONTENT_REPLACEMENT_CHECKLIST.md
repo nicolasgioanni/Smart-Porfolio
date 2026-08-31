@@ -60,7 +60,7 @@ Use this checklist when replacing local sample content or preparing a public wor
 - [ ] Use descriptive `label=url` link entries and confirm link inference produces the intended Home actions.
 - [ ] Keep a pending resource label in `pending_links` only while it has no destination. Remove it when the matching published link is added.
 - [ ] Verify impact, bullets, skills, and all links on the Research route.
-- [ ] Treat `graphical_abstract`, `graphical_abstract_alt`, and `video` as validated schema-only inputs for now: the current Research route does not render them. Do not rely on legacy research images to render; the authored organization logo is intentionally rendered in the simplified card header when supplied.
+- [ ] Verify each rendered `graphical_abstract` and `graphical_abstract_alt` pair in its card and enlarged preview. The three established IDs may use their checked-in curated abstract when the live workbook is still legacy; never rely on or publish the legacy `image` value. Treat `video` as validated but not yet rendered. The authored organization logo remains intentionally visible in the simplified card header when supplied.
 
 ## Projects
 
@@ -108,7 +108,7 @@ Use this checklist when replacing local sample content or preparing a public wor
 
 - [ ] Store only publishable assets under `public/`.
 - [ ] Use safe root-relative paths or approved HTTP(S) destinations.
-- [ ] Check portrait, favicon, project image, research graphical-abstract and video paths, organization logo, and institution logo paths for 200 responses. Keep graphical abstracts and videos under `public/images/research/`, pair each abstract with useful alt text, and leave all three media fields blank until their reviewed public files exist.
+- [ ] Check portrait, favicon, project image, research graphical-abstract and video paths, organization logo, and institution logo paths for 200 responses. Keep graphical abstracts and videos under `public/images/research/`, pair each abstract with useful alt text, sanitize contributed PNGs with `scripts/stripPngMetadata.mjs`, and publish a media field only after its reviewed public file exists.
 - [ ] Confirm image dimensions, cropping, contrast, and alt behavior on desktop and mobile.
 - [ ] Remove unused sample assets when they are no longer referenced and removal is within the release scope.
 

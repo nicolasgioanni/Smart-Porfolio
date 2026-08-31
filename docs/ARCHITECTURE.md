@@ -101,6 +101,8 @@ Portfolio data is already present in the generated page output. Hydration adds i
 
 The generator converts either checked-in templates or one complete workbook download into `src/content/generated/portfolio.generated.json`. Application code imports that file only through `getPortfolioContent()`, which validates the generated shape again before selectors and components consume it.
 
+Research graphical abstracts cross one additional presentation boundary. `getResearchGraphicalAbstract()` selects a complete canonical path-and-alt pair when authored, otherwise supplies the checked-in abstract for one of the three established project IDs only when both canonical fields are absent. Both the generated-content validator and the exported resolver reuse the same strict local Research-image path guard, and curated lookup accepts own registry keys only. Invalid or incomplete canonical input is never masked by a fallback. The temporary legacy workbook `image` field is discarded during normalization and is never a presentation input. `ResearchGraphicalAbstractPreview` progressively enhances the selected static image with the shared `ModalDialog`; it does not fetch content or duplicate modal lifecycle behavior.
+
 The boundary has four responsibilities:
 
 1. Convert source rows into typed property names and values.

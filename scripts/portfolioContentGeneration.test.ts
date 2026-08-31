@@ -238,7 +238,7 @@ describe("visible portfolio content hashing", () => {
     const content = contentFixture();
     const expectedHash = createPortfolioContentHash(content);
     const changes: Array<Partial<GeneratedPortfolioContent["research"][number]>> = [
-      { graphicalAbstract: "/images/research/cytocv-graphical-abstract.png" },
+      { graphicalAbstract: "/images/research/revised-cytocv-graphical-abstract.webp" },
       { graphicalAbstractAlt: "CytoCV graphical abstract." },
       { video: "/images/research/cytocv-workflow.webm" }
     ];
@@ -778,8 +778,14 @@ describe("XLSX workbook structure and cells", () => {
   it("accepts the canonical research media schema", async () => {
     const sheets = await parsePortfolioWorkbook(await createWorkbookBytes());
 
-    expect(sheets.research[0]).toHaveProperty("graphical_abstract", "");
-    expect(sheets.research[0]).toHaveProperty("graphical_abstract_alt", "");
+    expect(sheets.research[0]).toHaveProperty(
+      "graphical_abstract",
+      "/images/research/cytocv-graphical-abstract.png"
+    );
+    expect(sheets.research[0]).toHaveProperty(
+      "graphical_abstract_alt",
+      "Four-step CytoCV workflow from yeast microscopy channels through segmentation and fluorescence measurement to reviewable CSV/XLSX export."
+    );
     expect(sheets.research[0]).toHaveProperty("video", "");
     expect(sheets.research[0]).not.toHaveProperty("image");
   });
