@@ -11,7 +11,7 @@ type RecommendationGeometry = {
 type RecommendationLayoutSample = {
   cardPositions: string[];
   collapsedHeights: string[];
-  slotTops: number[];
+  slotOffsets: number[];
 };
 
 async function settleLayout(page: Page) {
@@ -56,12 +56,13 @@ async function getDocumentTop(locator: Locator): Promise<number> {
 async function getDesktopLayoutSnapshot(list: Locator) {
   return list.evaluate((element) => {
     const slots = Array.from(element.querySelectorAll<HTMLElement>(".recommendations-list__item"));
+    const listTop = element.getBoundingClientRect().top;
 
     return {
       collapsedHeights: slots.map((slot) =>
         slot.style.getPropertyValue("--recommendation-detail-collapsed-height")
       ),
-      slotTops: slots.map((slot) => slot.getBoundingClientRect().top + window.scrollY)
+      slotOffsets: slots.map((slot) => slot.getBoundingClientRect().top - listTop)
     };
   });
 }
@@ -75,6 +76,7 @@ async function sampleDesktopLayout(list: Locator, durationMs = 620): Promise<Rec
 
         const sample = () => {
           const slots = Array.from(element.querySelectorAll<HTMLElement>(".recommendations-list__item"));
+          const listTop = element.getBoundingClientRect().top;
 
           samples.push({
             cardPositions: slots.map((slot) => {
@@ -84,7 +86,7 @@ async function sampleDesktopLayout(list: Locator, durationMs = 620): Promise<Rec
             collapsedHeights: slots.map((slot) =>
               slot.style.getPropertyValue("--recommendation-detail-collapsed-height")
             ),
-            slotTops: slots.map((slot) => slot.getBoundingClientRect().top + window.scrollY)
+            slotOffsets: slots.map((slot) => slot.getBoundingClientRect().top - listTop)
           });
 
           if (performance.now() - startedAt >= sampleDuration) {
@@ -103,16 +105,16 @@ async function sampleDesktopLayout(list: Locator, durationMs = 620): Promise<Rec
 
 function expectStableDesktopLayout(
   samples: RecommendationLayoutSample[],
-  expectedSlotTops: number[],
+  expectedSlotOffsets: number[],
   expectedCollapsedHeights: string[]
 ) {
   expect(samples.length).toBeGreaterThan(2);
 
   for (const sample of samples) {
-    expect(sample.cardPositions).toEqual(expectedSlotTops.map(() => "absolute"));
+    expect(sample.cardPositions).toEqual(expectedSlotOffsets.map(() => "absolute"));
 
-    for (let index = 0; index < expectedSlotTops.length; index += 1) {
-      expect(Math.abs(sample.slotTops[index]! - expectedSlotTops[index]!)).toBeLessThanOrEqual(1);
+    for (let index = 0; index < expectedSlotOffsets.length; index += 1) {
+      expect(Math.abs(sample.slotOffsets[index]! - expectedSlotOffsets[index]!)).toBeLessThanOrEqual(1);
       expect(
         Math.abs(
           Number.parseFloat(sample.collapsedHeights[index]!) -
@@ -212,7 +214,7 @@ test.describe("recommendation cards", () => {
     await expect(activeSlot).toHaveAttribute("data-expanded", "true");
     expectStableDesktopLayout(
       await sampleDesktopLayout(list),
-      collapsedLayout.slotTops,
+      collapsedLayout.slotOffsets,
       collapsedLayout.collapsedHeights
     );
 
@@ -247,7 +249,7 @@ test.describe("recommendation cards", () => {
     await expect(activeSlot).toHaveAttribute("data-expanded", "false");
     expectStableDesktopLayout(
       await sampleDesktopLayout(list),
-      collapsedLayout.slotTops,
+      collapsedLayout.slotOffsets,
       collapsedLayout.collapsedHeights
     );
     await expectDesktopOverlayCleared(list);
@@ -268,14 +270,14 @@ test.describe("recommendation cards", () => {
       );
       expectStableDesktopLayout(
         await sampleDesktopLayout(list),
-        paletteCollapsedLayout.slotTops,
+        paletteCollapsedLayout.slotOffsets,
         paletteCollapsedLayout.collapsedHeights
       );
       await activeSlot.getByRole("button", { name: /show less recommendation/i }).click();
       await expect(activeSlot).toHaveAttribute("data-expanded", "false");
       expectStableDesktopLayout(
         await sampleDesktopLayout(list),
-        paletteCollapsedLayout.slotTops,
+        paletteCollapsedLayout.slotOffsets,
         paletteCollapsedLayout.collapsedHeights
       );
       await expectDesktopOverlayCleared(list);
@@ -295,7 +297,7 @@ test.describe("recommendation cards", () => {
       await expect(activeSlot).toHaveAttribute("data-expanded", "false");
       expectStableDesktopLayout(
         await sampleDesktopLayout(list),
-        collapsedLayout.slotTops,
+        collapsedLayout.slotOffsets,
         collapsedLayout.collapsedHeights
       );
       await expectDesktopOverlayCleared(list);
@@ -309,7 +311,7 @@ test.describe("recommendation cards", () => {
     await expect(activeSlot).toHaveAttribute("data-expanded", "false");
     expectStableDesktopLayout(
       await sampleDesktopLayout(list),
-      collapsedLayout.slotTops,
+      collapsedLayout.slotOffsets,
       collapsedLayout.collapsedHeights
     );
     await expectDesktopOverlayCleared(list);
@@ -326,7 +328,7 @@ test.describe("recommendation cards", () => {
       await expect(switchSlot).toHaveAttribute("data-expanded", "true");
       expectStableDesktopLayout(
         await sampleDesktopLayout(list),
-        collapsedLayout.slotTops,
+        collapsedLayout.slotOffsets,
         collapsedLayout.collapsedHeights
       );
 
