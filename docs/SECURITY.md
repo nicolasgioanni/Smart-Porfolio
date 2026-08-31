@@ -39,6 +39,13 @@ CSV content is untrusted build input. `csv-parse` must resolve to `7.0.2` or lat
 Canonical graphical abstracts must pass the same strict, root-relative `/images/research/` path guard during generated-content validation and direct presentation resolution. The guard rejects remote and protocol-relative URLs, traversal, repeated percent-encoded traversal, backslashes, null bytes, whitespace, query strings, fragments, and unsupported extensions. Curated fallback lookup accepts only own keys in the three-project registry; invalid or incomplete canonical input fails closed instead of falling back.
 
 Contributed PNG sanitation is a local publication tool, but its inputs remain untrusted. The CLI rejects files larger than 32 MiB from file metadata before reading. The parser independently caps input at 32 MiB, declared chunk data at 30 MiB, chunk count at 4,096, decoded image data at 64 MiB, each dimension at 16,384 pixels, and the canvas at 67,108,864 pixels. It requires nonzero dimensions, legal PNG color-type and bit-depth pairs, standard compression and filtering, supported noninterlaced or Adam7 scanlines, legal palette and critical-chunk ordering, a bounded valid zlib stream with exact filter-prefixed scanlines, consecutive nonempty image data, and a terminal `IEND`. Test-only limit overrides may lower protected ceilings but cannot raise or bypass them. Retained chunks remain byte-identical, and the sanitized output is parsed again before it can be written.
+## Dependency maintenance
+
+`package-lock.json` is the reviewed dependency graph, and CI installs it with `npm ci`. Run both `npm audit` and `npm audit --omit=dev` after a dependency change: the first covers the full quality-gate graph, while the second covers the deployed runtime graph.
+
+ExcelJS remains exactly `4.4.0` because no newer release is available. Its only override is the nested `exceljs > uuid` `11.1.1` remediation; do not broaden that override to unrelated UUID consumers. `npm ls exceljs uuid` and the locked audit establish that the remediation resolves to `11.1.1`.
+
+GHSA-w5hq-g745-h8pq concerns caller-buffer behavior in UUID v3, v5, and v6. The package-contract test establishes the required resolved version. The real XLSX data-bar test calls ExcelJS's UUID v4 extension path, verifies the generated identifier is serialized into worksheet XML, and verifies that ExcelJS restores the identical identifier on read. That test proves ExcelJS compatibility and serialization for the override; it does not by itself exercise or prove the advisory's v3/v5/v6 caller-buffer remediation. Re-evaluate and remove the narrow override when upgrading ExcelJS.
 
 ## Threat model
 
