@@ -56,9 +56,9 @@ Theme selection updates colors without closing the panel. Reduced motion preserv
 
 ## Mobile navigation rail
 
-At `max-width: 980px`, route links remain in one native horizontal rail. After each pathname loads, automatic motion waits exactly `3000ms`. If the rail overflows and has not been touched, it returns to the Home edge over `420ms`, then drifts at approximately `20px` per second and reverses at each boundary. Links are never cloned or reordered, and the motion has no live announcement.
+At `max-width: 980px`, route links followed by GitHub, LinkedIn, Email, and theme controls remain in one native horizontal rail. After each pathname loads, automatic motion waits exactly `3000ms`. If the rail overflows and has not been touched, it returns to the Home edge over `420ms`, then drifts at approximately `20px` per second and reverses at each boundary. Controls are never cloned or reordered, and the motion has no live announcement.
 
-Pointer, swipe, wheel, keyboard, or focus interaction inside the rail permanently stops automatic motion for the current pathname. A new pathname enables the initial idle behavior again. Pause while the document is hidden, and cancel timers and animation frames when the mobile breakpoint exits or the component unmounts. Reduced motion disables the automatic return and drift while preserving manual horizontal scrolling. Edge fades reflect the current overflow boundary without animating content opacity.
+Pointer, swipe, wheel, keyboard, focus, or native scroll interaction inside the rail pauses automatic motion and restarts a `5000ms` inactivity delay. When that delay completes, drift resumes from the current scroll position and preserves its prior direction instead of returning Home. An open theme menu holds the pause; closing it starts a fresh inactivity delay. A new pathname restores the initial `3000ms` behavior. Pause countdowns while the document is hidden, and cancel timers and animation frames when the mobile breakpoint exits or the component unmounts. Reduced motion disables the automatic return and drift while preserving manual horizontal scrolling. Edge fades reflect the current overflow boundary without animating content opacity.
 
 ## Scroll reveal
 

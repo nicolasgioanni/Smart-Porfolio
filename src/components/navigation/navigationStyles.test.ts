@@ -37,16 +37,27 @@ describe("responsive navigation styles", () => {
     );
   });
 
-  it("uses a constrained route rail beside persistent compact actions", () => {
+  it("keeps the desktop action cluster in its original grid slot through a display-contents wrapper", () => {
+    expect(navigationStyles).toMatch(/\.mobile-navigation\s*\{[^}]*display:\s*contents/);
+    expect(navigationStyles).toMatch(/\.mobile-navigation__routes\s*\{[^}]*display:\s*none/);
+    expect(navigationStyles).toMatch(
+      /\.blob-header__actions\s*\{(?=[^}]*grid-column:\s*3)(?=[^}]*grid-row:\s*1)(?=[^}]*justify-self:\s*end)[^}]*\}/
+    );
+  });
+
+  it("uses one mobile rail for routes, social links, and the theme control", () => {
     expect(mobileStyles).toMatch(
-      /\.blob-header__island,\s*\.blob-header--compact \.blob-header__island\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) auto/
+      /\.blob-header__island,\s*\.blob-header--compact \.blob-header__island\s*\{(?=[^}]*grid-template-columns:\s*minmax\(0, 1fr\))(?=[^}]*gap:\s*0)[^}]*\}/
     );
     expect(mobileStyles).toMatch(/\.site-brand,\s*\.main-navigation\s*\{[^}]*display:\s*none/);
     expect(mobileStyles).toMatch(
-      /\.mobile-navigation\s*\{(?=[^}]*grid-column:\s*1)(?=[^}]*display:\s*block)(?=[^}]*min-width:\s*0)(?=[^}]*overflow:\s*hidden)[^}]*\}/
+      /\.mobile-navigation\.mobile-navigation__rail\s*\{(?=[^}]*grid-column:\s*1)(?=[^}]*display:\s*flex)(?=[^}]*width:\s*100%)(?=[^}]*min-width:\s*0)(?=[^}]*overflow-x:\s*auto)[^}]*\}/
     );
     expect(mobileStyles).toMatch(
-      /\.blob-header__actions,\s*\.blob-header--compact \.blob-header__actions\s*\{(?=[^}]*grid-column:\s*2)(?=[^}]*flex:\s*0 0 auto)(?=[^}]*min-width:\s*max-content)[^}]*\}/
+      /\.mobile-navigation__routes\s*\{(?=[^}]*display:\s*flex)(?=[^}]*flex:\s*0 0 auto)(?=[^}]*min-width:\s*max-content)[^}]*\}/
+    );
+    expect(mobileStyles).toMatch(
+      /\.blob-header__actions,\s*\.blob-header--compact \.blob-header__actions\s*\{(?=[^}]*grid-column:\s*auto)(?=[^}]*justify-self:\s*auto)(?=[^}]*flex:\s*0 0 auto)(?=[^}]*min-width:\s*max-content)(?=[^}]*scroll-snap-align:\s*start)[^}]*\}/
     );
     expect(mobileStyles).toMatch(
       /\.blob-header \.social-link-group,\s*\.blob-header--compact \.social-link-group\s*\{(?=[^}]*display:\s*flex)(?=[^}]*flex:\s*0 0 auto)(?=[^}]*flex-wrap:\s*nowrap)[^}]*\}/
@@ -56,9 +67,9 @@ describe("responsive navigation styles", () => {
     );
   });
 
-  it("provides native swipe overflow, snapping, padded ends, and full route targets", () => {
+  it("provides native swipe overflow and snapping across the complete dock", () => {
     expect(mobileStyles).toMatch(
-      /\.mobile-navigation__rail\s*\{(?=[^}]*padding:\s*0 var\(--space-2\))(?=[^}]*overflow-x:\s*auto)(?=[^}]*overflow-y:\s*hidden)(?=[^}]*overscroll-behavior-inline:\s*contain)(?=[^}]*scroll-behavior:\s*auto)(?=[^}]*scroll-padding-inline:\s*var\(--space-2\))(?=[^}]*scroll-snap-type:\s*inline proximity)(?=[^}]*scrollbar-width:\s*none)(?=[^}]*touch-action:\s*pan-x pan-y)[^}]*\}/
+      /\.mobile-navigation\.mobile-navigation__rail\s*\{(?=[^}]*padding:\s*0 var\(--space-2\))(?=[^}]*overflow-x:\s*auto)(?=[^}]*overflow-y:\s*hidden)(?=[^}]*overscroll-behavior-inline:\s*contain)(?=[^}]*scroll-behavior:\s*auto)(?=[^}]*scroll-padding-inline:\s*var\(--space-2\))(?=[^}]*scroll-snap-type:\s*inline proximity)(?=[^}]*scrollbar-width:\s*none)(?=[^}]*touch-action:\s*pan-x pan-y)[^}]*\}/
     );
     expect(mobileStyles).toMatch(/\.mobile-navigation__rail::-webkit-scrollbar\s*\{[^}]*display:\s*none/);
     expect(mobileStyles).toMatch(
@@ -85,6 +96,9 @@ describe("responsive navigation styles", () => {
   it("opens the mobile theme menu upward from the action edge", () => {
     expect(mobileStyles).toMatch(
       /\.theme-switcher__popover\s*\{(?=[^}]*top:\s*auto)(?=[^}]*bottom:\s*calc\(100% - 1px\))(?=[^}]*transform-origin:\s*bottom right)[^}]*\}/
+    );
+    expect(mobileStyles).toMatch(
+      /\.theme-switcher__popover--portal\s*\{(?=[^}]*position:\s*fixed)(?=[^}]*z-index:\s*60)(?=[^}]*top:\s*auto)(?=[^}]*transform-origin:\s*bottom right)[^}]*\}/
     );
   });
 

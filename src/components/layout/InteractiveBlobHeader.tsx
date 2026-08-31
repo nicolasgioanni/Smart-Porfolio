@@ -200,11 +200,21 @@ export function InteractiveBlobHeader({ brand, initialTheme, navigationItems, pr
             </span>
           </div>
           <MainNavigation items={navigationItems} />
-          <MobileNavigation items={navigationItems} />
-          <div className="blob-header__actions">
-            <SocialLinkGroup compact links={primaryLinks.slice(0, 4)} />
-            <ThemeSwitcher initialTheme={initialTheme} onOpenChange={handleThemeMenuOpenChange} open={themeMenuOpen} />
-          </div>
+          <MobileNavigation
+            actions={
+              <div className="blob-header__actions">
+                <SocialLinkGroup compact links={primaryLinks.slice(0, 4)} />
+                <ThemeSwitcher
+                  initialTheme={initialTheme}
+                  onOpenChange={handleThemeMenuOpenChange}
+                  open={themeMenuOpen}
+                  portalPopover={mobileUiMode}
+                />
+              </div>
+            }
+            externalPaused={themeMenuOpen}
+            items={navigationItems}
+          />
         </div>
       </header>
       {brand.markImageSrc ? <ProfileImagePreview alt={profileImageAlt} imageSrc={brand.markImageSrc} onClose={closeProfilePreview} open={profilePreviewOpen} /> : null}
