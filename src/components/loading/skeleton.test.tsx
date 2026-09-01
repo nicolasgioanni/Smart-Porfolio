@@ -1,6 +1,20 @@
 ﻿import { render, screen } from "@testing-library/react";
 import type { ComponentType } from "react";
-import { describe, expect, it } from "vitest";
+import type { ResearchItem } from "@/content/types";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { researchSkeletonFixtures } from "../../../tests/fixtures/researchSkeletonContent";
+
+const researchContentFixture = vi.hoisted(() => ({
+  items: [] as ResearchItem[]
+}));
+
+vi.mock("@/lib/content/getPortfolioContent", () => ({
+  getPortfolioContent: () => ({
+    profile: {},
+    research: researchContentFixture.items,
+    siteSettings: { enableSkeletons: true }
+  })
+}));
 import LoadingContact from "@/app/contact/loading";
 import LoadingExperience from "@/app/experience/loading";
 import LoadingHome from "@/app/loading";
@@ -23,10 +37,8 @@ import { RouteSkeleton, routeSkeletons, skeletonRoutePaths } from "@/components/
 import { SkeletonBlock } from "@/components/loading/SkeletonBlock";
 import { SkeletonText } from "@/components/loading/SkeletonText";
 import { siteRoutePaths, type SiteRoutePath } from "@/components/navigation/siteRoutes";
-import { getPortfolioContent } from "@/lib/content/getPortfolioContent";
-import { getResearchFormalTitle } from "@/lib/content/researchNarratives";
+import { getResearchVisibleResources } from "@/lib/content/researchNarratives";
 import { routeHeaderContent } from "@/lib/content/routeHeaderContent";
-import { selectResearchDetailContent } from "@/lib/content/selectHomeContent";
 
 const routeLoadingComponents = {
   "/": LoadingHome,
@@ -42,6 +54,10 @@ const routeLoadingComponents = {
 } as const satisfies Readonly<Record<SiteRoutePath, ComponentType>>;
 
 describe("skeleton components", () => {
+  afterEach(() => {
+    researchContentFixture.items = [];
+  });
+
   it("renders block shapes without content text", () => {
     const { container } = render(<SkeletonText rows={3} />);
 
@@ -109,26 +125,34 @@ describe("skeleton components", () => {
     expect(container.querySelector(".skeleton-page__header")).not.toBeInTheDocument();
   });
 
-  it("keeps the custom Research intro title footprint aligned with shared page headings", () => {
-    const { container } = render(<LoadingResearch />);
-
-    expect(container.querySelector(".research-skeleton__intro-copy .route-header-skeleton__title")).toBeInTheDocument();
-    expect(container.querySelectorAll(".research-skeleton__project")).toHaveLength(3);
-    expect(
-      Array.from(container.querySelectorAll(".research-skeleton__project")).map(
-        (project) => project.querySelectorAll(".research-skeleton__details > .skeleton-block").length
-      )
-    ).toEqual([4, 3, 3]);
-    expect(container.querySelectorAll(".research-skeleton__video-actions > .skeleton-block")).toHaveLength(3);
-    expect(container.querySelectorAll(".research-skeleton__media-stack")).toHaveLength(1);
-    expect(container.querySelectorAll(".research-skeleton__abstract-frame")).toHaveLength(3);
-    expect(
-      Array.from(container.querySelectorAll(".research-skeleton__resources")).map(
+  for (const { items, name, resourceCounts } of researchSkeletonFixtures) {
+    it(`keeps the custom Research intro title footprint aligned with ${name}`, () => {
+      researchContentFixture.items = [...items];
+      const { container } = render(<LoadingResearch />);
+      const renderedResourceCounts = Array.from(container.querySelectorAll(".research-skeleton__resources")).map(
         (resources) => resources.querySelectorAll(":scope > .skeleton-block").length
-      )
-    ).toEqual([4, 3, 1]);
-    expect(container.querySelectorAll("[role=dialog]")).toHaveLength(0);
-  });
+      );
+      const resolvedResourceCounts = items.map((item) => {
+        const resources = getResearchVisibleResources(item);
+
+        return resources.links.length + resources.pendingLinks.length;
+      });
+
+      expect(container.querySelector(".research-skeleton__intro-copy .route-header-skeleton__title")).toBeInTheDocument();
+      expect(container.querySelectorAll(".research-skeleton__project")).toHaveLength(3);
+      expect(
+        Array.from(container.querySelectorAll(".research-skeleton__project")).map(
+          (project) => project.querySelectorAll(".research-skeleton__details > .skeleton-block").length
+        )
+      ).toEqual([4, 3, 3]);
+      expect(container.querySelectorAll(".research-skeleton__video-actions > .skeleton-block")).toHaveLength(3);
+      expect(container.querySelectorAll(".research-skeleton__media-stack")).toHaveLength(1);
+      expect(container.querySelectorAll(".research-skeleton__abstract-frame")).toHaveLength(3);
+      expect(resolvedResourceCounts).toEqual(resourceCounts);
+      expect(renderedResourceCounts).toEqual(resolvedResourceCounts);
+      expect(container.querySelectorAll("[role=dialog]")).toHaveLength(0);
+    });
+  }
 
   it("uses one exhaustive loader-safe header registry and hides canonical ink from assistive technology", () => {
     expect(Object.keys(routeHeaderContent)).toEqual(siteRoutePaths);
@@ -168,9 +192,7 @@ describe("skeleton components", () => {
       [59, 102, 100, 44, 54]
     ]);
     expect(projectSkeletonProfiles.map((profile) => profile.actionWidths)).toEqual([[112, 96], [112], [112]]);
-    expect(researchSkeletonProfiles.map((profile) => profile.formalTitle)).toEqual(
-      selectResearchDetailContent(getPortfolioContent()).map((item) => Boolean(getResearchFormalTitle(item)))
-    );
+    expect(researchSkeletonProfiles.map((profile) => profile.formalTitle)).toEqual([true, false, true]);
   });
 
   it("covers every declared route with a local loading boundary and registered composition", () => {
