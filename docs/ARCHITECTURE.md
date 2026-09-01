@@ -87,6 +87,8 @@ Core pages do not require a runtime Next.js server, database, authentication ser
 
 `src/app/robots.txt` and `src/app/sitemap.xml` use Next.js static metadata file conventions so they are copied into the export without a runtime metadata route. Their focused tests compare crawler policy and canonical sitemap URLs with the shared site configuration and route registry.
 
+Next 16's client router requests flattened `__next.*.txt` segment-cache files. On Windows, the framework exporter can preserve platform separators inside those generated names and create nested directories instead, as tracked in Next.js issues [#92339](https://github.com/vercel/next.js/issues/92339) and [#85374](https://github.com/vercel/next.js/issues/85374). Next 16.3.4 runs the stable `adapterPath` build-completion hook after the full static export, so the local adapter invokes `scripts/normalizeNextStaticExport.mjs` before the content-version writer runs. It converts only directory trees that match 16.3.4's filesystem-safe, dot-free encoded-segment grammar, beginning with one `__next.<encoded-segment>` root, to the same flat layout produced on Linux. It rejects malformed trees, symbolic links, unexpected entries, path escapes, and collisions, preserves the segment bytes, and leaves an already-correct export untouched.
+
 Static export does not mean the site contains no JavaScript. Focused client components hydrate browser-only behavior:
 
 - active-route measurement, mobile rail overflow state, and bounded idle navigation motion;

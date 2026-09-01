@@ -26,6 +26,7 @@ import { resolveThemeName } from "@/lib/theme/resolveThemeName";
 const spaceGrotesk = Space_Grotesk({
   fallback: ["Segoe UI", "Arial", "sans-serif"],
   display: "swap",
+  preload: false,
   subsets: ["latin"],
   variable: "--font-space-grotesk",
   weight: ["400", "500", "600", "700"]

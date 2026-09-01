@@ -26,6 +26,7 @@ describe("site typography contract", () => {
     const loader = layoutSource.match(/const\s+(\w+)\s*=\s*Space_Grotesk\(\{([\s\S]*?)\}\);/);
     expect(loader).not.toBeNull();
     expect(loader?.[2]).toMatch(/display:\s*"swap"/);
+    expect(loader?.[2]).toMatch(/preload:\s*false/);
     expect(loader?.[2]).toMatch(/subsets:\s*\[\s*"latin"\s*]/);
     expect(loader?.[2]).toMatch(/variable:\s*"--font-space-grotesk"/);
     expect(loader?.[2]).toMatch(/weight:\s*\[\s*"400",\s*"500",\s*"600",\s*"700"\s*]/);

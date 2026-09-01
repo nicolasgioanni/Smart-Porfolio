@@ -1,5 +1,6 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
 import { captureBrowserConsole, expectNoBrowserConsoleIssues } from "./browserConsole";
+import { settleLayout } from "./settleLayout";
 import { selectThemeWithChooser } from "./themePreference";
 
 type RecommendationGeometry = {
@@ -22,16 +23,6 @@ test.beforeEach(async ({ page }) => {
 test.afterEach(async ({ page }) => {
   expectNoBrowserConsoleIssues(page);
 });
-
-async function settleLayout(page: Page) {
-  await page.waitForLoadState("networkidle");
-  await page.evaluate(async () => {
-    await document.fonts.ready;
-    await new Promise<void>((resolve) => {
-      window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve()));
-    });
-  });
-}
 
 async function waitForStableHeight(locator: Locator) {
   await locator.evaluate(
@@ -197,7 +188,7 @@ test.describe("recommendation cards", () => {
   test("keeps desktop rows fixed and dims exactly the cards covered by the active overlay", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto("/recommendations");
-    await settleLayout(page);
+    await settleLayout(page, { waitForNetworkIdle: true });
 
     const list = page.locator(".recommendations-list");
     const slots = list.locator(".recommendations-list__item");
@@ -374,7 +365,7 @@ test.describe("recommendation cards", () => {
     for (const width of [980, 390]) {
       await page.setViewportSize({ width, height: 900 });
       await page.goto("/recommendations");
-      await settleLayout(page);
+      await settleLayout(page, { waitForNetworkIdle: true });
 
       const list = page.locator(".recommendations-list");
       const slots = list.locator(".recommendations-list__item");
@@ -438,7 +429,7 @@ test.describe("recommendation cards", () => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto("/recommendations");
-    await settleLayout(page);
+    await settleLayout(page, { waitForNetworkIdle: true });
 
     const list = page.locator(".recommendations-list");
     const slots = list.locator(".recommendations-list__item");
