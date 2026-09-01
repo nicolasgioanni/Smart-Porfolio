@@ -1,9 +1,18 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { siteRoutePaths } from "../../src/components/navigation/siteRoutes";
+import { captureBrowserConsole, expectNoBrowserConsoleIssues } from "./browserConsole";
 import { reloadWithStoredTheme } from "./themePreference";
 
 const mobileWidths = [320, 390, 768] as const;
 const viewportHeight = 844;
+
+test.beforeEach(async ({ page }) => {
+  captureBrowserConsole(page);
+});
+
+test.afterEach(async ({ page }) => {
+  expectNoBrowserConsoleIssues(page);
+});
 
 async function openHome(page: Page) {
   await page.goto("/");
@@ -401,6 +410,20 @@ test("restarts page entry motion after client-side navigation", async ({ page })
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.goto("/");
 
+  const root = page.locator("html");
+  await expect(root).toHaveAttribute("data-scroll-behavior", "smooth");
+  await page.evaluate(() => {
+    const rootElement = document.documentElement;
+    rootElement.style.scrollBehavior = "smooth";
+    const scrollBehaviorChanges: string[] = [];
+
+    new MutationObserver((records) => {
+      for (const record of records) scrollBehaviorChanges.push(record.oldValue ?? "");
+    }).observe(rootElement, { attributeFilter: ["style"], attributeOldValue: true, attributes: true });
+
+    (window as Window & { __scrollBehaviorChanges?: string[] }).__scrollBehaviorChanges = scrollBehaviorChanges;
+  });
+
   const initialPageBody = page.locator(".site-main > .page-container");
   await expect(initialPageBody).toHaveCSS("animation-name", "page-body-enter");
   await initialPageBody.evaluate((element) => {
@@ -434,6 +457,10 @@ test("restarts page entry motion after client-side navigation", async ({ page })
   });
   expect(navigationResult.sameDocument).toBe(true);
   expect(navigationResult.replacedPageBody).toBe(true);
+  await expect.poll(() => page.evaluate(
+    () => (window as Window & { __scrollBehaviorChanges?: string[] }).__scrollBehaviorChanges ?? []
+  )).toContain("scroll-behavior: auto;");
+  await expect(root).toHaveAttribute("style", "scroll-behavior: smooth;");
 });
 
 test("shows page content immediately when reduced motion is requested", async ({ page }) => {

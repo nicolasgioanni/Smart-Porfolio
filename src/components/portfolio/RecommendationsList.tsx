@@ -131,7 +131,7 @@ function updateOverlayGeometry(root: HTMLElement, activeId: string | null, usesN
 
 export function RecommendationsList({ items }: { items: RecommendationItem[] }) {
   const rootRef = useRef<HTMLDivElement>(null);
-  const scheduledFrameRef = useRef<number>();
+  const scheduledFrameRef = useRef<number | undefined>(undefined);
   const [activeId, setActiveId] = useState<string | null>(null);
   const usesNaturalFlow = useMediaQuery(MOBILE_UI_QUERY);
   const previousNaturalFlowRef = useRef(usesNaturalFlow);

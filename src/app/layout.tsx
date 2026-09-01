@@ -26,6 +26,7 @@ import { resolveThemeName } from "@/lib/theme/resolveThemeName";
 const spaceGrotesk = Space_Grotesk({
   fallback: ["Segoe UI", "Arial", "sans-serif"],
   display: "swap",
+  preload: false,
   subsets: ["latin"],
   variable: "--font-space-grotesk",
   weight: ["400", "500", "600", "700"]
@@ -46,7 +47,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   const initialTheme = resolveThemeName(content.siteSettings.defaultTheme);
 
   return (
-    <html lang={SITE_LANGUAGE} data-theme={initialTheme} suppressHydrationWarning>
+    <html lang={SITE_LANGUAGE} data-scroll-behavior="smooth" data-theme={initialTheme} suppressHydrationWarning>
       <head>
         <ThemePreferenceScript initialTheme={initialTheme} />
       </head>

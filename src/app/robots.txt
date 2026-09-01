@@ -1,0 +1,7 @@
+User-Agent: *
+Allow: /
+Disallow: /api/
+Disallow: /content-version.json
+Disallow: /artifact-integrity.json
+
+Sitemap: https://nicolasmgioanni.dev/sitemap.xml

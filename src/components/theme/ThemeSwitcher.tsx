@@ -40,7 +40,7 @@ export function ThemeSwitcher({
   const [internalOpen, setInternalOpen] = useState(false);
   const [portalPlacement, setPortalPlacement] = useState<PortalPlacement | null>(null);
   const [portalReady, setPortalReady] = useState(false);
-  const closeTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const finePointerRef = useRef(true);
   const themeTransitionIdRef = useRef(0);
   const ignoreThemeTransitionLeaveRef = useRef(false);

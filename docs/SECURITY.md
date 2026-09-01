@@ -247,9 +247,10 @@ Run:
 
 ```powershell
 npm audit
+npm audit --omit=dev
 ```
 
-Classify findings as production runtime, static-build, or development-tooling risk. Do not run forced major upgrades without reviewing compatibility and generated artifact changes.
+Review the full graph for static-build and development-tooling risk, then use the production-only result for deployable runtime exposure. Resolve advisories in the Next.js runtime and its matching ESLint plugin before release; record any separately scheduled exception with its package, affected path, remediation owner, and target branch. Do not run forced major upgrades without reviewing compatibility and generated artifact changes.
 
 ## Adding or changing an endpoint
 
