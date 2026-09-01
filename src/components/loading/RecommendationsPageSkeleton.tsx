@@ -1,10 +1,11 @@
 import { PageSkeleton } from "@/components/loading/PageSkeleton";
 import { SkeletonBlock } from "@/components/loading/SkeletonBlock";
 import { SkeletonText } from "@/components/loading/SkeletonText";
+import { siteRoutes } from "@/components/navigation/siteRoutes";
 
 export function RecommendationsPageSkeleton() {
   return (
-    <PageSkeleton>
+    <PageSkeleton pathname={siteRoutes.recommendations}>
       <div aria-hidden="true" className="detail-card-skeleton-grid detail-card-skeleton-grid--recommendations">
         {Array.from({ length: 4 }).map((_, index) => (
           <article className="detail-card-skeleton detail-card-skeleton--recommendation" key={index}>

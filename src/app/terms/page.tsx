@@ -4,8 +4,10 @@ import { siteRoutes } from "@/components/navigation/siteRoutes";
 import { SmartLink } from "@/components/navigation/SmartLink";
 import { createPageMetadata } from "@/lib/content/createPageMetadata";
 import { getPortfolioContent } from "@/lib/content/getPortfolioContent";
+import { routeHeaderContent } from "@/lib/content/routeHeaderContent";
 
-const pageTitle = "Site Terms & Accuracy Notice";
+const termsHeader = routeHeaderContent[siteRoutes.terms];
+const pageTitle = termsHeader.title;
 const pageDescription =
   "Notice for this informational portfolio, including accuracy, verification, intellectual property, and availability information.";
 
@@ -24,7 +26,8 @@ export default function TermsPage() {
 
   return (
     <LegalDocument
-      description="How portfolio information may be used, verified, and attributed."
+      description={termsHeader.description}
+      eyebrow={termsHeader.eyebrow}
       effectiveDate={effectiveDate}
       motionEnabled={content.siteSettings.enableScrollMotion}
       title={pageTitle}

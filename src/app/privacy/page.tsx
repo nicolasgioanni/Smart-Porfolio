@@ -4,8 +4,10 @@ import { siteRoutes } from "@/components/navigation/siteRoutes";
 import { SmartLink } from "@/components/navigation/SmartLink";
 import { createPageMetadata } from "@/lib/content/createPageMetadata";
 import { getPortfolioContent } from "@/lib/content/getPortfolioContent";
+import { routeHeaderContent } from "@/lib/content/routeHeaderContent";
 
-const pageTitle = "Privacy Notice";
+const privacyHeader = routeHeaderContent[siteRoutes.privacy];
+const pageTitle = privacyHeader.title;
 const pageDescription =
   "Privacy information for this portfolio, including theme storage, hosting request data, contact submissions, email communications, and visitor choices.";
 const privacyNoticeEffectiveDate = resolveLegalEffectiveDate("2026-09-09");
@@ -32,7 +34,8 @@ export default function PrivacyPage() {
 
   return (
     <LegalDocument
-      description="What information may be processed when you visit this portfolio or choose to make contact."
+      description={privacyHeader.description}
+      eyebrow={privacyHeader.eyebrow}
       effectiveDate={privacyNoticeEffectiveDate}
       motionEnabled={content.siteSettings.enableScrollMotion}
       title={pageTitle}

@@ -4,8 +4,10 @@ import { PageContainer } from "@/components/layout/PageContainer";
 import { siteRoutes } from "@/components/navigation/siteRoutes";
 import { createPageMetadata } from "@/lib/content/createPageMetadata";
 import { getPortfolioContent } from "@/lib/content/getPortfolioContent";
+import { routeHeaderContent } from "@/lib/content/routeHeaderContent";
 
-const pageTitle = "Contact";
+const contactHeader = routeHeaderContent[siteRoutes.contact];
+const pageTitle = contactHeader.title;
 const pageDescription =
   "Send Nicolas Gioanni a prioritized professional contact request.";
 
@@ -25,7 +27,7 @@ export default function ContactPage() {
   return (
     <PageContainer
       className="page-container--contact"
-      description="My University of Washington inbox is public and receives a high volume of email. For the fastest response and priority review, send a quick request through this form."
+      description={contactHeader.description}
       introVariant="panel"
       motionEnabled={content.siteSettings.enableScrollMotion}
       title={pageTitle}

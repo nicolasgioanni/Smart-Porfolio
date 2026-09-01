@@ -15,14 +15,20 @@ describe("skeleton style contracts", () => {
     expect(skeletonStyles).toMatch(/\.skeleton-page--home\s*\{[^}]*padding-top: var\(--space-8\)/s);
     expect(skeletonStyles).toMatch(/\.skeleton-page--legal\s*\{[^}]*width: min\(940px, calc\(100% - 32px\)\)/s);
     expect(skeletonStyles).toMatch(
-      /@media \(max-width: 860px\)[\s\S]*?\.skeleton-page__title\s*\{[^}]*height: 25px !important/s
+      /\.route-header-skeleton__ink\s*\{[^}]*color: transparent;[^}]*background-color: var\(--color-skeleton-surface\);[^}]*-webkit-box-decoration-break: clone;[^}]*box-decoration-break: clone/s
     );
+    expect(skeletonStyles).not.toMatch(/route-header-skeleton__geometry|tablet-tier/);
     expect(motionStyles).not.toMatch(/\.skeleton-page[^}]*animation:\s*page-body-enter/);
   });
 
   it("uses static solid loading blocks without shimmer", () => {
     expect(skeletonStyles).toMatch(/\.skeleton-block\s*\{[^}]*background:\s*var\(--color-skeleton-surface\)/s);
     expect(skeletonStyles).not.toMatch(/skeleton-shimmer|gradient|animation:/);
+    expect(skeletonStyles).not.toMatch(/skeleton-[^{]*\{[^}]*transition:/);
+    expect(experienceStyles).not.toMatch(/experience-skeleton[^{]*\{[^}]*animation:|experience-skeleton[^{]*\{[^}]*transition:/);
+    expect(researchStyles).not.toMatch(/research-skeleton[^{]*\{[^}]*animation:/);
+    expect(researchStyles).not.toMatch(/research-skeleton[^{]*\{[^}]*transition:/);
+    expect(researchStyles).not.toMatch(/research-skeleton[^{]*\{[^}]*backdrop-filter|research-skeleton[^{]*\{[^}]*filter:/);
   });
 
   it("preserves route geometry and responsive breakpoints from the resolved page styles", () => {
@@ -48,6 +54,9 @@ describe("skeleton style contracts", () => {
     );
     expect(skeletonStyles).toMatch(
       /@media \(max-width: 980px\)[\s\S]*?\.home-skeleton__portrait\s*\{[^}]*width: clamp\(150px, 28vw, 220px\) !important[^}]*height: clamp\(150px, 28vw, 220px\) !important/s
+    );
+    expect(skeletonStyles).toMatch(
+      /@media \(max-width: 980px\)[\s\S]*?\.home-skeleton__profile\s*\{[^}]*margin-bottom: clamp\(var\(--space-10\), 5vw, 3\.5rem\)/s
     );
     expect(skeletonStyles).toMatch(
       /@media \(max-width: 720px\)[\s\S]*?\.home-skeleton__academic-grid\s*\{[^}]*grid-template-columns: minmax\(0, 1fr\)/s
@@ -100,6 +109,24 @@ describe("skeleton style contracts", () => {
     );
     expect(researchStyles).toMatch(
       /\.research-skeleton__project\s*\{[^}]*border: 1px solid var\(--color-line\)[^}]*background: var\(--color-surface\)[^}]*box-shadow: var\(--shadow-card\)/s
+    );
+  });
+
+  it("models the published research media stacks with natural aspect-ratio geometry", () => {
+    expect(researchStyles).toMatch(
+      /\.research-skeleton__video-viewport\s*\{[^}]*aspect-ratio: 1710 \/ 1108[^}]*overflow: hidden/s
+    );
+    expect(researchStyles).toMatch(/\.research-skeleton__abstract-frame\s*\{[^}]*aspect-ratio: 16 \/ 9/s);
+    expect(researchStyles).toMatch(
+      /\.research-skeleton__video-actions\s*\{[^}]*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/s
+    );
+    expect(researchStyles).toMatch(
+      /@media \(max-width: 390px\)[\s\S]*?\.research-skeleton__video-actions\s*\{[^}]*grid-template-columns: minmax\(0, 1fr\)/s
+    );
+    expect(researchStyles).toMatch(/\.research-skeleton__details\s*\{[^}]*gap: 1px/s);
+    expect(researchStyles).toMatch(/\.research-skeleton__resources\s*\{[^}]*flex-wrap: wrap/s);
+    expect(researchStyles).toMatch(
+      /@media \(max-width: 620px\)[\s\S]*?\.research-skeleton__resources\s*\{[^}]*flex-direction: column/s
     );
   });
 

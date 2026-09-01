@@ -1,10 +1,11 @@
 import { PageSkeleton } from "@/components/loading/PageSkeleton";
 import { SkeletonBlock } from "@/components/loading/SkeletonBlock";
 import { SkeletonText } from "@/components/loading/SkeletonText";
+import { siteRoutes } from "@/components/navigation/siteRoutes";
 
 export function HomePageSkeleton() {
   return (
-    <PageSkeleton showHeader={false} variant="home">
+    <PageSkeleton pathname={siteRoutes.home} variant="home">
       <div aria-hidden="true" className="home-skeleton">
         <section className="home-skeleton__hero">
           <div className="home-skeleton__profile">
@@ -14,8 +15,7 @@ export function HomePageSkeleton() {
               <SkeletonBlock height={16} width="42%" />
             </div>
             <div className="home-skeleton__identity-list">
-              <SkeletonBlock height={16} width="78%" />
-              <SkeletonBlock height={16} width="64%" />
+              {[78, 64, 72, 86, 58].map((width, index) => <SkeletonBlock height={16} key={index} width={`${width}%`} />)}
             </div>
           </div>
           <div className="home-skeleton__introduction">
@@ -62,13 +62,17 @@ export function HomePageSkeleton() {
               <SkeletonBlock height={28} width="26%" />
               <SkeletonBlock height={36} radius={12} width={58} />
             </div>
-            {Array.from({ length: 3 }).map((_, index) => (
-              <div className="home-skeleton__row" key={index}>
+            {[1, 2, 2].map((roleCount, index) => (
+              <div className="home-skeleton__experience-group" key={index}>
                 <SkeletonBlock height={48} radius="999px" width={48} />
                 <div>
                   <SkeletonBlock height={20} width="54%" />
-                  <SkeletonBlock height={14} width="72%" />
-                  <SkeletonBlock height={14} width="42%" />
+                  {Array.from({ length: roleCount }).map((_, roleIndex) => (
+                    <div className="home-skeleton__experience-role" key={roleIndex}>
+                      <SkeletonBlock height={14} width={roleIndex === 0 ? "72%" : "60%"} />
+                      <SkeletonBlock height={14} width={roleIndex === 0 ? "42%" : "48%"} />
+                    </div>
+                  ))}
                 </div>
               </div>
             ))}

@@ -1,28 +1,33 @@
 import { PageSkeleton } from "@/components/loading/PageSkeleton";
+import { RouteHeaderSkeleton } from "@/components/loading/RouteHeaderSkeleton";
 import { SkeletonBlock } from "@/components/loading/SkeletonBlock";
 import { SkeletonText } from "@/components/loading/SkeletonText";
+import { siteRoutes } from "@/components/navigation/siteRoutes";
+import type { RouteHeaderContentSource } from "@/lib/content/routeHeaderContent";
 
-export function ExperiencePageSkeleton() {
+export const experienceSkeletonProfiles = [
+  { id: "us-treasury-ai-engineer", overviewRows: 0 },
+  { id: "research-assistant-software-engineering", overviewRows: 4 },
+  { id: "teaching-assistant", overviewRows: 4 },
+  { id: "undergraduate-researcher-adversarial-ml", overviewRows: 4 },
+  { id: "research-assistant-ai-ml", overviewRows: 4 }
+] as const;
+
+export function ExperiencePageSkeleton({ headerContent }: { headerContent?: RouteHeaderContentSource }) {
   return (
-    <PageSkeleton showHeader={false}>
+    <PageSkeleton pathname={siteRoutes.experience}>
       <div className="experience-skeleton" aria-hidden="true">
         <div className="experience-skeleton__intro">
           <div className="experience-skeleton__intro-copy">
-            <SkeletonBlock
-              className="skeleton-page__title"
-              height={28}
-              radius={14}
-              width="min(100%, 260px)"
-            />
-            <SkeletonText rows={2} />
+            <RouteHeaderSkeleton content={headerContent} pathname={siteRoutes.experience} />
           </div>
           <div className="experience-skeleton__intro-control">
-            <SkeletonBlock height={12} width={42} />
-            <SkeletonBlock height={40} radius="999px" width={196} />
+            <SkeletonBlock height={20.4} width={42} />
+            <SkeletonBlock height={52} radius="999px" width={196} />
           </div>
         </div>
-        {Array.from({ length: 5 }).map((_, index) => (
-          <article className="experience-skeleton__card" key={index}>
+        {experienceSkeletonProfiles.map((profile) => (
+          <article className="experience-skeleton__card" key={profile.id}>
             <div className="experience-skeleton__header">
               <SkeletonBlock height={64} radius="999px" width={64} />
               <div className="experience-skeleton__identity">
@@ -34,7 +39,7 @@ export function ExperiencePageSkeleton() {
             <div className="experience-skeleton__body">
               <SkeletonText rows={2} />
               <div className="experience-skeleton__chapters">
-                {Array.from({ length: 3 }).map((_, chapterIndex) => (
+                {Array.from({ length: profile.overviewRows }).map((_, chapterIndex) => (
                   <SkeletonBlock height={72} key={chapterIndex} />
                 ))}
               </div>
