@@ -156,6 +156,22 @@ describe("ResearchShowcase", () => {
     expect(within(amlProject!).getByRole("link", { name: "Reference manuscript for Adversarial Machine Learning" })).toBeInTheDocument();
   });
 
+  it("deduplicates pending resource labels before rendering disabled controls", () => {
+    const item = {
+      ...researchItems[0]!,
+      pendingLinks: ["Manuscript", " manuscript ", "Source code"]
+    };
+    render(<ResearchShowcase items={[item]} motionEnabled={false} />);
+
+    const project = screen.getByRole("heading", { level: 2, name: "CytoCV" }).closest("article");
+    const resources = project!.querySelector<HTMLElement>(".research-project__resources");
+
+    expect(resources).not.toBeNull();
+    expect(within(resources!).getAllByRole("link")).toHaveLength(3);
+    expect(within(resources!).getAllByRole("button")).toHaveLength(1);
+    expect(within(resources!).getByRole("button", { name: "Manuscript — not yet published" })).toBeDisabled();
+  });
+
   it("switches every project to technical copy and keeps one disclosure open per project", () => {
     render(<ResearchShowcase items={researchItems} motionEnabled={false} />);
 
