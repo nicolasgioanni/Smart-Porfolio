@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   getSafePlaybackTime,
   pauseAndResetPlayback,
+  pauseAndTransferPlayback,
   pausePlayback,
   setPlaybackTime,
   type ResearchVideoPlaybackSurface
@@ -12,19 +13,16 @@ function createSurface(currentTime = 0, duration = Number.NaN): ResearchVideoPla
 }
 
 describe("research video playback transfer", () => {
-  it("pauses and rewinds media so reopening cannot resume an earlier timeline", () => {
+  it("pauses and transfers a safe timeline without starting either surface", () => {
     const events: string[] = [];
     const outgoing = createSurface(12.5, 60);
+    const incoming = createSurface(0, 60);
     outgoing.pause = vi.fn(() => events.push("pause"));
-    Object.defineProperty(outgoing, "currentTime", {
-      configurable: true,
-      get: () => 0,
-      set: () => events.push("seek")
-    });
 
-    pauseAndResetPlayback(outgoing);
-    expect(events).toEqual(["pause", "seek"]);
+    expect(pauseAndTransferPlayback(outgoing, incoming)).toBe(12.5);
+    expect(events).toEqual(["pause"]);
     expect(outgoing.pause).toHaveBeenCalledOnce();
+    expect(incoming.currentTime).toBe(12.5);
   });
 
   it("clamps a timeline to known duration bounds", () => {

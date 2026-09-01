@@ -3,3 +3,5 @@
 *.jpg binary
 *.jpeg binary
 *.ico binary
+/public/images/research/cytocv-supplementary-video-s1.en.vtt text eol=lf
+/public/images/research/cytocv-supplementary-video-s1-transcript.txt text eol=lf

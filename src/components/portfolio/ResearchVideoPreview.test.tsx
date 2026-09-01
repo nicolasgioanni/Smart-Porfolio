@@ -34,6 +34,7 @@ describe("ResearchVideoPreview", () => {
 
   beforeEach(() => {
     vi.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(() => undefined);
+    vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -66,41 +67,42 @@ describe("ResearchVideoPreview", () => {
     expect(openButton).toHaveAttribute("aria-expanded", "false");
   });
 
-  it("uses the shared modal lifecycle and resets playback on close, Escape, and rapid reopen", async () => {
+  it("uses the shared modal lifecycle while handing off a paused timeline on close, Escape, and rapid reopen", async () => {
     const { container } = render(<ResearchVideoPreview poster={graphicalAbstract} title="Example Research" video={video} />);
     const inlinePlayer = container.querySelector<HTMLVideoElement>(".research-video__player")!;
     const openButton = screen.getByRole("button", { name: "Expand video for Example Research" });
-    setMediaTimeline(inlinePlayer, 27);
+    setMediaTimeline(inlinePlayer, 12.5);
     const pauseInline = vi.spyOn(inlinePlayer, "pause");
 
     fireEvent.click(openButton);
     const dialog = await screen.findByRole("dialog", { name: "Example Research supplementary workflow video" });
     const closeButton = within(dialog).getByRole("button", { name: "Close video for Example Research" });
     const modalPlayer = dialog.querySelector<HTMLVideoElement>(".research-video-dialog__player")!;
-    setMediaTimeline(modalPlayer, 19);
     const pauseModal = vi.spyOn(modalPlayer, "pause");
 
     expect(openButton).toHaveAttribute("aria-expanded", "true");
-    expect(inlinePlayer.currentTime).toBe(0);
+    expect(inlinePlayer.currentTime).toBe(12.5);
+    expect(modalPlayer.currentTime).toBe(12.5);
     expect(pauseInline).toHaveBeenCalled();
     await waitFor(() => expect(closeButton).toHaveFocus());
     expect(document.body.style.overflow).toBe("hidden");
 
+    setMediaTimeline(modalPlayer, 46.25);
     fireEvent.keyDown(document, { key: "Escape" });
     expect(openButton).toHaveAttribute("aria-expanded", "false");
-    expect(modalPlayer.currentTime).toBe(0);
-    expect(inlinePlayer.currentTime).toBe(0);
+    expect(modalPlayer.currentTime).toBe(46.25);
+    expect(inlinePlayer.currentTime).toBe(46.25);
     expect(pauseModal).toHaveBeenCalled();
 
     fireEvent.click(openButton);
     const reopenedDialog = await screen.findByRole("dialog", { name: "Example Research supplementary workflow video" });
     const reopenedPlayer = reopenedDialog.querySelector<HTMLVideoElement>(".research-video-dialog__player")!;
-    setMediaTimeline(reopenedPlayer, 0);
-    expect(reopenedPlayer.currentTime).toBe(0);
+    expect(reopenedPlayer.currentTime).toBe(46.25);
     fireEvent.click(within(reopenedDialog).getByRole("button", { name: "Close video for Example Research" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(openButton).toHaveFocus();
     expect(document.body.style.overflow).toBe(originalBodyOverflow);
+    expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
   });
 
   it("announces loading, errors, and ended playback without blocking the fallbacks", () => {
@@ -111,10 +113,34 @@ describe("ResearchVideoPreview", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Video playback is unavailable");
     expect(screen.getByRole("link", { name: "Read transcript" })).toBeInTheDocument();
 
+    fireEvent.play(player);
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+
     fireEvent.ended(player);
     expect(screen.getByRole("status")).toHaveTextContent("Video ended");
 
+    fireEvent.loadedMetadata(player);
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+
     fireEvent.loadStart(player);
     expect(screen.getByRole("status")).toHaveTextContent("Loading video metadata");
+  });
+
+  it("synchronizes metadata that loaded before hydration and keeps modal status isolated after close", async () => {
+    vi.spyOn(HTMLMediaElement.prototype, "readyState", "get").mockReturnValue(HTMLMediaElement.HAVE_ENOUGH_DATA);
+    const { container } = render(<ResearchVideoPreview poster={graphicalAbstract} title="Example Research" video={video} />);
+    const inlinePlayer = container.querySelector<HTMLVideoElement>(".research-video__player")!;
+    const openButton = screen.getByRole("button", { name: "Expand video for Example Research" });
+
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    fireEvent.click(openButton);
+    const dialog = await screen.findByRole("dialog", { name: "Example Research supplementary workflow video" });
+    const modalPlayer = dialog.querySelector<HTMLVideoElement>(".research-video-dialog__player")!;
+
+    fireEvent.loadStart(modalPlayer);
+    expect(within(dialog).getByRole("status")).toHaveTextContent("Loading video metadata");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Close video for Example Research" }));
+    expect(inlinePlayer.readyState).toBe(HTMLMediaElement.HAVE_ENOUGH_DATA);
+    expect(container.querySelector(".research-video__status")).not.toBeInTheDocument();
   });
 });

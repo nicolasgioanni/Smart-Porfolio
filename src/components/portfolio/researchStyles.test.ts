@@ -130,6 +130,8 @@ describe("research showcase styles", () => {
       researchStyles.indexOf(".research-abstract {")
     );
     const videoViewportRule = researchStyles.match(/\.research-video__viewport\s*\{[^}]*}/s)?.[0] ?? "";
+    const videoHeaderRule = researchStyles.match(/\.research-video__header\s*\{[^}]*}/s)?.[0] ?? "";
+    const videoActionsRule = researchStyles.match(/\.research-video__actions\s*\{[^}]*}/s)?.[0] ?? "";
     const playerRule = researchStyles.match(/\.research-video__player\s*\{[^}]*}/s)?.[0] ?? "";
     const dialogFrameRule = researchStyles.match(/\.research-video-dialog__frame\s*\{[^}]*}/s)?.[0] ?? "";
     const dialogViewportRule = researchStyles.match(/\.research-video-dialog__viewport\s*\{[^}]*}/s)?.[0] ?? "";
@@ -137,6 +139,9 @@ describe("research showcase styles", () => {
 
     expect(videoFeatureBlock).toMatch(/background:\s*var\(--visual-surface\)/);
     expect(videoFeatureBlock).not.toMatch(/gradient|backdrop-filter|blur|shadow-glow/i);
+    expect(videoHeaderRule).toMatch(/grid-template-columns:\s*minmax\(0, 1fr\)/);
+    expect(videoActionsRule).toMatch(/grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/);
+    expect(videoActionsRule).toMatch(/min-width:\s*0/);
     expect(videoViewportRule).toMatch(/aspect-ratio:\s*1710\s*\/\s*1108/);
     expect(videoViewportRule).toMatch(/overflow:\s*hidden/);
     expect(playerRule).toMatch(/object-fit:\s*contain/);

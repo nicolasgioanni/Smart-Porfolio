@@ -88,6 +88,35 @@ async function expectNoHorizontalOverflow(page: Page) {
     .toBe(true);
 }
 
+async function expectVideoHeaderContained(project: Locator) {
+  const geometry = await project.evaluate((projectElement) => {
+    const visual = projectElement.querySelector<HTMLElement>(".research-project__visual");
+    const header = projectElement.querySelector<HTMLElement>(".research-video__header");
+    const actions = projectElement.querySelector<HTMLElement>(".research-video__actions");
+    const controls = Array.from(actions?.querySelectorAll<HTMLElement>("a, button") ?? []);
+    if (!visual || !header || !actions) throw new Error("CytoCV video header is missing its containment elements.");
+
+    const visualBox = visual.getBoundingClientRect();
+    return {
+      actions: { clientWidth: actions.clientWidth, scrollWidth: actions.scrollWidth },
+      controls: controls.map((control) => {
+        const box = control.getBoundingClientRect();
+        return { left: box.left, right: box.right };
+      }),
+      header: { clientWidth: header.clientWidth, scrollWidth: header.scrollWidth },
+      visual: { left: visualBox.left, right: visualBox.right }
+    };
+  });
+
+  expect(geometry.header.scrollWidth).toBeLessThanOrEqual(geometry.header.clientWidth + 1);
+  expect(geometry.actions.scrollWidth).toBeLessThanOrEqual(geometry.actions.clientWidth + 1);
+  expect(geometry.controls).toHaveLength(3);
+  for (const control of geometry.controls) {
+    expect(control.left).toBeGreaterThanOrEqual(geometry.visual.left - 1);
+    expect(control.right).toBeLessThanOrEqual(geometry.visual.right + 1);
+  }
+}
+
 async function getFirstProjectWithDisclosure(projects: Locator): Promise<Locator | undefined> {
   const projectCount = await projects.count();
 
@@ -605,57 +634,71 @@ test.describe("Research showcase", () => {
     await expectDisclosureFocusToKeepRestingElevation(page, project!);
   });
 
-  test("keeps the CytoCV captioned video modal contained with native media fallbacks", async ({ page }) => {
+  test("keeps the CytoCV captioned video, header, and modal contained in every palette", async ({ page }) => {
     test.slow();
+
+    await page.goto("/research");
 
     for (const viewport of [
       { width: 1280, height: 600 },
       { width: 320, height: 568 }
     ]) {
-      await page.setViewportSize(viewport);
-      await page.goto("/research");
-      await settleLayout(page);
+      for (const theme of ["navy", "light", "dark"] as const) {
+        await page.setViewportSize(viewport);
+        await reloadWithStoredTheme(page, theme);
+        await settleLayout(page);
 
-      const project = page.locator('article.research-project[id="cytocv-miller-lab"]');
-      await expect(project).toHaveCount(1);
-      const player = project.locator("video.research-video__player");
-      const openButton = project.getByRole("button", { name: /Expand video for CytoCV/ });
-      await expect(player).toHaveAttribute("controls", "");
-      await expect(player).toHaveAttribute("preload", "metadata");
-      await expect(player).toHaveAttribute("playsinline", "");
-      await expect(player).not.toHaveAttribute("autoplay");
-      await expect(player).not.toHaveAttribute("controlslist", /./);
-      await expect(player).not.toHaveAttribute("disablepictureinpicture", /./);
-      await expect(project.getByRole("link", { name: "Read transcript" })).toHaveAttribute(
-        "href",
-        "/images/research/cytocv-supplementary-video-s1-transcript.txt"
-      );
-      await expect(project.getByRole("link", { name: "Download MP4" })).toHaveAttribute("download", "");
+        const project = page.locator('article.research-project[id="cytocv-miller-lab"]');
+        await expect(project).toHaveCount(1);
+        const player = project.locator("video.research-video__player");
+        const openButton = project.getByRole("button", { name: /Expand video for CytoCV/ });
+        await expect(player).toHaveAttribute("controls", "");
+        await expect(player).toHaveAttribute("preload", "metadata");
+        await expect(player).toHaveAttribute("playsinline", "");
+        await expect(player).not.toHaveAttribute("autoplay");
+        await expect(player).not.toHaveAttribute("controlslist", /./);
+        await expect(player).not.toHaveAttribute("disablepictureinpicture", /./);
+        await expect(project.getByRole("link", { name: "Read transcript" })).toHaveAttribute(
+          "href",
+          "/images/research/cytocv-supplementary-video-s1-transcript.txt"
+        );
+        await expect(project.getByRole("link", { name: "Download MP4" })).toHaveAttribute("download", "");
+        await expect
+          .poll(() => player.evaluate((video) => (video as HTMLVideoElement).readyState >= HTMLMediaElement.HAVE_METADATA))
+          .toBe(true);
+        await expect(project.locator(".research-video__status")).toHaveCount(0);
+        await expectVideoHeaderContained(project);
 
-      await openButton.scrollIntoViewIfNeeded();
-      await openButton.click();
-      const dialog = page.getByRole("dialog", { name: "CytoCV supplementary workflow video" });
-      const dialogPlayer = dialog.locator("video.research-video-dialog__player");
-      const closeButton = dialog.getByRole("button", { name: /Close video for CytoCV/ });
-      await expect(dialog).toBeVisible();
-      await expect(closeButton).toBeFocused();
-      await expect(dialogPlayer).toHaveAttribute("controls", "");
-      await expect(dialogPlayer.locator("track")).toHaveAttribute(
-        "src",
-        "/images/research/cytocv-supplementary-video-s1.en.vtt"
-      );
-      await expectNoHorizontalOverflow(page);
+        await openButton.scrollIntoViewIfNeeded();
+        await openButton.click();
+        const dialog = page.getByRole("dialog", { name: "CytoCV supplementary workflow video" });
+        const dialogPlayer = dialog.locator("video.research-video-dialog__player");
+        const closeButton = dialog.getByRole("button", { name: /Close video for CytoCV/ });
+        await expect(dialog).toBeVisible();
+        await expect(closeButton).toBeFocused();
+        await expect(dialogPlayer).toHaveAttribute("controls", "");
+        await expect(dialogPlayer.locator("track")).toHaveAttribute(
+          "src",
+          "/images/research/cytocv-supplementary-video-s1.en.vtt"
+        );
+        await expect(dialog).toHaveCSS("background-image", "none");
+        await expectNoHorizontalOverflow(page);
 
-      const [dialogBox, viewportBox] = await Promise.all([dialog.boundingBox(), dialog.locator(".research-video-dialog__viewport").boundingBox()]);
-      expect(dialogBox).not.toBeNull();
-      expect(viewportBox).not.toBeNull();
-      expect(dialogBox!.x).toBeGreaterThanOrEqual(0);
-      expect(dialogBox!.y).toBeGreaterThanOrEqual(0);
-      expect(dialogBox!.x + dialogBox!.width).toBeLessThanOrEqual(viewport.width + 1);
-      expect(dialogBox!.y + dialogBox!.height).toBeLessThanOrEqual(viewport.height + 1);
-      await closeButton.click();
-      await expect(dialog).toHaveCount(0);
-      await expect(openButton).toBeFocused();
+        const [dialogBox, viewportBox] = await Promise.all([
+          dialog.boundingBox(),
+          dialog.locator(".research-video-dialog__viewport").boundingBox()
+        ]);
+        expect(dialogBox).not.toBeNull();
+        expect(viewportBox).not.toBeNull();
+        expect(dialogBox!.x).toBeGreaterThanOrEqual(0);
+        expect(dialogBox!.y).toBeGreaterThanOrEqual(0);
+        expect(dialogBox!.x + dialogBox!.width).toBeLessThanOrEqual(viewport.width + 1);
+        expect(dialogBox!.y + dialogBox!.height).toBeLessThanOrEqual(viewport.height + 1);
+        await closeButton.click();
+        await expect(dialog).toHaveCount(0);
+        await expect(openButton).toBeFocused();
+        await expect(project.locator(".research-video__status")).toHaveCount(0);
+      }
     }
   });
 });
