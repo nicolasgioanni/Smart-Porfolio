@@ -227,6 +227,111 @@
   opacity: 0.78;
 }
 
+.research-media-stack {
+  display: grid;
+  grid-template-rows: auto auto;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 100%;
+  background: var(--visual-surface);
+}
+
+.research-video {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+  padding: clamp(var(--space-4), 3vw, var(--space-8));
+  color: #eafaff;
+  background: var(--visual-surface);
+}
+
+.research-video__header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.research-video__title,
+.research-video__duration {
+  display: block;
+}
+
+.research-video__title {
+  margin: 0;
+  color: #eafaff;
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-heading);
+}
+
+.research-video__duration {
+  margin-top: var(--space-1);
+  color: rgba(232, 244, 255, 0.68);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-heading);
+}
+
+.research-video__actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: 100%;
+  min-width: 0;
+  gap: var(--space-2);
+}
+
+.research-video__transcript,
+.research-video__download,
+.research-video__expand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 0;
+  padding-inline: var(--space-3);
+  border: 1px solid var(--detail-accent-border);
+  border-radius: var(--radius-pill);
+  color: #eafaff;
+  background: #10243a;
+  font: inherit;
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-heading);
+  overflow-wrap: anywhere;
+  text-align: center;
+  text-decoration: none;
+}
+
+.research-video__status {
+  margin: 0;
+  color: rgba(232, 244, 255, 0.82);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-normal);
+}
+
+.research-video__viewport {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-width: 0;
+  aspect-ratio: 1710 / 1108;
+  overflow: hidden;
+  border: 1px solid var(--detail-accent-border);
+  border-radius: var(--radius-card);
+  background: #000;
+  box-shadow: var(--shadow-soft);
+}
+
+.research-video__player {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+}
+
 .research-abstract {
   display: grid;
   place-items: center;
@@ -332,6 +437,102 @@
 }
 
 .research-abstract-dialog__frame > .research-abstract-dialog__close {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  appearance: none;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-pill);
+  color: var(--color-ink-strong);
+  background: var(--color-control-surface);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--font-size-page-title);
+  line-height: 1;
+}
+
+.research-media-stack > .research-abstract {
+  height: auto;
+  min-height: 0;
+  padding: clamp(var(--space-4), 2vw, var(--space-6));
+  border-top: 1px solid var(--color-line);
+}
+
+.research-media-stack > .research-abstract .research-abstract__trigger {
+  max-width: 32rem;
+}
+
+.research-video-dialog {
+  padding: clamp(var(--space-3), 2.4vw, var(--space-6));
+  background: var(--color-profile-preview-backdrop);
+}
+
+.research-video-dialog__frame {
+  position: relative;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  gap: var(--space-2);
+  width: min(100%, 100rem);
+  height: 100%;
+  max-height: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: clamp(3.5rem, 6vw, 4.75rem) clamp(var(--space-3), 2.4vw, var(--space-6))
+    clamp(var(--space-3), 2.4vw, var(--space-6));
+  overflow: hidden;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface-strong);
+  box-shadow: var(--shadow-soft);
+}
+
+.research-video-dialog__viewport {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: #000;
+}
+
+.research-video-dialog__player {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-inline-size: 100%;
+  max-block-size: 100%;
+  object-fit: contain;
+  background: #000;
+}
+
+.research-video-dialog__resources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.research-video-dialog__resources .research-video__transcript,
+.research-video-dialog__resources .research-video__download {
+  color: var(--color-ink-strong);
+  background: var(--color-control-surface);
+}
+
+.research-video-dialog__resources + .research-video__status {
+  color: var(--color-muted);
+}
+
+.research-video-dialog__frame > .research-video-dialog__close {
   position: absolute;
   top: var(--space-3);
   right: var(--space-3);
@@ -590,15 +791,48 @@
     padding: var(--space-4);
   }
 
-  .research-abstract-dialog {
+  .research-video {
+    padding: var(--space-4);
+  }
+
+  .research-video__header {
+    align-items: stretch;
+  }
+
+  .research-video__actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .research-video__transcript,
+  .research-video__download,
+  .research-video__expand {
+    width: 100%;
+  }
+
+  .research-abstract-dialog,
+  .research-video-dialog {
     padding: var(--space-2);
   }
 
-  .research-abstract-dialog__frame {
+  .research-abstract-dialog__frame,
+  .research-video-dialog__frame {
     padding: 3.75rem var(--space-2) var(--space-2);
     border-radius: var(--radius-card);
   }
 
+  .research-video-dialog__resources {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+}
+
+@media (max-width: 390px) {
+  .research-video__actions,
+  .research-video-dialog__resources {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -623,7 +857,9 @@
 }
 
 .site-shell[data-glass-effects="false"] .research-visual,
-.site-shell[data-glass-effects="false"] .research-abstract {
+.site-shell[data-glass-effects="false"] .research-abstract,
+.site-shell[data-glass-effects="false"] .research-video,
+.site-shell[data-glass-effects="false"] .research-media-stack {
   background: var(--visual-surface);
 }
 
