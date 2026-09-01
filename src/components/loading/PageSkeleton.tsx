@@ -1,32 +1,33 @@
 import type { ReactNode } from "react";
-import { SkeletonBlock } from "@/components/loading/SkeletonBlock";
+import { RouteHeaderSkeleton } from "@/components/loading/RouteHeaderSkeleton";
+import type { SiteRoutePath } from "@/components/navigation/siteRoutes";
+import { getRouteHeaderContent } from "@/lib/content/routeHeaderContent";
 
 type PageSkeletonProps = {
   children: ReactNode;
-  headerVariant?: "default" | "legal";
-  showHeader?: boolean;
+  pathname: SiteRoutePath;
   variant?: "default" | "home" | "legal" | "contact";
 };
 
 export function PageSkeleton({
   children,
-  headerVariant = "default",
-  showHeader = true,
+  pathname,
   variant = "default"
 }: PageSkeletonProps) {
+  const header = getRouteHeaderContent(pathname);
+
   return (
     <section
       aria-busy="true"
       aria-label="Loading page"
       className={["skeleton-page", `skeleton-page--${variant}`].join(" ")}
     >
-      {showHeader ? (
-        <header className="skeleton-page__header" aria-hidden="true">
-          {headerVariant === "legal" ? <SkeletonBlock height={12} width={112} /> : null}
-          <SkeletonBlock className="skeleton-page__title" height={28} radius={14} width="min(100%, 460px)" />
-          <SkeletonBlock height={20} width="min(100%, 760px)" />
-          <SkeletonBlock height={20} width="min(74%, 580px)" />
-        </header>
+      {header?.placement === "page" ? (
+        <div className="page-intro page-intro--panel skeleton-page__intro">
+          <header className="page-intro__surface skeleton-page__header" aria-hidden="true">
+            <RouteHeaderSkeleton pathname={pathname} />
+          </header>
+        </div>
       ) : null}
       {children}
     </section>

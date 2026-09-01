@@ -11,6 +11,7 @@ import { EmptyState } from "@/components/portfolio/EmptyState";
 import type { DetailMode } from "@/lib/content/detailNarratives";
 import { getExperienceModeContent } from "@/lib/content/experienceNarratives";
 import { formatProfileOverviewDateRange } from "@/lib/content/profileOverview";
+import { routeHeaderContent } from "@/lib/content/routeHeaderContent";
 
 type ExperienceShowcaseProps = {
   items: ExperienceItem[];
@@ -71,7 +72,7 @@ export function ExperienceShowcase({ items, motionEnabled = true, summary }: Exp
       }
       introVariant="panel"
       motionEnabled={motionEnabled}
-      title="Experience"
+      title={routeHeaderContent["/experience"].title}
     >
       <div className="experience-showcase" data-motion={motionEnabled ? "enabled" : "disabled"}>
         {items.length === 0 ? (

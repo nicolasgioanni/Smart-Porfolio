@@ -2,10 +2,11 @@ import { PageSkeleton } from "@/components/loading/PageSkeleton";
 import { SkeletonBlock } from "@/components/loading/SkeletonBlock";
 import { SkeletonButton } from "@/components/loading/SkeletonButton";
 import { SkeletonText } from "@/components/loading/SkeletonText";
+import { siteRoutes } from "@/components/navigation/siteRoutes";
 
 export function ResumePageSkeleton() {
   return (
-    <PageSkeleton>
+    <PageSkeleton pathname={siteRoutes.resume}>
       <section aria-hidden="true" className="resume-skeleton">
         <div className="resume-skeleton__content">
           <SkeletonBlock height={14} width={112} />

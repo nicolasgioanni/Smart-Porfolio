@@ -1,0 +1,14 @@
+import { execFileSync } from "node:child_process";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import type { SiteRoutePath } from "../../src/components/navigation/siteRoutes";
+
+const helperDirectory = path.dirname(fileURLToPath(import.meta.url));
+const projectRoot = path.resolve(helperDirectory, "..", "..");
+const rendererPath = path.join(helperDirectory, "renderSkeletonAlignment.tsx");
+const serializedMarkup = execFileSync(process.execPath, ["--import", "tsx", rendererPath], {
+  cwd: projectRoot,
+  encoding: "utf8"
+});
+
+export const skeletonAlignmentMarkupByRoute = JSON.parse(serializedMarkup) as Readonly<Record<SiteRoutePath, string>>;

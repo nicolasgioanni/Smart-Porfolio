@@ -12,15 +12,15 @@ import { siteRoutes, type SiteRoutePath } from "@/components/navigation/siteRout
 type RouteSkeletonComponent = ComponentType;
 
 function TermsPageSkeleton() {
-  return <LegalPageSkeleton sectionProfiles={legalSkeletonProfiles[siteRoutes.terms]} />;
+  return <LegalPageSkeleton pathname={siteRoutes.terms} sectionProfiles={legalSkeletonProfiles[siteRoutes.terms]} />;
 }
 
 function PrivacyPageSkeleton() {
-  return <LegalPageSkeleton sectionProfiles={legalSkeletonProfiles[siteRoutes.privacy]} />;
+  return <LegalPageSkeleton pathname={siteRoutes.privacy} sectionProfiles={legalSkeletonProfiles[siteRoutes.privacy]} />;
 }
 
 function SecurityPageSkeleton() {
-  return <LegalPageSkeleton sectionProfiles={legalSkeletonProfiles[siteRoutes.security]} />;
+  return <LegalPageSkeleton pathname={siteRoutes.security} sectionProfiles={legalSkeletonProfiles[siteRoutes.security]} />;
 }
 
 export const routeSkeletons = {
