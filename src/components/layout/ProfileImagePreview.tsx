@@ -9,7 +9,7 @@ type ProfileImagePreviewProps = {
   imageSrc: string;
   onClose: () => void;
   open: boolean;
-  restoreFocusRef: RefObject<HTMLElement>;
+  restoreFocusRef: RefObject<HTMLElement | null>;
 };
 
 export function ProfileImagePreview({ alt, imageSrc, onClose, open, restoreFocusRef }: ProfileImagePreviewProps) {

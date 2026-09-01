@@ -32,11 +32,11 @@ The central route registry classifies every visitor page into exactly one indexi
 
 `/contact` is the only non-indexable visitor route. It remains crawlable and emits `noindex, follow`, allowing Google to read the directive and follow its links. It is deliberately absent from the sitemap but is not blocked by `robots.txt`. The directive is an indexing policy, not an access-control boundary.
 
-New visitor routes must be added to the central registry and explicitly assigned to one of these groups. Metadata, sitemap generation, and regression tests consume that shared classification.
+New visitor routes must be added to the central registry and explicitly assigned to one of these groups. Metadata and regression tests consume that shared classification.
 
 ## Generated search files
 
-The native Next.js metadata route in `src/app/robots.ts` generates `/robots.txt`. Its wildcard rule allows the site and disallows only:
+The Next.js static metadata source in `src/app/robots.txt` is emitted as `/robots.txt`. Its wildcard rule allows the site and disallows only:
 
 - `/api/`
 - `/content-version.json`
@@ -44,9 +44,9 @@ The native Next.js metadata route in `src/app/robots.ts` generates `/robots.txt`
 
 The file also advertises `https://nicolasmgioanni.dev/sitemap.xml`. It does not block `/contact`, page routes, or Next.js assets.
 
-The native metadata route in `src/app/sitemap.ts` generates `/sitemap.xml` from the indexable route collection. It contains the nine absolute canonical URLs listed above and no contact, Function, metadata, asset, preview, `www`, query-string, or fragment URL. Entries intentionally omit priority, change frequency, and modification dates because the repository has no accurate per-route modification timestamp.
+The static metadata source in `src/app/sitemap.xml` is emitted as `/sitemap.xml`. It contains the nine absolute canonical URLs listed above and no contact, Function, metadata, asset, preview, `www`, query-string, or fragment URL. Entries intentionally omit priority, change frequency, and modification dates because the repository has no accurate per-route modification timestamp.
 
-Both files are produced as part of the generated static artifact. They are not edited by hand, and the deployment smoke check compares each deployed response with the already-verified local artifact. See [Deployment](DEPLOYMENT.md#exact-automated-smoke-scope) for that check.
+Both source-controlled static metadata files are copied into the generated artifact. Their focused tests compare the crawler policy and sitemap URLs with shared site configuration and the indexable route registry, and the deployment smoke check compares each deployed response with the already-verified local artifact. See [Deployment](DEPLOYMENT.md#exact-automated-smoke-scope) for that check.
 
 ## Page metadata
 

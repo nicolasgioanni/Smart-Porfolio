@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { captureBrowserConsole, expectNoBrowserConsoleIssues } from "./browserConsole";
 import { selectThemeWithChooser } from "./themePreference";
 
 type RecommendationGeometry = {
@@ -13,6 +14,14 @@ type RecommendationLayoutSample = {
   collapsedHeights: string[];
   slotOffsets: number[];
 };
+
+test.beforeEach(async ({ page }) => {
+  captureBrowserConsole(page);
+});
+
+test.afterEach(async ({ page }) => {
+  expectNoBrowserConsoleIssues(page);
+});
 
 async function settleLayout(page: Page) {
   await page.waitForLoadState("networkidle");

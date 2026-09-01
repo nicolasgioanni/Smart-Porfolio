@@ -18,11 +18,11 @@ type ModalDialogProps = ModalDialogAccessibleName & {
   children: ReactNode;
   dialogId: string;
   frameClassName?: string;
-  initialFocusRef?: RefObject<HTMLElement>;
+  initialFocusRef?: RefObject<HTMLElement | null>;
   onAfterClose?: () => void;
   onRequestClose: () => void;
   open: boolean;
-  restoreFocusRef?: RefObject<HTMLElement>;
+  restoreFocusRef?: RefObject<HTMLElement | null>;
   rootClassName?: string;
 };
 

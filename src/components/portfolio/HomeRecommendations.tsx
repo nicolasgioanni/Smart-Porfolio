@@ -211,7 +211,7 @@ function layoutsMatch(
 
 export function HomeRecommendations({ items, showAction = true }: { items: RecommendationItem[]; showAction?: boolean }) {
   const gridRef = useRef<HTMLDivElement>(null);
-  const scheduledFrameRef = useRef<number>();
+  const scheduledFrameRef = useRef<number | undefined>(undefined);
   const [layout, setLayout] = useState<Record<string, HomeRecommendationLayout>>({});
   const layoutRef = useRef<Record<string, HomeRecommendationLayout>>({});
   const usesNaturalFlow = useMediaQuery(MOBILE_UI_QUERY);
