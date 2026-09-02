@@ -21,6 +21,15 @@ export type ResearchSkeletonProfile = {
   resourceWidths: readonly number[];
 };
 
+export type ResearchPageSkeletonProps = {
+  /**
+   * Already-selected Research detail content for an isolated server render.
+   * Production loading boundaries omit this prop and resolve the generated
+   * portfolio content so their resource footprint continues to match it.
+   */
+  detailItems?: readonly ResearchItem[];
+};
+
 /**
  * Deliberately literal display profiles in `selectResearchDetailContent` order.
  * Their resource widths are trimmed or extended by the validated server
@@ -170,8 +179,8 @@ function ResearchCardSkeleton({ index, profile }: { index: number; profile: Rese
   );
 }
 
-export function ResearchPageSkeleton() {
-  const profiles = resolveResearchSkeletonProfiles(selectResearchDetailContent(getPortfolioContent()));
+export function ResearchPageSkeleton({ detailItems }: ResearchPageSkeletonProps) {
+  const profiles = resolveResearchSkeletonProfiles(detailItems ?? selectResearchDetailContent(getPortfolioContent()));
 
   return (
     <PageSkeleton pathname={siteRoutes.research}>

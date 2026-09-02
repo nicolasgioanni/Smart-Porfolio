@@ -1,6 +1,7 @@
 import React, { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { siteRoutePaths, type SiteRoutePath } from "../../src/components/navigation/siteRoutes";
+import { siteRoutePaths, siteRoutes, type SiteRoutePath } from "../../src/components/navigation/siteRoutes";
+import { canonicalResearchSkeletonItems } from "../fixtures/researchSkeletonContent";
 
 // This isolated server renderer uses tsx, which needs the classic JSX runtime
 // made available before it imports the app's automatic-runtime component graph.
@@ -9,7 +10,15 @@ import { siteRoutePaths, type SiteRoutePath } from "../../src/components/navigat
 const { RouteSkeleton } = await import("../../src/components/loading/RouteSkeleton");
 
 const markupByRoute = Object.fromEntries(
-  siteRoutePaths.map((pathname) => [pathname, renderToStaticMarkup(createElement(RouteSkeleton, { pathname }))])
+  siteRoutePaths.map((pathname) => [
+    pathname,
+    renderToStaticMarkup(
+      createElement(RouteSkeleton, {
+        pathname,
+        researchDetailItems: pathname === siteRoutes.research ? canonicalResearchSkeletonItems : undefined
+      })
+    )
+  ])
 ) as Readonly<Record<SiteRoutePath, string>>;
 
 process.stdout.write(JSON.stringify(markupByRoute));
