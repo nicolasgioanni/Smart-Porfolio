@@ -174,7 +174,7 @@ A deployable candidate follows this sequence:
 1. Resolve the exact candidate commit and target branch.
 2. Generate one validated content snapshot.
 3. Compare its canonical normalized content subset hash and exact commit SHA with the active production manifest when the event permits a no-op.
-4. Run documentation validation, lint, typecheck, focused footer and navigation regressions, the full Vitest suite, the navigation, footer, and recommendation Playwright Chromium suites, and a static build.
+4. Run documentation validation, lint, typecheck, focused footer and navigation regressions, the full Vitest suite, and the skeleton, navigation, footer, recommendation, experience, and research Playwright Chromium suites before the static build.
 5. Write `content-version.json` and `artifact-integrity.json`.
 6. Upload and download the immutable Actions artifact.
 7. Verify every artifact digest and the candidate commit.
@@ -232,6 +232,7 @@ The two-step ticket flow avoids sending a consumed Turnstile token twice and kee
 | Runtime and static export | `next.config.mjs` and `src/app/` |
 | Route registry and navigation | `src/components/navigation/siteRoutes.ts` and `navigationItems.ts` |
 | Browser navigation regression | `playwright.config.ts` and `tests/e2e/navigation.spec.ts` |
+| Skeleton visual and transition regressions | `tests/e2e/skeletons.visual.spec.ts`, `tests/e2e/skeletons.transition.spec.ts`, and `.github/workflows/skeleton-baselines.yml` |
 | Content types | `src/content/types.ts` |
 | Workbook contract | `scripts/lib/portfolioContentGeneration.ts` |
 | Source-mode orchestration | `scripts/fetchPortfolioContent.ts` |
