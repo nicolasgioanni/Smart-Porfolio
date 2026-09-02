@@ -24,6 +24,7 @@
     "test:e2e:navigation": "playwright test navigation.spec.ts --project=chromium",
     "test:e2e:skeletons:visual": "playwright test skeletons.visual.spec.ts --project=chromium",
     "test:e2e:skeletons": "playwright test skeletons.transition.spec.ts skeletons.visual.spec.ts --project=chromium",
+    "test:skeleton-guidance": "vitest run scripts/skeletonGuidance.test.mjs",
     "test:skeleton-baseline-workflow": "vitest run scripts/skeletonBaselineWorkflow.test.mjs",
     "test:e2e:footer": "playwright test footer.spec.ts --project=chromium",
     "test:e2e:recommendations": "playwright test recommendations.spec.ts --project=chromium",

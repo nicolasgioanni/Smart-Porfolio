@@ -36,6 +36,7 @@ Run this checklist before shipping meaningful changes.
 - Runtime request handling remains isolated to the documented `/api/contact/verify` and `/api/contact` Cloudflare Pages Functions.
 - Client components are justified by interaction or browser APIs.
 - Theme listeners are scoped to System behavior, respect manual override precedence, synchronize cleared storage, and clean up on unmount.
+- Skeleton geometry changes preserve static loading semantics, the inert visual fixture, and the static-export transition contract. Research visual baselines use only the isolated canonical local-template detail fixture; normal loading and alignment remain generated-workbook driven.
 
 ## Verification
 
@@ -45,6 +46,10 @@ Run this checklist before shipping meaningful changes.
 - `npm run typecheck`
 - `npm run test:footer`
 - `npm run test:navigation`
+- `npm run test:skeletons`
+- `npm run test:skeleton-guidance`
+- `npm run test:skeleton-baseline-workflow`
+- `npm run test:e2e:skeletons` on Ubuntu 24.04 when skeleton rendering, route coverage, or browser workflow changes
 - `npm run test:e2e:navigation`
 - `npm run test:e2e:footer`
 - `npm run test:e2e:recommendations`
@@ -52,4 +57,4 @@ Run this checklist before shipping meaningful changes.
 - `npm run build`
 - `npm run verify`
 
-`npm run verify` includes documentation validation, lint, typecheck, the full test suite, and a normal build. The focused footer and navigation commands remain separate named CI gates, while CI also runs the Chromium navigation, footer, and recommendation regressions after installing the browser.
+`npm run verify` includes documentation validation, lint, typecheck, the full test suite, and a normal build. The focused footer and navigation commands remain separate named CI gates, while CI also runs the Chromium skeleton, navigation, footer, recommendation, experience, and research regressions after one browser installation.

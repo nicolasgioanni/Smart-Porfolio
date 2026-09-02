@@ -59,6 +59,9 @@ describe("package and CI deployment automation", () => {
     expect(packageJson.scripts["test:e2e:skeletons"]).toBe(
       "playwright test skeletons.transition.spec.ts skeletons.visual.spec.ts --project=chromium"
     );
+    expect(packageJson.scripts["test:skeleton-guidance"]).toBe(
+      "vitest run scripts/skeletonGuidance.test.mjs"
+    );
     expect(packageJson.scripts["test:e2e:footer"]).toBe(
       "playwright test footer.spec.ts --project=chromium"
     );

@@ -6,6 +6,8 @@ Smart Portfolio separates static application code, build-time content, isolated 
 
 ```text
 Smart-Porfolio/
+|-- .agents/
+|   `-- skills/portfolio-skeleton-regression/SKILL.md
 |-- .github/
 |   `-- workflows/ci.yml
 |-- docs/
@@ -54,16 +56,17 @@ Smart-Porfolio/
 | Location | Responsibility |
 | --- | --- |
 | `.github/workflows/ci.yml` | Candidate selection, content generation, verification, artifact transfer, Cloudflare Direct Upload, smoke tests, and schedule heartbeat. |
+| `.agents/skills/portfolio-skeleton-regression/` | Repository-scoped guidance for deterministic skeleton visual and transition regression work. |
 | `docs/` | Guides, references, checklists, and README assets. |
 | `functions/` | Cloudflare Pages Functions for contact verification and delivery. These are not Next.js route handlers. |
 | `migrations/` | Append-only Cloudflare D1 schema changes applied before the corresponding Pages deployment. |
 | `public/` | Public images, favicons, Pages security headers, and the exact Function route allowlist copied into the static export. |
 | `scripts/` | Content ingestion, local automation, deployment manifests, artifact integrity, deployment smoke checks, and script-level tests. |
-| `tests/e2e/` | Playwright Chromium regressions for responsive navigation, recommendation overlays, and footer first-render, route, restoration, and scroll behavior. |
+| `tests/e2e/` | Playwright Chromium regressions for deterministic skeleton geometry and transitions, responsive navigation, recommendation overlays, Experience and Research detail behavior, and footer first-render, route, restoration, and scroll behavior. |
 | `src/` | Next.js routes, React components, typed content, selectors, validation, theme helpers, and CSS. |
 | `next.config.mjs` | Static export and unoptimized image configuration. |
 | `package.json` | Supported Node.js range, dependencies, and executable project commands. |
-| `playwright.config.ts` | Chromium navigation, recommendation, and footer regression configuration plus the local Next.js web server. |
+| `playwright.config.ts` | Chromium skeleton, navigation, recommendation, Experience, Research, and footer regression configuration plus the local Next.js web server. |
 | `wrangler.jsonc` | Pages output directory plus reviewed production and preview runtime variables and isolated D1 bindings. Encrypted secrets are configured outside the repository. |
 
 ## Documented application routes
