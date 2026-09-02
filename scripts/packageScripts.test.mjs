@@ -47,8 +47,17 @@ describe("package and CI deployment automation", () => {
     expect(packageJson.scripts["test:navigation"]).toBe(
       "vitest run src/components/navigation/MobileNavigation.test.tsx src/components/navigation/navigation.test.tsx src/components/navigation/navigationStyles.test.ts src/components/responsive/useMediaQuery.test.tsx src/components/theme/ThemeSwitcher.test.tsx"
     );
+    expect(packageJson.scripts["test:skeletons"]).toBe(
+      "vitest run src/components/loading/skeleton.test.tsx src/components/loading/skeletonStyles.test.ts src/components/loading/skeletonContentContract.test.ts src/components/loading/ResearchPageSkeleton.test.tsx src/components/motion/pageEntryStyles.test.ts"
+    );
     expect(packageJson.scripts["test:e2e:navigation"]).toBe(
       "playwright test navigation.spec.ts --project=chromium"
+    );
+    expect(packageJson.scripts["test:e2e:skeletons:visual"]).toBe(
+      "playwright test skeletons.visual.spec.ts --project=chromium"
+    );
+    expect(packageJson.scripts["test:e2e:skeletons"]).toBe(
+      "playwright test skeletons.transition.spec.ts skeletons.visual.spec.ts --project=chromium"
     );
     expect(packageJson.scripts["test:e2e:footer"]).toBe(
       "playwright test footer.spec.ts --project=chromium"
