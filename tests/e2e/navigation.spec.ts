@@ -300,6 +300,7 @@ test("uses solid, layered semantic surfaces in every palette", async ({ page }) 
 });
 
 test("moves the whole rail, pauses after touch, and resumes in place after five seconds", async ({ page }) => {
+  await page.clock.install();
   await page.setViewportSize({ width: 390, height: viewportHeight });
   await openHome(page);
 
@@ -314,21 +315,19 @@ test("moves the whole rail, pauses after touch, and resumes in place after five 
       scrollLeft: element.scrollLeft
     };
   });
-  await expect.poll(async () => {
-    const current = await rail.evaluate((element) => {
-      const actionsElement = element.querySelector<HTMLElement>(".blob-header__actions");
-      if (!actionsElement) throw new Error("The mobile rail is missing its action cluster.");
+  await page.clock.runFor(3_500);
+  const driftedRail = await rail.evaluate((element) => {
+    const actionsElement = element.querySelector<HTMLElement>(".blob-header__actions");
+    if (!actionsElement) throw new Error("The mobile rail is missing its action cluster.");
 
-      return {
-        actionsX: actionsElement.getBoundingClientRect().x,
-        scrollLeft: element.scrollLeft
-      };
-    });
-    const scrollDelta = current.scrollLeft - driftBaseline.scrollLeft;
-    const actionDelta = driftBaseline.actionsX - current.actionsX;
-
-    return scrollDelta > 5 && Math.abs(actionDelta - scrollDelta) <= 2;
-  }, { timeout: 5_000 }).toBe(true);
+    return {
+      actionsX: actionsElement.getBoundingClientRect().x,
+      scrollLeft: element.scrollLeft
+    };
+  });
+  const driftDistance = driftedRail.scrollLeft - driftBaseline.scrollLeft;
+  expect(driftDistance).toBeGreaterThan(5);
+  expect(Math.abs(driftBaseline.actionsX - driftedRail.actionsX - driftDistance)).toBeLessThanOrEqual(2);
 
   await rail.evaluate((element) => {
     element.scrollLeft = Math.min(140, (element.scrollWidth - element.clientWidth) / 2);
@@ -339,19 +338,21 @@ test("moves the whole rail, pauses after touch, and resumes in place after five 
   await expect(rail).not.toHaveAttribute("data-automating", "");
   const pausedPosition = await rail.evaluate((element) => element.scrollLeft);
 
-  // Leave enough headroom before the five-second browser timer to prove the
-  // interaction hold without letting a busy multi-worker host cross it.
-  await page.waitForTimeout(2_500);
+  await page.clock.runFor(2_500);
   const positionBeforeResume = await rail.evaluate((element) => element.scrollLeft);
   expect(Math.abs(positionBeforeResume - pausedPosition)).toBeLessThanOrEqual(1);
   expect(positionBeforeResume).toBeGreaterThan(40);
 
-  await expect(rail).toHaveAttribute("data-automating", "", { timeout: 3_500 });
-  await expect.poll(
-    () => rail.evaluate((element, start) => Math.abs(element.scrollLeft - start), pausedPosition),
-    { timeout: 2_000 }
-  ).toBeGreaterThan(3);
-  expect(await rail.evaluate((element) => element.scrollLeft)).toBeGreaterThan(30);
+  await page.clock.runFor(2_400);
+  await expect(rail).not.toHaveAttribute("data-automating", "");
+  expect(Math.abs(await rail.evaluate((element) => element.scrollLeft) - pausedPosition)).toBeLessThanOrEqual(1);
+
+  await page.clock.runFor(100);
+  await expect(rail).toHaveAttribute("data-automating", "");
+  await page.clock.runFor(200);
+  const resumedPosition = await rail.evaluate((element) => element.scrollLeft);
+  expect(Math.abs(resumedPosition - pausedPosition)).toBeGreaterThan(3);
+  expect(resumedPosition).toBeGreaterThan(30);
 });
 
 test("keeps manual overflow but disables automatic drift for reduced motion", async ({ page }) => {
