@@ -84,11 +84,16 @@ describe("package and CI deployment automation", () => {
     );
     expect(workflow).toMatch(/jobs:\s+verify:\s+name: verify/);
     expect(workflow.match(/node-version: 22/g)).toHaveLength(2);
-    expect(workflow.match(/actions\/checkout@v6/g)).toHaveLength(3);
-    expect(workflow.match(/actions\/setup-node@v6/g)).toHaveLength(2);
-    expect(workflow.match(/actions\/upload-artifact@v7/g)).toHaveLength(1);
-    expect(workflow.match(/actions\/download-artifact@v8/g)).toHaveLength(1);
-    expect(workflow).not.toMatch(/actions\/(?:checkout|setup-node|upload-artifact|download-artifact)@v4/);
+    expect([...workflow.matchAll(/^\s+uses: ([^\n]+)$/gm)].map(([, action]) => action.trim())).toEqual([
+      "actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0",
+      "actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0",
+      "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+      "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+      "actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0",
+      "actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0",
+      "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1",
+      "actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0"
+    ]);
     expect(workflow).toContain(
       "ref: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'main' || github.sha }}"
     );
@@ -123,8 +128,9 @@ describe("package and CI deployment automation", () => {
     expect(verifyJob).toContain("run: npm run typecheck");
     expect(verifyJob).toContain("run: npm run test:footer");
     expect(verifyJob).toContain("run: npm run test:navigation");
-    expect(verifyJob).toContain("run: npx playwright install --with-deps chromium");
+    expect(verifyJob).toContain("run: npx --no-install playwright install --with-deps chromium");
     expect(verifyJob).toContain("run: npm run test:e2e:navigation");
+    expect(verifyJob).toContain("run: npm run test:e2e:skeletons");
     expect(verifyJob).toContain("run: npm run test:e2e:footer");
     expect(verifyJob).toContain("run: npm run test:e2e:recommendations");
     expect(verifyJob).toContain("run: npm run test:e2e:experience");
@@ -236,6 +242,7 @@ describe("package and CI deployment automation", () => {
       "Navigation regression tests",
       "Full test suite",
       "Install Chromium for browser regressions",
+      "Browser skeleton regression tests",
       "Browser navigation regression tests",
       "Browser footer regression tests",
       "Browser recommendation regression tests",
@@ -249,6 +256,34 @@ describe("package and CI deployment automation", () => {
     expect(verifyJob).toMatch(
       /- name: Upload the exact verified static export\s+if: steps\.decision\.outputs\.should_deploy == 'true'/
     );
+
+    expect(verifyJob).toContain("runs-on: ubuntu-24.04");
+    expect(verifyJob.match(/playwright install --with-deps chromium/g)).toHaveLength(1);
+    expect(verifyJob.indexOf("Install Chromium for browser regressions")).toBeLessThan(
+      verifyJob.indexOf("Browser skeleton regression tests")
+    );
+
+    const diagnosticsUpload = section(
+      verifyJob,
+      "- name: Upload Playwright diagnostics on failure",
+      "- name: Build the pull-request snapshot without remote credentials"
+    );
+    expect(diagnosticsUpload).toContain("if: failure()");
+    expect(diagnosticsUpload).toContain(
+      "uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1"
+    );
+    expect(diagnosticsUpload).toContain(
+      "name: playwright-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}"
+    );
+    expect(diagnosticsUpload).toMatch(/path: \|\s+playwright-report\/\s+test-results\//);
+    expect(diagnosticsUpload).toContain("if-no-files-found: ignore");
+    expect(diagnosticsUpload).not.toContain("cloudflare-pages-build");
+    expect(diagnosticsUpload).not.toContain("path: out/");
+    expect(diagnosticsUpload).not.toContain("should_deploy");
+    expect(verifyJob.indexOf("Upload Playwright diagnostics on failure")).toBeLessThan(
+      verifyJob.indexOf("Build the pull-request snapshot without remote credentials")
+    );
+    expect(verifyJob.match(/name: cloudflare-pages-build/g)).toHaveLength(1);
   });
 
   it("deploys only the immutable green artifact with pinned local Wrangler", async () => {
