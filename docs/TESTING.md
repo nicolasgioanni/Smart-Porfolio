@@ -13,9 +13,9 @@ Smart Portfolio uses a layered quality gate for documentation, static content, R
 | DOM assertions | Testing Library and `@testing-library/jest-dom` |
 | Browser runner | Playwright 1.x with Chromium |
 | TypeScript mode | Strict, no emit |
-| CI runner | `ubuntu-latest` |
+| CI runner | Verify: `ubuntu-24.04`; deploy and scheduled heartbeat: `ubuntu-latest` |
 
-`vitest.config.ts` enables globals, loads `vitest.setup.ts`, maps `@` to `src`, and excludes `tests/e2e/` so Playwright specifications run only in their browser runner. The repository has one CI operating-system and Node-major configuration, not a multi-platform test matrix.
+`vitest.config.ts` enables globals, loads `vitest.setup.ts`, maps `@` to `src`, and excludes `tests/e2e/` so Playwright specifications run only in their browser runner. The verification path has one explicit Ubuntu 24.04 and Node 22 configuration, not a multi-platform test matrix.
 
 ## Command matrix
 
@@ -164,7 +164,7 @@ Pull requests targeting `main` or `develop`:
 4. Run typecheck.
 5. Run the focused footer and navigation suites.
 6. Run the full Vitest suite.
-7. Install Chromium and run the navigation, footer, recommendation, experience, and research browser regressions.
+7. Install Chromium once and run the skeleton, navigation, footer, recommendation, experience, and research browser regressions.
 8. Build with `build:generated`.
 9. Stop without creating a deployment artifact.
 
@@ -187,7 +187,7 @@ Scheduled runs and non-forced manual runs perform the strict content work before
 
 ### Focused regression duplication
 
-CI deliberately runs `test:footer` and `test:navigation` before `test`. The complete suite includes the same Vitest files, so they execute twice. The focused steps preserve named regression signals while the full suite catches cross-component failures. After the full suite passes, CI conditionally installs Chromium and runs the navigation, footer, recommendation, experience, and research Playwright suites; candidates that skip verification do not download the browser.
+CI deliberately runs `test:footer` and `test:navigation` before `test`. The complete suite includes the same Vitest files, so they execute twice. The focused steps preserve named regression signals while the full suite catches cross-component failures. After the full suite passes, the Ubuntu 24.04 verify job conditionally installs Chromium once and runs the skeleton, navigation, footer, recommendation, experience, and research Playwright suites; candidates that skip verification do not download the browser. If a verify step fails, the job uploads any available `playwright-report/` and `test-results/` files as a seven-day `playwright-diagnostics-<run-id>-<attempt>` artifact. That failure-only artifact is distinct from, and never used as, the one-day `cloudflare-pages-build` deployment artifact.
 
 ## Post-deployment smoke tests
 
