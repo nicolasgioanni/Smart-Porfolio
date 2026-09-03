@@ -1,6 +1,6 @@
 import { RouteSkeleton } from "@/components/loading/RouteSkeleton";
 import { shouldRenderSkeletons } from "@/components/loading/shouldRenderSkeletons";
-import { siteRoutes } from "@/components/navigation/siteRoutes";
+import { siteRoutes } from "@/lib/routing/siteRoutes";
 
 export default function Loading() {
   if (!shouldRenderSkeletons()) return null;

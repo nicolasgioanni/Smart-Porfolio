@@ -1,6 +1,6 @@
 import React, { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { siteRoutePaths, type SiteRoutePath } from "../../src/components/navigation/siteRoutes";
+import { siteRoutePaths, type SiteRoutePath } from "../../src/lib/routing/siteRoutes";
 
 // Next compiles the app with the automatic runtime, while this isolated
 // server renderer uses the classic runtime through tsx.

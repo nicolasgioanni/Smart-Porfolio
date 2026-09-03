@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import {
   isIndexableSiteRoutePath,
   type SiteRoutePath
-} from "@/components/navigation/siteRoutes";
+} from "@/lib/routing/siteRoutes";
 import type { GeneratedPortfolioContent } from "@/content/types";
 import {
   CANONICAL_HOMEPAGE_URL,

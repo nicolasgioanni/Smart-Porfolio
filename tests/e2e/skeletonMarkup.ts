@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import type { SiteRoutePath } from "../../src/components/navigation/siteRoutes";
+import type { SiteRoutePath } from "../../src/lib/routing/siteRoutes";
 
 const helperDirectory = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(helperDirectory, "..", "..");

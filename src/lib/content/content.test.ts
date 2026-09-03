@@ -14,14 +14,16 @@ import {
 } from "@/lib/content/normalizePortfolioContent";
 import { getResearchGraphicalAbstract } from "@/lib/content/researchGraphicalAbstracts";
 import {
-  createRecommendationExcerpt,
   groupSkillsByCategory,
-  hasRecommendations,
   selectHeaderLinks,
-  selectHomeContent,
+  selectHomeContent
+} from "@/lib/content/selectHomeContent";
+import {
+  createRecommendationExcerpt,
+  hasRecommendations,
   selectHomeRecommendations,
   shouldShowRecommendationsRoute
-} from "@/lib/content/selectHomeContent";
+} from "@/lib/content/selectRecommendationContent";
 import {
   createProfileOverviewContent,
   createShortAboutText,

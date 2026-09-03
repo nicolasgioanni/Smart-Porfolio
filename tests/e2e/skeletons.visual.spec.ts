@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page, type Request, type Response } from "@playwright/test";
-import { siteRoutePaths, siteRoutes, type SiteRoutePath } from "../../src/components/navigation/siteRoutes";
+import { siteRoutePaths, siteRoutes, type SiteRoutePath } from "../../src/lib/routing/siteRoutes";
 import { captureBrowserConsole, expectNoBrowserConsoleIssues } from "./browserConsole";
 import { skeletonMarkupByRoute } from "./skeletonMarkup";
 import { prepareDarkPage, settleDocumentLayout } from "./skeletonTestHelpers";

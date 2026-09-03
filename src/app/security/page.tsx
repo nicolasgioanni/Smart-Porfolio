@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { LegalDocument, resolveLegalContactEmail, resolveLegalEffectiveDate } from "@/components/legal/LegalDocument";
-import { siteRoutes } from "@/components/navigation/siteRoutes";
+import { siteRoutes } from "@/lib/routing/siteRoutes";
 import { SmartLink } from "@/components/navigation/SmartLink";
 import { createPageMetadata } from "@/lib/content/createPageMetadata";
 import { getPortfolioContent } from "@/lib/content/getPortfolioContent";

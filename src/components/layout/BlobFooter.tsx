@@ -3,7 +3,7 @@ import {
   InteractiveBlobFooter,
   type ProgressiveFooterLink
 } from "@/components/layout/InteractiveBlobFooter";
-import { siteRoutes } from "@/components/navigation/siteRoutes";
+import { siteRoutes } from "@/lib/routing/siteRoutes";
 
 const repositoryKinds = new Set(["repository", "source", "github_repository"]);
 const profileResourceKinds = new Set(["github", "linkedin"]);

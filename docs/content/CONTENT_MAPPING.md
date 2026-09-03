@@ -209,10 +209,11 @@ These accepted fields should not be treated as display controls:
 
 | Concern | Source |
 | --- | --- |
-| Home and detail selection | `src/lib/content/selectHomeContent.ts` |
+| Home selection | `src/lib/content/selectHomeContent.ts` and `src/lib/content/selectVisibleContent.ts` |
+| Detail and recommendation selection | `src/lib/content/selectDetailContent.ts` and `src/lib/content/selectRecommendationContent.ts` |
 | Shared ordering | `src/lib/content/sortPortfolioContent.ts` |
 | Profile overview fallbacks | `src/lib/content/profileOverview.ts` |
-| Home composition | `src/components/portfolio/HomeOverview.tsx` |
+| Home composition | `src/components/portfolio/home/HomeOverview.tsx` |
 | Header link selection and navigation | `src/components/layout/BlobHeader.tsx`, `src/components/navigation/navigationItems.ts` |
 | Footer resources | `src/components/layout/BlobFooter.tsx` |
 | Collection renderers | `src/components/portfolio/` |

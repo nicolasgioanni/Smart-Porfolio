@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { AnchorHTMLAttributes } from "react";
-import { isSiteRouteHref } from "@/components/navigation/siteRoutes";
+import { isSiteRouteHref } from "@/lib/routing/siteRoutes";
 import { getExternalLinkProps } from "@/lib/content/displayHelpers";
 
 export type SmartLinkProps = Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href"> & {

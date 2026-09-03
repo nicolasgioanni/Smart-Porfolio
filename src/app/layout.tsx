@@ -16,7 +16,7 @@ import "@/styles/contact.css";
 import "@/styles/interactions.css";
 import "@/styles/utilities.css";
 import { SiteShell } from "@/components/layout/SiteShell";
-import { siteRoutes } from "@/components/navigation/siteRoutes";
+import { siteRoutes } from "@/lib/routing/siteRoutes";
 import { ThemePreferenceScript } from "@/components/theme/ThemePreferenceScript";
 import { createPageMetadata } from "@/lib/content/createPageMetadata";
 import { getPortfolioContent } from "@/lib/content/getPortfolioContent";

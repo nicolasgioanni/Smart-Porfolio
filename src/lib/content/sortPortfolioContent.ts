@@ -1,25 +1,17 @@
-type HomeSortableItem = {
+type OrderedFeaturedItem = {
   featured: boolean;
   homeOrder?: number;
+  detailOrder?: number;
+};
+
+type ContentSortableItem = OrderedFeaturedItem & {
   title?: string;
   institution?: string;
   id?: string;
   startDate?: string;
 };
 
-type DetailSortableItem = {
-  featured: boolean;
-  detailOrder?: number;
-  title?: string;
-  institution?: string;
-  id?: string;
-  startDate?: string;
-};
-
-type RecommendationSortableItem = {
-  featured: boolean;
-  homeOrder?: number;
-  detailOrder?: number;
+type RecommendationSortableItem = OrderedFeaturedItem & {
   recommendationDate?: string;
   recommenderName?: string;
   id?: string;
@@ -54,13 +46,23 @@ function compareDisplayName(
   return compareText(left.title ?? left.institution ?? left.id, right.title ?? right.institution ?? right.id);
 }
 
-export function sortForHome<TItem extends HomeSortableItem>(items: TItem[]): TItem[] {
+function sortFeaturedByOrder<TItem extends OrderedFeaturedItem>(
+  items: TItem[],
+  orderKey: "homeOrder" | "detailOrder",
+  compareTieBreakers: (left: TItem, right: TItem) => number
+): TItem[] {
   return [...items].sort((left, right) => {
     if (left.featured !== right.featured) return left.featured ? -1 : 1;
 
-    const orderDifference = missingLast(left.homeOrder) - missingLast(right.homeOrder);
+    const orderDifference = missingLast(left[orderKey]) - missingLast(right[orderKey]);
     if (orderDifference !== 0) return orderDifference;
 
+    return compareTieBreakers(left, right);
+  });
+}
+
+export function sortForHome<TItem extends ContentSortableItem>(items: TItem[]): TItem[] {
+  return sortFeaturedByOrder(items, "homeOrder", (left, right) => {
     const dateDifference = compareStartDateDescending(left.startDate, right.startDate);
     if (dateDifference !== 0) return dateDifference;
 
@@ -68,13 +70,8 @@ export function sortForHome<TItem extends HomeSortableItem>(items: TItem[]): TIt
   });
 }
 
-export function sortForDetail<TItem extends DetailSortableItem>(items: TItem[]): TItem[] {
-  return [...items].sort((left, right) => {
-    if (left.featured !== right.featured) return left.featured ? -1 : 1;
-
-    const orderDifference = missingLast(left.detailOrder) - missingLast(right.detailOrder);
-    if (orderDifference !== 0) return orderDifference;
-
+export function sortForDetail<TItem extends ContentSortableItem>(items: TItem[]): TItem[] {
+  return sortFeaturedByOrder(items, "detailOrder", (left, right) => {
     const dateDifference = compareStartDateDescending(left.startDate, right.startDate);
     if (dateDifference !== 0) return dateDifference;
 
@@ -87,12 +84,7 @@ function compareRecommendationName(left: RecommendationSortableItem, right: Reco
 }
 
 export function sortRecommendationsForHome<TItem extends RecommendationSortableItem>(items: TItem[]): TItem[] {
-  return [...items].sort((left, right) => {
-    if (left.featured !== right.featured) return left.featured ? -1 : 1;
-
-    const orderDifference = missingLast(left.homeOrder) - missingLast(right.homeOrder);
-    if (orderDifference !== 0) return orderDifference;
-
+  return sortFeaturedByOrder(items, "homeOrder", (left, right) => {
     const dateDifference = compareStartDateDescending(left.recommendationDate, right.recommendationDate);
     if (dateDifference !== 0) return dateDifference;
 
@@ -101,12 +93,7 @@ export function sortRecommendationsForHome<TItem extends RecommendationSortableI
 }
 
 export function sortRecommendationsForDetail<TItem extends RecommendationSortableItem>(items: TItem[]): TItem[] {
-  return [...items].sort((left, right) => {
-    if (left.featured !== right.featured) return left.featured ? -1 : 1;
-
-    const orderDifference = missingLast(left.detailOrder) - missingLast(right.detailOrder);
-    if (orderDifference !== 0) return orderDifference;
-
+  return sortFeaturedByOrder(items, "detailOrder", (left, right) => {
     const dateDifference = compareStartDateDescending(left.recommendationDate, right.recommendationDate);
     if (dateDifference !== 0) return dateDifference;
 

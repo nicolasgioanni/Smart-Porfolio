@@ -14,17 +14,17 @@ import { GlassIconLink } from "@/components/glass/GlassIconLink";
 import { BlobFooter } from "@/components/layout/BlobFooter";
 import { PageIntro } from "@/components/layout/PageIntro";
 import { SectionHeader } from "@/components/layout/SectionHeader";
-import { EmptyState } from "@/components/portfolio/EmptyState";
-import { FeaturedGrid } from "@/components/portfolio/FeaturedGrid";
-import { HomeEducationSummary } from "@/components/portfolio/HomeEducationSummary";
-import { HomeFeaturedExperience } from "@/components/portfolio/HomeFeaturedExperience";
-import { HomeFeaturedProjects } from "@/components/portfolio/HomeFeaturedProjects";
-import { HomeFeaturedResearch } from "@/components/portfolio/HomeFeaturedResearch";
-import { HomeOverview } from "@/components/portfolio/HomeOverview";
-import { HomeRecommendations } from "@/components/portfolio/HomeRecommendations";
-import { PortfolioHero } from "@/components/portfolio/PortfolioHero";
-import { RecommendationsList } from "@/components/portfolio/RecommendationsList";
-import { ResearchList } from "@/components/portfolio/ResearchList";
+import { EmptyState } from "@/components/portfolio/shared/EmptyState";
+import { FeaturedGrid } from "@/components/portfolio/shared/FeaturedGrid";
+import { HomeEducationSummary } from "@/components/portfolio/home/HomeEducationSummary";
+import { HomeFeaturedExperience } from "@/components/portfolio/home/HomeFeaturedExperience";
+import { HomeFeaturedProjects } from "@/components/portfolio/home/HomeFeaturedProjects";
+import { HomeFeaturedResearch } from "@/components/portfolio/home/HomeFeaturedResearch";
+import { HomeOverview } from "@/components/portfolio/home/HomeOverview";
+import { HomeRecommendations } from "@/components/portfolio/home/HomeRecommendations";
+import { PortfolioHero } from "@/components/portfolio/home/PortfolioHero";
+import { RecommendationsList } from "@/components/portfolio/recommendations/RecommendationsList";
+import { ResearchList } from "@/components/portfolio/research/ResearchList";
 import { createProfileOverviewContent } from "@/lib/content/profileOverview";
 
 const linkedInRecommendationsUrl =

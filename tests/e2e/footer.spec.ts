@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { siteRoutePaths } from "../../src/components/navigation/siteRoutes";
+import { siteRoutePaths } from "../../src/lib/routing/siteRoutes";
 import {
   allowBrowserConsoleMessage,
   captureBrowserConsole,

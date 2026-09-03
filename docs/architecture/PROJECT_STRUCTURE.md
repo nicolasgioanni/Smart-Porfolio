@@ -110,15 +110,19 @@ The recommendation route and navigation item remain discoverable only when recom
 `src/app/layout.tsx` loads generated content, resolves the server fallback theme, installs the pre-hydration system-preference script, creates metadata, and renders `SiteShell`. The shell composes the desktop top header or mobile bottom dock, route content, and progressive footer.
 
 - `src/components/layout/` owns page containers, header and footer composition, profile preview, and structural primitives.
-- `src/components/navigation/` owns the route registry, desktop and mobile navigation, external-link handling, active-route state, and social links.
+- `src/lib/routing/siteRoutes.ts` owns the canonical route registry. `src/components/navigation/` owns desktop and mobile navigation, external-link handling, active-route state, and social links.
 - `src/components/overlay/` owns reusable portal-backed modal lifecycle, focus management, dismissal, and background-scroll locking.
 - `src/components/theme/` and `src/lib/theme/` own pre-hydration and live system resolution, manual override persistence, cross-tab synchronization, and the theme disclosure.
 
 ### Portfolio components
 
-`src/components/portfolio/` contains the Home summary layer and evidence-focused route components. `HomeOverview.tsx` owns Home section order. `selectHomeContent.ts` and `profileOverview.ts` own content selection and fallback rules. `ResearchGraphicalAbstractPreview.tsx` owns Research thumbnail and enlarged-preview composition while delegating lifecycle behavior to the shared dialog.
+`src/components/portfolio/` groups the Home summary layer and evidence-focused route components by owner: `home/`, `profile/`, `experience/`, `research/`, `projects/`, `recommendations/`, `skills/`, and `resume/`. `shared/` contains only domain-neutral display and control primitives. Skills components remain under `skills/` when another portfolio domain consumes them. `home/HomeOverview.tsx` owns Home section order. `selectHomeContent.ts`, `selectVisibleContent.ts`, `selectDetailContent.ts`, `selectRecommendationContent.ts`, and `profileOverview.ts` divide content selection by surface and domain. `research/ResearchGraphicalAbstractPreview.tsx` owns Research thumbnail and enlarged-preview composition while delegating lifecycle behavior to the shared dialog.
 
 Focused client behavior includes the configured role rotation, modal media and skills dialogs, recommendation measurement and expansion, optional scroll reveals, and the shared shell interactions. Content rendering remains server-generated. Modal consumers provide their content and geometry while `src/components/overlay/ModalDialog.tsx` provides the common accessible interaction contract.
+
+### Direct import boundary
+
+`eslint.config.mjs` enforces direct import direction for both alias and relative specifiers. Files under `src/lib/` cannot import `src/components` or `src/features`; files under `src/components/` cannot import generated content, Cloudflare Functions, or scripts. Components receive generated content through the app and library layers. The rule intentionally does not analyze transitive dependency graphs or constrain `src/app/`; `src/lib/architecture/importBoundaries.test.ts` keeps the direct policy executable.
 
 ### Surface and loading primitives
 
@@ -140,7 +144,10 @@ Shared dialog lifecycle and transition state live in `src/components/overlay/Mod
 | `src/lib/csv/` | CSV parsing. |
 | `src/lib/content/normalizePortfolioContent.ts` | Conversion from source rows to typed content. |
 | `src/lib/content/validatePortfolioContent.ts` | Required values, references, URLs, and cross-field invariants. |
-| `src/lib/content/selectHomeContent.ts` | Home and detail selection, ordering, limits, and recommendation visibility. |
+| `src/lib/content/selectHomeContent.ts` | Home ordering, limits, links, skill grouping, and assembled Home content. |
+| `src/lib/content/selectVisibleContent.ts` | Shared Home explicit-visibility, featured, then all-items fallback and item-limit resolution. |
+| `src/lib/content/selectDetailContent.ts` | Research, project, experience, and education detail ordering. |
+| `src/lib/content/selectRecommendationContent.ts` | Recommendation visibility, ordering, route eligibility, detail selection, and excerpt fallback. |
 | `src/lib/content/routeHeaderContent.ts` | Exhaustive canonical route-header registry and the sole generated Experience summary resolver shared by resolved pages and loaders. |
 | `src/lib/content/researchGraphicalAbstracts.ts` | Canonical graphical-abstract selection and checked-in fallback metadata for established Research IDs. |
 | `scripts/fetchPortfolioContent.ts` | Source-mode selection, anonymous workbook fetch, timeout and byte-cap enforcement, generated-file I/O, and command output. |
@@ -196,7 +203,7 @@ Vitest discovers the complete suite. ESLint, TypeScript, the static build, docum
 | Add or change a portfolio content field | template header, `types.ts`, normalization, validation, selector, component | Content tests, schema, mapping, public workbook, security impact |
 | Change an existing sheet column | matching template and content helpers | Remote workbook header, schema, tests, hash behavior |
 | Add a Home section | `HomeOverview.tsx` and a focused portfolio component | Home selector, skeleton, responsive CSS, accessibility, tests, mapping |
-| Add a detail route | `src/app/<route>/` and `siteRoutes.ts` | Navigation, metadata, loading state, tests, smoke coverage |
+| Add a detail route | `src/app/<route>/` and `src/lib/routing/siteRoutes.ts` | Navigation, metadata, loading state, tests, smoke coverage |
 | Change a theme token | `src/styles/tokens.css` | All themes, focus states, contrast, design system, theme tests |
 | Add a surface primitive | `src/components/glass/` and `glass.css` | Hover Base state, semantics, reduced motion, solid-tier design system |
 | Change navigation or footer behavior | layout and navigation components plus CSS | Keyboard behavior, route tests, footer regressions, accessibility |

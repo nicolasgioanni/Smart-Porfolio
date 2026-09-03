@@ -1,5 +1,5 @@
 import type { SiteSettings } from "@/content/types";
-import { siteRoutes, type SiteRoutePath } from "@/components/navigation/siteRoutes";
+import { siteRoutes, type SiteRoutePath } from "@/lib/routing/siteRoutes";
 
 export type NavigationItem = {
   href: SiteRoutePath;

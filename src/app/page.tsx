@@ -1,4 +1,4 @@
-﻿import { HomeOverview } from "@/components/portfolio/HomeOverview";
+﻿import { HomeOverview } from "@/components/portfolio/home/HomeOverview";
 import { HomepageStructuredData } from "@/components/seo/HomepageStructuredData";
 import { getPortfolioContent } from "@/lib/content/getPortfolioContent";
 import { selectHomeContent } from "@/lib/content/selectHomeContent";
