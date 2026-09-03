@@ -286,4 +286,4 @@ Every file under `public/` is directly retrievable. Use an approved asset, a saf
 7. Add or update component and CSS-contract tests.
 8. Update this guide when the change creates a reusable rule.
 
-For file ownership and cross-cutting changes, see [Project structure](PROJECT_STRUCTURE.md) and [Maintenance](MAINTENANCE.md).
+For file ownership and cross-cutting changes, see [Project structure](../architecture/PROJECT_STRUCTURE.md) and [Maintenance](../development/MAINTENANCE.md).

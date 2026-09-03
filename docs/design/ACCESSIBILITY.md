@@ -78,7 +78,7 @@ Each expandable evidence row is a native button with `aria-expanded` and `aria-c
 
 ### Research video
 
-CytoCV's self-hosted supplementary video uses native controls with no autoplay, metadata-only preload, inline playback support, and an enabled synchronized English captions track. The player offers a readable time-coded narration transcript with timestamped visual descriptions and an MP4 download fallback outside the native control surface. Playback loading, failure, and completion are politely announced without hiding either fallback; inline and modal status messages remain independent. Its enlarged view reuses `ModalDialog`, keeps native captions, fullscreen, and picture-in-picture available, and pauses while handing its current timeline between the inline and enlarged views. Neither view is programmatically played. Review captions and visual descriptions against the source whenever the asset changes; see [Research media](RESEARCH_MEDIA.md) for the current integrity and publication record.
+CytoCV's self-hosted supplementary video uses native controls with no autoplay, metadata-only preload, inline playback support, and an enabled synchronized English captions track. The player offers a readable time-coded narration transcript with timestamped visual descriptions and an MP4 download fallback outside the native control surface. Playback loading, failure, and completion are politely announced without hiding either fallback; inline and modal status messages remain independent. Its enlarged view reuses `ModalDialog`, keeps native captions, fullscreen, and picture-in-picture available, and pauses while handing its current timeline between the inline and enlarged views. Neither view is programmatically played. Review captions and visual descriptions against the source whenever the asset changes; see [Research media](../content/RESEARCH_MEDIA.md) for the current integrity and publication record.
 
 ### Recommendations
 
@@ -143,4 +143,4 @@ Verify meaningful UI changes at 200 percent zoom, at the 980 and 720 pixel layou
 8. Check image alt text and decorative-image handling.
 9. Run focused component tests, the relevant `test:e2e:*` browser suites, and `npm run verify`.
 
-Related guidance is in the [Design system](DESIGN_SYSTEM.md), [Animation guidelines](ANIMATION_GUIDELINES.md), [Quality checklist](QUALITY_CHECKLIST.md), and [Testing](TESTING.md).
+Related guidance is in the [Design system](DESIGN_SYSTEM.md), [Animation guidelines](ANIMATION_GUIDELINES.md), [Quality checklist](../quality/QUALITY_CHECKLIST.md), and [Testing](../quality/TESTING.md).

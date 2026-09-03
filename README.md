@@ -56,11 +56,11 @@ The workbook participates only at build time. Cloudflare Pages serves the static
 
 Deep dives:
 
-- [Architecture](docs/ARCHITECTURE.md)
-- [Content pipeline](docs/CONTENT_PIPELINE.md)
-- [Deployment](docs/DEPLOYMENT.md)
-- [Search indexing](docs/SEARCH_INDEXING.md)
-- [Contact system](docs/CONTACT_SYSTEM.md)
+- [Architecture](docs/architecture/ARCHITECTURE.md)
+- [Content pipeline](docs/content/CONTENT_PIPELINE.md)
+- [Deployment](docs/operations/DEPLOYMENT.md)
+- [Search indexing](docs/operations/SEARCH_INDEXING.md)
+- [Contact system](docs/security/CONTACT_SYSTEM.md)
 
 ## Content workflow
 
@@ -94,7 +94,7 @@ The public `/resume` route provides private-request instructions only. It does n
 
 The workflow performs an ordinary anonymous HTTPS download. It uses no Google API, Drive connector, OAuth grant, service account, or Google account access. Local development can use checked-in CSV templates; production candidates enable strict remote mode and cannot fall back to template content.
 
-See [Content pipeline](docs/CONTENT_PIPELINE.md), [sheet schema](docs/CONTENT_SHEET_SCHEMA.md), and [local content editing](docs/LOCAL_CONTENT_EDITING.md).
+See [Content pipeline](docs/content/CONTENT_PIPELINE.md), [sheet schema](docs/content/CONTENT_SHEET_SCHEMA.md), and [local content editing](docs/content/LOCAL_CONTENT_EDITING.md).
 
 ## User experience and visual system
 
@@ -111,7 +111,7 @@ The interface uses solid semantic surface tiers as restrained hierarchy. Text si
 - Route skeletons mirror final layouts without hiding available static content.
 - Focus-visible treatments, ARIA state, keyboard behavior, semantic headings, and responsive reflow are component requirements.
 
-See [Design system](docs/DESIGN_SYSTEM.md), [Accessibility](docs/ACCESSIBILITY.md), [Animation guidelines](docs/ANIMATION_GUIDELINES.md), and [Skeleton loading guidelines](docs/SKELETON_LOADING_GUIDELINES.md).
+See [Design system](docs/design/DESIGN_SYSTEM.md), [Accessibility](docs/design/ACCESSIBILITY.md), [Animation guidelines](docs/design/ANIMATION_GUIDELINES.md), and [Skeleton loading guidelines](docs/design/SKELETON_LOADING_GUIDELINES.md).
 
 ## Documented route map
 
@@ -196,7 +196,7 @@ npm run dev:pages
 
 This command builds first, applies pending migrations to Wrangler's local D1 state, then starts Pages development with the address printed by Wrangler. It does not require production credentials or a remote database.
 
-See [Local development](docs/LOCAL_DEVELOPMENT.md) for command flags, setup-state behavior, Function configuration, and safe cleanup.
+See [Local development](docs/development/LOCAL_DEVELOPMENT.md) for command flags, setup-state behavior, Function configuration, and safe cleanup.
 
 ## Editing content
 
@@ -218,7 +218,7 @@ Do not edit `src/content/generated/portfolio.generated.json` as the authoring so
 4. Configure the XLSX export locator in the build environment.
 5. Use strict mode for deployment candidates.
 
-See [Content sheet schema](docs/CONTENT_SHEET_SCHEMA.md) for fields and [Content replacement checklist](docs/CONTENT_REPLACEMENT_CHECKLIST.md) before publishing a broad content update.
+See [Content sheet schema](docs/content/CONTENT_SHEET_SCHEMA.md) for fields and [Content replacement checklist](docs/content/CONTENT_REPLACEMENT_CHECKLIST.md) before publishing a broad content update.
 
 ## Environment configuration
 
@@ -252,7 +252,7 @@ Never copy real values into tracked documentation or `.env.example`.
 
 `CONTACT_RATE_LIMIT_DB` is a Wrangler D1 binding rather than an environment variable. Production and preview use distinct remote databases whose reviewed UUIDs are pinned in `wrangler.jsonc`; local Pages development uses the `contact-rate-limit-local` emulation identifier.
 
-Deployment credentials and immutable Cloudflare target variables are documented in [Deployment](docs/DEPLOYMENT.md). Secret placement and logging rules are documented in [Security](docs/SECURITY.md).
+Deployment credentials and immutable Cloudflare target variables are documented in [Deployment](docs/operations/DEPLOYMENT.md). Secret placement and logging rules are documented in [Security](docs/security/SECURITY.md).
 
 ## Testing and quality gates
 
@@ -277,7 +277,7 @@ Deployment credentials and immutable Cloudflare target variables are documented 
 
 Pull requests generate from checked-in templates without deployment credentials, then run the complete verification path and static build. Deployable branch candidates use one strict remote snapshot. Artifact checks and live smoke tests run as deployment-specific stages.
 
-See [Testing](docs/TESTING.md), [Quality checklist](docs/QUALITY_CHECKLIST.md), and [Performance checklist](docs/PERFORMANCE_CHECKLIST.md).
+See [Testing](docs/quality/TESTING.md), [Quality checklist](docs/quality/QUALITY_CHECKLIST.md), and [Performance checklist](docs/quality/PERFORMANCE_CHECKLIST.md).
 
 ## Deployment
 
@@ -295,7 +295,7 @@ Configured production URLs are [nicolasmgioanni.dev](https://nicolasmgioanni.dev
 
 The workflow checks that a production candidate still matches current `main`, verifies the downloaded artifact, validates the environment-specific D1 binding, applies pending migrations, runs pinned local Wrangler from repository root, and smoke-tests the deployed root, robots file, sitemap, content manifest, integrity manifest, and GET rejection from both contact Functions. Generated production content and deployment state are not committed after upload. The active `/content-version.json` records current deployed content and candidate metadata; it does not prove that a post-upload smoke test succeeded or that a remote D1 migration is active.
 
-See [Deployment](docs/DEPLOYMENT.md) for setup and [Operations](docs/OPERATIONS.md) for event behavior, no-ops, retries, manifests, and rollback considerations.
+See [Deployment](docs/operations/DEPLOYMENT.md) for setup and [Operations](docs/operations/OPERATIONS.md) for event behavior, no-ops, retries, manifests, and rollback considerations.
 
 ## Contact and security
 
@@ -315,7 +315,7 @@ Every new logical message requires a fresh single-use Turnstile token before its
 
 The D1 quota limits a supplied address but cannot authenticate its owner or collapse every alias. Cloudflare WAF rate limiting for both JSON paths remains an operator-managed defense in depth. Repository code and tests cannot prove the live rule or the response customization available on the active Cloudflare plan.
 
-See [Contact system](docs/CONTACT_SYSTEM.md), [Security](docs/SECURITY.md), and [Security checklist](docs/SECURITY_CHECKLIST.md).
+See [Contact system](docs/security/CONTACT_SYSTEM.md), [Security](docs/security/SECURITY.md), and [Security checklist](docs/security/SECURITY_CHECKLIST.md).
 
 ## Project structure
 
@@ -334,21 +334,21 @@ src/lib/             Content, CSV, formatting, and theme helpers
 src/styles/          Semantic tokens and focused CSS layers
 ```
 
-See [Project structure](docs/PROJECT_STRUCTURE.md) for route ownership, component groups, styling responsibilities, tests, and a change-location matrix.
+See [Project structure](docs/architecture/PROJECT_STRUCTURE.md) for route ownership, component groups, styling responsibilities, tests, and a change-location matrix.
 
 ## Documentation
 
-The complete reader-oriented index is [docs/README.md](docs/README.md).
+The complete reader-oriented index is [docs/README.md](docs/README.md). Repository-local implementation guidance is in [Agent workflow](docs/development/AGENT_WORKFLOW.md).
 
 | Goal | Guides |
 | --- | --- |
-| Understand the system | [Architecture](docs/ARCHITECTURE.md) and [project structure](docs/PROJECT_STRUCTURE.md) |
-| Edit content | [Content pipeline](docs/CONTENT_PIPELINE.md), [sheet schema](docs/CONTENT_SHEET_SCHEMA.md), and [local editing](docs/LOCAL_CONTENT_EDITING.md) |
-| Work locally and test | [Local development](docs/LOCAL_DEVELOPMENT.md) and [testing](docs/TESTING.md) |
-| Change the interface | [Design system](docs/DESIGN_SYSTEM.md), [accessibility](docs/ACCESSIBILITY.md), and [animation](docs/ANIMATION_GUIDELINES.md) |
-| Deploy and operate | [Deployment](docs/DEPLOYMENT.md), [operations](docs/OPERATIONS.md), and [troubleshooting](docs/TROUBLESHOOTING.md) |
-| Review security | [Security](docs/SECURITY.md), [contact system](docs/CONTACT_SYSTEM.md), and [security checklist](docs/SECURITY_CHECKLIST.md) |
-| Extend safely | [Maintenance](docs/MAINTENANCE.md) and [engineering standards](docs/ENGINEERING_STANDARDS.md) |
+| Understand the system | [Architecture](docs/architecture/ARCHITECTURE.md) and [project structure](docs/architecture/PROJECT_STRUCTURE.md) |
+| Edit content | [Content pipeline](docs/content/CONTENT_PIPELINE.md), [sheet schema](docs/content/CONTENT_SHEET_SCHEMA.md), and [local editing](docs/content/LOCAL_CONTENT_EDITING.md) |
+| Work locally and test | [Local development](docs/development/LOCAL_DEVELOPMENT.md) and [testing](docs/quality/TESTING.md) |
+| Change the interface | [Design system](docs/design/DESIGN_SYSTEM.md), [accessibility](docs/design/ACCESSIBILITY.md), and [animation](docs/design/ANIMATION_GUIDELINES.md) |
+| Deploy and operate | [Deployment](docs/operations/DEPLOYMENT.md), [operations](docs/operations/OPERATIONS.md), and [troubleshooting](docs/development/TROUBLESHOOTING.md) |
+| Review security | [Security](docs/security/SECURITY.md), [contact system](docs/security/CONTACT_SYSTEM.md), and [security checklist](docs/security/SECURITY_CHECKLIST.md) |
+| Extend safely | [Maintenance](docs/development/MAINTENANCE.md) and [engineering standards](docs/development/ENGINEERING_STANDARDS.md) |
 
 ## License
 

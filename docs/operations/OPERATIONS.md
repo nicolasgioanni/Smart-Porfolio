@@ -52,7 +52,7 @@ The preview build receives only `NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY`. If tha
 
 ### Release source changes to production
 
-1. Merge the green change into `main` through the protected branch flow.
+1. Merge the reviewed green change into `main` through the repository's approved change flow.
 2. Confirm the push workflow resolves the current `main` SHA.
 3. Confirm strict workbook generation succeeds before the quality gates.
 4. Confirm the deploy job downloads and revalidates `cloudflare-pages-build` instead of rebuilding.
@@ -216,7 +216,7 @@ Use the first failing stage to decide whether production could have changed:
 | Wrangler | Usually prior deployment remains active | Check Cloudflare deployment history before retrying |
 | Post-Wrangler smoke | Candidate deployment exists and may already serve through the stable alias; the failed job does not roll it back | Inspect live metadata and Cloudflare history immediately |
 
-Detailed failure signatures and corrective commands are in [Troubleshooting](TROUBLESHOOTING.md).
+Detailed failure signatures and corrective commands are in [Troubleshooting](../development/TROUBLESHOOTING.md).
 
 ## Rollback
 
@@ -276,6 +276,6 @@ Rotating `TURNSTILE_SECRET_KEY` also changes the verification-ticket signing key
 ## Related guides
 
 - [Deployment](DEPLOYMENT.md)
-- [Testing](TESTING.md)
-- [Troubleshooting](TROUBLESHOOTING.md)
-- [Security](SECURITY.md)
+- [Testing](../quality/TESTING.md)
+- [Troubleshooting](../development/TROUBLESHOOTING.md)
+- [Security](../security/SECURITY.md)

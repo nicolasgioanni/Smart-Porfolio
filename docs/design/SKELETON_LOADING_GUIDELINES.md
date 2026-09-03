@@ -89,7 +89,7 @@ The required Ubuntu CI command, `npm run test:e2e:skeletons`, runs the direct al
 
 ## Baseline maintenance
 
-Use the [repository skeleton regression skill](../.agents/skills/portfolio-skeleton-regression/SKILL.md) before changing skeleton geometry, route coverage, or the browser workflow. Capture baseline candidates only through the manual Ubuntu 24.04 workflow for the exact selected revision, review every artifact image, then commit the approved Linux bytes. Do not create Windows or macOS snapshots, relax the zero-difference comparison, or mutate hydrated application DOM to construct a fixture. If the route or viewport matrix changes intentionally, update the visual specification, the baseline workflow count guard, its tests, and the reviewed images together.
+Use the [repository skeleton regression skill](../../.agents/skills/portfolio-skeleton-regression/SKILL.md) before changing skeleton geometry, route coverage, or the browser workflow. Capture baseline candidates only through the manual Ubuntu 24.04 workflow for the exact selected revision, review every artifact image, then commit the approved Linux bytes. Do not create Windows or macOS snapshots, relax the zero-difference comparison, or mutate hydrated application DOM to construct a fixture. If the route or viewport matrix changes intentionally, update the visual specification, the baseline workflow count guard, its tests, and the reviewed images together.
 
 ## Use skeletons for
 
@@ -106,4 +106,4 @@ Use the [repository skeleton regression skill](../.agents/skills/portfolio-skele
 - simulating interactive controls;
 - forcing a loading animation to appear for a minimum time.
 
-See [Design system](DESIGN_SYSTEM.md), [Accessibility](ACCESSIBILITY.md), and [Performance budget](PERFORMANCE_BUDGET.md).
+See [Design system](DESIGN_SYSTEM.md), [Accessibility](ACCESSIBILITY.md), and [Performance budget](../quality/PERFORMANCE_BUDGET.md).

@@ -191,4 +191,4 @@ Use the relevant `_logo_alt` column when a logo needs meaningful alternative tex
 
 Pull requests use local templates. Strict remote candidates for configured branches and scheduled or manual checks download the workbook once, then test and build that generated snapshot. Deployment consumes the exact verified artifact without a second fetch or build.
 
-For an immediate workbook release check, dispatch the repository workflow rather than editing generated JSON. Confirm the deployed `/content-version.json` has the expected content hash and candidate commit after the workflow succeeds. See [Deployment](DEPLOYMENT.md) for branch and rollback operations.
+For an immediate workbook release check, dispatch the repository workflow rather than editing generated JSON. Confirm the deployed `/content-version.json` has the expected content hash and candidate commit after the workflow succeeds. See [Deployment](../operations/DEPLOYMENT.md) for branch and rollback operations.

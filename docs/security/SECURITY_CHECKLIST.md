@@ -1,6 +1,6 @@
 # Security Checklist
 
-Use this checklist with [Contact System](CONTACT_SYSTEM.md), [Security](SECURITY.md), and [Deployment](DEPLOYMENT.md). Check source and generated artifacts for repository behavior. Check provider dashboards and controlled deployed requests for external behavior.
+Use this checklist with [Contact System](CONTACT_SYSTEM.md), [Security](SECURITY.md), and [Deployment](../operations/DEPLOYMENT.md). Check source and generated artifacts for repository behavior. Check provider dashboards and controlled deployed requests for external behavior.
 
 ## Evidence and control status
 
@@ -138,4 +138,4 @@ Use this checklist with [Contact System](CONTACT_SYSTEM.md), [Security](SECURITY
 - Run `npm audit` and classify advisories as runtime, static-build, or development-tooling risk.
 - Do not force major dependency upgrades without compatibility and artifact review.
 - For every new endpoint, document and test methods, media types, schema, body and time limits, origins, authentication or verification, privacy, retention, logs, abuse controls, error responses, headers, and deployment checks.
-- Update [Contact System](CONTACT_SYSTEM.md), [Security](SECURITY.md), and [Deployment](DEPLOYMENT.md) when the runtime or operator contract changes.
+- Update [Contact System](CONTACT_SYSTEM.md), [Security](SECURITY.md), and [Deployment](../operations/DEPLOYMENT.md) when the runtime or operator contract changes.

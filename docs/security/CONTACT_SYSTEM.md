@@ -2,7 +2,7 @@
 
 The Contact route is a statically exported page with two narrowly routed Cloudflare Pages Functions. A visible Turnstile gate must succeed before contact fields are shown. Successful verification creates a short-lived signed ticket, and the later delivery request uses that ticket instead of submitting the Turnstile token again.
 
-Use this guide for the complete request contract and trust boundary. See [Security](SECURITY.md) for the broader threat model, [Deployment](DEPLOYMENT.md) for production setup, and [Local development](LOCAL_DEVELOPMENT.md#complete-contact-flow-development) for local Pages Function testing.
+Use this guide for the complete request contract and trust boundary. See [Security](SECURITY.md) for the broader threat model, [Deployment](../operations/DEPLOYMENT.md) for production setup, and [Local development](../development/LOCAL_DEVELOPMENT.md#complete-contact-flow-development) for local Pages Function testing.
 
 ## Source of truth
 
@@ -303,7 +303,7 @@ Pull-request builds receive neither deployment site key. Production and preview 
 
 The production Wrangler values allow the assigned Pages hostname, the apex custom hostname, and its `www` hostname with matching HTTPS origins. The preview override allows only the stable `develop` Pages hostname and its HTTPS origin. Production and preview declare separate reviewed D1 database names and live IDs. If either database is deliberately replaced, update only that environment's ID and apply its tracked migrations before deployment. Secret values are configured separately in Cloudflare and are not present in `wrangler.jsonc`, so the repository cannot prove that they exist or are correct in a live environment.
 
-For local testing, copy the placeholder-only example into the ignored local environment file and follow [Local development](LOCAL_DEVELOPMENT.md#complete-contact-flow-development). Do not use production credentials locally.
+For local testing, copy the placeholder-only example into the ignored local environment file and follow [Local development](../development/LOCAL_DEVELOPMENT.md#complete-contact-flow-development). Do not use production credentials locally.
 
 ## Abuse protection: enforced and external controls
 
@@ -374,5 +374,5 @@ When changing either endpoint or the client contract:
 3. Reassess origin, body, timing, ticket, privacy, logging, and rate-limit behavior.
 4. Keep secrets server-only and public site keys environment-specific.
 5. Add tests for success, failure, retry, timeout, and generic responses.
-6. Update this guide, [Security](SECURITY.md), [Deployment](DEPLOYMENT.md), and the [Security checklist](SECURITY_CHECKLIST.md).
+6. Update this guide, [Security](SECURITY.md), [Deployment](../operations/DEPLOYMENT.md), and the [Security checklist](SECURITY_CHECKLIST.md).
 7. Verify the active Cloudflare and Resend configuration separately from repository tests.

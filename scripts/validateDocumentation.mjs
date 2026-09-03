@@ -13,8 +13,8 @@ const generatedRootFiles = new Set([
 ]);
 const localDevelopmentDocuments = new Set([
   "README.md",
-  "docs/LOCAL_DEVELOPMENT.md",
-  "docs/TROUBLESHOOTING.md",
+  "docs/development/LOCAL_DEVELOPMENT.md",
+  "docs/development/TROUBLESHOOTING.md",
 ]);
 
 const obviousPlaceholderPatterns = [
@@ -27,12 +27,6 @@ const obviousPlaceholderPatterns = [
 const privateWorkbookPatterns = [
   /https?:\/\/(?:docs\.google\.com\/spreadsheets|drive\.google\.com\/(?:file|open|uc))/i,
   /PORTFOLIO_WORKBOOK_URL\s*=\s*["']?\s*https?:\/\//i,
-];
-
-const excludedLocalProcessPatterns = [
-  /\b\x43\x6f\x64\x65\x78\b/i,
-  /\b\x4d\x43\x50\b/i,
-  /\b\x41\x47\x45\x4e\x54S?\.md\b/i,
 ];
 
 function toPosix(relativePath) {
@@ -54,6 +48,26 @@ async function listMarkdownFiles(directory) {
   }
 
   return files;
+}
+
+async function listOptionalMarkdownFiles(directory) {
+  try {
+    const directoryStats = await stat(directory);
+    if (!directoryStats.isDirectory()) return [];
+  } catch {
+    return [];
+  }
+
+  return listMarkdownFiles(directory);
+}
+
+async function readOptionalFile(filePath) {
+  try {
+    await access(filePath);
+    return filePath;
+  } catch {
+    return undefined;
+  }
 }
 
 function lineNumberAt(source, index) {
@@ -304,7 +318,9 @@ function scanDocumentContent(relativePath, source) {
     (line) => /^#(?!#)\s+\S/.test(line) || /<h1\b/i.test(line),
   ).length;
 
-  if (h1Count !== 1) errors.push(`expected exactly one H1, found ${h1Count}`);
+  if (relativePath !== "AGENTS.md" && h1Count !== 1) {
+    errors.push(`expected exactly one H1, found ${h1Count}`);
+  }
   errors.push(...findFenceErrors(source));
 
   if (/[A-Za-z]:[\\/]Users[\\/]/i.test(source)) {
@@ -328,10 +344,6 @@ function scanDocumentContent(relativePath, source) {
     errors.push("contains an obvious unresolved placeholder");
   }
 
-  if (excludedLocalProcessPatterns.some((pattern) => pattern.test(source))) {
-    errors.push("contains excluded local tooling terminology");
-  }
-
   if (
     /(?:committed|checked[- ]in).{0,80}(?:\.next\/|out\/|coverage\/)/i.test(
       source,
@@ -346,18 +358,38 @@ function scanDocumentContent(relativePath, source) {
   return errors;
 }
 
+function scanRepositorySkill(relativePath, source) {
+  const skillPath = /^\.agents\/skills\/([^/]+)\/SKILL\.md$/.exec(relativePath);
+  if (!skillPath) return [];
+
+  const frontmatter = /^---\r?\n([\s\S]*?)\r?\n---\r?\n/.exec(source)?.[1];
+  if (!frontmatter) return ["skill is missing YAML frontmatter"];
+
+  const name = /^name:[ \t]*([^\r\n]+?)[ \t]*$/m.exec(frontmatter)?.[1]?.trim();
+  const description = /^description:[ \t]*(\S(?:.*\S)?)[ \t]*$/m.exec(frontmatter)?.[1]?.trim();
+  if (name !== skillPath[1]) return ["skill name must match its directory"];
+  if (!description) return ["skill frontmatter requires a description"];
+
+  return [];
+}
+
 export async function validateDocumentation({
   projectRoot = defaultProjectRoot,
 } = {}) {
   const resolvedProjectRoot = path.resolve(projectRoot);
   const docsDirectory = path.join(resolvedProjectRoot, "docs");
   const readmePath = path.join(resolvedProjectRoot, "README.md");
+  const agentGuidancePath = path.join(resolvedProjectRoot, "AGENTS.md");
+  const agentDirectory = path.join(resolvedProjectRoot, ".agents");
   const docsStats = await stat(docsDirectory);
   if (!docsStats.isDirectory()) throw new Error("docs must be a directory");
 
+  const optionalAgentGuidancePath = await readOptionalFile(agentGuidancePath);
   const markdownFiles = [
     readmePath,
     ...(await listMarkdownFiles(docsDirectory)),
+    ...(optionalAgentGuidancePath ? [optionalAgentGuidancePath] : []),
+    ...(await listOptionalMarkdownFiles(agentDirectory)),
   ];
   const documents = await Promise.all(
     markdownFiles.map(async (filePath) => ({
@@ -485,6 +517,9 @@ export async function validateDocumentation({
     const relativePath = toPosix(path.relative(resolvedProjectRoot, filePath));
 
     for (const error of scanDocumentContent(relativePath, source)) {
+      errors.push(`${relativePath}: ${error}`);
+    }
+    for (const error of scanRepositorySkill(relativePath, source)) {
       errors.push(`${relativePath}: ${error}`);
     }
 

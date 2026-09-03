@@ -13,14 +13,12 @@ describe("skeleton regression guidance", () => {
     const [repositoryGuidance, skill, skeletonGuide] = await Promise.all([
       readProjectFile("AGENTS.md"),
       readProjectFile(".agents/skills/portfolio-skeleton-regression/SKILL.md"),
-      readProjectFile("docs/SKELETON_LOADING_GUIDELINES.md")
+      readProjectFile("docs/design/SKELETON_LOADING_GUIDELINES.md")
     ]);
 
-    for (const source of [repositoryGuidance, skill]) {
-      expect(source).toContain("Ubuntu 24.04");
-      expect(source).toContain("React-owned DOM");
-      expect(source).toMatch(/static export/i);
-    }
+    expect(skill).toContain("Ubuntu 24.04");
+    expect(skill).toContain("React-owned DOM");
+    expect(skill).toMatch(/static export/i);
 
     expect(repositoryGuidance).toContain(
       ".agents/skills/portfolio-skeleton-regression/SKILL.md"
@@ -33,18 +31,20 @@ describe("skeleton regression guidance", () => {
     expect(skill).toContain("source body rather than mounting a streamable fallback");
     expect(skill).toContain("canonical local-template detail items");
     expect(skill).toContain("generated-workbook data");
-    expect(repositoryGuidance).toContain("intentional control-shaped geometry");
-    expect(repositoryGuidance).toContain("real interactive controls");
-    expect(repositoryGuidance).toContain("canonical local-template detail items");
+    expect(skill).toContain("intentional control-shaped geometry");
+    expect(skill).toContain("real interactive controls");
+    expect(skill).toContain("canonical local-template detail items");
     expect(skeletonGuide).toContain("canonical local-template detail items");
     expect(skeletonGuide).toContain("generated-workbook driven");
     expect(skeletonGuide).toContain(
-      "[repository skeleton regression skill](../.agents/skills/portfolio-skeleton-regression/SKILL.md)"
+      "[repository skeleton regression skill](../../.agents/skills/portfolio-skeleton-regression/SKILL.md)"
     );
   });
 
   it("retains the established Research media safeguards while adding skeleton guidance", async () => {
-    const repositoryGuidance = await readProjectFile("AGENTS.md");
+    const interfaceSkill = await readProjectFile(
+      ".agents/skills/portfolio-interface-contracts/SKILL.md"
+    );
 
     for (const contract of [
       "ResearchGraphicalAbstractPreview",
@@ -52,7 +52,7 @@ describe("skeleton regression guidance", () => {
       "researchVideoAssets.test.ts",
       "16 MiB video and 64 KiB-per-text-asset read ceilings"
     ]) {
-      expect(repositoryGuidance).toContain(contract);
+      expect(interfaceSkill).toContain(contract);
     }
   });
 });

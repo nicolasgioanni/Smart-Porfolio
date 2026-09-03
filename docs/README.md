@@ -14,72 +14,74 @@ This documentation explains how Smart Portfolio is authored, built, tested, depl
 
 | Reader | Start with | Continue with |
 | --- | --- | --- |
-| Portfolio owner | [Local content editing](LOCAL_CONTENT_EDITING.md) | [Content pipeline](CONTENT_PIPELINE.md), [sheet schema](CONTENT_SHEET_SCHEMA.md), and [content replacement checklist](CONTENT_REPLACEMENT_CHECKLIST.md) |
-| Developer | [Architecture](ARCHITECTURE.md) | [Project structure](PROJECT_STRUCTURE.md), [local development](LOCAL_DEVELOPMENT.md), [testing](TESTING.md), and [maintenance](MAINTENANCE.md) |
-| Design contributor | [Design system](DESIGN_SYSTEM.md) | [Accessibility](ACCESSIBILITY.md), [animation guidelines](ANIMATION_GUIDELINES.md), and [skeleton loading guidelines](SKELETON_LOADING_GUIDELINES.md) |
-| Deployment operator | [Deployment](DEPLOYMENT.md) | [Operations](OPERATIONS.md), [testing](TESTING.md), and [troubleshooting](TROUBLESHOOTING.md) |
-| Security reviewer | [Security](SECURITY.md) | [Contact system](CONTACT_SYSTEM.md), [architecture](ARCHITECTURE.md), and [security checklist](SECURITY_CHECKLIST.md) |
+| Portfolio owner | [Local content editing](content/LOCAL_CONTENT_EDITING.md) | [Content pipeline](content/CONTENT_PIPELINE.md), [sheet schema](content/CONTENT_SHEET_SCHEMA.md), and [content replacement checklist](content/CONTENT_REPLACEMENT_CHECKLIST.md) |
+| Developer | [Architecture](architecture/ARCHITECTURE.md) | [Project structure](architecture/PROJECT_STRUCTURE.md), [agent workflow](development/AGENT_WORKFLOW.md), [local development](development/LOCAL_DEVELOPMENT.md), [testing](quality/TESTING.md), and [maintenance](development/MAINTENANCE.md) |
+| Design contributor | [Design system](design/DESIGN_SYSTEM.md) | [Accessibility](design/ACCESSIBILITY.md), [animation guidelines](design/ANIMATION_GUIDELINES.md), and [skeleton loading guidelines](design/SKELETON_LOADING_GUIDELINES.md) |
+| Deployment operator | [Deployment](operations/DEPLOYMENT.md) | [Operations](operations/OPERATIONS.md), [testing](quality/TESTING.md), and [troubleshooting](development/TROUBLESHOOTING.md) |
+| Security reviewer | [Security](security/SECURITY.md) | [Contact system](security/CONTACT_SYSTEM.md), [architecture](architecture/ARCHITECTURE.md), and [security checklist](security/SECURITY_CHECKLIST.md) |
 
 ## Start here
 
 | Document | Purpose |
 | --- | --- |
 | [Project README](../README.md) | Product overview, architecture summary, setup path, route map, and links into the documentation suite. |
-| [Architecture](ARCHITECTURE.md) | System boundaries, layers, data flow, tradeoffs, and authoritative implementation sources. |
-| [Project structure](PROJECT_STRUCTURE.md) | Repository tree, route ownership, component groups, tests, and guidance on where changes belong. |
+| [Architecture](architecture/ARCHITECTURE.md) | System boundaries, layers, data flow, tradeoffs, and authoritative implementation sources. |
+| [Project structure](architecture/PROJECT_STRUCTURE.md) | Repository tree, route ownership, component groups, tests, and guidance on where changes belong. |
 
 ## Content authoring
 
 | Document | Purpose |
 | --- | --- |
-| [Content pipeline](CONTENT_PIPELINE.md) | Local and remote source modes, XLSX validation, normalization, generated JSON, and semantic hashing. |
-| [Content sheet schema](CONTENT_SHEET_SCHEMA.md) | Exact field reference for supported source data. |
-| [Content mapping](CONTENT_MAPPING.md) | Mapping from source fields through generated types and selectors to routes and components. |
-| [Local content editing](LOCAL_CONTENT_EDITING.md) | Owner-focused procedure for editing local templates, assets, and workbook-backed content. |
-| [Content replacement checklist](CONTENT_REPLACEMENT_CHECKLIST.md) | Short publication checklist for replacing portfolio content safely. |
-| [Research media](RESEARCH_MEDIA.md) | Publication facts, accessibility artifacts, and integrity contracts for self-hosted Research media. |
+| [Content pipeline](content/CONTENT_PIPELINE.md) | Local and remote source modes, XLSX validation, normalization, generated JSON, and semantic hashing. |
+| [Content sheet schema](content/CONTENT_SHEET_SCHEMA.md) | Exact field reference for supported source data. |
+| [Content mapping](content/CONTENT_MAPPING.md) | Mapping from source fields through generated types and selectors to routes and components. |
+| [Local content editing](content/LOCAL_CONTENT_EDITING.md) | Owner-focused procedure for editing local templates, assets, and workbook-backed content. |
+| [Content replacement checklist](content/CONTENT_REPLACEMENT_CHECKLIST.md) | Short publication checklist for replacing portfolio content safely. |
+| [Research media](content/RESEARCH_MEDIA.md) | Publication facts, accessibility artifacts, and integrity contracts for self-hosted Research media. |
 
 ## Design and user experience
 
 | Document | Purpose |
 | --- | --- |
-| [Design system](DESIGN_SYSTEM.md) | Themes, tokens, glass primitives, layout, cards, interactions, and contribution rules. |
-| [Accessibility](ACCESSIBILITY.md) | Accessibility practices, interaction contracts, known limits, and verification steps. |
-| [Animation guidelines](ANIMATION_GUIDELINES.md) | Approved motion behavior, timing, reduced-motion handling, and interaction constraints. |
-| [Skeleton loading guidelines](SKELETON_LOADING_GUIDELINES.md) | Route loading states, static-first constraints, layout matching, and accessibility behavior. |
+| [Design system](design/DESIGN_SYSTEM.md) | Themes, tokens, solid surface primitives, layout, cards, interactions, and contribution rules. |
+| [Accessibility](design/ACCESSIBILITY.md) | Accessibility practices, interaction contracts, known limits, and verification steps. |
+| [Animation guidelines](design/ANIMATION_GUIDELINES.md) | Approved motion behavior, timing, reduced-motion handling, and interaction constraints. |
+| [Skeleton loading guidelines](design/SKELETON_LOADING_GUIDELINES.md) | Route loading states, static-first constraints, layout matching, and accessibility behavior. |
 
 ## Development and quality
 
 | Document | Purpose |
 | --- | --- |
-| [Local development](LOCAL_DEVELOPMENT.md) | Supported Node.js version, setup commands, development servers, local content, and Pages Function testing. |
-| [Testing](TESTING.md) | Test layers, focused commands, Playwright navigation, recommendation, and footer coverage, the full quality gate, CI behavior, and test-extension guidance. |
-| [Engineering standards](ENGINEERING_STANDARDS.md) | Concise architecture, component, styling, test, and dependency rules. |
-| [Quality checklist](QUALITY_CHECKLIST.md) | General pre-merge verification checklist. |
-| [Performance budget](PERFORMANCE_BUDGET.md) | Runtime, JavaScript, asset, glass, motion, and build constraints. |
-| [Performance checklist](PERFORMANCE_CHECKLIST.md) | Focused pre-merge performance review. |
+| [Local development](development/LOCAL_DEVELOPMENT.md) | Supported Node.js version, setup commands, development servers, local content, and Pages Function testing. |
+| [Agent workflow](development/AGENT_WORKFLOW.md) | Portable repository-local guidance, focused skills, durable decisions, and model routing. |
+| [Testing](quality/TESTING.md) | Test layers, focused commands, Playwright navigation, recommendation, and footer coverage, the full quality gate, CI behavior, and test-extension guidance. |
+| [Engineering standards](development/ENGINEERING_STANDARDS.md) | Concise architecture, component, styling, test, and dependency rules. |
+| [Quality checklist](quality/QUALITY_CHECKLIST.md) | General pre-merge verification checklist. |
+| [Repository reachability audit](quality/UNUSED_CODE_AUDIT.md) | Evidence, retention decisions, and the removal standard for unused-code reviews. |
+| [Performance budget](quality/PERFORMANCE_BUDGET.md) | Runtime, JavaScript, asset, surface, motion, and build constraints. |
+| [Performance checklist](quality/PERFORMANCE_CHECKLIST.md) | Focused pre-merge performance review. |
 
 ## Deployment and operations
 
 | Document | Purpose |
 | --- | --- |
-| [Deployment](DEPLOYMENT.md) | GitHub and Cloudflare setup, environment separation, branch protection, and first deployment. |
-| [Operations](OPERATIONS.md) | Event behavior, candidate selection, exact-artifact deployment, manifests, smoke tests, retries, and rollback considerations. |
-| [Troubleshooting](TROUBLESHOOTING.md) | Symptoms, likely causes, diagnostics, safe corrections, and actions to avoid. |
+| [Deployment](operations/DEPLOYMENT.md) | GitHub and Cloudflare setup, environment separation, release governance, and first deployment. |
+| [Operations](operations/OPERATIONS.md) | Event behavior, candidate selection, exact-artifact deployment, manifests, smoke tests, retries, and rollback considerations. |
+| [Troubleshooting](development/TROUBLESHOOTING.md) | Symptoms, likely causes, diagnostics, safe corrections, and actions to avoid. |
 
 ## Security and data handling
 
 | Document | Purpose |
 | --- | --- |
-| [Security](SECURITY.md) | Threat model, trust boundaries, public and private data, headers, URL rules, contact security, and publication review. |
-| [Contact system](CONTACT_SYSTEM.md) | Client workflow, verification ticket, request validation, Turnstile, Resend, configuration, and abuse controls. |
-| [Security checklist](SECURITY_CHECKLIST.md) | Concise operational security review linked to the deeper guides. |
+| [Security](security/SECURITY.md) | Threat model, trust boundaries, public and private data, headers, URL rules, contact security, and publication review. |
+| [Contact system](security/CONTACT_SYSTEM.md) | Client workflow, verification ticket, request validation, Turnstile, Resend, configuration, and abuse controls. |
+| [Security checklist](security/SECURITY_CHECKLIST.md) | Concise operational security review linked to the deeper guides. |
 
 ## Maintenance
 
 | Document | Purpose |
 | --- | --- |
-| [Maintenance](MAINTENANCE.md) | Safe extension patterns for content fields, routes, UI, themes, Functions, CI, and deployment. |
+| [Maintenance](development/MAINTENANCE.md) | Safe extension patterns for content fields, routes, UI, themes, Functions, CI, and deployment. |
 
 ## Sources of truth
 

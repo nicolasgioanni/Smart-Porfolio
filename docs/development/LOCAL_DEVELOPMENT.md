@@ -116,7 +116,7 @@ The command validates the selected source and writes `src/content/generated/port
 
 `npm run build` has a `prebuild` lifecycle step and therefore regenerates content before Next.js runs. `npm run build:generated` skips that lifecycle fetch and consumes the existing generated JSON. The latter is the CI build command after the workflow has already fetched and validated its one candidate snapshot.
 
-See [Local Content Editing](LOCAL_CONTENT_EDITING.md), [Content Pipeline](CONTENT_PIPELINE.md), and [Content Sheet Schema](CONTENT_SHEET_SCHEMA.md) for authoring rules.
+See [Local Content Editing](../content/LOCAL_CONTENT_EDITING.md), [Content Pipeline](../content/CONTENT_PIPELINE.md), and [Content Sheet Schema](../content/CONTENT_SHEET_SCHEMA.md) for authoring rules.
 
 ## Complete contact-flow development
 
@@ -195,7 +195,7 @@ npm run verify:local:node
 
 Because `verify` ends with the normal build, the wrapper's explicit generation is followed by the build lifecycle generation. CI avoids a second remote fetch by using `build:generated` instead.
 
-Use [Testing](TESTING.md) for the command matrix, test inventory, and CI coverage.
+Use [Testing](../quality/TESTING.md) for the command matrix, test inventory, and CI coverage.
 
 ## Inspecting the static export
 
@@ -237,6 +237,6 @@ Removing `node_modules` requires confirmation unless `-Force` is supplied. Clean
 ## Next steps
 
 - [Troubleshooting](TROUBLESHOOTING.md)
-- [Testing](TESTING.md)
-- [Deployment](DEPLOYMENT.md)
-- [Operations](OPERATIONS.md)
+- [Testing](../quality/TESTING.md)
+- [Deployment](../operations/DEPLOYMENT.md)
+- [Operations](../operations/OPERATIONS.md)

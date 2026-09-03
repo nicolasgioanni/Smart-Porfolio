@@ -140,7 +140,7 @@ Use the sheet and row context from the generator error, correct the source, and 
 
 The hash covers the canonical normalized content subset. Formatting, workbook metadata, equivalent line endings, trailing blank cells, generation time, and compatibility fields outside that subset do not change it.
 
-Confirm the edited field is mapped into the current UI. See [Content Pipeline](CONTENT_PIPELINE.md) and [Content Mapping](CONTENT_MAPPING.md).
+Confirm the edited field is mapped into the current UI. See [Content Pipeline](../content/CONTENT_PIPELINE.md) and [Content Mapping](../content/CONTENT_MAPPING.md).
 
 ### The hash changed unexpectedly
 
@@ -364,7 +364,7 @@ Wrangler has successfully created the candidate deployment before smoke testing 
 
 The smoke helper retries 10 times with 5-second gaps and 20-second request timeouts. Persistent failure can indicate alias propagation, stale metadata, a wrong commit, an altered manifest, Function routing failure, or a changed JSON method contract.
 
-There is no automatic rollback. Follow [Operations](OPERATIONS.md#rollback) after identifying the active deployment.
+There is no automatic rollback. Follow [Operations](../operations/OPERATIONS.md#rollback) after identifying the active deployment.
 
 ### The assigned domain works but the custom domain fails
 

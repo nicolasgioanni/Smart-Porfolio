@@ -130,7 +130,7 @@ Shared dialog lifecycle and transition state live in `src/components/overlay/Mod
 | `scripts/lib/portfolioContentGeneration.ts` | Workbook URL and payload checks, XLSX parsing, worksheet and row validation, formula extraction, hashing, and metadata finalization. |
 | `scripts/lib/pngMetadata.mjs` and `scripts/stripPngMetadata.mjs` | Strict, resource-bounded PNG chunk parsing and lossless removal of non-rendering text, EXIF, and provenance chunks from contributed research media. |
 
-Deployment replaces the development snapshot with one strict workbook-derived candidate, tests it, and builds the exact static artifact without fetching again. It does not commit the deployed production or stable preview candidate. See [Content pipeline](CONTENT_PIPELINE.md).
+Deployment replaces the development snapshot with one strict workbook-derived candidate, tests it, and builds the exact static artifact without fetching again. It does not commit the deployed production or stable preview candidate. See [Content pipeline](../content/CONTENT_PIPELINE.md).
 
 The local `resume.csv` compatibility template must remain header-only. It is never a remote workbook tab or a source of published resume content; a workbook containing a `resume` worksheet is invalid.
 
@@ -159,7 +159,7 @@ The principal responsive thresholds are 980, 860, 720, 620, 520, 480, and 380 CS
 
 `functions/api/contact/verify.ts` verifies a Turnstile response and issues a short-lived signed verification ticket. `functions/api/contact.ts` validates that ticket and the contact payload, checks mail-domain routing, reserves a pseudonymous D1 quota slot, and sends two sequential idempotent Resend requests. Shared validation, response construction, cryptography, configuration parsing, and delivery helpers live in `functions/_shared/contact.ts`; the minimal reservation schema lives under `migrations/`.
 
-`public/_routes.json` is the deployment allowlist for those exact Function paths. Broadening it changes the runtime and security boundary and requires tests plus updates to [Contact system](CONTACT_SYSTEM.md) and [Security](SECURITY.md).
+`public/_routes.json` is the deployment allowlist for those exact Function paths. Broadening it changes the runtime and security boundary and requires tests plus updates to [Contact system](../security/CONTACT_SYSTEM.md) and [Security](../security/SECURITY.md).
 
 ## Tests
 
@@ -170,7 +170,7 @@ Tests stay next to the behavior they protect when practical:
 - content-generation and automation tests under `scripts/`;
 - CSS contract tests next to the component or style behavior they protect.
 
-Vitest discovers the complete suite. ESLint, TypeScript, the static build, documentation validation, artifact checks, and deployment smoke tests provide additional layers. See [Testing](TESTING.md).
+Vitest discovers the complete suite. ESLint, TypeScript, the static build, documentation validation, artifact checks, and deployment smoke tests provide additional layers. See [Testing](../quality/TESTING.md).
 
 ## Where should this change go?
 
@@ -192,7 +192,7 @@ Vitest discovers the complete suite. ESLint, TypeScript, the static build, docum
 ## Related guides
 
 - [Architecture](ARCHITECTURE.md)
-- [Content pipeline](CONTENT_PIPELINE.md)
-- [Design system](DESIGN_SYSTEM.md)
-- [Testing](TESTING.md)
-- [Maintenance](MAINTENANCE.md)
+- [Content pipeline](../content/CONTENT_PIPELINE.md)
+- [Design system](../design/DESIGN_SYSTEM.md)
+- [Testing](../quality/TESTING.md)
+- [Maintenance](../development/MAINTENANCE.md)

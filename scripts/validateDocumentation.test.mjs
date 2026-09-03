@@ -154,18 +154,61 @@ describe("documentation validation", () => {
     }
   });
 
-  it("rejects excluded local tooling terminology", async () => {
-    const excludedTerm = String.fromCharCode(67, 111, 100, 101, 120);
+  it("allows and validates repository-local agent guidance", async () => {
     const root = await createFixture({
-      "README.md": `# Project\n\nDo not publish ${excludedTerm} process notes.\n`,
-      "docs/GUIDE.md": "# Guide\n",
+      "README.md": "# Project\n\n[Agent guidance](AGENTS.md)\n",
+      "AGENTS.md": "# Agent guidance\n\nUse [the skill](.agents/skills/example/SKILL.md).\n",
+      ".agents/skills/example/SKILL.md": "---\nname: example\ndescription: Example repository guidance.\n---\n\n# Example\n\nUse an MCP tool when the task needs one.\n",
+      "docs/GUIDE.md": "# Guide\n\nThis guide can describe Codex workflows.\n",
     });
 
     try {
       const result = await validateDocumentation({ projectRoot: root });
-      expect(result.errors).toEqual([
-        "README.md: contains excluded local tooling terminology",
-      ]);
+      expect(result.errors).toEqual([]);
+      expect(result.checkedFiles).toEqual(
+        expect.arrayContaining([
+          "AGENTS.md",
+          ".agents/skills/example/SKILL.md",
+        ]),
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+ it("rejects an invalid repository skill identity", async () => {
+    const root = await createFixture({
+      "README.md": "# Project\n",
+      "docs/GUIDE.md": "# Guide\n",
+      ".agents/skills/example/SKILL.md": "---\nname: different\n---\n\n# Example\n",
+    });
+
+    try {
+      const result = await validateDocumentation({ projectRoot: root });
+      expect(result.errors).toEqual(
+        expect.arrayContaining([
+          ".agents/skills/example/SKILL.md: skill name must match its directory",
+        ]),
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a skill with an empty description before another key", async () => {
+    const root = await createFixture({
+      "README.md": "# Project\n",
+      "docs/GUIDE.md": "# Guide\n",
+      ".agents/skills/example/SKILL.md": "---\nname: example\ndescription:\nmetadata: ignored\n---\n\n# Example\n",
+    });
+
+    try {
+      const result = await validateDocumentation({ projectRoot: root });
+      expect(result.errors).toEqual(
+        expect.arrayContaining([
+          ".agents/skills/example/SKILL.md: skill frontmatter requires a description",
+        ]),
+      );
     } finally {
       await rm(root, { recursive: true, force: true });
     }
