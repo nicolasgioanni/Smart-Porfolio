@@ -99,9 +99,11 @@ describe("ResearchVideoPreview", () => {
     const reopenedPlayer = reopenedDialog.querySelector<HTMLVideoElement>(".research-video-dialog__player")!;
     expect(reopenedPlayer.currentTime).toBe(46.25);
     fireEvent.click(within(reopenedDialog).getByRole("button", { name: "Close video for Example Research" }));
-    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
-    expect(openButton).toHaveFocus();
-    expect(document.body.style.overflow).toBe(originalBodyOverflow);
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(openButton).toHaveFocus();
+      expect(document.body.style.overflow).toBe(originalBodyOverflow);
+    });
     expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
   });
 
