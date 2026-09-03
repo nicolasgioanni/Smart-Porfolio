@@ -243,7 +243,7 @@ The two-step ticket flow avoids sending a consumed Turnstile token twice and kee
 | Home order and selection | `HomeOverview.tsx`, `selectHomeContent.ts`, and `profileOverview.ts` |
 | Theme behavior | `src/components/theme/`, `src/lib/theme/`, and `tokens.css` |
 | Glass and interaction primitives | `src/components/glass/`, `glass.css`, and `interactions.css` |
-| Contact verification and delivery | `functions/api/` and `functions/_shared/contact.ts` |
+| Contact verification and delivery | `functions/api/`, the stable `functions/_shared/contact.ts` facade, and its focused `functions/_shared/contact/` modules |
 | Contact-rate storage schema | `migrations/` and `wrangler.jsonc` |
 | Function routing and static headers | `public/_routes.json` and `public/_headers` |
 | Cloudflare project configuration | `wrangler.jsonc` |

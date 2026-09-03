@@ -12,7 +12,8 @@ Use this guide for the complete request contract and trust boundary. See [Securi
 | Wizard state, requests, retries, and acknowledgments | `src/components/contact/ContactForm.tsx` |
 | Browser field validation | `src/components/contact/contactFormValidation.ts` |
 | Turnstile widget options | `src/components/contact/TurnstileWidget.tsx` |
-| Shared schemas, ticket, provider calls, and response headers | `functions/_shared/contact.ts` |
+| Shared public contact contract | `functions/_shared/contact.ts` |
+| Request, provider, persistence, ticket, and delivery modules | `functions/_shared/contact/` |
 | Verification handler | `functions/api/contact/verify.ts` |
 | Delivery handler | `functions/api/contact.ts` |
 | Function route allowlist | `public/_routes.json` |
