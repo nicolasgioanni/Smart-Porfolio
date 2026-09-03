@@ -3,18 +3,17 @@ import { siteRoutePaths, siteRoutes, type SiteRoutePath } from "../../src/compon
 import { captureBrowserConsole, expectNoBrowserConsoleIssues } from "./browserConsole";
 import { skeletonMarkupByRoute } from "./skeletonMarkup";
 import { prepareDarkPage, settleDocumentLayout } from "./skeletonTestHelpers";
+import {
+  collectStandaloneDocumentSource,
+  createStandaloneDocument,
+  waitForStandaloneDocumentAssets
+} from "./standaloneSkeletonDocument";
 
 type SnapshotCase = {
   height: number;
   name: string;
   pathname: SiteRoutePath;
   width: number;
-};
-
-type StandaloneDocumentSource = {
-  bodyAttributes: [string, string][];
-  htmlAttributes: [string, string][];
-  stylesheetHrefs: string[];
 };
 
 const desktopAndMobileSnapshots: SnapshotCase[] = siteRoutePaths.flatMap((pathname) => [
@@ -35,54 +34,11 @@ function snapshotName({ name, pathname }: SnapshotCase): string {
   return `skeleton-${pathname === siteRoutes.home ? "home" : pathname.slice(1)}-${name}.png`;
 }
 
-function escapeAttribute(value: string): string {
-  return value.replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;");
-}
-
-function serializeAttributes(attributes: [string, string][]): string {
-  return attributes.map(([name, value]) => `${name}="${escapeAttribute(value)}"`).join(" ");
-}
-
-function createStandaloneDocument(source: StandaloneDocumentSource, markup: string): string {
-  const stylesheets = source.stylesheetHrefs
-    .map((href) => `<link data-skeleton-visual-stylesheet rel="stylesheet" href="${escapeAttribute(href)}">`)
-    .join("");
-
-  return `<!doctype html>
-<html ${serializeAttributes(source.htmlAttributes)}>
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    ${stylesheets}
-  </head>
-  <body ${serializeAttributes(source.bodyAttributes)}>
-    <main data-skeleton-visual-fixture>${markup}</main>
-  </body>
-</html>`;
-}
-
-async function collectStandaloneDocumentSource(page: Page): Promise<StandaloneDocumentSource> {
-  const source = (await page.evaluate(() => ({
-    bodyAttributes: Array.from(document.body.attributes, ({ name, value }) => [name, value]),
-    htmlAttributes: Array.from(document.documentElement.attributes, ({ name, value }) => [name, value]),
-    stylesheetHrefs: Array.from(document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]'), (link) => link.href)
-  }))) as StandaloneDocumentSource;
-
-  if (source.stylesheetHrefs.length === 0) {
-    throw new Error("The source shell did not expose a compiled stylesheet href for the visual fixture.");
-  }
+async function loadStandaloneRouteSkeleton(page: Page, pathname: SiteRoutePath): Promise<Locator> {
+  const source = await collectStandaloneDocumentSource(page);
   if (source.htmlAttributes.find(([name]) => name === "data-theme")?.[1] !== "dark") {
     throw new Error("The source shell did not resolve the dark theme before the visual fixture loaded.");
   }
-  if (!source.bodyAttributes.some(([name]) => name === "class")) {
-    throw new Error("The source shell did not expose the generated body font class for the visual fixture.");
-  }
-
-  return source;
-}
-
-async function loadStandaloneRouteSkeleton(page: Page, pathname: SiteRoutePath): Promise<Locator> {
-  const source = await collectStandaloneDocumentSource(page);
   const stylesheetHrefs = new Set(source.stylesheetHrefs);
   const fixtureAssetFailures: string[] = [];
   const isFixtureAssetRequest = (request: Request): boolean =>
@@ -102,7 +58,9 @@ async function loadStandaloneRouteSkeleton(page: Page, pathname: SiteRoutePath):
   page.on("response", failedResponseListener);
   await page.route(standaloneFixtureRoute, (route) =>
     route.fulfill({
-      body: createStandaloneDocument(source, skeletonMarkupByRoute[pathname]),
+      body: createStandaloneDocument(source, skeletonMarkupByRoute[pathname], {
+        markerAttribute: "data-skeleton-visual-fixture"
+      }),
       contentType: "text/html",
       status: 200
     })
@@ -114,15 +72,7 @@ async function loadStandaloneRouteSkeleton(page: Page, pathname: SiteRoutePath):
     await expect(page.locator("nextjs-portal")).toHaveCount(0);
     await expect(page.locator("script")).toHaveCount(0);
     await expect(page.locator("[data-skeleton-visual-stylesheet]")).toHaveCount(source.stylesheetHrefs.length);
-    await page.waitForFunction((hrefs) => {
-      const stylesheets = Array.from(document.querySelectorAll<HTMLLinkElement>("[data-skeleton-visual-stylesheet]"));
-      return hrefs.every((href) => stylesheets.some((stylesheet) => stylesheet.href === href && stylesheet.sheet));
-    }, source.stylesheetHrefs);
-    await page.evaluate(async () => {
-      await document.fonts.load('16px "Space Grotesk"');
-      await document.fonts.ready;
-    });
-    await expect.poll(() => page.evaluate(() => document.fonts.check('16px "Space Grotesk"'))).toBe(true);
+    await waitForStandaloneDocumentAssets(page, source);
     await settleDocumentLayout(page);
 
     if (fixtureAssetFailures.length > 0) {
