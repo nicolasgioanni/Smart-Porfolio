@@ -1,10 +1,11 @@
 import { isValidEmail } from "../../../src/lib/contact/validation";
 import type { EmailDomainValidationResult } from "./contracts";
-import { fetchWithTimeout } from "./transport";
+import { fetchWithJsonTimeout, type ReadJsonResponse } from "./transport";
 import { isPlainObject } from "./values";
 
 const DNS_OVER_HTTPS_URL = "https://cloudflare-dns.com/dns-query";
 const DNS_TIMEOUT_MS = 3_000;
+const DNS_MAX_RESPONSE_BYTES = 65_536;
 
 interface DnsJsonResponse {
   Status?: number;
@@ -40,19 +41,21 @@ export async function validateEmailDomain(email: string): Promise<EmailDomainVal
 }
 
 async function queryDns(domain: string, recordType: "MX" | "A" | "AAAA"): Promise<DnsQueryResult> {
-  const response = await fetchWithTimeout(
-    `${DNS_OVER_HTTPS_URL}?name=${encodeURIComponent(domain)}&type=${recordType}`,
-    { headers: { Accept: "application/dns-json" } },
-    DNS_TIMEOUT_MS
+  return (
+    (await fetchWithJsonTimeout(
+      `${DNS_OVER_HTTPS_URL}?name=${encodeURIComponent(domain)}&type=${recordType}`,
+      { headers: { Accept: "application/dns-json" } },
+      DNS_TIMEOUT_MS,
+      DNS_MAX_RESPONSE_BYTES,
+      parseDnsResponse
+    )) ?? { kind: "unavailable" }
   );
-  if (!response?.ok) return { kind: "unavailable" };
+}
 
-  let body: DnsJsonResponse;
-  try {
-    body = (await response.json()) as DnsJsonResponse;
-  } catch {
-    return { kind: "unavailable" };
-  }
+async function parseDnsResponse(response: Response, readJson: ReadJsonResponse): Promise<DnsQueryResult> {
+  if (!response.ok) return { kind: "unavailable" };
+
+  const body = (await readJson()) as DnsJsonResponse | undefined;
   if (!isPlainObject(body) || !Number.isInteger(body.Status)) return { kind: "unavailable" };
   if (body.TC === true || (body.TC !== undefined && typeof body.TC !== "boolean")) {
     return { kind: "unavailable" };

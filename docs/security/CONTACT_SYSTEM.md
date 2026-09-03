@@ -140,7 +140,7 @@ Both handlers use the same request envelope rules:
 - The byte stream must be valid UTF-8 and valid JSON.
 - A configured allowlist is valid only when every comma-separated entry is valid. One malformed origin or hostname makes the corresponding configuration check fail closed.
 
-The handlers do not implement a request-body timeout, whole-request timeout, or client-side fetch timeout. Cloudflare platform limits still apply. Bounded timeouts apply to Siteverify, mail-domain DNS validation, and each Resend request.
+The handlers apply a 15-second request-body read deadline, but do not implement a whole-request timeout or client-side fetch timeout. Cloudflare platform limits still apply. A body that crosses the 16 KiB input limit or its read deadline begins stream cancellation without waiting for that cleanup to settle. Bounded timeouts apply to Siteverify, mail-domain DNS validation, and each Resend request.
 
 ### `POST /api/contact/verify`
 
@@ -158,7 +158,7 @@ The handler checks required Turnstile configuration before origin, media-type, a
 - a separate Siteverify operation UUID as `idempotency_key`;
 - `CF-Connecting-IP` as `remoteip` only when the header is non-empty, at most 64 characters, and free of unsafe control characters.
 
-Each Siteverify attempt has a 5-second timeout. A network failure, timeout, HTTP `408`, HTTP `429`, HTTP `5xx`, provider `internal-error`, malformed JSON, or malformed provider response receives one bounded retry of the same token with the same operation UUID. The operation UUID is scoped to that verification operation and is not the submission identity. It is never reused for a new token. Provider configuration, request-contract, and unknown structured errors fail as unavailable without retrying an error that requires operator correction.
+Each Siteverify attempt has a 5-second deadline beginning before the request and covering response headers plus streamed JSON parsing. The JSON response is limited to 16 KiB, and the fixed provider request rejects redirects before its secret-bearing body can be forwarded. A network failure, deadline, HTTP `408`, HTTP `429`, HTTP `5xx`, provider `internal-error`, oversized or malformed JSON, or malformed provider response receives one bounded retry of the same token with the same operation UUID. The operation UUID is scoped to that verification operation and is not the submission identity. It is never reused for a new token. Provider configuration, request-contract, and unknown structured errors fail as unavailable without retrying an error that requires operator correction.
 
 A ticket is issued only when the provider response is successful, parses as JSON, contains `success: true`, contains action exactly `portfolio_contact`, reports a hostname in the exact configured allowlist, and returns `cdata` exactly matching the submitted UUID. An invalid or duplicate challenge, or a successful response with an action, hostname, or custom-data mismatch, returns `400 verification_failed`. Exhausted transient failures and provider integration faults return `503 verification_unavailable`. The repository does not inspect `challenge_ts`.
 
@@ -194,7 +194,7 @@ The browser records `startedAt` only when initial verification has succeeded and
 
 The silent success response prevents these low-cost bot signals from becoming a tuning oracle. It also means `200` is intentionally not proof that a honeypot or implausibly fast request produced email.
 
-For a normal verified request, the server performs bounded DNS validation before creating a quota reservation. An explicit nonexistent domain, null MX, or domain with neither usable MX nor address fallback returns `422 invalid_email`. A timeout, transient resolver failure, or indeterminate result returns `503 email_validation_unavailable`. DNS validation establishes domain routing only; it cannot prove that the mailbox exists, is deliverable, or belongs to the submitter.
+For a normal verified request, the server performs bounded DNS validation before creating a quota reservation. Each DNS exchange has a 3-second full-operation deadline and a 64 KiB JSON-response limit, and fixed resolver requests reject redirects. An explicit nonexistent domain, null MX, or domain with neither usable MX nor address fallback returns `422 invalid_email`. A timeout, transient resolver failure, oversized response, or indeterminate result returns `503 email_validation_unavailable`. DNS validation establishes domain routing only; it cannot prove that the mailbox exists, is deliverable, or belongs to the submitter.
 
 ## Verification ticket
 
@@ -233,7 +233,7 @@ Expired rows are removed during reservation cleanup. Fewer than two unexpired ro
 
 ## Email delivery and idempotency
 
-After DNS validation and quota reservation, the handler makes up to two sequential `POST https://api.resend.com/emails` requests with server-only bearer authorization and bounded timeouts. It sends the visitor confirmation first and sends the owner notification only after Resend accepts the confirmation request:
+After DNS validation and quota reservation, the handler makes up to two sequential `POST https://api.resend.com/emails` requests with server-only bearer authorization and bounded timeouts. Fixed Resend requests reject redirects, and the handler cancels each unread response body without waiting because it needs only the acceptance status. It sends the visitor confirmation first and sends the owner notification only after Resend accepts the confirmation request:
 
 | Message | Destination | Reply-to | Content |
 | --- | --- | --- | --- |
@@ -244,7 +244,7 @@ Both messages use the configured `CONTACT_FROM_EMAIL` sender. The visitor subjec
 
 The visitor request uses `Idempotency-Key: portfolio-contact/visitor/<submissionId>` and the owner request uses `Idempotency-Key: portfolio-contact/owner/<submissionId>`. If the owner request fails after visitor acceptance, the browser keeps its locked payload and still-valid ticket; a retry repeats both calls, and the visitor key returns the original accepted result before the owner call is retried. If the ticket expires first, the browser refreshes verification with the original UUID and then repeats the same locked delivery request, preserving both provider keys and the byte-equivalent body. Resend currently documents a 24-hour idempotency window, returns the original result for an identical retry, and rejects reuse of the same key with a different payload. See [Resend idempotency keys](https://resend.com/docs/dashboard/emails/idempotency-keys).
 
-Any network failure, timeout, or non-success provider response becomes `502 delivery_failed`. The handler reads only what it needs to establish provider acceptance and does not return provider response bodies or email identifiers. Acceptance is not mailbox verification: asynchronous rejection or bounce can still occur after the API call succeeds.
+Any network failure, timeout, redirect, or non-success provider response becomes `502 delivery_failed`. The handler reads only what it needs to establish provider acceptance and does not return provider response bodies or email identifiers. Acceptance is not mailbox verification: asynchronous rejection or bounce can still occur after the API call succeeds.
 
 ## Responses and headers
 
@@ -255,7 +255,7 @@ Any network failure, timeout, or non-success provider response becomes `502 deli
 | Missing, malformed, or unlisted origin | `403` | `request_rejected` |
 | Media type other than JSON | `415` | `unsupported_media_type` |
 | Body over 16 KiB | `413` | `request_too_large` |
-| Malformed JSON or invalid schema | `400` | `invalid_request` |
+| Malformed, timed-out, or invalid JSON request | `400` | `invalid_request` |
 | Form draft older than two hours | `409` | `request_expired` |
 | Invalid Turnstile challenge or action, hostname, or custom-data mismatch | `400` | `verification_failed` |
 | Exhausted transient Turnstile failure or provider integration fault | `503` | `verification_unavailable` |
