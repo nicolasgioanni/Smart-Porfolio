@@ -237,7 +237,7 @@ The role rotation, route indicator, header state, mobile rail drift, theme discl
 
 ## Loading states
 
-Route `loading.tsx` files use skeletons shaped like their destination. Skeletons contain no real text or fake controls, remain hidden from the accessibility tree at primitive level, and expose a busy labelled region at page level. They do not justify client-side content fetching.
+Route `loading.tsx` files use static, solid skeletons shaped like their destination. Body placeholders contain no fake prose or controls. `RouteHeaderSkeleton` is the single copy-shaped exception: it reuses the exhaustive canonical route-header registry as transparent, noninteractive ink inside an `aria-hidden` header so real typography determines responsive line fragments over the solid skeleton surface. Page roots expose one labelled busy region. Skeletons do not justify client-side content fetching.
 
 See [Skeleton loading guidelines](SKELETON_LOADING_GUIDELINES.md).
 

@@ -56,7 +56,7 @@ Use opaque semantic surface tiers for cards, navigation, footer, dialogs, and se
 Skeletons support route transitions and deferred UI. They do not replace static delivery.
 
 - Match final layout dimensions.
-- Contain no real text or fake controls.
+- Keep body placeholders free of real or fake prose and controls. The transparent, `aria-hidden` canonical route-header ink is the only copy-shaped exception and exists solely to derive intrinsic line geometry.
 - Keep skeletons static; never add shimmer.
 - Do not introduce an artificial delay.
 

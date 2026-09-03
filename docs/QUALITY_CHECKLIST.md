@@ -36,7 +36,7 @@ Run this checklist before shipping meaningful changes.
 - Runtime request handling remains isolated to the documented `/api/contact/verify` and `/api/contact` Cloudflare Pages Functions.
 - Client components are justified by interaction or browser APIs.
 - Theme listeners are scoped to System behavior, respect manual override precedence, synchronize cleared storage, and clean up on unmount.
-- Skeleton geometry changes preserve static loading semantics, the inert visual fixture, and the static-export transition contract. Research visual baselines use only the isolated canonical local-template detail fixture; normal loading and alignment remain generated-workbook driven.
+- Skeleton geometry changes preserve the exhaustive route-header registry, the generated Experience resolver, static loading semantics, shared inert alignment/visual fixtures, and the static-export transition contract. Research visual baselines use only the isolated canonical local-template detail fixture; normal loading and alignment remain generated-workbook driven.
 
 ## Verification
 
@@ -49,6 +49,7 @@ Run this checklist before shipping meaningful changes.
 - `npm run test:skeletons`
 - `npm run test:skeleton-guidance`
 - `npm run test:skeleton-baseline-workflow`
+- `npm run test:e2e:skeletons:alignment` for local cross-width geometry validation
 - `npm run test:e2e:skeletons` on Ubuntu 24.04 when skeleton rendering, route coverage, or browser workflow changes
 - `npm run test:e2e:navigation`
 - `npm run test:e2e:footer`

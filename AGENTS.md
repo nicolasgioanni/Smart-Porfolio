@@ -32,11 +32,13 @@
 
 ## Skeleton regression workflow
 
-- Reuse `RouteSkeleton`, route compositions, and `skeletons.css` for loading geometry. Keep blocks static and solid, permitting only intentional control-shaped geometry; do not add shimmer, gradients, blur, glow, fake copy, or real interactive controls.
+- Reuse `RouteSkeleton`, route compositions, `RouteHeaderSkeleton`, and `skeletons.css` for loading geometry. Keep blocks static and solid, permitting only intentional control-shaped geometry; do not add shimmer, gradients, blur, glow, fake prose, or real interactive controls.
+- Resolve page-header geometry through the exhaustive `src/lib/content/routeHeaderContent.ts` registry. Its transparent, `aria-hidden` canonical header ink is the only copy-shaped exception; preserve the generated Experience summary override through `resolveRouteHeaderContent()` instead of adding viewport JavaScript or route-specific width tables.
 - Read `.agents/skills/portfolio-skeleton-regression/SKILL.md` before changing skeleton geometry, route coverage, visual baselines, transition coverage, or the browser gate.
-- Keep visual baselines Linux-only on Ubuntu 24.04 with zero-difference screenshots. The live shell may supply resolved attributes, the body font class, and compiled stylesheet URLs, but the screenshot fixture must remain same-origin and inert: no application scripts, development portal, or mutation of React-owned DOM.
+- Keep visual baselines Linux-only on Ubuntu 24.04 with zero-difference screenshots. The live shell may supply resolved attributes, the body font class, and compiled stylesheet URLs, but alignment and screenshot fixtures must remain same-origin and inert through the shared standalone-document helper: no application scripts, development portal, or mutation of React-owned DOM.
 - Standalone Research visual snapshots may inject controlled canonical local-template detail items only through the isolated renderer. Normal loading boundaries and component or alignment coverage must remain generated-workbook driven.
 - Preserve the static export transition contract: a held non-prefetch RSC response keeps the source body in place; do not claim that `loading.tsx` streams in the published export. Review every baseline artifact before committing it.
+- Preserve all three parts of `npm run test:e2e:skeletons`: direct resolved-versus-loader alignment, held-navigation semantics, and the Linux visual matrix.
 
 ## Verification and documentation
 

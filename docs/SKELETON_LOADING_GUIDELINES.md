@@ -19,12 +19,17 @@ Reusable primitives and compositions include:
 - `SkeletonCard`
 - `SkeletonHero`
 - `SkeletonGrid`
+- `RouteHeaderSkeleton`
+- `RouteSkeleton`
 - `PageSkeleton`
 - `HomePageSkeleton`
 - `ResearchPageSkeleton`
 - `ProjectsPageSkeleton`
 - `ExperiencePageSkeleton`
 - `RecommendationsPageSkeleton`
+- `ResumePageSkeleton`
+- `ContactPageSkeleton`
+- `LegalPageSkeleton`
 
 ## Route behavior
 
@@ -35,20 +40,32 @@ Reusable primitives and compositions include:
 | Projects | Page introduction and card grid shaped like the evidence route. |
 | Experience | Page introduction, compact audience selector, and logo-led role cards with evidence-row footprints. |
 | Recommendations | Page introduction and recommendation cards. |
-| Contact | Generic page skeleton while the static form shell resolves. |
+| Resume | Page introduction and private-resume request panel. |
+| Contact | Page introduction and form-shell footprint while the static contact route resolves. |
+| Terms, Privacy, Security | Canonical legal header and route-specific section footprints. |
 
 Each route `loading.tsx` calls `shouldRenderSkeletons()` before returning the page-specific composition. The setting changes loading polish, not route content.
 
 ## Layout matching
 
 - Use the same grids, radii, spacing tokens, and approximate block heights as the destination.
-- Reserve image, heading, paragraph, metadata, and action geometry without copying real content.
+- Reserve body image, paragraph, metadata, and action geometry without inventing or imitating prose. Canonical page-header ink is the intentional exception described below.
 - Update a skeleton when its route changes enough to create a noticeable layout jump.
 - Keep responsive column changes aligned with the destination style sheet.
 
+## Canonical header geometry
+
+`src/lib/content/routeHeaderContent.ts` is an exhaustive registry for every registered route. Resolved pages and `RouteHeaderSkeleton` reuse its eyebrow, title, description, placement, and accessory contract. The Home entry is intentionally `null` because Home has a different hero composition.
+
+`RouteHeaderSkeleton` renders the exact canonical strings inside an `aria-hidden` header. The text color is transparent while each browser-generated line fragment receives one flat `--color-skeleton-surface` fill through `box-decoration-break: clone`. Pointer selection and interaction are disabled. This lets the browser derive the real typography, wrapping, and line boxes at every width without viewport JavaScript, fake prose, or per-route width tables.
+
+Experience is the only generated page-header override. Both its resolved route and loader pass validated `getPortfolioContent()` data through `resolveRouteHeaderContent()` so they share the generated `profile.experienceSummary` or the registry fallback exactly. Do not add another generated override outside that resolver.
+
+Research card footprint counts come from validated selected detail items and the same `getResearchVisibleResources()` resolver used by resolved cards. Only the isolated visual renderer may inject controlled canonical local-template Research items; normal loading boundaries and direct alignment remain generated-workbook driven.
+
 ## Accessibility
 
-Primitive blocks use `aria-hidden="true"`. `PageSkeleton` exposes a labelled region with `aria-busy="true"`. Skeletons contain no fake text, links, buttons, form controls, or announcements about content that may not exist.
+Primitive blocks use `aria-hidden="true"`. `PageSkeleton` exposes a labelled region with `aria-busy="true"`. The canonical header strings exist only inside an `aria-hidden` ancestor and are transparent, non-selectable, and noninteractive, so they do not become headings, copy, focus targets, or announcements in the accessibility tree. Body skeletons contain no fake text, links, buttons, or form controls.
 
 The page-level busy region is sufficient. Do not add a live region for every placeholder.
 
@@ -58,11 +75,17 @@ Skeletons use static solid `--color-skeleton-surface` fills in every motion sett
 
 ## Visual and transition regression coverage
 
-`tests/e2e/skeletons.visual.spec.ts` loads the real shell only to read its resolved dark-theme HTML attributes, generated body font class, and absolute compiled stylesheet hrefs. It then fulfills a same-origin inert fixture document containing those attributes, stylesheets, and canonical `RouteSkeleton` markup rather than timing a navigation. The fixture has no application scripts or `nextjs-portal`, so neither React reconciliation nor the Next development toolbar can affect pixels. It asserts the stylesheet count and load state, `document.fonts.ready`, the loaded Space Grotesk face and computed font, static skeleton block styling, and stylesheet/font request or HTTP failures while the two-frame layout settle is in progress. Browser warnings, errors, and page errors are rejected before and after each screenshot. The source document's inline development style only defines Next toolbar fonts and is intentionally not copied. It covers every registered route at desktop and mobile widths plus the selected `980px` boundaries. Baselines are Linux-only, live under `tests/e2e/__screenshots__/linux/`, and are captured manually on Ubuntu 24.04 through the read-only baseline workflow. Review every PNG update deliberately.
+`tests/e2e/standaloneSkeletonDocument.ts` provides the shared same-origin inert document and asset-readiness contract for the alignment and visual suites. It carries only the real shell's resolved HTML/body attributes, generated body font class, and absolute compiled stylesheet hrefs. Fixtures contain canonical server-rendered `RouteSkeleton` markup, no application scripts, and no `nextjs-portal`, so neither React reconciliation nor the Next development toolbar can affect measurements or pixels.
+
+`tests/e2e/skeleton-alignment.spec.ts` compares resolved page-header Range line boxes with canonical loader ink relative to the persistent `site-main` shell. It covers compact, phone, tablet, transition, and fluid desktop widths; representative wrap boundaries; the generated Experience summary; Home overflow; Projects and Research detail footprints; Light and Dark; and reduced motion. Run it locally with `npm run test:e2e:skeletons:alignment`. Keep its existing font-metric tolerance strict.
+
+`tests/e2e/skeletons.visual.spec.ts` additionally asserts dark-theme resolution, stylesheet count and load state, `document.fonts.ready`, the loaded Space Grotesk face and computed font, static skeleton block styling, and stylesheet/font request or HTTP failures while the two-frame layout settle is in progress. Browser warnings, errors, and page errors are rejected before and after each screenshot. The source document's inline development style only defines Next toolbar fonts and is intentionally not copied. It covers every registered route at desktop and mobile widths plus the selected `980px` boundaries. Baselines are Linux-only, live under `tests/e2e/__screenshots__/linux/`, and are captured manually on Ubuntu 24.04 through the read-only baseline workflow. Review every PNG update deliberately.
 
 Research visual snapshots inject controlled canonical local-template detail items only through the isolated renderer for deterministic baselines. Normal Research loading boundaries and component or alignment coverage remain generated-workbook driven.
 
 `tests/e2e/skeletons.transition.spec.ts` disables viewport prefetch before hydration, clicks real rendered Next links, and holds a target non-prefetch RSC request for every non-Home route. A route with no source link or no held navigation request fails; it must never pass by skipping. With these synchronous Server Component routes, holding the whole Flight response keeps the source body in place rather than mounting a streamable `loading.tsx` fallback. This validates App Router request and navigation ownership in development. The published site is a static export, where Next 16 does not support loading UI streaming, so canonical static markup, busy semantics, and no-animation contracts remain the deployed-artifact geometry protection.
+
+The required Ubuntu CI command, `npm run test:e2e:skeletons`, runs the direct alignment, held-navigation transition, and Linux zero-difference visual specifications together.
 
 ## Baseline maintenance
 

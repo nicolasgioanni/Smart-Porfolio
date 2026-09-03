@@ -56,13 +56,13 @@ Smart-Porfolio/
 | Location | Responsibility |
 | --- | --- |
 | `.github/workflows/ci.yml` | Candidate selection, content generation, verification, artifact transfer, Cloudflare Direct Upload, smoke tests, and schedule heartbeat. |
-| `.agents/skills/portfolio-skeleton-regression/` | Repository-scoped guidance for deterministic skeleton visual and transition regression work. |
+| `.agents/skills/portfolio-skeleton-regression/` | Repository-scoped guidance for deterministic skeleton alignment, visual, and transition regression work. |
 | `docs/` | Guides, references, checklists, and README assets. |
 | `functions/` | Cloudflare Pages Functions for contact verification and delivery. These are not Next.js route handlers. |
 | `migrations/` | Append-only Cloudflare D1 schema changes applied before the corresponding Pages deployment. |
 | `public/` | Public images, favicons, Pages security headers, and the exact Function route allowlist copied into the static export. |
 | `scripts/` | Content ingestion, local automation, deployment manifests, artifact integrity, deployment smoke checks, and script-level tests. |
-| `tests/e2e/` | Playwright Chromium regressions for deterministic skeleton geometry and transitions, responsive navigation, recommendation overlays, Experience and Research detail behavior, and footer first-render, route, restoration, and scroll behavior. |
+| `tests/e2e/` | Playwright Chromium regressions for deterministic skeleton alignment, inert visual fixtures, and transitions; responsive navigation; recommendation overlays; Experience and Research detail behavior; and footer first-render, route, restoration, and scroll behavior. |
 | `src/` | Next.js routes, React components, typed content, selectors, validation, theme helpers, and CSS. |
 | `next.config.mjs` | Static export and unoptimized image configuration. |
 | `package.json` | Supported Node.js range, dependencies, and executable project commands. |
@@ -107,9 +107,11 @@ Focused client behavior includes the configured role rotation, modal media and s
 
 ### Surface and loading primitives
 
-`src/components/glass/` owns reusable solid surfaces, cards, controls, links, chips, dividers, and blobs. `src/components/loading/` owns route-level skeleton composition. Components consume semantic values from `src/styles/` rather than defining theme colors locally.
+`src/components/glass/` owns reusable solid surfaces, cards, controls, links, chips, dividers, and blobs. `src/components/loading/` owns route-level skeleton composition, including `RouteSkeleton` delegation and `RouteHeaderSkeleton` intrinsic header ink. Components consume semantic values from `src/styles/` rather than defining theme colors locally.
 
 Shared dialog lifecycle and transition state live in `src/components/overlay/ModalDialog.tsx` and `src/styles/dialog.css`. Consumer style sheets define only domain-specific backdrop color, frame size, and internal presentation.
+
+`tests/e2e/standaloneSkeletonDocument.ts` owns the inert same-origin HTML shell and stylesheet/font readiness used by direct skeleton alignment and Linux screenshot comparison. Browser tests must use that helper instead of replacing nodes inside the hydrated application tree.
 
 ## Content system
 
@@ -122,6 +124,7 @@ Shared dialog lifecycle and transition state live in `src/components/overlay/Mod
 | `src/lib/content/normalizePortfolioContent.ts` | Conversion from source rows to typed content. |
 | `src/lib/content/validatePortfolioContent.ts` | Required values, references, URLs, and cross-field invariants. |
 | `src/lib/content/selectHomeContent.ts` | Home and detail selection, ordering, limits, and recommendation visibility. |
+| `src/lib/content/routeHeaderContent.ts` | Exhaustive canonical route-header registry and the sole generated Experience summary resolver shared by resolved pages and loaders. |
 | `src/lib/content/researchGraphicalAbstracts.ts` | Canonical graphical-abstract selection and checked-in fallback metadata for established Research IDs. |
 | `scripts/fetchPortfolioContent.ts` | Source-mode selection, anonymous workbook fetch, timeout and byte-cap enforcement, generated-file I/O, and command output. |
 | `scripts/lib/portfolioContentGeneration.ts` | Workbook URL and payload checks, XLSX parsing, worksheet and row validation, formula extraction, hashing, and metadata finalization. |
@@ -145,7 +148,7 @@ The local `resume.csv` compatibility template must remain header-only. It is nev
 | `portfolio.css` | Home profile, cards, timelines, skills, recommendations, and detail layouts. |
 | `research.css` | Research modules, evidence rows, graphical-abstract containment, and preview-dialog presentation. |
 | `motion.css` | CSS-only page entrance plus scroll reveal and compression states. |
-| `skeletons.css` | Static solid loading placeholders. |
+| `skeletons.css` | Static solid loading placeholders and transparent canonical header ink whose line fragments follow resolved typography. |
 | `contact.css` | Contact wizard, fields, review, consent, status, and responsive rules. |
 | `interactions.css` | Shared Hover Base states and reduced-motion behavior. |
 | `utilities.css` | Small reusable utility classes. |
