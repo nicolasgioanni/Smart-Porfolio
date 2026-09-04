@@ -173,11 +173,11 @@ describe("legal document routes", () => {
 
   it("publishes distinct production metadata for every notice", () => {
     expect(generateTermsMetadata().title).toEqual({
-      absolute: "Site Terms & Accuracy Notice | Nicolas Gioanni Portfolio"
+      absolute: "Nicolas Gioanni | Site Terms & Accuracy Notice"
     });
-    expect(generatePrivacyMetadata().title).toEqual({ absolute: "Privacy Notice | Nicolas Gioanni Portfolio" });
+    expect(generatePrivacyMetadata().title).toEqual({ absolute: "Nicolas Gioanni | Privacy Notice" });
     expect(generateSecurityMetadata().title).toEqual({
-      absolute: "Security & Responsible Disclosure | Nicolas Gioanni Portfolio"
+      absolute: "Nicolas Gioanni | Security & Responsible Disclosure"
     });
   });
 });

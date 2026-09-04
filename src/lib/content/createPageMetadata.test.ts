@@ -20,7 +20,7 @@ describe("createPageMetadata", () => {
     expect(metadata.metadataBase).toEqual(new URL("https://nicolasmgioanni.dev"));
     expect(metadata.title).toEqual({
       default: "Nicolas Gioanni Portfolio",
-      template: "%s | Nicolas Gioanni Portfolio"
+      template: "Nicolas Gioanni | %s"
     });
     expect(metadata.description).toBe(defaultDescription);
     expect(metadata.alternates).toEqual({ canonical: "https://nicolasmgioanni.dev/" });
@@ -43,7 +43,7 @@ describe("createPageMetadata", () => {
       title: "Experience",
       description
     });
-    const resolvedTitle = "Experience | Nicolas Gioanni Portfolio";
+    const resolvedTitle = "Nicolas Gioanni | Experience";
     const profileImage = "https://nicolasmgioanni.dev/favicon/favicon.png";
 
     expect(metadata.title).toEqual({ absolute: resolvedTitle });
