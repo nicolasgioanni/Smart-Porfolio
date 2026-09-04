@@ -11,6 +11,7 @@ import { MOBILE_UI_QUERY, useMediaQuery } from "@/components/responsive/useMedia
 const collapsedHeightProperty = "--recommendation-detail-collapsed-height";
 const overflowReserveProperty = "--recommendations-overlay-reserve";
 const overlapTolerance = 1;
+const collapsedViewportTolerance = 1;
 
 function getRecommendationSlots(root: HTMLElement): HTMLElement[] {
   return Array.from(root.querySelectorAll<HTMLElement>(".recommendations-list__item"));
@@ -23,6 +24,19 @@ function getRecommendationCard(slot: HTMLElement): HTMLElement | null {
 function getRenderedHeight(element: HTMLElement): number {
   if (element.offsetHeight > 0) return element.offsetHeight;
   return element.getBoundingClientRect().height;
+}
+
+function hasViewportSettledAtCollapsedHeight(slot: HTMLElement): boolean {
+  const expandable = slot.querySelector<HTMLElement>(".recommendation-expandable");
+  const viewport = slot.querySelector<HTMLElement>(".recommendation-expandable__viewport");
+
+  if (!expandable || !viewport || expandable.dataset.expanded === "true") return false;
+
+  const collapsedHeight = Number.parseFloat(expandable.style.getPropertyValue("--recommendation-collapsed-height"));
+  const viewportHeight = getRenderedHeight(viewport);
+
+  if (!Number.isFinite(collapsedHeight) || collapsedHeight <= 0 || viewportHeight <= 0) return true;
+  return viewportHeight <= collapsedHeight + collapsedViewportTolerance;
 }
 
 function rectanglesOverlap(activeRect: DOMRect, candidateRect: DOMRect): boolean {
@@ -61,7 +75,7 @@ function measureCollapsedSlotHeights(root: HTMLElement, activeId: string | null)
       continue;
     }
 
-    if (id !== activeId) {
+    if (id !== activeId && hasViewportSettledAtCollapsedHeight(slot)) {
       const renderedHeight = getRenderedHeight(card);
 
       if (renderedHeight > 0) {
