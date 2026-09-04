@@ -302,22 +302,42 @@
 }
 
 .experience-card__chapters {
+  position: relative;
   display: grid;
   margin-top: var(--space-5);
-  border-top: 1px solid var(--color-line);
+  border-top: 1px solid transparent;
+}
+
+.experience-card__chapters::before,
+.experience-chapter::before {
+  position: absolute;
+  right: var(--space-1);
+  left: var(--space-1);
+  height: 1px;
+  content: "";
+  background: var(--color-line);
+  pointer-events: none;
+}
+
+.experience-card__chapters::before {
+  top: -1px;
 }
 
 .experience-chapter {
   position: relative;
   min-width: 0;
-  border-bottom: 1px solid var(--color-line);
+  border-bottom: 1px solid transparent;
+}
+
+.experience-chapter::before {
+  bottom: -1px;
 }
 
 .experience-chapter::after {
   position: absolute;
-  right: 0;
+  right: var(--space-1);
   bottom: -1px;
-  left: 0;
+  left: var(--space-1);
   height: 1px;
   content: "";
   background: linear-gradient(90deg, transparent, var(--color-accent), transparent);
