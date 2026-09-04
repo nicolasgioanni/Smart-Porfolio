@@ -480,8 +480,8 @@ describe("portfolio UI helpers", () => {
     expect(cards).toHaveLength(3);
     expect(screen.getAllByRole("heading", { level: 3 }).map((heading) => heading.textContent)).toEqual(items.map((item) => item.title));
     expect(screen.getAllByText("UW Bothell School of STEM")).toHaveLength(3);
-    expect(screen.getByText("Aug 2024 \u2013 Present")).toBeInTheDocument();
-    expect(screen.getAllByText("Bothell, Washington, United States")).toHaveLength(3);
+    expect(screen.queryByText("Aug 2024 \u2013 Present")).not.toBeInTheDocument();
+    expect(screen.queryByText("Bothell, Washington, United States")).not.toBeInTheDocument();
     expect(screen.getByText("A one-line research explanation.")).toBeInTheDocument();
     expect(screen.queryByText("Compact profile-only research copy.")).not.toBeInTheDocument();
     expect(screen.queryByText("A longer detail explanation.")).not.toBeInTheDocument();

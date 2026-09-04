@@ -2,7 +2,6 @@ import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   MOBILE_NAVIGATION_DRIFT_PX_PER_SECOND,
-  MOBILE_NAVIGATION_IDLE_DELAY_MS,
   MOBILE_NAVIGATION_INTERACTION_RESUME_DELAY_MS,
   MOBILE_NAVIGATION_RETURN_DURATION_MS,
   MobileNavigation
@@ -250,7 +249,7 @@ describe("MobileNavigation", () => {
     expect(pageScroll).not.toHaveBeenCalled();
   });
 
-  it("keeps the initial pathname delay when active-route centering emits a scroll event", () => {
+  it("starts immediately even when active-route centering emits a scroll event", () => {
     navigationMock.pathname = "/";
     const view = render(<MobileNavigation items={navigationItems} />);
     const routes = screen.getByRole("navigation", { name: "Mobile navigation" });
@@ -265,48 +264,41 @@ describe("MobileNavigation", () => {
     view.rerender(<MobileNavigation items={navigationItems} />);
     fireEvent.scroll(rail);
 
-    advanceIdleTimer(MOBILE_NAVIGATION_IDLE_DELAY_MS - 1, MOBILE_NAVIGATION_IDLE_DELAY_MS - 1);
-    expect(animationFrames).toHaveLength(0);
-    advanceIdleTimer(1, MOBILE_NAVIGATION_IDLE_DELAY_MS);
     expect(animationFrames).toHaveLength(1);
   });
 
-  it("returns to Home after the idle delay, then drifts using elapsed frame time", () => {
+  it("returns to Home immediately, then drifts using elapsed frame time", () => {
     const { rail } = renderOverflowingRail(120);
 
-    advanceIdleTimer(MOBILE_NAVIGATION_IDLE_DELAY_MS - 1, MOBILE_NAVIGATION_IDLE_DELAY_MS - 1);
-    expect(animationFrames).toHaveLength(0);
     expect(rail.scrollLeft).toBe(120);
 
-    advanceIdleTimer(1, MOBILE_NAVIGATION_IDLE_DELAY_MS);
     expect(animationFrames).toHaveLength(1);
     expect(rail).toHaveAttribute("data-automating");
 
-    flushAnimationFrame(MOBILE_NAVIGATION_IDLE_DELAY_MS + MOBILE_NAVIGATION_RETURN_DURATION_MS / 2);
+    flushAnimationFrame(MOBILE_NAVIGATION_RETURN_DURATION_MS / 2);
     expect(rail.scrollLeft).toBeCloseTo(60);
 
-    flushAnimationFrame(MOBILE_NAVIGATION_IDLE_DELAY_MS + MOBILE_NAVIGATION_RETURN_DURATION_MS);
+    flushAnimationFrame(MOBILE_NAVIGATION_RETURN_DURATION_MS);
     expect(rail.scrollLeft).toBe(0);
     expect(animationFrames).toHaveLength(1);
 
-    flushAnimationFrame(MOBILE_NAVIGATION_IDLE_DELAY_MS + MOBILE_NAVIGATION_RETURN_DURATION_MS + 1000);
+    flushAnimationFrame(MOBILE_NAVIGATION_RETURN_DURATION_MS + 1000);
     expect(rail.scrollLeft).toBeCloseTo(MOBILE_NAVIGATION_DRIFT_PX_PER_SECOND);
     expect(rail).toHaveAttribute("data-edge", "both");
   });
 
   it("reverses drift cleanly at both overflow boundaries", () => {
     const { rail } = renderOverflowingRail();
-    advanceIdleTimer(MOBILE_NAVIGATION_IDLE_DELAY_MS, MOBILE_NAVIGATION_IDLE_DELAY_MS);
 
-    flushAnimationFrame(MOBILE_NAVIGATION_IDLE_DELAY_MS + 10_000);
+    flushAnimationFrame(10_000);
     expect(rail.scrollLeft).toBe(200);
 
-    flushAnimationFrame(MOBILE_NAVIGATION_IDLE_DELAY_MS + 11_000);
+    flushAnimationFrame(11_000);
     expect(rail.scrollLeft).toBe(180);
 
-    flushAnimationFrame(MOBILE_NAVIGATION_IDLE_DELAY_MS + 20_000);
+    flushAnimationFrame(20_000);
     expect(rail.scrollLeft).toBe(0);
-    flushAnimationFrame(MOBILE_NAVIGATION_IDLE_DELAY_MS + 21_000);
+    flushAnimationFrame(21_000);
     expect(rail.scrollLeft).toBe(20);
   });
 
@@ -322,32 +314,29 @@ describe("MobileNavigation", () => {
       }
     });
 
-    advanceIdleTimer(MOBILE_NAVIGATION_IDLE_DELAY_MS, MOBILE_NAVIGATION_IDLE_DELAY_MS);
-    flushAnimationFrame(MOBILE_NAVIGATION_IDLE_DELAY_MS + 16);
+    flushAnimationFrame(16);
     expect(rail.scrollLeft).toBe(0);
 
-    flushAnimationFrame(MOBILE_NAVIGATION_IDLE_DELAY_MS + 32);
+    flushAnimationFrame(32);
     expect(rail.scrollLeft).toBe(1);
   });
 
   it("does not treat scroll events caused by automation as user interaction", () => {
     const { rail } = renderOverflowingRail();
-    advanceIdleTimer(MOBILE_NAVIGATION_IDLE_DELAY_MS, MOBILE_NAVIGATION_IDLE_DELAY_MS);
-    flushAnimationFrame(MOBILE_NAVIGATION_IDLE_DELAY_MS + 1000);
+    flushAnimationFrame(1000);
     expect(rail.scrollLeft).toBe(20);
 
     fireEvent.scroll(rail);
     expect(rail).toHaveAttribute("data-automating");
     expect(animationFrames).toHaveLength(1);
 
-    flushAnimationFrame(MOBILE_NAVIGATION_IDLE_DELAY_MS + 2000);
+    flushAnimationFrame(2000);
     expect(rail.scrollLeft).toBe(40);
   });
 
   it("pauses active drift when a scroll event moves away from its automated position", () => {
     const { rail } = renderOverflowingRail();
-    advanceIdleTimer(MOBILE_NAVIGATION_IDLE_DELAY_MS, MOBILE_NAVIGATION_IDLE_DELAY_MS);
-    flushAnimationFrame(MOBILE_NAVIGATION_IDLE_DELAY_MS + 1000);
+    flushAnimationFrame(1000);
 
     rail.scrollLeft = 75;
     fireEvent.scroll(rail);
@@ -356,7 +345,7 @@ describe("MobileNavigation", () => {
 
     advanceIdleTimer(
       MOBILE_NAVIGATION_INTERACTION_RESUME_DELAY_MS,
-      MOBILE_NAVIGATION_IDLE_DELAY_MS + 1000 + MOBILE_NAVIGATION_INTERACTION_RESUME_DELAY_MS
+      1000 + MOBILE_NAVIGATION_INTERACTION_RESUME_DELAY_MS
     );
     expect(animationFrames).toHaveLength(1);
   });
@@ -404,9 +393,8 @@ describe("MobileNavigation", () => {
 
   it("resumes from the current position in the direction used before interaction", () => {
     const { rail } = renderOverflowingRail();
-    advanceIdleTimer(MOBILE_NAVIGATION_IDLE_DELAY_MS, MOBILE_NAVIGATION_IDLE_DELAY_MS);
-    flushAnimationFrame(MOBILE_NAVIGATION_IDLE_DELAY_MS + 10_000);
-    flushAnimationFrame(MOBILE_NAVIGATION_IDLE_DELAY_MS + 10_016);
+    flushAnimationFrame(10_000);
+    flushAnimationFrame(10_016);
     expect(rail.scrollLeft).toBeCloseTo(199.68);
 
     rail.scrollLeft = 150;
@@ -446,8 +434,7 @@ describe("MobileNavigation", () => {
 
   it("holds active drift for an external pause and resumes from the same position", () => {
     const view = renderOverflowingRail();
-    advanceIdleTimer(MOBILE_NAVIGATION_IDLE_DELAY_MS, MOBILE_NAVIGATION_IDLE_DELAY_MS);
-    flushAnimationFrame(MOBILE_NAVIGATION_IDLE_DELAY_MS + 1000);
+    flushAnimationFrame(1000);
     expect(view.rail.scrollLeft).toBe(20);
 
     view.rerender(<MobileNavigation externalPaused items={navigationItems} />);
@@ -464,49 +451,36 @@ describe("MobileNavigation", () => {
     expect(view.rail.scrollLeft).toBe(40);
   });
 
-  it("cancels on breakpoint exit and starts a fresh idle cycle on mobile return", () => {
+  it("cancels on breakpoint exit and starts immediately on mobile return", () => {
     renderOverflowingRail(80);
     advanceIdleTimer(1000, 1000);
 
     setMediaPreference(MOBILE_UI_QUERY, false);
-    advanceIdleTimer(MOBILE_NAVIGATION_IDLE_DELAY_MS, 4000);
+    advanceIdleTimer(3000, 4000);
     expect(animationFrames).toHaveLength(0);
 
     setMediaPreference(MOBILE_UI_QUERY, true);
-    advanceIdleTimer(MOBILE_NAVIGATION_IDLE_DELAY_MS - 1, 6999);
-    expect(animationFrames).toHaveLength(0);
-    advanceIdleTimer(1, 7000);
     expect(animationFrames).toHaveLength(1);
   });
 
-  it("resets interaction waiting to the initial idle cycle when the pathname changes", () => {
+  it("starts immediately when the pathname changes during an interaction pause", () => {
     const view = renderOverflowingRail(80);
     fireEvent.pointerDown(view.rail);
-    advanceIdleTimer(MOBILE_NAVIGATION_IDLE_DELAY_MS, MOBILE_NAVIGATION_IDLE_DELAY_MS);
     expect(animationFrames).toHaveLength(0);
 
     navigationMock.pathname = "/research";
     view.rerender(<MobileNavigation items={navigationItems} />);
-    advanceIdleTimer(MOBILE_NAVIGATION_IDLE_DELAY_MS, MOBILE_NAVIGATION_IDLE_DELAY_MS * 2);
 
     expect(animationFrames).toHaveLength(1);
     expect(within(view.rail).getByRole("link", { name: "Research" })).toHaveAttribute("aria-current", "page");
   });
 
-  it("pauses the idle countdown while the document is hidden", () => {
-    renderOverflowingRail(80);
-    advanceIdleTimer(1000, 1000);
-
+  it("starts immediately when a hidden document becomes visible", () => {
     Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });
-    act(() => document.dispatchEvent(new Event("visibilitychange")));
-    advanceIdleTimer(5000, 6000);
+    renderOverflowingRail(80);
     expect(animationFrames).toHaveLength(0);
-
     Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
     act(() => document.dispatchEvent(new Event("visibilitychange")));
-    advanceIdleTimer(1999, 7999);
-    expect(animationFrames).toHaveLength(0);
-    advanceIdleTimer(1, 8000);
     expect(animationFrames).toHaveLength(1);
   });
 
@@ -554,15 +528,12 @@ describe("MobileNavigation", () => {
     reducedMotion = reducesMotion;
     const { rail } = renderOverflowingRail(80);
 
-    advanceIdleTimer(MOBILE_NAVIGATION_IDLE_DELAY_MS, MOBILE_NAVIGATION_IDLE_DELAY_MS);
-
     expect(animationFrames).toHaveLength(0);
     expect(rail.scrollLeft).toBe(80);
   });
 
   it("disconnects observation and cancels scheduled work on unmount", () => {
     const view = renderOverflowingRail(80);
-    advanceIdleTimer(MOBILE_NAVIGATION_IDLE_DELAY_MS, MOBILE_NAVIGATION_IDLE_DELAY_MS);
     expect(animationFrames).toHaveLength(1);
 
     view.unmount();
@@ -590,24 +561,14 @@ describe("MobileNavigation", () => {
     vi.clearAllTimers();
   });
 
-  it("removes the idle timer and visibility listener when the breakpoint exits", () => {
+  it("removes animation frames and the visibility listener when the breakpoint exits", () => {
     const removeEventListener = vi.spyOn(document, "removeEventListener");
-    const clearTimeout = vi.spyOn(globalThis, "clearTimeout");
-    const setTimeout = vi.spyOn(globalThis, "setTimeout");
     const view = renderOverflowingRail(80);
-    const idleTimerCallIndex = setTimeout.mock.calls.findIndex(
-      ([, delay]) => delay === MOBILE_NAVIGATION_IDLE_DELAY_MS
-    );
-    const idleTimerId = setTimeout.mock.results[idleTimerCallIndex]?.value;
-
-    expect(idleTimerCallIndex).toBeGreaterThanOrEqual(0);
+    expect(animationFrames).toHaveLength(1);
     setMediaPreference(MOBILE_UI_QUERY, false);
-
-    expect(clearTimeout).toHaveBeenCalledWith(idleTimerId);
+    expect(animationFrames).toHaveLength(0);
     expect(removeEventListener).toHaveBeenCalledWith("visibilitychange", expect.any(Function));
     expect(resizeDisconnect).toHaveBeenCalledOnce();
-
     view.unmount();
-    vi.clearAllTimers();
   });
 });

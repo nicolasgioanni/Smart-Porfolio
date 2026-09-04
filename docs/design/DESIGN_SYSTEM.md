@@ -165,7 +165,7 @@ Use `PortfolioCard` variants according to meaning:
 | `media` | Card with primary media. |
 | `timeline` | Experience timeline entry. |
 
-Research and project Home cards use concise copy and bottom-aligned verified actions. The Projects route retains evidence cards, while the Research route uses its alternating project showcase described below.
+Research and project Home cards use concise copy and bottom-aligned verified actions. At `720px` and below, they show one short sentence from `homeMobileSummaries.ts`; unknown IDs use the first authored summary sentence. CSS selects the server-rendered copy for the viewport. Research Home cards omit dates and locations at every size. Project Home skill chips appear above `720px` only. Phone Home sections use 16px panel padding, slightly tighter gaps, 17px card headings, and 13px supporting copy. The Projects route retains evidence cards, while the Research route uses its alternating project showcase described below.
 
 Home section route actions use compact buttons aligned with the section heading. They remain visually subordinate to primary page actions.
 
@@ -187,13 +187,13 @@ Experience and Research cards use a restrained neutral shadow and two-pixel lift
 
 ## Skills
 
-Home groups selected skills by `category` and `category_order`. The published content currently produces three cards with four skills each. A skill with the complete proficiency, summary, and evidence set renders as a button that opens the shared dialog. Incomplete legacy detail sets render as static badges.
+Home groups selected skills by `category` and `category_order`. The published content currently produces three cards with four skills each. At `720px` and below, each compact group places its skills in one flexible row with 12px labels, abbreviated TS / JS, TF / Keras, and LLM / RAG names, no icons, and 44px-high targets. Full skill names and dialog content remain available through the accessible trigger and dialog. A skill with the complete proficiency, summary, and evidence set renders as a button that opens the shared dialog. Incomplete legacy detail sets render as static badges.
 
 The shared portal-backed dialog is modal, traps focus, closes through Escape, backdrop, or button, restores trigger focus, and removes background scrolling. Profile previews and project cards reuse the same interaction contract. Each consumer owns only its content, accessible label, initial-focus target, and visual geometry.
 
 ## Recommendations
 
-Recommendation cards render the full quote with an optional validated inline link and expose `Show more` only when measurement detects overflow. Multi-card Home rows may reduce one preview from four lines to three when header geometry requires a level collapsed row.
+Recommendation cards render the full quote with an optional validated inline link. Above `720px`, they expose `Show more` when measurement detects overflow. At `720px` and below, the collapsed quote shows exactly its first sentence; the remaining sentences stay in the same blockquote, hidden from display and keyboard navigation until expansion. A single-sentence quote needs no toggle, regardless of its line count. Phone expansion uses immediate natural flow. Multi-card Home rows may reduce one preview from four lines to three when header geometry requires a level collapsed row.
 
 The outer Home panel keeps its collapsed border and background. An expanded card may extend below it while an invisible reserve preserves normal document flow for later sections. Home recommendation cards use an opaque theme-matched fill so their color remains stable across the panel boundary.
 

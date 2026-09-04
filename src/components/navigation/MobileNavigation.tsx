@@ -14,7 +14,6 @@ import { useReducedMotionPreference } from "@/components/motion/useReducedMotion
 import { isNavigationItemActive, type NavigationItem } from "@/components/navigation/navigationItems";
 import { MOBILE_UI_QUERY, useMediaQuery } from "@/components/responsive/useMediaQuery";
 
-export const MOBILE_NAVIGATION_IDLE_DELAY_MS = 3000;
 export const MOBILE_NAVIGATION_INTERACTION_RESUME_DELAY_MS = 5000;
 export const MOBILE_NAVIGATION_RETURN_DURATION_MS = 420;
 export const MOBILE_NAVIGATION_DRIFT_PX_PER_SECOND = 20;
@@ -185,7 +184,7 @@ export function MobileNavigation({
 
     let animationFrameId: number | null = null;
     let countdownTimeoutId: ReturnType<typeof setTimeout> | null = null;
-    let countdownRemainingMs = MOBILE_NAVIGATION_IDLE_DELAY_MS;
+    let countdownRemainingMs = MOBILE_NAVIGATION_INTERACTION_RESUME_DELAY_MS;
     let countdownStartedAt = 0;
     let externallyPaused = externalPausedRef.current;
     let phase: "drift" | "external-hold" | "idle" | "interaction-wait" | "return" | "stopped" = externallyPaused
@@ -346,9 +345,14 @@ export function MobileNavigation({
         || !getAutomationMeasurement()
       ) return;
 
+      if (phase === "idle") {
+        beginReturn();
+        return;
+      }
+
       countdownStartedAt = performance.now();
       countdownTimeoutId = setTimeout(
-        phase === "idle" ? beginReturn : resumeDrift,
+        resumeDrift,
         countdownRemainingMs
       );
     };

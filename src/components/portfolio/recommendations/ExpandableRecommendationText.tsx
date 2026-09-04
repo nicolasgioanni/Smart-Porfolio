@@ -5,6 +5,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useReducedMotionPreference } from "@/components/motion/useReducedMotionPreference";
 import { SmartLink } from "@/components/navigation/SmartLink";
 import type { PortfolioContentLink } from "@/content/types";
+import { splitFirstSentence } from "@/lib/content/conciseText";
+import { PHONE_HERO_QUERY, useMediaQuery } from "@/components/responsive/useMediaQuery";
 
 const defaultCollapsedLineCount = 4;
 const fallbackLineHeight = 22;
@@ -65,20 +67,24 @@ function sanitizeDomId(value: string): string {
   return value.trim().replace(/[^a-zA-Z0-9_-]+/g, "-").replace(/^-+|-+$/g, "") || "recommendation";
 }
 
-function renderQuoteWithLink(quote: string, link: PortfolioContentLink | undefined): ReactNode {
-  if (!link?.label) return quote;
+function renderQuoteWithLink(quote: string, link: PortfolioContentLink | undefined, start = 0, end = quote.length): ReactNode {
+  const visibleText = quote.slice(start, end);
+  if (!link?.label) return visibleText;
 
   const linkStart = quote.indexOf(link.label);
 
-  if (linkStart < 0 || linkStart !== quote.lastIndexOf(link.label)) return quote;
+  const linkEnd = linkStart + link.label.length;
+  if (linkStart < 0 || linkStart !== quote.lastIndexOf(link.label) || linkEnd <= start || linkStart >= end) return visibleText;
+  const visibleLinkStart = Math.max(start, linkStart);
+  const visibleLinkEnd = Math.min(end, linkEnd);
 
   return (
     <>
-      {quote.slice(0, linkStart)}
+      {quote.slice(start, visibleLinkStart)}
       <SmartLink className="recommendation-expandable__inline-link" href={link.url}>
-        {link.label}
+        {quote.slice(visibleLinkStart, visibleLinkEnd)}
       </SmartLink>
-      {quote.slice(linkStart + link.label.length)}
+      {quote.slice(visibleLinkEnd, end)}
     </>
   );
 }
@@ -99,6 +105,8 @@ export function ExpandableRecommendationText({
   const expanded = controlledExpanded ?? internalExpanded;
   const isControlled = controlledExpanded !== undefined;
   const prefersReducedMotion = useReducedMotionPreference();
+  const phoneLayout = useMediaQuery(PHONE_HERO_QUERY);
+  const [firstSentence, remainingSentences] = useMemo(() => splitFirstSentence(quote), [quote]);
   const resolvedLineCount = normalizeCollapsedLineCount(collapsedLineCount);
   const fallbackMeasurement = useMemo(
     () => createFallbackMeasurement(quote, resolvedLineCount),
@@ -106,7 +114,7 @@ export function ExpandableRecommendationText({
   );
   const resolvedMeasurement =
     measurement?.quote === quote && measurement.lineCount === resolvedLineCount ? measurement : fallbackMeasurement;
-  const renderedQuote = useMemo(() => renderQuoteWithLink(quote, fullQuoteLink), [quote, fullQuoteLink]);
+  const canExpand = phoneLayout ? Boolean(remainingSentences.trim()) : resolvedMeasurement.canExpand;
   const controlledId = `recommendation-${sanitizeDomId(id)}-quote`;
 
   const updateExpanded = useCallback(
@@ -175,10 +183,10 @@ export function ExpandableRecommendationText({
   }, [measureQuote]);
 
   useEffect(() => {
-    if (!resolvedMeasurement.canExpand && expanded) {
+    if (!canExpand && expanded) {
       updateExpanded(false);
     }
-  }, [expanded, resolvedMeasurement.canExpand, updateExpanded]);
+  }, [expanded, canExpand, updateExpanded]);
 
   useEffect(() => {
     if (!expanded) return;
@@ -205,7 +213,8 @@ export function ExpandableRecommendationText({
   return (
     <div
       className="recommendation-expandable"
-      data-can-expand={resolvedMeasurement.canExpand ? "true" : "false"}
+      data-can-expand={canExpand ? "true" : "false"}
+      data-has-more-sentences={remainingSentences.trim() ? "true" : "false"}
       data-collapsed-lines={resolvedLineCount}
       data-expanded={expanded ? "true" : "false"}
       data-measured={resolvedMeasurement.measured ? "true" : "false"}
@@ -214,11 +223,16 @@ export function ExpandableRecommendationText({
     >
       <div className="recommendation-expandable__viewport" id={controlledId}>
         <blockquote className="recommendation-expandable__quote" ref={quoteRef}>
-          {renderedQuote}
+          {renderQuoteWithLink(quote, fullQuoteLink, 0, firstSentence.length)}
+          {remainingSentences ? (
+            <span className="recommendation-expandable__remainder">
+              {renderQuoteWithLink(quote, fullQuoteLink, firstSentence.length)}
+            </span>
+          ) : null}
         </blockquote>
       </div>
 
-      {resolvedMeasurement.canExpand ? (
+      {canExpand || remainingSentences.trim() ? (
         <button
           aria-controls={controlledId}
           aria-expanded={expanded}
