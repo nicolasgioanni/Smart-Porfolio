@@ -21,6 +21,7 @@ field_of_study,Computer Science
 graduation,Jun 2025
 short_bio,"I’m ambitious, relentlessly curious, and always looking for the next hard problem to learn from. I care about moving with urgency, doing things well, and getting better with every project."
 long_bio,"I build practical software systems at the intersection of full-stack engineering, AI/ML, computer vision, and security. My work includes research software for microscopy analysis, adversarial machine learning pipelines, teaching support for core CS courses, and production-style projects using Next.js, Flask, Django, Firebase, and cloud deployment tooling."
+experience_summary,"My experience spans AI engineering at the U.S. Treasury, research software and machine learning at the University of Washington, and teaching core computer science courses."
 portrait_image,/favicon/favicon.png
 favicon_image,/favicon/favicon.png
 resume_url,
