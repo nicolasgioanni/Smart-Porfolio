@@ -147,14 +147,6 @@
   color: var(--color-subtle);
 }
 
-.glass-divider {
-  width: 100%;
-  height: 1px;
-  margin: var(--space-4) 0;
-  border: 0;
-  background: var(--color-line-strong);
-}
-
 .glass-icon-link,
 .glass-icon-button {
   min-height: 38px;

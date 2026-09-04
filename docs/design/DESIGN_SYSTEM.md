@@ -124,7 +124,6 @@ Do not reorder these sections through CSS. Change `HomeOverview.tsx`, skeleton c
 | `GlassIconButton` | Labelled icon-only controls. |
 | `GlassIconLink` | Social and external destinations. |
 | `GlassChip` | Short metadata, skills, roles, and facts. |
-| `GlassDivider` | Quiet separation within a surface. |
 
 The existing `Glass*` component names are compatibility names for solid surface primitives. They use one-pixel borders, semantic opaque backgrounds, and restrained neutral shadows. `enable_glass_effects` remains a generated-setting compatibility switch; both paths preserve the same opaque hierarchy without backdrop blur.
 

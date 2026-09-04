@@ -22,10 +22,6 @@ export function selectHomeRecommendations(recommendations: RecommendationItem[],
   return limitItems(sortedItems, resolveItemLimit(maxItems, 3));
 }
 
-export function getFeaturedRecommendation(recommendations: RecommendationItem[]): RecommendationItem | undefined {
-  return sortRecommendationsForDetail(recommendations)[0];
-}
-
 export function hasRecommendations(recommendations: RecommendationItem[]): boolean {
   return recommendations.length > 0;
 }

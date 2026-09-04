@@ -13,6 +13,7 @@ The review used these checks together:
 3. Repository-wide literal-reference searches for public paths and script entry points.
 4. Package and workflow inspection for command-line and continuous-integration entry points.
 5. Current generated-content inspection, including the source-mode metadata and every published asset path.
+6. A follow-up direct-export and component review after portfolio ownership was reorganized. It combined a static TypeScript import graph with repository-wide symbol searches across application code, tests, scripts, Functions, styles, and documentation.
 
 Compiler and import-graph results are evidence, not proof that a file is removable. Framework discovery, direct command execution, generated content, and externally addressable public paths are checked before a deletion is approved.
 
@@ -22,7 +23,7 @@ The module graph resolves static TypeScript imports and re-exports. It does not 
 
 ## Retained implementation roots
 
-No TypeScript or CSS source file met the removal standard in this review.
+No TypeScript or CSS source file met the removal standard in the initial pass. The focused follow-up review below rechecked direct exports and unused component modules after the ownership refactor.
 
 The following initially appear unreferenced to a simple import scan, but are active roots or generated inputs:
 
@@ -35,6 +36,20 @@ The following initially appear unreferenced to a simple import scan, but are act
 | Skeleton and browser-test helpers | Tests import them directly or execute their renderer process at runtime. |
 
 The strict TypeScript pass reported no unused locals or parameters. The module graph also found no `src/` production module that was imported only from tests. That result does not establish that every exported API is necessary, so exported APIs remain subject to focused review when their owning feature changes.
+
+## Follow-up direct-export and component cleanup
+
+The follow-up review covered the ownership-refactor baseline `434f2bae9d424ab02360bfd88183bf05f8ff5c2b`. It reran `tsc --noUnusedLocals --noUnusedParameters`, resolved static TypeScript imports from application and test roots, and searched every candidate name across the repository. The findings below have no framework discovery path, command entry point, generated-content reference, or external public-URL compatibility concern.
+
+| Removed implementation | Evidence |
+| --- | --- |
+| `ExperienceList`, `ExperienceTimeline`, `ExperienceTimelineItem`, `ProfileSummary`, and `SkillsSummary` | The pass-through wrappers had no importer. Removing `ExperienceList` exposed the unused timeline and timeline item; their names and `.experience-timeline*` and `.timeline-item*` selectors had no remaining consumer. |
+| `SkillBadge` | It had no production or test import. Active skill badges are rendered directly by `InteractiveSkillShowcase`; the remaining security assertion is a negative source-text check, not a dependency. |
+| `GlassDivider` and `.glass-divider` | The component had no import, and the CSS selector appeared only in that component and its now-removed design-system entry. |
+| `getEducationLogo`, `getFeaturedRecommendation`, and `formatList` | Each exported helper had only its definition repository-wide. |
+| `SkeletonHero`, `SkeletonGrid`, `SkeletonCard`, `SkeletonAvatar`, and their unique selectors | The first two compositions had no import or route discovery path. Removing them made the card and avatar compositions unreachable too. `.skeleton-hero*`, `.skeleton-grid*`, `.skeleton-card`, `.skeleton-avatar`, and `.skeleton-actions` were then unreferenced. Shared `.skeleton-page__actions`, `.skeleton-page__section`, and active `.detail-card-skeleton-grid` rules remain. The obsolete skeleton-guideline entries were removed. |
+
+This removal preserves live route markup and active CSS rules. It does not imply that a future public asset or framework-convention file is removable; those remain subject to the retention limits above.
 
 ## Public assets retained for content compatibility
 
