@@ -29,6 +29,19 @@ test.describe("Experience showcase", () => {
     const architecture = cytocvCard.getByRole("button", { name: /Application architecture/i });
     const vision = cytocvCard.getByRole("button", { name: /Vision pipeline/i });
 
+    const [architectureIconBox, visionIconBox] = await Promise.all([
+      architecture.locator(".experience-chapter__icon").boundingBox(),
+      vision.locator(".experience-chapter__icon").boundingBox()
+    ]);
+    expect(architectureIconBox).not.toBeNull();
+    expect(visionIconBox).not.toBeNull();
+    expect(
+      Math.abs(
+        architectureIconBox!.x + architectureIconBox!.width -
+          (visionIconBox!.x + visionIconBox!.width)
+      )
+    ).toBeLessThanOrEqual(1);
+
     await architecture.click();
     await expect(architecture).toHaveAttribute("aria-expanded", "true");
     await expect(cytocvCard.getByRole("list", { name: "Application architecture tools" })).toBeVisible();
