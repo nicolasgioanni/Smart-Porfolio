@@ -89,7 +89,7 @@ Both handlers:
 - reject invalid configuration instead of falling back to permissive values;
 - return generic JSON responses with non-cacheable Function headers.
 
-`POST /api/contact/verify` accepts a plain object with exactly `submissionId` and `turnstileToken`. It sends one JSON Siteverify request with a 5-second timeout, uses the UUID as the provider idempotency key, and includes `CF-Connecting-IP` only after bounded control-character validation. A ticket is issued only for `success: true`, action exactly `portfolio_contact`, and an exact allowed hostname.
+`POST /api/contact/verify` accepts a plain object with exactly `submissionId` and `turnstileToken`. The browser supplies the same submission UUID as Turnstile `cData` and executes the interaction-only widget only during the final Send action. The handler generates a separate Siteverify operation UUID, sends it as the provider idempotency key, and reuses it only for one bounded retry of the same token after a transient failure. Each attempt has a 5-second timeout. `CF-Connecting-IP` is included only after bounded control-character validation. A ticket is issued only for `success: true`, action exactly `portfolio_contact`, an exact allowed hostname, and returned `cdata` exactly matching the submission UUID. Invalid or duplicate challenges return `400 verification_failed`; exhausted transient failures and provider integration faults return `503 verification_unavailable`.
 
 `POST /api/contact` allows only its documented fields, rejects unknown keys and unsafe values, requires three acknowledgments to be boolean `true`, and validates the names, email, optional phone, message, timing fields, and submission UUID. The hidden honeypot and minimum-completion check are evaluated during payload parsing, before ticket validation. A non-empty honeypot or completion under 1,200 milliseconds returns a silent generic success without calling DNS, D1, or Resend. This order avoids making the low-cost bot signals an oracle. Normal provider delivery cannot begin until the signed ticket and its submission binding, the mail-domain route, and a D1 quota reservation have been validated.
 
@@ -115,7 +115,9 @@ Expired records are deleted during reservation work. An existing submission UUID
 
 ## Email delivery, idempotency, and header safety
 
-The delivery handler sends the visitor confirmation through Resend first with `Idempotency-Key: portfolio-contact/visitor/<submissionId>`. Only after that request is accepted does it send the owner notification with `Idempotency-Key: portfolio-contact/owner/<submissionId>`. A first `verification_required` response before provider ambiguity clears the UUID and permits an unlocked new verified session. After an ambiguous or partial delivery failure, the browser instead locks the reviewed fields and acknowledgments and preserves the same UUID, start time, consent values, and byte-equivalent JSON body through any ticket refresh. If the owner request fails, repeating the accepted visitor request returns its idempotent result before the owner request is retried. After success, the browser clears the draft and verification state, returns to the gate, and keeps the green success notice visible until the visitor explicitly starts another verification.
+The delivery handler sends the visitor confirmation through Resend first with `Idempotency-Key: portfolio-contact/visitor/<submissionId>`. Only after that request is accepted does it send the owner notification with `Idempotency-Key: portfolio-contact/owner/<submissionId>`. The browser locks the reviewed payload while verification and delivery are active and rejects repeated Send actions. A first `verification_required` response before provider ambiguity preserves the draft on review and requires fresh final-submit verification before another delivery attempt. After an ambiguous or partial delivery failure, the browser preserves the same UUID, original start time, consent values, and byte-equivalent JSON body through any ticket refresh. If the owner request fails, repeating the accepted visitor request returns its idempotent result before the owner request is retried. After success, the browser clears the draft and verification state and shows a standalone completion view. Selecting <em>Send another message</em> creates a new draft identity and start time.
+
+Every new logical message requires a fresh, single-use Turnstile token. A still-valid 30-minute ticket skips repeated Turnstile verification only for the same locked delivery retry. It cannot authorize a new outbound message.
 
 The owner notification goes to the private configured destination and uses the validated visitor email as `reply_to`. The visitor confirmation goes to the validated visitor email and uses the fixed public reply-to. Both messages use a fixed configured sender and server-controlled subjects. User-controlled values are validated, escaped in HTML, and also placed in plain-text alternatives.
 
@@ -145,7 +147,8 @@ The direct email link bypasses the Function-specific verification, ticket, valid
 - streaming body-size, strict UTF-8, JSON, and schema validation;
 - required acknowledgments and bounded field grammar;
 - honeypot and timing signals;
-- server-side Turnstile verification with exact action and hostname;
+- fresh server-side Turnstile verification for each new logical message with exact action, hostname, and submission custom data;
+- one bounded same-operation retry for transient Siteverify failure;
 - a short-lived, signed, submission-bound ticket;
 - bounded mail-domain DNS validation;
 - a keyed two-per-address rolling 24-hour D1 quota;
@@ -162,7 +165,7 @@ http.request.uri.path in {"/api/contact/verify" "/api/contact"}
 
 The repository cannot verify the live rule, threshold, counting characteristic, mitigation timeout, action, plan capabilities, or current effectiveness. Check those values in Cloudflare and through a controlled deployed test. A WAF rule is defense in depth and does not replace the application controls above.
 
-Do not place an interactive Managed Challenge on either JSON endpoint. It would return an HTML challenge to a client that expects JSON and would add another interactive gate after the form's visible Turnstile step.
+Do not place an interactive Managed Challenge on either JSON endpoint. It would return an HTML challenge to a client that expects JSON and would add another gate after the form executes its interaction-only Turnstile widget during final Send.
 
 Cloudflare documents custom JSON rate-limit block responses as a Pro-plan-or-higher feature. If the API contract requires a JSON edge response, confirm that the active plan and selected action support it. Do not describe a custom JSON block body as a Free-plan guarantee. See [Cloudflare rate-limit custom responses](https://developers.cloudflare.com/waf/rate-limiting-rules/create-zone-dashboard/#configure-a-custom-response-for-blocked-requests).
 
