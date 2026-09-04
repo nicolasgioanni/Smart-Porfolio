@@ -88,6 +88,8 @@ Card-wide elevation belongs exclusively to active fine-pointer hover. A disclosu
 
 Reduced motion removes audience, card, chapter, and chevron transitions while preserving selected and expanded state. The global scroll-motion setting controls only the optional staggered card entrance; user-triggered audience and disclosure behavior remains available regardless of that setting.
 
+The priority browser gate covers Experience and Research detail controls and the Recommendations expansion flow at desktop, responsive, and reduced-motion states. See [Testing](../quality/TESTING.md#browser-experience-and-research-coverage) for the executable coverage boundary.
+
 ## Footer disclosure
 
 The footer expands into reserved normal-flow space. Each pathname owns a fresh compact disclosure, and automatic expansion requires new user scroll intent on that route plus a fully visible runway activation band. Observer callbacks, loading-layout changes, scroll restoration, and programmatic scrolling must not initiate the transition. The transition may animate width, padding, grid-row height, opacity, and a small vertical translation over roughly `420ms`. It must not animate blur or scale, change total document length, block native scrolling, or hide focused details. Reduced motion applies compact or expanded state immediately.
@@ -105,3 +107,4 @@ Use layered solid tiers, fine borders, and restrained neutral shadows. Accent co
 - [Design system](DESIGN_SYSTEM.md)
 - [Accessibility](ACCESSIBILITY.md)
 - [Skeleton loading guidelines](SKELETON_LOADING_GUIDELINES.md)
+- [Testing](../quality/TESTING.md)
