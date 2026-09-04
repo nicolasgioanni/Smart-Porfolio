@@ -81,7 +81,7 @@ Research visual snapshots inject controlled canonical local-template detail item
 
 `tests/e2e/skeletons.transition.spec.ts` disables viewport prefetch before hydration, clicks real rendered Next links, and holds a target non-prefetch RSC request for every non-Home route. A route with no source link or no held navigation request fails; it must never pass by skipping. With these synchronous Server Component routes, holding the whole Flight response keeps the source body in place rather than mounting a streamable `loading.tsx` fallback. This validates App Router request and navigation ownership in development. The published site is a static export, where Next 16 does not support loading UI streaming, so canonical static markup, busy semantics, and no-animation contracts remain the deployed-artifact geometry protection.
 
-The required Ubuntu CI command, `npm run test:e2e:skeletons`, runs the direct alignment, held-navigation transition, and Linux zero-difference visual specifications together.
+The portable `npm run test:e2e:priority` command runs direct alignment and held-navigation transition coverage. Pull-request CI adds `npm run test:e2e:skeletons:visual` as a separate Ubuntu 24.04 step; local Windows priority runs must not compare Linux baselines. The required full-tier Ubuntu command, `npm run test:e2e:skeletons`, runs the direct alignment, held-navigation transition, and Linux zero-difference visual specifications together.
 
 ## Baseline maintenance
 
