@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Page, type Route } from "@playwright/test";
+import { expect, test, type Locator, type Page, type Route } from "./browserTest";
 import { siteRoutePaths, siteRoutes, type SiteRoutePath } from "../../src/lib/routing/siteRoutes";
 import { prepareDarkPage, settleDocumentLayout, suppressViewportPrefetch } from "./skeletonTestHelpers";
 

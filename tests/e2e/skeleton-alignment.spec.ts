@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "./browserTest";
 import { siteRoutes, type SiteRoutePath } from "../../src/lib/routing/siteRoutes";
 import { experienceOverrideSkeletonMarkup, experienceOverrideSummary } from "./experienceOverrideSkeletonMarkup";
 import { skeletonAlignmentMarkupByRoute } from "./skeletonAlignmentMarkup";

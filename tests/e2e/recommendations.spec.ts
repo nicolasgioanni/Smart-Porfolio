@@ -1,4 +1,4 @@
-import { expect, test, type Locator } from "@playwright/test";
+import { expect, test, type Locator } from "./browserTest";
 import { captureBrowserConsole, expectNoBrowserConsoleIssues } from "./browserConsole";
 import { settleLayout } from "./settleLayout";
 import { selectThemeWithChooser } from "./themePreference";

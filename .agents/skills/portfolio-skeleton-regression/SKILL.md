@@ -31,7 +31,7 @@ If route coverage or the viewport matrix changes intentionally, update the visua
 
 ## Keep CI and transition semantics accurate
 
-The normal verify job runs on Ubuntu 24.04, installs Chromium once, and runs `npm run test:e2e:skeletons` before the other browser suites. That aggregate must retain the direct resolved-versus-loader alignment matrix, held-navigation transition suite, and Linux visual matrix. Preserve its failure-only diagnostics artifact as separate from the deployable static artifact.
+The full release tier of the stable `verify` job runs on Ubuntu 24.04, installs Chromium once, and runs `npm run test:e2e:full`. Its complete browser selection must retain all three `npm run test:e2e:skeletons` parts: direct resolved-versus-loader alignment, held-navigation transition semantics, and the Linux visual matrix. The pull-request priority tier may run alignment only. Preserve the failure-only diagnostics artifact as separate from the deployable static artifact.
 
 The transition suite suppresses viewport prefetch and holds the first non-prefetch RSC request. With synchronous route rendering, holding that response preserves the source body rather than mounting a streamable fallback. Static export does not provide loading streaming; do not change this into a fallback-visibility claim.
 

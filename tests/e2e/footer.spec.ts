@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./browserTest";
 import { siteRoutePaths } from "../../src/lib/routing/siteRoutes";
 import {
   allowBrowserConsoleMessage,

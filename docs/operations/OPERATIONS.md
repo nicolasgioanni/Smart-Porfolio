@@ -42,7 +42,7 @@ Do not infer a successful source deployment from the content hash alone. Code-on
 ### Preview a branch change
 
 1. Open or update a pull request targeting `main` or `develop`.
-2. Confirm the `verify` job generated template content and passed documentation integrity, lint, typecheck, focused footer tests, the full suite, and the static build.
+2. Confirm the `verify` job generated template content and passed documentation integrity, lint, typecheck, the priority unit and browser suites, and the static build.
 3. Merge or push the reviewed change to `develop`.
 4. Confirm the workflow selected `deploy_target=preview`, validated the preview D1 binding, applied pending preview migrations, and deployed the current `develop` SHA.
 5. Review `https://develop.smart-portfolio-bds.pages.dev` manually. Complete the visible gate, observe its automatic transition or use Continue, and confirm the three data-entry steps, two acknowledgments, 500-character limit, responsive behavior, focus, and error states without selecting Send request. The gate may consume a Turnstile token, but this no-delivery inspection must not call `/api/contact`, reserve D1 quota, or send email. Confirm the standalone completion layout through verified component coverage.

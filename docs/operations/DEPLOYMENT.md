@@ -33,7 +33,7 @@ The repository cannot verify Cloudflare or GitHub dashboard state. Operators mus
 - No legacy provider continues to publish the custom domain.
 - Cloudflare runtime secrets and separate D1 bindings exist in the correct production and preview environments.
 - WAF rate limiting covers both contact endpoints, and the selected Cloudflare plan or provider-compatible control preserves the JSON API contract.
-- Branch or ruleset protection should be configured as defense in depth for `main` and `develop`: require the `verify` check where applicable and block force-push or deletion. The tracked workflow cannot verify the current GitHub settings.
+- `main` branch protection was independently verified on 2026-09-11: pull requests require the current `verify` status from GitHub Actions app `15368`, require the branch to be current, require zero human approvals, enforce rules for administrators, and block force-push and deletion. Keep `develop` unprotected while its guarded schedule heartbeat remains enabled. Re-verify this external setting after any GitHub policy change.
 - Custom-domain bindings, redirects, certificates, and DNS remain healthy.
 
 Provider-dashboard uploads and deploy hooks bypass the repository quality gate and are not part of the supported release path.
@@ -42,12 +42,12 @@ Provider-dashboard uploads and deploy hooks bypass the repository quality gate a
 
 The workflow has one verification job, one conditional deploy job, and one schedule-only heartbeat job.
 
-| Event | Candidate | Content source | Full verification | Deployment |
+| Event | Candidate | Content source | Verification tier | Deployment |
 | --- | --- | --- | --- | --- |
-| Pull request targeting `main` or `develop` | Event SHA | Checked-in templates | Always | Never |
-| Push to `develop` | Exact pushed SHA, if still current | One strict workbook snapshot | Always for the latest candidate | `develop` preview |
-| Push to `main` | Exact pushed SHA, if still current | One strict workbook snapshot | Always for the latest candidate | Production |
-| Daily schedule at `17 13 * * *` | Current `main` | One strict workbook snapshot | When the production content hash or commit SHA differs | Production when either differs |
+| Pull request targeting `main` or `develop` | Event SHA | Checked-in templates | Priority | Never |
+| Push to `develop` | Exact pushed SHA, if still current | One strict workbook snapshot | Full for the latest candidate | `develop` preview |
+| Push to `main` | Exact pushed SHA, if still current | One strict workbook snapshot | Full for the latest candidate | Production |
+| Daily schedule at `17 13 * * *` | Current `main` | One strict workbook snapshot | Full when the production content hash or commit SHA differs | Production when either differs |
 | Manual dispatch, `force_deploy=true` | Current `main` | One strict workbook snapshot | Always | Production |
 | Manual dispatch, `force_deploy=false` | Current `main` | One strict workbook snapshot | When the production content hash or commit SHA differs | Production when either differs |
 
@@ -287,16 +287,16 @@ See [Operations](OPERATIONS.md) for the release, incident, and rollback runbooks
 
 ## Branch protection and heartbeat
 
-No branch protection or ruleset was configured in the repository at the latest verified audit. Configure and verify the following intended `main` policy in GitHub settings:
+The `main` protection rule was independently read from GitHub on 2026-09-11. Its verified policy is:
 
-1. Pull-request-based changes with the `verify` status required.
-2. The branch must be current before merge.
+1. Pull-request-based changes with the `verify` status required; require the branch to be current before merge.
+2. No human review approval is required by this policy.
 3. Force-push and branch deletion are blocked.
 4. GitHub Actions has no bypass to write deployment state to `main`.
 
-This policy must be checked in GitHub settings because it is not encoded by the workflow.
+This policy must be checked in GitHub settings after any change because it is not encoded by the workflow. `develop` has no equivalent rule so the narrowly guarded schedule heartbeat can continue to update that branch.
 
-The daily schedule also starts `develop-schedule-heartbeat`. It compares the newest activity on `main` and `develop`. If neither has activity within 30 days, the checked-in job first confirms that remote `develop` already exists, then writes only `.github/schedule-heartbeat`, verifies that no other path changed, and commits as `github-actions[bot]`. It checks that `develop` did not change while the job prepared the commit and uses a normal non-force push to `develop`; a concurrent update is rejected rather than retried or overwritten. The job is coded to make no other ref update, uses its own non-canceling concurrency group, and cannot deploy. Configure branch or ruleset protection separately as defense in depth; its current state is not verified here.
+The daily schedule also starts `develop-schedule-heartbeat`. It compares the newest activity on `main` and `develop`. If neither has activity within 30 days, the checked-in job first confirms that remote `develop` already exists, then writes only `.github/schedule-heartbeat`, verifies that no other path changed, and commits as `github-actions[bot]`. It checks that `develop` did not change while the job prepared the commit and uses a normal non-force push to `develop`; a concurrent update is rejected rather than retried or overwritten. The job is coded to make no other ref update, uses its own non-canceling concurrency group, and cannot deploy. Do not apply the intended `main` rule to `develop` while this heartbeat is active; its current external state is not verified here.
 
 ## Related guides
 
