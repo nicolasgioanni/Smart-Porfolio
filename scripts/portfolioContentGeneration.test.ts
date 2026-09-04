@@ -22,6 +22,11 @@ import {
   validatePortfolioWorkbookUrl,
   type PortfolioWorkbookSheetName
 } from "./lib/portfolioContentGeneration";
+import {
+  portfolioWorkbookMaxArchiveEntries,
+  portfolioWorkbookMaxDecodedArchiveBytes,
+  portfolioWorkbookMaxDecodedBytesPerArchiveEntry
+} from "./lib/workbookArchive";
 
 const templatesDirectory = path.resolve(import.meta.dirname, "..", "src", "content", "templates");
 const workbookUrl = "https://downloads.example.test/portfolio.xlsx?token=private-test-id";
@@ -141,6 +146,78 @@ async function createEmptyWorkbookBytes(): Promise<Uint8Array> {
   return writeWorkbookBytes(new ExcelJS.Workbook());
 }
 
+async function appendUnreferencedArchiveEntries(
+  bytes: Uint8Array,
+  entries: ReadonlyArray<{ name: string; body: Uint8Array | string }>
+): Promise<Uint8Array> {
+  const archive = await JSZip.loadAsync(bytes);
+
+  for (const entry of entries) {
+    archive.file(entry.name, entry.body, { compression: "DEFLATE" });
+  }
+
+  return Uint8Array.from(await archive.generateAsync({ type: "uint8array", compression: "DEFLATE" }));
+}
+
+async function decodedArchiveByteLength(bytes: Uint8Array): Promise<number> {
+  const archive = await JSZip.loadAsync(bytes);
+  let decodedBytes = 0;
+
+  for (const entry of Object.values(archive.files)) {
+    if (!entry.dir) decodedBytes += (await entry.async("uint8array")).byteLength;
+  }
+
+  return decodedBytes;
+}
+
+function readLittleEndianUint16(bytes: Uint8Array, offset: number): number {
+  return bytes[offset]! | (bytes[offset + 1]! << 8);
+}
+
+function writeLittleEndianUint32(bytes: Uint8Array, offset: number, value: number): void {
+  bytes[offset] = value & 0xff;
+  bytes[offset + 1] = (value >>> 8) & 0xff;
+  bytes[offset + 2] = (value >>> 16) & 0xff;
+  bytes[offset + 3] = (value >>> 24) & 0xff;
+}
+
+function matchesArchiveEntryName(bytes: Uint8Array, offset: number, entryName: Uint8Array): boolean {
+  return entryName.every((byte, index) => bytes[offset + index] === byte);
+}
+
+function falsifyArchiveEntryDeclaredSize(bytes: Uint8Array, entryName: string): Uint8Array {
+  const result = new Uint8Array(bytes);
+  const nameBytes = textBytes(entryName);
+  let changedLocalHeader = false;
+  let changedCentralDirectory = false;
+
+  for (let offset = 0; offset <= result.byteLength - 4; offset += 1) {
+    const signature = result[offset]! | (result[offset + 1]! << 8) | (result[offset + 2]! << 16) | (result[offset + 3]! << 24);
+
+    if (signature === 0x04034b50) {
+      const nameLength = readLittleEndianUint16(result, offset + 26);
+      if (nameLength === nameBytes.byteLength && matchesArchiveEntryName(result, offset + 30, nameBytes)) {
+        writeLittleEndianUint32(result, offset + 22, 1);
+        changedLocalHeader = true;
+      }
+    }
+
+    if (signature === 0x02014b50) {
+      const nameLength = readLittleEndianUint16(result, offset + 28);
+      if (nameLength === nameBytes.byteLength && matchesArchiveEntryName(result, offset + 46, nameBytes)) {
+        writeLittleEndianUint32(result, offset + 24, 1);
+        changedCentralDirectory = true;
+      }
+    }
+  }
+
+  if (!changedLocalHeader || !changedCentralDirectory) {
+    throw new Error(`Test archive is missing ${entryName}`);
+  }
+
+  return result;
+}
+
 async function generateFromWorkbook(
   bytes: Uint8Array,
   options: {
@@ -166,6 +243,7 @@ async function generateFromWorkbook(
 
 afterEach(async () => {
   vi.useRealTimers();
+  vi.restoreAllMocks();
   await Promise.all(temporaryDirectories.splice(0).map((directory) => rm(directory, { recursive: true, force: true })));
 });
 
@@ -567,6 +645,69 @@ describe("strict XLSX download boundary", () => {
 });
 
 describe("XLSX workbook structure and cells", () => {
+  it("rejects too many resolved archive entries before workbook parsing", async () => {
+    const archive = await JSZip.loadAsync(await createWorkbookBytes());
+    let entryIndex = 0;
+
+    while (Object.keys(archive.files).length <= portfolioWorkbookMaxArchiveEntries) {
+      archive.file(`unreferenced-entry-${entryIndex}.txt`, "x", { compression: "DEFLATE" });
+      entryIndex += 1;
+    }
+
+    const bytes = Uint8Array.from(await archive.generateAsync({ type: "uint8array", compression: "DEFLATE" }));
+    const xlsxGetter = vi.spyOn(ExcelJS.Workbook.prototype, "xlsx", "get");
+
+    await expect(parsePortfolioWorkbook(bytes)).rejects.toThrow(/archive contains too many entries/);
+    expect(xlsxGetter).not.toHaveBeenCalled();
+  });
+
+  it("measures decoded entry bytes instead of trusting compressed archive metadata", async () => {
+    const entryName = "unreferenced-expanded-entry.txt";
+    const bytes = await appendUnreferencedArchiveEntries(await createWorkbookBytes(), [
+      {
+        name: entryName,
+        body: new Uint8Array(portfolioWorkbookMaxDecodedBytesPerArchiveEntry + 1).fill(0x61)
+      }
+    ]);
+    const bytesWithFalsifiedSize = falsifyArchiveEntryDeclaredSize(bytes, entryName);
+    const xlsxGetter = vi.spyOn(ExcelJS.Workbook.prototype, "xlsx", "get");
+
+    expect(bytes.byteLength).toBeLessThan(portfolioWorkbookMaxBytes);
+    await expect(parsePortfolioWorkbook(bytesWithFalsifiedSize)).rejects.toThrow(
+      /archive exceeds the allowed decoded size limit/
+    );
+    expect(xlsxGetter).not.toHaveBeenCalled();
+  });
+
+  it("permits the exact total decoded limit and rejects one more decoded byte", async () => {
+    const workbookBytes = await createWorkbookBytes();
+    const existingDecodedBytes = await decodedArchiveByteLength(workbookBytes);
+    const remainingBytes = portfolioWorkbookMaxDecodedArchiveBytes - existingDecodedBytes;
+    const secondEntryBytes = remainingBytes - portfolioWorkbookMaxDecodedBytesPerArchiveEntry;
+    const atLimitBytes = await appendUnreferencedArchiveEntries(workbookBytes, [
+      {
+        name: "unreferenced-expanded-entry-first.txt",
+        body: new Uint8Array(portfolioWorkbookMaxDecodedBytesPerArchiveEntry).fill(0x61)
+      },
+      {
+        name: "unreferenced-expanded-entry-second.txt",
+        body: new Uint8Array(secondEntryBytes).fill(0x62)
+      },
+      { name: "unreferenced-empty-entry.txt", body: "" }
+    ]);
+    const oneByteOverLimit = await appendUnreferencedArchiveEntries(atLimitBytes, [
+      { name: "unreferenced-one-byte-entry.txt", body: "x" }
+    ]);
+
+    expect(secondEntryBytes).toBeGreaterThan(0);
+    expect(secondEntryBytes).toBeLessThan(portfolioWorkbookMaxDecodedBytesPerArchiveEntry);
+    expect(atLimitBytes.byteLength).toBeLessThan(portfolioWorkbookMaxBytes);
+    await expect(parsePortfolioWorkbook(atLimitBytes)).resolves.toHaveProperty("profile");
+    const xlsxGetter = vi.spyOn(ExcelJS.Workbook.prototype, "xlsx", "get");
+    await expect(parsePortfolioWorkbook(oneByteOverLimit)).rejects.toThrow(/archive exceeds the allowed decoded size limit/);
+    expect(xlsxGetter).not.toHaveBeenCalled();
+  });
+
   it("writes and reads a data-bar workbook through ExcelJS's UUID-backed extension path", async () => {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("UUID data bars");

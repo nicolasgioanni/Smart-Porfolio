@@ -10,6 +10,7 @@ import { parse } from "csv-parse/sync";
 import type { GeneratedPortfolioContent } from "../../src/content/types";
 import { parseCsv, type CsvRow } from "../../src/lib/csv/parseCsv";
 import type { PortfolioSheetName } from "../../src/lib/content/normalizePortfolioContent";
+import { invalidXlsxWorkbookError, validatePortfolioWorkbookArchive } from "./workbookArchive";
 
 export const portfolioWorkbookSheetNames = [
   "profile",
@@ -362,13 +363,15 @@ function normalizeWorksheetTitle(title: string): string {
 }
 
 export async function parsePortfolioWorkbook(bytes: Uint8Array): Promise<PortfolioWorkbookSheets> {
+  await validatePortfolioWorkbookArchive(bytes);
+
   const workbook = new ExcelJS.Workbook();
   const arrayBuffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
 
   try {
     await workbook.xlsx.load(arrayBuffer);
   } catch {
-    throw new Error("The workbook download is not a valid XLSX workbook");
+    throw invalidXlsxWorkbookError();
   }
 
   if (workbook.worksheets.length === 0) {
