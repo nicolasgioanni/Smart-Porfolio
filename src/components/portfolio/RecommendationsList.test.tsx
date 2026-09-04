@@ -130,25 +130,33 @@ function installResponsiveMode(initialNaturalFlow = false) {
 describe("RecommendationsList expansion layout", () => {
   let animationFrameId = 0;
   let responsiveMode: ReturnType<typeof installResponsiveMode>;
+  let visuallyExpandedRecommendationId: string | null = null;
 
   beforeEach(() => {
     animationFrameId = 0;
     responsiveMode = installResponsiveMode();
+    visuallyExpandedRecommendationId = null;
 
     vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function getRect(this: HTMLElement) {
       if (this.classList.contains("featured-grid")) {
         return createRect({ height: 424, left: 0, top: 0, width: 620 });
       }
 
-      if (this.classList.contains("recommendation-card--detail")) {
+      if (
+        this.classList.contains("recommendation-card--detail") ||
+        this.classList.contains("recommendation-expandable__viewport")
+      ) {
         const slot = this.closest<HTMLElement>(".recommendations-list__item");
         const id = slot?.dataset.recommendationId ?? "";
         const column = id === "recommendation-b" || id === "recommendation-d" ? 1 : 0;
         const row = id === "recommendation-c" || id === "recommendation-d" ? 1 : 0;
-        const expanded = slot?.dataset.expanded === "true";
+        const visuallyExpanded = slot?.dataset.expanded === "true" || id === visuallyExpandedRecommendationId;
+        const viewportHeight = visuallyExpanded ? 240 : 88;
+        const cardHeight = visuallyExpanded ? 500 : 200;
+        const height = this.classList.contains("recommendation-expandable__viewport") ? viewportHeight : cardHeight;
 
         return createRect({
-          height: expanded ? 500 : 200,
+          height,
           left: column * 320,
           top: row * 224
         });
@@ -240,6 +248,58 @@ describe("RecommendationsList expansion layout", () => {
     await waitFor(() => {
       expect(slots.map((slot) => slot.dataset.expanded)).toEqual(["false", "false", "false", "false"]);
       expect(slots.map((slot) => slot.dataset.overlapped)).toEqual(["false", "false", "false", "false"]);
+    });
+  });
+
+  it("preserves cached slot heights while inactive cards finish closing", async () => {
+    const { container } = render(<RecommendationsList items={createRecommendations()} />);
+    const root = container.querySelector<HTMLElement>(".recommendations-list");
+    const slots = Array.from(container.querySelectorAll<HTMLElement>(".recommendations-list__item"));
+    const firstToggle = within(slots[0]!).getByRole("button", {
+      name: /show more recommendation from alex manager/i
+    });
+
+    await waitFor(() => {
+      expect(root).toHaveAttribute("data-overlay-ready", "true");
+      expect(slots[0]!.style.getPropertyValue("--recommendation-detail-collapsed-height")).toBe("200px");
+    });
+
+    fireEvent.click(firstToggle);
+    await waitFor(() => expect(slots[0]).toHaveAttribute("data-expanded", "true"));
+
+    visuallyExpandedRecommendationId = "recommendation-a";
+    fireEvent.click(
+      within(slots[0]!).getByRole("button", { name: /show less recommendation from alex manager/i })
+    );
+
+    await waitFor(() => {
+      expect(slots[0]).toHaveAttribute("data-expanded", "false");
+      expect(slots[0]!.style.getPropertyValue("--recommendation-detail-collapsed-height")).toBe("200px");
+    });
+
+    fireEvent(window, new Event("resize"));
+
+    await waitFor(() => {
+      expect(slots[0]!.style.getPropertyValue("--recommendation-detail-collapsed-height")).toBe("200px");
+    });
+
+    fireEvent.click(firstToggle);
+    await waitFor(() => expect(slots[0]).toHaveAttribute("data-expanded", "true"));
+
+    fireEvent.click(
+      within(slots[1]!).getByRole("button", { name: /show more recommendation from blair professor/i })
+    );
+
+    await waitFor(() => {
+      expect(slots.map((slot) => slot.dataset.expanded)).toEqual(["false", "true", "false", "false"]);
+      expect(slots[0]!.style.getPropertyValue("--recommendation-detail-collapsed-height")).toBe("200px");
+    });
+
+    visuallyExpandedRecommendationId = null;
+    fireEvent(window, new Event("resize"));
+
+    await waitFor(() => {
+      expect(slots[0]!.style.getPropertyValue("--recommendation-detail-collapsed-height")).toBe("200px");
     });
   });
 

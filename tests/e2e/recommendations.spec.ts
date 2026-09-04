@@ -7,6 +7,12 @@ type RecommendationGeometry = {
   top: number;
 };
 
+type RecommendationLayoutSample = {
+  cardPosition: string;
+  collapsedHeight: string;
+  rowTop: number;
+};
+
 async function settleLayout(page: Page) {
   await page.waitForLoadState("networkidle");
   await page.evaluate(async () => {
@@ -46,6 +52,55 @@ async function getDocumentTop(locator: Locator): Promise<number> {
   return locator.evaluate((element) => element.getBoundingClientRect().top + window.scrollY);
 }
 
+async function sampleDesktopLayout(
+  rowSlot: Locator,
+  measuredSlotIndex: number,
+  durationMs = 620
+): Promise<RecommendationLayoutSample[]> {
+  return rowSlot.evaluate(
+    (element, { durationMs: sampleDuration, measuredSlotIndex: sampleSlotIndex }) =>
+      new Promise<RecommendationLayoutSample[]>((resolve) => {
+        const samples: RecommendationLayoutSample[] = [];
+        const measuredSlot = document.querySelectorAll<HTMLElement>(".recommendations-list__item")[sampleSlotIndex];
+        const measuredCard = measuredSlot?.querySelector<HTMLElement>(".recommendation-card--detail");
+        const startedAt = performance.now();
+
+        const sample = () => {
+          samples.push({
+            cardPosition: measuredCard ? getComputedStyle(measuredCard).position : "missing",
+            collapsedHeight: measuredSlot?.style.getPropertyValue("--recommendation-detail-collapsed-height") ?? "",
+            rowTop: element.getBoundingClientRect().top + window.scrollY
+          });
+
+          if (performance.now() - startedAt >= sampleDuration) {
+            resolve(samples);
+            return;
+          }
+
+          window.requestAnimationFrame(sample);
+        };
+
+        window.requestAnimationFrame(sample);
+      }),
+    { durationMs, measuredSlotIndex }
+  );
+}
+
+function expectStableDesktopLayout(
+  samples: RecommendationLayoutSample[],
+  expectedRowTop: number,
+  expectedCollapsedHeight: string
+) {
+  expect(samples.length).toBeGreaterThan(2);
+  const expectedCollapsedHeightValue = Number.parseFloat(expectedCollapsedHeight);
+
+  for (const sample of samples) {
+    expect(Math.abs(sample.rowTop - expectedRowTop)).toBeLessThanOrEqual(1);
+    expect(Math.abs(Number.parseFloat(sample.collapsedHeight) - expectedCollapsedHeightValue)).toBeLessThanOrEqual(1);
+    expect(sample.cardPosition).toBe("absolute");
+  }
+}
+
 function geometriesOverlap(active: RecommendationGeometry, candidate: RecommendationGeometry): boolean {
   return (
     active.left < candidate.right - 1 &&
@@ -67,6 +122,9 @@ test.describe("recommendation cards", () => {
     const firstCard = firstSlot.locator(".recommendation-card--detail");
     const secondRowTopBefore = await getDocumentTop(slots.nth(2));
     const collapsedHeight = (await firstCard.boundingBox())?.height ?? 0;
+    const cachedCollapsedHeight = await firstSlot.evaluate((element) =>
+      element.style.getPropertyValue("--recommendation-detail-collapsed-height")
+    );
 
     await expect(list).toHaveAttribute("data-layout-mode", "overlay");
     await expect(list).toHaveAttribute("data-overlay-ready", "true");
@@ -116,6 +174,28 @@ test.describe("recommendation cards", () => {
 
     await firstSlot.getByRole("button", { name: /show less recommendation/i }).click();
     await expect(firstSlot).toHaveAttribute("data-expanded", "false");
+    expectStableDesktopLayout(
+      await sampleDesktopLayout(slots.nth(2), 0),
+      secondRowTopBefore,
+      cachedCollapsedHeight
+    );
+
+    await firstSlot.getByRole("button", { name: /show more recommendation/i }).click();
+    await expect(firstSlot).toHaveAttribute("data-expanded", "true");
+    await waitForStableHeight(firstCard);
+
+    const secondSlot = slots.nth(1);
+    await secondSlot.getByRole("button", { name: /show more recommendation/i }).click();
+    await expect(secondSlot).toHaveAttribute("data-expanded", "true");
+    expectStableDesktopLayout(
+      await sampleDesktopLayout(slots.nth(2), 0),
+      secondRowTopBefore,
+      cachedCollapsedHeight
+    );
+
+    await secondSlot.getByRole("button", { name: /show less recommendation/i }).click();
+    await expect(secondSlot).toHaveAttribute("data-expanded", "false");
+    await waitForStableHeight(secondSlot.locator(".recommendation-card--detail"));
 
     const bottomSlot = slots.nth(2);
     await bottomSlot.getByRole("button", { name: /show more recommendation/i }).click();
