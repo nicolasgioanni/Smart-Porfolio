@@ -167,9 +167,9 @@ Home section route actions use compact buttons aligned with the section heading.
 
 ### Experience showcase
 
-The dedicated Experience route uses one logo-led glass card per position. Identity metadata remains stable while a page-wide `For everyone` or `Technical` control swaps the narrative depth for every role. Each collapsed evidence chapter already communicates its central fact; expansion adds context and tools tied to that chapter. Only one chapter per role remains open.
+The dedicated Experience route combines its heading, spreadsheet-backed summary, and page-wide detail control in one strong glass introduction panel. On desktop, `Detail level:` and the `For everyone` or `Technical` selector occupy the upper-right column while the heading and summary remain in the flexible left column. The selector swaps the narrative depth for every logo-led role card while identity metadata remains stable.
 
-The segmented selector uses one translated glass lens, and role cards use bounded logo highlights rather than pointer-following effects. On small screens, evidence returns to the full card width and result signals move below their chapter summaries.
+The segmented selector uses one translated glass lens, and role cards use bounded logo highlights rather than pointer-following effects. Below `760px`, the selector row moves beneath the summary and stretches to the panel width. Below `520px`, its label stacks above the full-width segmented control. On small screens, evidence returns to the full card width and result signals move below their chapter summaries. Each collapsed evidence chapter communicates its central fact; expansion adds context and tools tied to that chapter, and only one chapter per role remains open.
 
 ## Skills
 

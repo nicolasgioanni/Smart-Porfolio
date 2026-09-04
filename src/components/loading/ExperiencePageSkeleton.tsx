@@ -4,14 +4,17 @@ import { SkeletonText } from "@/components/loading/SkeletonText";
 
 export function ExperiencePageSkeleton() {
   return (
-    <PageSkeleton>
+    <PageSkeleton showHeader={false}>
       <div className="experience-skeleton" aria-hidden="true">
-        <div className="experience-skeleton__mode">
-          <div className="experience-skeleton__mode-copy">
-            <SkeletonBlock height={11} width={76} />
-            <SkeletonBlock height={16} width="min(100%, 430px)" />
+        <div className="experience-skeleton__intro">
+          <div className="experience-skeleton__intro-copy">
+            <SkeletonBlock height={44} radius={14} width="min(100%, 260px)" />
+            <SkeletonText rows={2} />
           </div>
-          <SkeletonBlock height={50} radius="999px" width={300} />
+          <div className="experience-skeleton__intro-control">
+            <SkeletonBlock height={16} width={76} />
+            <SkeletonBlock height={54} radius="999px" width={300} />
+          </div>
         </div>
         {Array.from({ length: 4 }).map((_, index) => (
           <article className="experience-skeleton__card" key={index}>

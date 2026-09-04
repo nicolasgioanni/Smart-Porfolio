@@ -70,7 +70,9 @@ The header profile image opens a labelled modal preview with a close button, Esc
 
 ### Experience chapters
 
-The page-level `For everyone` and `Technical` buttons form a labelled group and expose the selected depth with `aria-pressed`. The explanatory sentence is a polite live region, so a depth change is announced without repeating every role.
+The Experience heading, summary, and detail controls share one page-introduction surface. The descriptive H1 and summary remain available when there are no published roles, while the detail controls are omitted because there is no content to switch.
+
+The visible `Detail level:` text and its visually hidden `Experience` prefix label the page-level `For everyone` and `Technical` group through `aria-labelledby`. Each button exposes the selected depth with `aria-pressed`. A concise visually hidden polite live region announces depth changes without adding explanatory copy to the layout or repeating every role.
 
 Each expandable evidence chapter is a native button with `aria-expanded` and `aria-controls`; its panel is a labelled region and is `aria-hidden` while collapsed. Only one chapter per role remains open. Escape closes the focused chapter without moving focus. Organization logos are decorative because the adjacent organization name supplies the same identity in text.
 
