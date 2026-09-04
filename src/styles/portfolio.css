@@ -1703,13 +1703,18 @@
   }
 
   .recommendations-list[data-layout-mode="overlay"][data-overlay-ready="true"]
-    .recommendations-list__item[data-expanded="true"]
+    .recommendations-list__item
     .recommendation-card--detail {
     position: absolute;
     top: 0;
     right: 0;
     left: 0;
     width: 100%;
+  }
+
+  .recommendations-list[data-layout-mode="overlay"][data-overlay-ready="true"]
+    .recommendations-list__item[data-expanded="true"]
+    .recommendation-card--detail {
     border-color: var(--color-line-strong);
     background: var(--color-recommendation-card-solid);
     box-shadow: var(--shadow-soft), var(--shadow-glow);
