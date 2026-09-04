@@ -21,13 +21,24 @@
   margin-bottom: var(--space-6);
 }
 
+.page-container--experience .page-intro__surface {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--space-6);
+}
+
+.page-container--experience .page-intro__accessory {
+  justify-self: end;
+}
+
+.page-container--experience .page-description {
+  max-width: 62ch;
+}
+
 .experience-showcase,
 .experience-showcase__roles {
   display: grid;
-}
-
-.experience-showcase {
-  gap: var(--space-6);
 }
 
 .experience-showcase__roles {
@@ -37,20 +48,11 @@
 .experience-mode-control {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-5);
-  padding: var(--space-4);
+  justify-content: flex-end;
+  gap: var(--space-3);
 }
 
-.experience-mode-control__copy {
-  display: grid;
-  gap: var(--space-1);
-  min-width: 0;
-  padding-inline-start: var(--space-2);
-}
-
-.experience-mode-control__eyebrow,
-.experience-mode-control__description,
+.experience-mode-control__label,
 .experience-card__organization,
 .experience-card__title,
 .experience-card__summary,
@@ -58,18 +60,12 @@
   margin: 0;
 }
 
-.experience-mode-control__eyebrow {
-  color: var(--color-accent);
-  font-size: var(--font-size-eyebrow);
-  font-weight: var(--font-weight-heavy);
-  letter-spacing: var(--letter-spacing-label);
-  line-height: var(--line-height-heading);
-  text-transform: uppercase;
-}
-
-.experience-mode-control__description {
+.experience-mode-control__label {
   color: var(--color-muted);
-  line-height: var(--line-height-normal);
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-control);
+  white-space: nowrap;
 }
 
 .experience-mode-switch {
@@ -564,18 +560,18 @@
 }
 
 @media (max-width: 760px) {
-  .experience-mode-control {
-    align-items: stretch;
-    flex-direction: column;
+  .page-container--experience .page-intro__surface {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-5);
   }
 
-  .experience-mode-control__copy {
-    padding-inline: var(--space-1);
-  }
-
-  .experience-mode-switch {
-    flex-basis: auto;
+  .page-container--experience .page-intro__accessory {
+    justify-self: stretch;
     width: 100%;
+  }
+
+  .experience-mode-control {
+    justify-content: space-between;
   }
 
   .experience-card__header {
@@ -662,6 +658,18 @@
   }
 }
 
+@media (max-width: 520px) {
+  .experience-mode-control {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .experience-mode-switch {
+    flex-basis: auto;
+    width: 100%;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .experience-showcase[data-motion="enabled"] .experience-card-wrap,
   .experience-card__body {
@@ -700,7 +708,7 @@
   gap: var(--space-5);
 }
 
-.experience-skeleton__mode,
+.experience-skeleton__intro,
 .experience-skeleton__card {
   border: 1px solid var(--color-line);
   background: var(--color-surface);
@@ -708,25 +716,32 @@
   backdrop-filter: blur(var(--glass-blur-mobile));
 }
 
-.experience-skeleton__mode {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-5);
-  padding: var(--space-4);
+.experience-skeleton__intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--space-6);
+  padding: clamp(var(--space-6), 4vw, var(--space-10));
   border-radius: var(--radius-panel);
 }
 
-.experience-skeleton__mode-copy,
+.experience-skeleton__intro-copy,
+.experience-skeleton__intro-control,
 .experience-skeleton__identity,
 .experience-skeleton__body,
 .experience-skeleton__chapters {
   display: grid;
 }
 
-.experience-skeleton__mode-copy,
+.experience-skeleton__intro-copy,
 .experience-skeleton__identity {
   gap: var(--space-2);
+}
+
+.experience-skeleton__intro-control {
+  grid-template-columns: 76px minmax(260px, 300px);
+  align-items: center;
+  gap: var(--space-3);
 }
 
 .experience-skeleton__card {
@@ -753,12 +768,18 @@
 }
 
 @media (max-width: 760px) {
-  .experience-skeleton__mode {
-    align-items: stretch;
-    flex-direction: column;
+  .experience-skeleton__intro {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-5);
+  }
+}
+
+@media (max-width: 520px) {
+  .experience-skeleton__intro-control {
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  .experience-skeleton__mode > .skeleton-block {
+  .experience-skeleton__intro-control > .skeleton-block:last-child {
     width: 100% !important;
   }
 }

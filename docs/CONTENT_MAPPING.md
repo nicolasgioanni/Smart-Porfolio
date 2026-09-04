@@ -107,6 +107,8 @@ Footer resources include GitHub and LinkedIn rows whose `show_in_footer` value i
 
 ## Experience
 
+The page introduction uses the optional profile `experience_summary` value, with component fallback copy when the value is absent.
+
 Home shows the complete selected experience set and groups it by `organization.trim().toLowerCase()`. Organization capitalization and surrounding whitespace therefore do not create separate groups. The first available logo in a group is reused for the group, with generated initials as the no-logo fallback.
 
 Home displays organization, title, date range, location, and organization logo. It does not display type, summaries, bullets, or skills.

@@ -60,6 +60,7 @@ const profileKeyMap: Record<string, keyof ProfileContent> = {
   graduation: "graduation",
   short_bio: "shortBio",
   long_bio: "longBio",
+  experience_summary: "experienceSummary",
   portrait_image: "portraitImage",
   favicon_image: "faviconImage",
   resume_url: "resumeUrl",

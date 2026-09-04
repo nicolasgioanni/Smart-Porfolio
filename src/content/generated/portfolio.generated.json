@@ -1,7 +1,7 @@
 {
   "metadata": {
-    "generatedAt": "2026-08-30T08:18:38.583Z",
-    "contentHash": "1762a91b57f724b0287510ec428c67ef1223826a501e020a8ebf6d53010306b7",
+    "generatedAt": "2026-09-04T04:02:51.431Z",
+    "contentHash": "8fbf9fd8cbc0b06364cedbc55a801951f43660c0806bf0644e81697ae6ca550e",
     "sourceMode": "templates",
     "sources": {
       "profile": "template",
@@ -38,6 +38,7 @@
     "graduation": "Jun 2025",
     "shortBio": "I’m ambitious, relentlessly curious, and always looking for the next hard problem to learn from. I care about moving with urgency, doing things well, and getting better with every project.",
     "longBio": "I build practical software systems at the intersection of full-stack engineering, AI/ML, computer vision, and security. My work includes research software for microscopy analysis, adversarial machine learning pipelines, teaching support for core CS courses, and production-style projects using Next.js, Flask, Django, Firebase, and cloud deployment tooling.",
+    "experienceSummary": "My experience spans AI engineering at the U.S. Treasury, research software and machine learning at the University of Washington, and teaching core computer science courses.",
     "portraitImage": "/favicon/favicon.png",
     "faviconImage": "/favicon/favicon.png",
     "primaryCtaLabel": "View projects",

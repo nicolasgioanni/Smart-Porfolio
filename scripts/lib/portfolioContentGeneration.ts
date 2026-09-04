@@ -54,6 +54,7 @@ const allowedProfileKeys = new Set([
   "graduation",
   "short_bio",
   "long_bio",
+  "experience_summary",
   "portrait_image",
   "favicon_image",
   "resume_url",
