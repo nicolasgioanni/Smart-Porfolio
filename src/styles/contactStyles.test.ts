@@ -6,6 +6,17 @@ const contactStyles = readFileSync(path.join(process.cwd(), "src", "styles", "co
 const tokenStyles = readFileSync(path.join(process.cwd(), "src", "styles", "tokens.css"), "utf8");
 
 describe("contact wizard styles", () => {
+  it("supports the three-step flow, final verification states, and standalone success layout", () => {
+    expect(contactStyles).toMatch(/\.contact-progress\s*{[^}]*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/s);
+    expect(contactStyles).toMatch(/\.contact-success\s*{[^}]*display: grid[^}]*gap: var\(--space-6\)/s);
+    expect(contactStyles).toMatch(
+      /\.contact-turnstile\[data-status="prepared"\] \.contact-turnstile__status-row,[\s\S]*?color: var\(--color-ink-strong\)/
+    );
+    expect(contactStyles).toMatch(
+      /\.contact-turnstile\[data-status="executing"\] \.contact-turnstile__status-row\s*{[^}]*color: var\(--color-accent\)/s
+    );
+  });
+
   it("uses the CytoCV blue focus treatment for fields in every theme", () => {
     expect(tokenStyles).toMatch(/--color-contact-field-focus:\s*#007bff/);
     expect(tokenStyles).toMatch(/--contact-field-focus-ring:\s*0 0 0 3px rgba\(0, 123, 255, 0\.2\)/);

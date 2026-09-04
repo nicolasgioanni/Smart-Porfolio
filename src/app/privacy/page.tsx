@@ -42,8 +42,8 @@ export default function PrivacyPage() {
         <p>
           This Notice applies to this portfolio website. The portfolio has no visitor accounts, payment processing,
           first-party analytics, advertising, or tracking pixels. It does not use advertising, analytics, or cross-site
-          tracking cookies. Its contact form uses one short-lived, essential verification cookie to enforce its initial
-          human-verification gate and provides a direct channel for legitimate professional inquiries.
+          tracking cookies. Its contact form uses one short-lived, essential verification cookie to enforce final-submit
+          human verification and provides a direct channel for legitimate professional inquiries.
         </p>
         <p>
           The portfolio owner does not sell or rent personal information, use it for targeted or cross-context behavioral
@@ -76,9 +76,10 @@ export default function PrivacyPage() {
           {" "}is provided as UK-specific regulatory background.
         </p>
         <p>
-          After Cloudflare verifies the visible Turnstile check at the start of the contact form, the site sets a signed
-          contact-verification cookie for up to 30 minutes. It is restricted to this host and sent only over secure
-          connections, is unavailable to browser scripts, and is limited to same-site requests. It contains a verification
+          After you select <em>Send request</em> and Cloudflare verifies the Turnstile check, the site sets a signed
+          contact-verification cookie for up to 30 minutes. The interaction-only widget remains hidden unless Cloudflare
+          requires your attention. The cookie is restricted to this host and sent only over secure connections, is
+          unavailable to browser scripts, and is limited to same-site requests. It contains a verification
           ticket bound to one opaque submission identifier, not your name, email address, phone number, message,
           acknowledgments, or other contact content. It is cleared after successful delivery. If delivery fails, it remains
           available until its original expiry so you can retry without repeating the security check.
@@ -110,7 +111,8 @@ export default function PrivacyPage() {
           protect the contact channel.
         </p>
         <p>
-          Loading and completing Turnstile causes the browser to communicate with Cloudflare. Cloudflare&apos;s{" "}
+          Preparing and running Turnstile during the final Send action causes the browser to communicate with Cloudflare.
+          The interaction-only widget remains hidden unless Cloudflare requires visitor input. Cloudflare&apos;s{" "}
           <SmartLink href="https://www.cloudflare.com/turnstile-privacy-policy/">
             Turnstile Privacy Addendum
           </SmartLink>{" "}
@@ -120,24 +122,29 @@ export default function PrivacyPage() {
           the service does not access, store, or transmit user communications, form entries, or page input.
         </p>
         <p>
-          In this implementation, the contact fields are not supplied to Turnstile. The widget returns a token, and the
-          browser sends only that token and an opaque submission identifier over HTTPS to <code>/api/contact/verify</code>.
-          That narrowly scoped Cloudflare Pages Function may include the connecting IP address when it asks Cloudflare to
-          verify the token and then establishes the short-lived verification cookie. The form should advance automatically
-          when verification succeeds; Continue is available only as a fallback.
+          In this implementation, the contact fields are not supplied to Turnstile. The form creates an opaque identifier
+          for the reviewed submission and supplies that identifier as Turnstile custom data. When you choose <em>Send
+          request</em>, the widget creates a fresh, single-use token for the new message, and the browser sends only that
+          token and the opaque submission identifier over HTTPS to <code>/api/contact/verify</code>. That narrowly scoped
+          Cloudflare Pages Function may include the connecting IP address when it asks Cloudflare to verify the token. It
+          requires successful verification, the expected action and hostname, and matching custom data before establishing
+          the short-lived verification cookie. Verification then continues the same final Send action.
         </p>
         <p>
           Your contact-field values remain in your browser while you complete and review the form. They are transmitted over
           HTTPS to <code>/api/contact</code> only when you choose <em>Send request</em>. That endpoint validates the signed
-          verification ticket, submitted fields, and acknowledgments. For mail-domain validation, the server sends only the
-          domain portion of the supplied address and the requested DNS record type—not the local part of the address or other
-          contact fields—to Cloudflare&apos;s DNS-over-HTTPS resolver. Cloudflare describes resolver logging and retention in its{" "}
+          verification ticket, matching submission identifier, submitted fields, and acknowledgments. For mail-domain
+          validation, the server sends only the domain portion of the supplied address and the requested DNS record type. It
+          does not send the local part of the address or other contact fields to Cloudflare&apos;s DNS-over-HTTPS resolver.
+          Cloudflare describes resolver logging and retention in its{" "}
           <SmartLink href="https://developers.cloudflare.com/1.1.1.1/privacy/public-dns-resolver/">
             1.1.1.1 Public DNS Resolver privacy commitments
           </SmartLink>. This check improves input quality but does not prove that a particular mailbox exists or belongs to
           the submitter. The endpoint does not send the Turnstile response through Cloudflare verification a second time.
-          After the first delivery attempt, reviewed fields are locked so a failed or uncertain attempt can be retried with
-          the same submission identifier and idempotent delivery payloads.
+          After an email-provider attempt or uncertain delivery outcome, reviewed fields are locked so the request can be
+          retried with the same submission identifier and idempotent delivery payloads. A still-valid signed ticket permits only that
+          same locked delivery retry without another Turnstile check. If the ticket expires first, the final Send action
+          requires a fresh token while preserving the locked delivery identity and content.
         </p>
         <p>
           A verified submission reserves one of two allowed attempts for that normalized address during a rolling 24-hour
