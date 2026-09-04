@@ -231,9 +231,11 @@ Confirm:
 - The Content Security Policy still permits the required script, frame, and connection origins.
 - A browser extension or network policy is not blocking the widget.
 
+The widget is prepared on the review step with `execution: "execute"` and `appearance: "interaction-only"`. It may remain visually hidden while ready. Confirm the final Send control reports that the security check is prepared rather than expecting an up-front checkbox.
+
 ### `/api/contact/verify` returns HTTP 400
 
-Use a fresh token and confirm the site key, secret, exact `portfolio_contact` action, and `TURNSTILE_ALLOWED_HOSTNAMES` agree. Turnstile tokens are single-use and short-lived. Cloudflare dummy tokens use action `test` and intentionally fail this contract.
+Use a fresh token and confirm the site key, secret, exact `portfolio_contact` action, `TURNSTILE_ALLOWED_HOSTNAMES`, and returned `cdata` agree with the current submission UUID. Turnstile tokens are single-use and short-lived. Cloudflare dummy tokens use action `test` and intentionally fail this contract.
 
 ### `/api/contact/verify` returns HTTP 403
 
@@ -241,15 +243,15 @@ The browser origin must exactly match one entry in `CONTACT_ALLOWED_ORIGINS`, in
 
 ### `/api/contact/verify` returns HTTP 503
 
-Required verification configuration is missing or malformed. Check `TURNSTILE_SECRET_KEY`, allowed hostnames, and allowed origins without printing values. No separate ticket-signing secret exists.
+Read the JSON error before diagnosing the result. `service_unavailable` means required local verification configuration is missing or malformed. Check `TURNSTILE_SECRET_KEY`, allowed hostnames, and allowed origins without printing values. No separate ticket-signing secret exists. `verification_unavailable` means a transient Siteverify failure remained after the one bounded same-operation retry, or Siteverify reported a provider integration fault such as an invalid secret or malformed request. Preserve the reviewed fields and retry the final Send action with a fresh token later; if the error persists, correct the provider configuration before retrying.
 
-### Verification succeeds but the form does not advance
+### Final Send verification succeeds but delivery does not begin
 
-Inspect the verification response and confirm the browser accepted the signed cookie. The cookie is `Secure`; use the documented Wrangler or preview setup and check browser cookie policy. The Continue control remains available as a fallback after successful verification.
+Inspect the verification response and confirm the browser accepted the signed cookie. The cookie is `Secure`; use the documented Wrangler or preview setup and check browser cookie policy. Confirm the reviewed payload remained locked and the browser continued to `/api/contact` with the same submission UUID. Do not reset the original form-start time when verification succeeds.
 
 ### `/api/contact` returns `verification_required`
 
-The final request must include the signed cookie and exact submission ID used during verification. The ticket expires after 30 minutes, is bound to one ID, and the browser is instructed to clear it after successful delivery. Enforcement is stateless: restart verification when the ticket cookie is missing, cleared, expired, invalid, or mismatched with the submission ID.
+The final request must include the signed cookie and exact submission ID used during verification. The ticket expires after 30 minutes, is bound to one ID, and the browser is instructed to clear it after successful delivery. Enforcement is stateless: run fresh final-submit verification when the ticket cookie is missing, cleared, expired, invalid, or mismatched with the submission ID. Preserve the original UUID, start time, and byte-equivalent body when refreshing a ticket for a locked ambiguous or partial delivery retry.
 
 ### `/api/contact` returns HTTP 400
 

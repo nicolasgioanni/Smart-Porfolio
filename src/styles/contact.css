@@ -13,6 +13,7 @@
 }
 
 .contact-form,
+.contact-success,
 .contact-step,
 .contact-fields,
 .contact-step__heading,
@@ -21,6 +22,12 @@
 }
 
 .contact-form {
+  gap: var(--space-6);
+}
+
+.contact-success {
+  display: grid;
+  align-content: start;
   gap: var(--space-6);
 }
 
@@ -74,7 +81,7 @@
 
 .contact-progress {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-2);
   margin-top: var(--space-3);
 }
@@ -312,8 +319,13 @@
   line-height: var(--line-height-normal);
 }
 
+.contact-turnstile[data-status="prepared"] .contact-turnstile__status-row,
 .contact-turnstile[data-status="ready"] .contact-turnstile__status-row {
   color: var(--color-ink-strong);
+}
+
+.contact-turnstile[data-status="executing"] .contact-turnstile__status-row {
+  color: var(--color-accent);
 }
 
 .contact-turnstile[data-status="error"] .contact-turnstile__status-row,

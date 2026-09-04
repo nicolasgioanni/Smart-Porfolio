@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { PageIntro, type PageIntroVariant } from "@/components/layout/PageIntro";
 
 type PageContainerProps = {
+  introAccessory?: ReactNode;
   eyebrow?: string;
   title: string;
   description?: string;
@@ -12,6 +13,7 @@ type PageContainerProps = {
 };
 
 export function PageContainer({
+  introAccessory,
   eyebrow,
   title,
   description,
@@ -23,6 +25,7 @@ export function PageContainer({
   return (
     <div className={["page-container", className].filter(Boolean).join(" ")}>
       <PageIntro
+        accessory={introAccessory}
         description={description}
         eyebrow={eyebrow}
         motionEnabled={motionEnabled}

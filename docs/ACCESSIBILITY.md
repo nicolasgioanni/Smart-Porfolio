@@ -70,7 +70,9 @@ The header profile image opens a labelled modal preview with a close button, Esc
 
 ### Experience chapters
 
-The page-level `For everyone` and `Technical` buttons form a labelled group and expose the selected depth with `aria-pressed`. The explanatory sentence is a polite live region, so a depth change is announced without repeating every role.
+The Experience heading, summary, and detail controls share one page-introduction surface. The descriptive H1 and summary remain available when there are no published roles, while the detail controls are omitted because there is no content to switch.
+
+The visible `Detail level:` text and its visually hidden `Experience` prefix label the page-level `For everyone` and `Technical` group through `aria-labelledby`. Each button exposes the selected depth with `aria-pressed`. A concise visually hidden polite live region announces depth changes without adding explanatory copy to the layout or repeating every role.
 
 Each expandable evidence chapter is a native button with `aria-expanded` and `aria-controls`; its panel is a labelled region and is `aria-hidden` while collapsed. Only one chapter per role remains open. Escape closes the focused chapter without moving focus. Organization logos are decorative because the adjacent organization name supplies the same identity in text.
 
@@ -113,7 +115,7 @@ See [Skeleton loading guidelines](SKELETON_LOADING_GUIDELINES.md) for the comple
 
 The Contact route keeps a direct email alternative available when the Turnstile widget or delivery endpoint is unavailable.
 
-The form provides visible labels, required-state cues, `aria-invalid`, error descriptions, focus movement between steps, polite status updates, alert semantics, native acknowledgement checkboxes, and a submit button disabled until verification and acknowledgements are complete. The hidden honeypot is removed from the tab order.
+The three-step form provides visible labels, required-state cues, `aria-invalid`, error descriptions, focus movement between steps, polite status updates, alert semantics, native acknowledgement checkboxes, and a final Send button disabled until the widget is prepared and acknowledgements are complete. Verification, interactive fallback, expiry, retry, and delivery states remain announced while repeated Send actions are blocked. The interaction-only widget may remain visually hidden when no challenge is required. Successful delivery replaces the wizard with a standalone completion view and a clearly named <em>Send another message</em> action. The hidden honeypot is removed from the tab order.
 
 Server validation remains authoritative. Accessible client feedback does not weaken origin, schema, timing, ticket, or delivery checks.
 

@@ -42,6 +42,15 @@ describe("skeleton components", () => {
     expect(container.textContent).toBe("");
   });
 
+  it("renders one combined Experience intro skeleton without a separate page header", () => {
+    const { container } = render(<LoadingExperience />);
+
+    expect(container.querySelectorAll(".experience-skeleton__intro")).toHaveLength(1);
+    expect(container.querySelector(".experience-skeleton__intro-copy")).toBeInTheDocument();
+    expect(container.querySelector(".experience-skeleton__intro-control")).toBeInTheDocument();
+    expect(container.querySelector(".skeleton-page__header")).not.toBeInTheDocument();
+  });
+
   it("route loading files render page skeletons", () => {
     const components = [LoadingHome, LoadingResearch, LoadingProjects, LoadingExperience, LoadingRecommendations, LoadingResume, LoadingContact];
 

@@ -8,6 +8,7 @@ const RESEND_EMAIL_URL = "https://api.resend.com/emails";
 const DNS_OVER_HTTPS_URL = "https://cloudflare-dns.com/dns-query";
 const CANONICAL_SITE_URL = "https://nicolasmgioanni.dev";
 const TURNSTILE_TIMEOUT_MS = 5_000;
+const TURNSTILE_MAX_ATTEMPTS = 2;
 const RESEND_TIMEOUT_MS = 8_000;
 const DNS_TIMEOUT_MS = 3_000;
 const MIN_COMPLETION_TIME_MS = 1_200;
@@ -103,10 +104,19 @@ type ReadBodyResult =
   | { kind: "too-large" };
 
 interface TurnstileResponse {
-  success?: boolean;
-  hostname?: string;
-  action?: string;
+  success: boolean;
+  hostname?: unknown;
+  action?: unknown;
+  cdata?: unknown;
+  "error-codes"?: unknown;
 }
+
+export type TurnstileVerificationResult =
+  | { kind: "valid" }
+  | { kind: "rejected" }
+  | { kind: "unavailable" };
+
+type TurnstileAttemptResult = TurnstileVerificationResult | { kind: "transient" };
 
 interface ContactTicketPayload {
   v: 1;
@@ -298,45 +308,84 @@ export async function verifyTurnstile(
   payload: TurnstileVerificationPayload,
   request: Request,
   env: ContactEnv
-): Promise<boolean> {
+): Promise<TurnstileVerificationResult> {
   const secret = env.TURNSTILE_SECRET_KEY?.trim();
   const allowedHostnames = parseHostnames(env.TURNSTILE_ALLOWED_HOSTNAMES);
-  if (!secret || allowedHostnames.length === 0) return false;
+  if (!secret || allowedHostnames.length === 0) return { kind: "unavailable" };
+
+  let operationId: string;
+  try {
+    operationId = crypto.randomUUID();
+  } catch {
+    return { kind: "unavailable" };
+  }
 
   const verificationBody: Record<string, string> = {
     secret,
     response: payload.turnstileToken,
-    idempotency_key: payload.submissionId
+    idempotency_key: operationId
   };
   const remoteIp = request.headers.get("CF-Connecting-IP")?.trim();
   if (remoteIp && remoteIp.length <= 64 && !hasUnsafeControlCharacters(remoteIp)) {
     verificationBody.remoteip = remoteIp;
   }
 
-  const response = await fetchWithTimeout(
-    TURNSTILE_VERIFY_URL,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(verificationBody)
-    },
-    TURNSTILE_TIMEOUT_MS
-  );
-  if (!response?.ok) return false;
+  const requestInit: RequestInit = {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(verificationBody)
+  };
 
-  let result: TurnstileResponse;
-  try {
-    result = (await response.json()) as TurnstileResponse;
-  } catch {
-    return false;
+  for (let attempt = 0; attempt < TURNSTILE_MAX_ATTEMPTS; attempt += 1) {
+    const response = await fetchWithTimeout(TURNSTILE_VERIFY_URL, requestInit, TURNSTILE_TIMEOUT_MS);
+    const result = await classifyTurnstileAttempt(response, payload.submissionId, allowedHostnames);
+    if (result.kind !== "transient") return result;
   }
 
-  return (
-    result.success === true &&
-    result.action === CONTACT_ACTION &&
-    typeof result.hostname === "string" &&
-    allowedHostnames.includes(result.hostname.trim().toLowerCase())
-  );
+  return { kind: "unavailable" };
+}
+
+async function classifyTurnstileAttempt(
+  response: Response | undefined,
+  submissionId: string,
+  allowedHostnames: string[]
+): Promise<TurnstileAttemptResult> {
+  if (!response) return { kind: "transient" };
+  if (!response.ok) {
+    return response.status === 408 || response.status === 429 || response.status >= 500
+      ? { kind: "transient" }
+      : { kind: "unavailable" };
+  }
+
+  let result: unknown;
+  try {
+    result = await response.json();
+  } catch {
+    return { kind: "transient" };
+  }
+  if (!isPlainObject(result) || typeof result.success !== "boolean") return { kind: "transient" };
+
+  const turnstileResult = result as unknown as TurnstileResponse;
+  if (turnstileResult.success === true) {
+    return turnstileResult.action === CONTACT_ACTION &&
+      typeof turnstileResult.hostname === "string" &&
+      allowedHostnames.includes(turnstileResult.hostname.trim().toLowerCase()) &&
+      turnstileResult.cdata === submissionId
+      ? { kind: "valid" }
+      : { kind: "rejected" };
+  }
+
+  const errorCodes = turnstileResult["error-codes"];
+  if (errorCodes !== undefined && (!Array.isArray(errorCodes) || errorCodes.some((code) => typeof code !== "string"))) {
+    return { kind: "transient" };
+  }
+
+  const codes = errorCodes as string[] | undefined;
+  if (codes?.includes("internal-error")) return { kind: "transient" };
+  if (codes?.length && codes.every((code) => code === "invalid-input-response" || code === "timeout-or-duplicate")) {
+    return { kind: "rejected" };
+  }
+  return { kind: "unavailable" };
 }
 
 export async function createContactTicket(

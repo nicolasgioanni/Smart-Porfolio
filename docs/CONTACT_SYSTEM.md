@@ -1,6 +1,6 @@
 # Contact System
 
-The Contact route is a statically exported page with two narrowly routed Cloudflare Pages Functions. Turnstile verification happens before contact data entry. A successful verification creates a short-lived signed ticket, and the later delivery request uses that ticket instead of submitting the Turnstile token again.
+The Contact route is a statically exported page with two narrowly routed Cloudflare Pages Functions. The visitor completes a three-step contact wizard before Turnstile runs during the final Send action. A successful verification creates a short-lived signed ticket, and the immediate delivery request uses that ticket instead of submitting the Turnstile token again.
 
 Use this guide for the complete request contract and trust boundary. See [Security](SECURITY.md) for the broader threat model, [Deployment](DEPLOYMENT.md) for production setup, and [Local development](LOCAL_DEVELOPMENT.md#complete-contact-flow-development) for local Pages Function testing.
 
@@ -36,13 +36,21 @@ sequenceDiagram
     participant D1 as Cloudflare D1
     participant Resend
 
-    Visitor->>Browser: Complete visible Turnstile check
+    Visitor->>Browser: Enter details, review, acknowledge, and select Send
+    Browser->>Browser: Lock payload and execute prepared widget
+    opt Cloudflare requires interaction
+        Browser-->>Visitor: Show interaction-only challenge
+        Visitor->>Browser: Complete challenge
+    end
     Browser->>Verify: POST token and submission UUID
-    Verify->>Turnstile: Validate token, action, hostname, optional IP
+    Verify->>Turnstile: Validate token with operation UUID and optional IP
     Turnstile-->>Verify: Verification result
+    opt Transient provider failure
+        Verify->>Turnstile: Retry same token and operation UUID once
+        Turnstile-->>Verify: Verification result
+    end
+    Verify->>Verify: Require success, action, hostname, and matching cdata
     Verify-->>Browser: 200 and signed HttpOnly ticket cookie
-    Browser-->>Visitor: Advance to data entry
-    Visitor->>Browser: Enter, review, acknowledge, and send
     Browser->>Deliver: POST contact JSON with same UUID and cookie
     Deliver->>Deliver: Validate body, timing, ticket, and binding
     Deliver->>DNS: Validate mail-domain routing
@@ -60,55 +68,60 @@ The two endpoint calls use `credentials: "same-origin"`, so the browser can acce
 
 ## Client experience
 
-### Route and first-step verification
+### Route and final-submit verification
 
-`/contact` is static HTML with a hydrated client form. Its metadata is `noindex, follow`. The route reads `NEXT_PUBLIC_TURNSTILE_SITE_KEY` at build time. When the selected build has no site key, the widget is unavailable and Continue remains disabled.
+`/contact` is static HTML with a hydrated client form. Its metadata is `noindex, follow`. The route reads `NEXT_PUBLIC_TURNSTILE_SITE_KEY` at build time. When the selected build has no site key, the widget is unavailable and the final Send action remains disabled.
 
 The explicit Turnstile widget uses:
 
 - action `portfolio_contact`;
-- appearance `always`;
+- appearance `interaction-only`;
+- execution `execute`;
+- the current submission UUID as `cData`;
 - flexible sizing;
 - light widget styling only for the Light site theme, and dark styling for Navy and Dark;
+- manual token refresh and retry behavior so the client controls recovery;
 - no hidden Turnstile response field because the token is sent in explicit JSON.
 
-The widget script loads from Cloudflare after hydration. Expiry and timeout callbacks clear the token and offer a reset. Script, widget, and unsupported-browser errors fail closed in the client.
+The widget script loads from Cloudflare after hydration, and the widget is prepared while the review step is active. It executes only after all final fields and acknowledgments pass validation and the visitor selects <em>Send request</em>. The interaction-only appearance keeps it hidden unless Cloudflare requires visitor input. Expiry, timeout, widget, script, and unsupported-browser callbacks clear the token and fail closed. The reviewed values remain available, and the visitor explicitly selects Send again after recovery rather than entering an automatic verification loop.
 
-When the widget supplies a token, the browser creates a cryptographically random UUID. It posts only that UUID and the token to `/api/contact/verify`. A verified response resets the form start time, enables Continue, and advances to the name step after 400 milliseconds. Continue remains available during that delay as a manual fallback.
+Each new logical draft receives a cryptographically random submission UUID and a new form-start time. The form-start time is not reset after verification. The UUID binds the reviewed payload, Turnstile custom data, signed ticket, D1 retry identity, and Resend idempotency keys. When the executed widget supplies a fresh token, the browser posts only that UUID and token to `/api/contact/verify`. A verified response continues the same locked Send action to `/api/contact`.
 
-### Four wizard steps
+### Three wizard steps
 
-The progress UI uses steps `0` through `3`:
+The progress UI uses steps `1` through `3`:
 
-1. Verify you are human.
-2. Enter required first and last names.
-3. Enter a required email address and message, plus an optional phone number.
-4. Review the request and accept all three required acknowledgments.
+1. Enter required first and last names.
+2. Enter a required email address and message, plus an optional phone number.
+3. Review the request and accept all three required acknowledgments.
 
-The acknowledgments cover permission to respond, the Terms and Privacy Notice, and confirmation that the inquiry is legitimate and contains no prohibited material. The Send request button remains disabled until all three values are true and server verification is complete.
+The acknowledgments cover permission to respond, the Terms and Privacy Notice, and confirmation that the inquiry is legitimate and contains no prohibited material. The Send request button remains disabled until all three values are true and the Turnstile widget is prepared, unless a still-valid ticket permits a same-payload delivery retry.
 
 Draft contact values live only in React state. The contact form does not read or write local storage or session storage. The hidden `website` field is a honeypot. A direct `mailto:` link remains available when the form or delivery service cannot be used.
 
+Successful delivery replaces the wizard with a standalone completion view. Its <em>Send another message</em> action creates a fresh draft identity and form-start time before returning to the first step.
+
 ### Submission and retry states
 
-The browser trims the visible text fields and sends the final JSON to `/api/contact`. It does not send the Turnstile token again.
+The browser validates and trims the visible fields, freezes the reviewed payload during verification and delivery, and sends the final JSON to `/api/contact` only after `/api/contact/verify` succeeds. It does not send the Turnstile token to the delivery endpoint.
 
-The review Back button and acknowledgment controls are locked while a delivery request is pending. A pre-delivery correction or service result can unlock the form because no provider request was made. After a provider or delivery-network failure makes the outcome ambiguous or partial, the browser keeps the reviewed payload locked for safe retry. It preserves the original submission UUID, `startedAt` value, acknowledgments, and byte-equivalent JSON payload. This matches Resend's requirement that a repeated idempotency key use the same request payload.
+The review Back button, repeat Send actions, and acknowledgment controls are locked while verification or delivery is active. A pre-delivery correction or service result can unlock the form because no email-provider request was made. After a provider or delivery-network failure makes the outcome ambiguous or partial, the browser keeps the reviewed payload locked for safe retry. It preserves the original submission UUID, `startedAt` value, acknowledgments, and byte-equivalent JSON payload. This matches Resend's requirement that a repeated idempotency key use the same request payload.
 
 Client behavior depends on the response:
 
 | Result | Client behavior |
 | --- | --- |
-| Verification succeeds | Advance to data entry and retain the UUID for delivery. |
-| Verification fails or cannot be reached | Clear the UUID, reset the widget, remain at the gate, and offer direct email. |
-| Delivery returns `verification_required` before any ambiguous or partial delivery | Return to the gate, preserve the draft, clear the prior UUID, and unlock it after a new verified session creates a new UUID. |
-| Delivery returns `verification_required` after an ambiguous or partial delivery | Return to the gate only to refresh the ticket. Keep the reviewed payload locked and preserve the original UUID and `startedAt`; verification and the later delivery retry reuse that UUID so both Resend idempotency keys and the request body remain unchanged. |
+| Verification succeeds | Retain the UUID and continue the same locked final Send action to delivery. |
+| Challenge is invalid, expires, or cannot complete | Reset or recreate the widget, preserve the reviewed fields, remain on review, and require an explicit Send retry. |
+| Verification is transiently unavailable after its bounded retry | Preserve the reviewed fields, remain on review, and show a retryable service notice. No delivery request starts. |
+| Delivery returns `verification_required` before any ambiguous or partial delivery | Preserve the draft on review and require a fresh final-submit verification before a new delivery attempt. |
+| Delivery returns `verification_required` after an ambiguous or partial delivery | Keep the reviewed payload locked and preserve the original UUID and `startedAt`. A fresh token refreshes only the ticket, and the later delivery retry reuses the UUID so both Resend idempotency keys and the request body remain unchanged. |
 | Delivery returns `invalid_email` | Return to the editable details step and show the red correction notice. No quota slot or email is created. |
 | Delivery returns `rate_limited` | Keep the form editable and show the red rolling-limit notice. Honor the response's `Retry-After` value. |
 | DNS validation is temporarily unavailable | Keep the form editable and show a red retry notice. No quota slot or email is created. |
 | Configuration or quota storage is unavailable | Show a red service failure notice and fail closed without email delivery. |
 | Provider or delivery network failure | Stay on the locked review step and allow a same-payload retry with the current ticket and UUID. |
-| Delivery succeeds | Reset to human verification, clear local draft and verification state, and show the persistent green success notice including the submitted email address. Within the current page session, keep the notice until the visitor explicitly starts another verification. |
+| Delivery succeeds | Clear the draft and verification state, then show the standalone green completion view including the submitted email address. Create a fresh draft only after the visitor selects <em>Send another message</em>. |
 
 ## Endpoint contract
 
@@ -137,10 +150,12 @@ The handler checks required Turnstile configuration before origin, media-type, a
 
 - the server-only secret;
 - the token;
-- the submission UUID as `idempotency_key`;
+- a separate Siteverify operation UUID as `idempotency_key`;
 - `CF-Connecting-IP` as `remoteip` only when the header is non-empty, at most 64 characters, and free of unsafe control characters.
 
-The Siteverify call has a 5-second timeout. A ticket is issued only when the provider response is successful, parses as JSON, contains `success: true`, contains action exactly `portfolio_contact`, and reports a hostname in the exact configured allowlist. The repository does not inspect provider error details or `challenge_ts`.
+Each Siteverify attempt has a 5-second timeout. A network failure, timeout, HTTP `408`, HTTP `429`, HTTP `5xx`, provider `internal-error`, malformed JSON, or malformed provider response receives one bounded retry of the same token with the same operation UUID. The operation UUID is scoped to that verification operation and is not the submission identity. It is never reused for a new token. Provider configuration, request-contract, and unknown structured errors fail as unavailable without retrying an error that requires operator correction.
+
+A ticket is issued only when the provider response is successful, parses as JSON, contains `success: true`, contains action exactly `portfolio_contact`, reports a hostname in the exact configured allowlist, and returns `cdata` exactly matching the submitted UUID. An invalid or duplicate challenge, or a successful response with an action, hostname, or custom-data mismatch, returns `400 verification_failed`. Exhausted transient failures and provider integration faults return `503 verification_unavailable`. The repository does not inspect `challenge_ts`.
 
 Cloudflare documents Turnstile tokens as single-use, valid for five minutes, and limited to 2,048 characters. See [Turnstile server-side validation](https://developers.cloudflare.com/turnstile/get-started/server-side-validation/).
 
@@ -234,7 +249,8 @@ Any network failure, timeout, or non-success provider response becomes `502 deli
 | Media type other than JSON | `415` | `unsupported_media_type` |
 | Body over 16 KiB | `413` | `request_too_large` |
 | Malformed JSON or invalid schema | `400` | `invalid_request` |
-| Turnstile rejection or provider verification failure | `400` | `verification_failed` |
+| Invalid Turnstile challenge or action, hostname, or custom-data mismatch | `400` | `verification_failed` |
+| Exhausted transient Turnstile failure or provider integration fault | `503` | `verification_unavailable` |
 | Missing, invalid, expired, or mismatched ticket | `401` | `verification_required` |
 | Unroutable or null-MX email domain | `422` | `invalid_email` |
 | Two active reservations for the normalized address | `429` | `rate_limited`, with `Retry-After` |
@@ -293,7 +309,8 @@ For local testing, copy the placeholder-only example into the ignored local envi
 - strict schemas and unknown-field rejection;
 - required acknowledgments and field validation;
 - honeypot and completion-time signals;
-- one server-side Turnstile validation with exact action and hostname;
+- one fresh server-side Turnstile validation per new logical message with exact action, hostname, and submission custom data;
+- one bounded same-operation retry for transient Siteverify failure;
 - signed, short-lived, submission-bound ticket;
 - bounded mail-domain DNS validation;
 - pseudonymous two-per-address rolling 24-hour D1 quota;
@@ -310,7 +327,7 @@ http.request.uri.path in {"/api/contact/verify" "/api/contact"}
 
 The live WAF state cannot be verified from this repository. Confirm the deployed rule, threshold, counting characteristic, mitigation timeout, action, and response through the Cloudflare dashboard and a controlled live test.
 
-Do not place an interactive Managed Challenge on either JSON endpoint. The form already performs one visible Turnstile check, and an HTML challenge would add a second gate and change the API response contract.
+Do not place an interactive Managed Challenge on either JSON endpoint. The form already executes its interaction-only Turnstile widget during final Send, and an HTML challenge would add another gate and change the JSON API response contract.
 
 The browser falls back to a generic failure message when an error response is not valid JSON. That fallback does not make an HTML challenge compatible with the endpoint contract.
 
@@ -328,7 +345,7 @@ The direct email link bypasses the two contact Functions, their ticket, and thei
 
 ## Verification coverage and limits
 
-The automated tests cover browser gating, exact client request bodies, notices and locked retries, field validation, Turnstile widget callbacks, handler order, body and schema rejection, origin and configuration failure, ticket signing and tamper checks, DNS outcomes, D1 reservation and concurrency behavior, sequential provider calls, email escaping, idempotent partial-failure retry, route allowlisting, and legal-page disclosures.
+The automated tests cover the three-step browser flow, final-submit execution, interactive fallback, expiry and error recovery, repeated-click blocking, exact client request bodies, standalone completion, subsequent new messages, notices and locked retries, field validation, Turnstile widget callbacks, handler order, body and schema rejection, origin and configuration failure, action, hostname and custom-data binding, bounded Siteverify retry, ticket signing and tamper checks, DNS outcomes, D1 reservation and concurrency behavior, sequential provider calls, email escaping, idempotent partial-failure retry, route allowlisting, and legal-page disclosures.
 
 Deployment smoke testing performs unauthenticated `GET` requests to both Function paths and requires `405` JSON responses. This proves that both routes are deployed and reject the wrong method. It does not prove live Turnstile validation, cookie acceptance, D1 migration state, DNS behavior, WAF state, Resend delivery, sender-domain verification, recipient correctness, or mailbox receipt.
 
@@ -339,7 +356,7 @@ npx --no-install vitest run functions/api/contact/verify.test.ts functions/api/c
 npm run docs:check
 ```
 
-Complete end-to-end activation still requires a controlled live test on each allowed hostname without printing tokens, contact bodies, recipient values, or provider responses.
+For a release preview, inspect the three steps, final Send status, interaction fallback, completion layout, responsive behavior, and accessibility states without selecting the final Send action. This confirms the deployed interface without consuming a Turnstile token, D1 quota slot, or email delivery. Complete end-to-end activation still requires a separately authorized controlled live test on each allowed hostname without printing tokens, contact bodies, recipient values, or provider responses.
 
 ## Change rules
 

@@ -28,6 +28,7 @@ export type ProfileContent = {
   fieldOfStudy?: string;
   graduation?: string;
   longBio?: string;
+  experienceSummary?: string;
   portraitImage?: string;
   faviconImage?: string;
   resumeUrl?: string;
