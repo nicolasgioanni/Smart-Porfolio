@@ -92,16 +92,16 @@ async function expectVideoHeaderContained(project: Locator) {
   const geometry = await project.evaluate((projectElement) => {
     const visual = projectElement.querySelector<HTMLElement>(".research-project__visual");
     const header = projectElement.querySelector<HTMLElement>(".research-video__header");
-    const actions = projectElement.querySelector<HTMLElement>(".research-video__actions");
-    const controls = Array.from(actions?.querySelectorAll<HTMLElement>("a, button") ?? []);
-    if (!visual || !header || !actions) throw new Error("CytoCV video header is missing its containment elements.");
+    const toolbar = projectElement.querySelector<HTMLElement>(".research-video__toolbar");
+    const controls = Array.from(toolbar?.querySelectorAll<HTMLElement>("a, button") ?? []);
+    if (!visual || !header || !toolbar) throw new Error("CytoCV video toolbar is missing its containment elements.");
 
     const visualBox = visual.getBoundingClientRect();
     return {
-      actions: { clientWidth: actions.clientWidth, scrollWidth: actions.scrollWidth },
+      toolbar: { clientWidth: toolbar.clientWidth, scrollWidth: toolbar.scrollWidth },
       controls: controls.map((control) => {
         const box = control.getBoundingClientRect();
-        return { left: box.left, right: box.right };
+        return { height: box.height, left: box.left, right: box.right, width: box.width };
       }),
       header: { clientWidth: header.clientWidth, scrollWidth: header.scrollWidth },
       visual: { left: visualBox.left, right: visualBox.right }
@@ -109,9 +109,11 @@ async function expectVideoHeaderContained(project: Locator) {
   });
 
   expect(geometry.header.scrollWidth).toBeLessThanOrEqual(geometry.header.clientWidth + 1);
-  expect(geometry.actions.scrollWidth).toBeLessThanOrEqual(geometry.actions.clientWidth + 1);
+  expect(geometry.toolbar.scrollWidth).toBeLessThanOrEqual(geometry.toolbar.clientWidth + 1);
   expect(geometry.controls).toHaveLength(3);
   for (const control of geometry.controls) {
+    expect(control.width).toBeGreaterThanOrEqual(44);
+    expect(control.height).toBeGreaterThanOrEqual(44);
     expect(control.left).toBeGreaterThanOrEqual(geometry.visual.left - 1);
     expect(control.right).toBeLessThanOrEqual(geometry.visual.right + 1);
   }
@@ -669,6 +671,16 @@ test.describe("Research showcase", () => {
         await expect(project.locator(".research-video__status")).toHaveCount(0);
         await expectVideoHeaderContained(project);
 
+        const toolbar = project.getByRole("group", { name: "CytoCV video tools" });
+        await expect(toolbar).toHaveCount(1);
+        const videoViewport = project.locator(".research-video__viewport");
+        const videoViewportBox = await videoViewport.boundingBox();
+        expect(videoViewportBox).not.toBeNull();
+        await page.mouse.move(videoViewportBox!.x + 2, videoViewportBox!.y + 2);
+        await expect.poll(() => toolbar.evaluate((element) => getComputedStyle(element).opacity)).toBe("1");
+        await openButton.focus();
+        await expect.poll(() => openButton.evaluate((control) => getComputedStyle(control, "::after").opacity)).toBe("1");
+
         await openButton.scrollIntoViewIfNeeded();
         await openButton.click();
         const dialog = page.getByRole("dialog", { name: "CytoCV supplementary workflow video" });
@@ -683,6 +695,13 @@ test.describe("Research showcase", () => {
         );
         await expect(dialog).toHaveCSS("background-image", "none");
         await expectNoHorizontalOverflow(page);
+        const dialogToolbar = dialog.getByRole("group", { name: "CytoCV video tools" });
+        await expect(dialogToolbar.locator("a, button")).toHaveCount(2);
+        await expect(dialogToolbar.getByRole("link", { name: "Read transcript" })).toHaveAttribute(
+          "href",
+          "/images/research/cytocv-supplementary-video-s1-transcript.txt"
+        );
+        await expect(dialogToolbar.getByRole("link", { name: "Download MP4" })).toHaveAttribute("download", "");
 
         const [dialogBox, viewportBox] = await Promise.all([
           dialog.boundingBox(),
@@ -694,6 +713,9 @@ test.describe("Research showcase", () => {
         expect(dialogBox!.y).toBeGreaterThanOrEqual(0);
         expect(dialogBox!.x + dialogBox!.width).toBeLessThanOrEqual(viewport.width + 1);
         expect(dialogBox!.y + dialogBox!.height).toBeLessThanOrEqual(viewport.height + 1);
+        const closeBox = await closeButton.boundingBox();
+        expect(closeBox).not.toBeNull();
+        expect(closeBox!.y + closeBox!.height).toBeLessThanOrEqual(viewportBox!.y + 1);
         await closeButton.click();
         await expect(dialog).toHaveCount(0);
         await expect(openButton).toBeFocused();
