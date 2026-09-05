@@ -82,11 +82,11 @@ Scroll motion must not blur text. The `enable_scroll_motion` setting gates scrol
 
 ## Experience and research disclosure
 
-The shared audience lens translates over `260ms`; selected text changes immediately through `aria-pressed`. Switching views settles the new card copy with a short opacity and vertical-transform transition. Opening a chapter uses one bounded `300ms` grid-row transition, while its refraction line, copy, and chevron use opacity or transform. Only one chapter per card can be open, which bounds layout work. Fine-pointer card lift is decorative and never required to find content.
+The shared audience lens translates over `260ms`; selected text changes immediately through `aria-pressed`. Switching views clears the selected evidence row before the new card copy settles with its short opacity and vertical-transform transition. Research and Experience share the recommendation disclosure tokens: panel height uses `520ms`, panel opacity uses `320ms`, and both use `cubic-bezier(0.22, 1, 0.36, 1)`. Exactly one row across each route may be selected. Above `980px`, only its opaque panel is absolutely layered below the permanently normal-flow summary, with no reserve or card reflow; the panel body scrolls after `60dvh`. Semantic close immediately applies `aria-hidden`, inertness, and pointer inactivity, while its visual layer stays stacked beneath a newly active panel until the height transition settles and releases that stacking state. At `980px` and below, the panel follows normal document flow. Fine-pointer card lift is decorative and never required to find content.
 
 Card-wide elevation belongs exclusively to active fine-pointer hover. A disclosure keeps focus after it opens, so `:focus-within` may strengthen the card border but must not apply the large surface shadow or translation. Keyboard focus remains visible on the focused control without leaving a tall elevated rectangle around expanded content while the page scrolls.
 
-Reduced motion removes audience, card, chapter, and chevron transitions while preserving selected and expanded state. The global scroll-motion setting controls only the optional staggered card entrance; user-triggered audience and disclosure behavior remains available regardless of that setting.
+Reduced motion applies audience and disclosure state immediately while preserving selected and expanded state. The global scroll-motion setting controls only the optional staggered card entrance; user-triggered audience and disclosure behavior remains available regardless of that setting.
 
 ## Footer disclosure
 

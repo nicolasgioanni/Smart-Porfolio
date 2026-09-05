@@ -113,6 +113,21 @@
   grid-row: 1;
 }
 
+@media (min-width: 921px) {
+  .research-project__visual {
+    overflow: hidden;
+    border-start-start-radius: calc(var(--radius-panel) - 1px);
+    border-end-start-radius: calc(var(--radius-panel) - 1px);
+  }
+
+  .research-project[data-visual-side="right"] .research-project__visual {
+    border-start-start-radius: 0;
+    border-end-start-radius: 0;
+    border-start-end-radius: calc(var(--radius-panel) - 1px);
+    border-end-end-radius: calc(var(--radius-panel) - 1px);
+  }
+}
+
 .research-project__header,
 .research-project__body {
   min-width: 0;
