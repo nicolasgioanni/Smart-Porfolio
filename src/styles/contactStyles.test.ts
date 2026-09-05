@@ -30,12 +30,12 @@ describe("contact wizard styles", () => {
     );
   });
 
-  it("uses compact review fine print and scroll-safe visible verification", () => {
+  it("reserves flexible and compact verification geometry", () => {
     expect(contactStyles).toMatch(
       /\.contact-gate-status,\s*\.contact-review__fine-print,\s*\.contact-submit-status\s*{[^}]*font-size: var\(--font-size-eyebrow\)[^}]*line-height: var\(--line-height-normal\)/s
     );
     expect(contactStyles).toMatch(
-      /\.contact-turnstile__widget\s*{[^}]*width: 100%[^}]*overflow-x: auto[^}]*overflow-y: hidden/s
+      /\.contact-turnstile__widget\s*{[^}]*height: var\(--contact-widget-height, 65px\)[^}]*overflow: hidden/s
     );
   });
 
@@ -103,14 +103,17 @@ describe("contact wizard styles", () => {
     );
   });
 
-  it("uses one focused, animated notice treatment for semantic error and success feedback", () => {
+  it("uses an overlay with animated notice treatment for semantic error and success feedback", () => {
     expect(contactStyles).toMatch(
       /\.contact-notice\s*{[^}]*color: var\(--color-danger\)[^}]*background: var\(--color-danger-surface\)[^}]*animation: contact-notice-enter 200ms/s
     );
     expect(contactStyles).toMatch(
       /\.contact-notice\[data-tone="success"\]\s*{[^}]*border-color: var\(--color-success-border\)[^}]*color: var\(--color-success\)[^}]*background: var\(--color-success-surface\)/s
     );
-    expect(contactStyles).toMatch(/\.contact-notice:focus-visible\s*{[^}]*var\(--focus-ring\)/s);
+    expect(contactStyles).toMatch(/\.contact-notifications\s*{[^}]*position: fixed[^}]*z-index: 90[^}]*680px[^}]*overflow: auto/s);
+    expect(contactStyles).toMatch(/\.contact-notice__close\.glass-icon-button\s*{[^}]*border-color: transparent[^}]*background: transparent/s);
+    expect(contactStyles).toMatch(/@container contact-security \(min-width: 300px\)[\s\S]*?--contact-widget-height: 65px/);
+    expect(contactStyles).toMatch(/\.contact-verification-slot\s*{[^}]*--contact-widget-height: 140px[^}]*height: calc/s);
     expect(contactStyles).toMatch(
       /@keyframes contact-notice-enter[\s\S]*?opacity: 0[^}]*transform: translateY\(-0\.5rem\)[\s\S]*?opacity: 1[^}]*transform: translateY\(0\)/s
     );

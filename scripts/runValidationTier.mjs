@@ -8,6 +8,8 @@ const vitestEntryPoint = path.join(projectRoot, "node_modules", "vitest", "vites
 
 export const priorityTestTargets = [
   "scripts/validateDocumentation.test.mjs",
+  "scripts/contactTransport.integration.test.ts",
+  "scripts/updateContactTlds.test.mjs",
   "scripts/packageScripts.test.mjs",
   "scripts/runValidationTier.test.mjs",
   "scripts/checkDeployedContent.test.mjs",
@@ -19,6 +21,8 @@ export const priorityTestTargets = [
   "src/app/contact/contact.test.tsx",
   "src/components/contact/contactFormValidation.test.ts",
   "src/components/contact/TurnstileWidget.test.tsx",
+  "src/components/contact/ContactNotifications.test.tsx",
+  "src/styles/contactStyles.test.ts",
   "src/components/loading/skeletonContentContract.test.ts",
   "src/components/navigation/MobileNavigation.test.tsx",
   "src/components/navigation/navigation.test.tsx",

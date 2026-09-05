@@ -125,6 +125,10 @@ The three data-entry steps provide visible labels, required-state cues, `aria-in
 
 Server validation remains authoritative. Accessible client feedback does not weaken origin, schema, timing, ticket, or delivery checks.
 
+Contact outcome notifications use a viewport-fixed body portal independent of form layout. New errors announce assertively and successes politely through separate live regions without stealing focus. The newest of at most three cards remains readable when collapsed; older cards are aria-hidden and inert until expansion by hover, focus, or tapping the exposed stack. A labelled toggle and Escape provide keyboard expansion/collapse, and every card has a 44-pixel accessible X control with visible hover/focus treatment. Dismissing or evicting a focused card restores focus to a visible card, stack control, or the previously focused page control/heading. Long message regions are keyboard-focusable and scroll within viewport bounds. Each 30-second timer pauses during hover, focus, touch-expanded reading, and document hiding. Banners expire independently while recovery and completion content remain. Reduced motion applies state changes immediately.
+
+The verification well reserves widget, status, and recovery rows through every security state; it uses compact dimensions when less than 300 pixels are available. Email suffix typos display their specific error on blur and Review. Invalid fields retain red treatment, repeatable shake, error descriptions, and first-invalid-field focus. Submission completion focuses its persistent heading.
+
 ## Responsive and zoom behavior
 
 Navigation, grids, profile panels, controls, and footer columns collapse at established breakpoints. At `980px` and below, the navigation dock stays fixed above the device safe area and the shell reserves matching bottom clearance. Long links and labels may wrap. Primary glass buttons have a 44 CSS pixel minimum height, and narrower layouts expand controls where needed.

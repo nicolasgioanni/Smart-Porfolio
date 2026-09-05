@@ -104,10 +104,12 @@ async function fetchResponse(
   deadline: Deadline
 ): Promise<Response | undefined> {
   const responsePromise = Promise.resolve()
-    .then(() => fetch(url, { ...init, redirect: "error", signal }))
+    // workerd rejects redirect: "error" before issuing a request. Manual mode
+    // lets us reject redirects without forwarding provider credentials.
+    .then(() => fetch(url, { ...init, redirect: "manual", signal }))
     .then(
       (response) => {
-        if (deadline.isExpired()) {
+        if (deadline.isExpired() || (response.status >= 300 && response.status < 400)) {
           discardResponseBody(response);
           return undefined;
         }
