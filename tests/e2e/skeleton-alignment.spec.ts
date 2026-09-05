@@ -39,6 +39,7 @@ type ProjectFootprint = {
 type ResearchFootprint = {
   abstracts: number;
   formalTitle: boolean;
+  mediaTitles: number;
   mediaStacks: number;
   overviewRows: number;
   resources: number;
@@ -402,10 +403,11 @@ test("matches real Project and Research detail footprints at compact, phone, tab
       cards.map((card) => ({
         abstracts: card.querySelectorAll(".research-abstract").length,
         formalTitle: Boolean(card.querySelector(".research-project__formal-title")),
+        mediaTitles: card.querySelectorAll(".research-media-title").length,
         mediaStacks: card.querySelectorAll(".research-media-stack").length,
         overviewRows: card.querySelectorAll(".detail-list > .detail-section").length,
         resources: card.querySelectorAll(".research-project__resource").length,
-        videoActions: card.querySelectorAll(".research-video__actions > a, .research-video__actions > button").length
+        videoActions: card.querySelectorAll(".research-video__toolbar > a, .research-video__toolbar > button").length
       }))
     );
     const { fixturePage: researchFixturePage, skeleton: researchSkeleton } = await mountStaticRouteSkeleton(
@@ -423,24 +425,31 @@ test("matches real Project and Research detail footprints at compact, phone, tab
         await expect(card.locator(".research-skeleton__resources > .skeleton-block")).toHaveCount(footprint.resources);
         await expect(card.locator(".research-skeleton__media-stack")).toHaveCount(footprint.mediaStacks);
         await expect(card.locator(".research-skeleton__abstract-frame")).toHaveCount(footprint.abstracts);
-        await expect(card.locator(".research-skeleton__video-actions > .skeleton-block")).toHaveCount(footprint.videoActions);
+        await expect(card.locator(".research-skeleton__video-toolbar > .skeleton-block")).toHaveCount(footprint.videoActions);
+        await expect(card.locator(".research-skeleton__media-title")).toHaveCount(footprint.mediaTitles);
         const abstractFrames = await card.locator(".research-skeleton__abstract-frame").evaluateAll((frames) =>
           frames.map((frame) => {
             const abstract = frame.closest<HTMLElement>(".research-skeleton__abstract");
-            if (!abstract) throw new Error("Research skeleton abstract frame is missing its local container.");
+            const title = abstract?.querySelector<HTMLElement>(".research-skeleton__abstract-title");
+            if (!abstract || !title) throw new Error("Research skeleton abstract frame is missing its local title container.");
             const abstractBox = abstract.getBoundingClientRect();
             const frameBox = frame.getBoundingClientRect();
+            const titleBox = title.getBoundingClientRect();
+            const rowGap = Number.parseFloat(getComputedStyle(abstract).rowGap);
             return {
               clientWidth: abstract.clientWidth,
+              gap: rowGap,
               left: frameBox.left - abstractBox.left,
               right: abstractBox.right - frameBox.right,
-              top: frameBox.top - abstractBox.top - abstract.clientTop,
+              titleTop: titleBox.top - abstractBox.top - abstract.clientTop,
+              triggerTopAfterTitle: frameBox.top - titleBox.bottom,
               width: frameBox.width
             };
           })
         );
         for (const frame of abstractFrames) {
-          expect(frame.top).toBeCloseTo(16, 0);
+          expect(frame.titleTop).toBeCloseTo(16, 0);
+          expect(frame.triggerTopAfterTitle).toBeCloseTo(frame.gap, 0);
           expect(frame.left).toBeCloseTo(16, 0);
           expect(frame.right).toBeCloseTo(16, 0);
           expect(frame.width).toBeCloseTo(frame.clientWidth - 32, 0);
