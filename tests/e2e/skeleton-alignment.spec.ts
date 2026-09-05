@@ -407,7 +407,7 @@ test("matches real Project and Research detail footprints at compact, phone, tab
         mediaStacks: card.querySelectorAll(".research-media-stack").length,
         overviewRows: card.querySelectorAll(".detail-list > .detail-section").length,
         resources: card.querySelectorAll(".research-project__resource").length,
-        videoActions: card.querySelectorAll(".research-video__actions > a, .research-video__actions > button").length
+        videoActions: card.querySelectorAll(".research-video__toolbar > a, .research-video__toolbar > button").length
       }))
     );
     const { fixturePage: researchFixturePage, skeleton: researchSkeleton } = await mountStaticRouteSkeleton(
@@ -425,8 +425,9 @@ test("matches real Project and Research detail footprints at compact, phone, tab
         await expect(card.locator(".research-skeleton__resources > .skeleton-block")).toHaveCount(footprint.resources);
         await expect(card.locator(".research-skeleton__media-stack")).toHaveCount(footprint.mediaStacks);
         await expect(card.locator(".research-skeleton__abstract-frame")).toHaveCount(footprint.abstracts);
+        await expect(card.locator(".research-skeleton__video-toolbar > .skeleton-block")).toHaveCount(footprint.videoActions);
         await expect(card.locator(".research-skeleton__media-title")).toHaveCount(footprint.mediaTitles);
-        await expect(card.locator(".research-skeleton__video-actions > .skeleton-block")).toHaveCount(footprint.videoActions);
+        await expect(card.locator(".research-skeleton__video-toolbar > .skeleton-block")).toHaveCount(footprint.videoActions);
       }
       await assertViewportHasNoOverflow(researchFixturePage, `Research skeleton does not overflow at ${viewport.name}`);
     } finally {
