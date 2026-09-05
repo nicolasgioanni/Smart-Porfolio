@@ -123,6 +123,12 @@ describe("skeleton style contracts", () => {
     expect(researchStyles).toMatch(
       /@media \(max-width: 390px\)[\s\S]*?\.research-skeleton__video-actions\s*\{[^}]*grid-template-columns: minmax\(0, 1fr\)/s
     );
+    expect(researchStyles).toMatch(
+      /\.research-skeleton__abstract\s*\{[^}]*align-content:\s*center[^}]*gap:\s*var\(--space-3\)/s
+    );
+    expect(researchStyles).toMatch(
+      /\.research-skeleton__abstract-title\s*\{[^}]*max-width:\s*44rem[^}]*justify-self:\s*start/s
+    );
     expect(researchStyles).toMatch(/\.research-skeleton__details\s*\{[^}]*gap: 1px/s);
     expect(researchStyles).toMatch(/\.research-skeleton__resources\s*\{[^}]*flex-wrap: wrap/s);
     expect(researchStyles).toMatch(
