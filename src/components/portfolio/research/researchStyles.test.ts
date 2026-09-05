@@ -162,7 +162,7 @@ describe("research showcase styles", () => {
       /@media \(hover: hover\) and \(pointer: fine\)[\s\S]*?\.research-video__viewport:hover \.research-video__toolbar,[\s\S]*?\.research-video-dialog__viewport:focus-within \.research-video__toolbar[\s\S]*?opacity:\s*1/
     );
     expect(researchStyles).toMatch(
-      /@media \(hover: none\), \(pointer: coarse\)[\s\S]*?\.research-video__toolbar\s*\{[^}]*opacity:\s*1[^}]*pointer-events:\s*auto/s
+      /@media \(hover: none\), \(pointer: coarse\)[\s\S]*?\.research-video__toolbar\s*\{[^}]*opacity:\s*1[^}]*pointer-events:\s*auto[\s\S]*?\.research-video__toolbar-control::after\s*\{[^}]*content:\s*none/s
     );
   });
 });
