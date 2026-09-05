@@ -424,6 +424,27 @@ test("matches real Project and Research detail footprints at compact, phone, tab
         await expect(card.locator(".research-skeleton__media-stack")).toHaveCount(footprint.mediaStacks);
         await expect(card.locator(".research-skeleton__abstract-frame")).toHaveCount(footprint.abstracts);
         await expect(card.locator(".research-skeleton__video-actions > .skeleton-block")).toHaveCount(footprint.videoActions);
+        const abstractFrames = await card.locator(".research-skeleton__abstract-frame").evaluateAll((frames) =>
+          frames.map((frame) => {
+            const abstract = frame.closest<HTMLElement>(".research-skeleton__abstract");
+            if (!abstract) throw new Error("Research skeleton abstract frame is missing its local container.");
+            const abstractBox = abstract.getBoundingClientRect();
+            const frameBox = frame.getBoundingClientRect();
+            return {
+              clientWidth: abstract.clientWidth,
+              left: frameBox.left - abstractBox.left,
+              right: abstractBox.right - frameBox.right,
+              top: frameBox.top - abstractBox.top - abstract.clientTop,
+              width: frameBox.width
+            };
+          })
+        );
+        for (const frame of abstractFrames) {
+          expect(frame.top).toBeCloseTo(16, 0);
+          expect(frame.left).toBeCloseTo(16, 0);
+          expect(frame.right).toBeCloseTo(16, 0);
+          expect(frame.width).toBeCloseTo(frame.clientWidth - 32, 0);
+        }
       }
       await assertViewportHasNoOverflow(researchFixturePage, `Research skeleton does not overflow at ${viewport.name}`);
     } finally {

@@ -46,7 +46,10 @@ describe("research showcase styles", () => {
     expect(visualSurfaces.every((surface) => /^#[\da-f]{6}$/i.test(surface))).toBe(true);
     expect(researchStyles).toMatch(/\.research-visual\s*{[^}]*background:\s*var\(--visual-surface\)/s);
     expect(abstractRule).toMatch(/background:\s*var\(--visual-surface\)/);
-    expect(abstractRule).toMatch(/place-items:\s*center/);
+    expect(abstractRule).toMatch(/align-content:\s*start/);
+    expect(abstractRule).toMatch(/padding:\s*var\(--space-4\)/);
+    expect(abstractRule).toMatch(/overflow:\s*hidden/);
+    expect(abstractRule).toMatch(/border-radius:\s*var\(--radius-card\)/);
     expect(abstractRule).not.toMatch(/gradient|rgba|transparent/);
   });
 
@@ -92,6 +95,8 @@ describe("research showcase styles", () => {
     expect(thumbnailRule).toMatch(/width:\s*100%/);
     expect(thumbnailRule).toMatch(/height:\s*100%/);
     expect(thumbnailRule).toMatch(/object-fit:\s*contain/);
+    expect(triggerRule).toMatch(/width:\s*100%/);
+    expect(triggerRule).toMatch(/max-width:\s*none/);
     expect(triggerRule).toMatch(
       /transition:\s*box-shadow 180ms ease,\s*transform 180ms cubic-bezier\(0\.16, 1, 0\.3, 1\)/
     );
@@ -115,9 +120,6 @@ describe("research showcase styles", () => {
     expect(graphicalAbstractFeatureBlock).not.toMatch(/box-shadow\s*:\s*[^;]*\b0\s+0\b/i);
     expect(researchStyles).toMatch(
       /@media \(hover: hover\) and \(pointer: fine\)[\s\S]*?\.research-abstract__trigger:hover[\s\S]*?transform:\s*translate3d\(0, -2px, 0\)/
-    );
-    expect(researchStyles).toMatch(
-      /@media \(max-width: 920px\)[\s\S]*?\.research-abstract__trigger\s*\{[^}]*max-width:\s*none/
     );
     expect(researchStyles).toMatch(
       /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.research-abstract__trigger\s*\{[^}]*transition:\s*none[\s\S]*?\.research-abstract__trigger:focus-visible[\s\S]*?transform:\s*none/
