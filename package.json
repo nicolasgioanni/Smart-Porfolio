@@ -33,7 +33,7 @@
     "test:e2e:experience": "playwright test experience.spec.ts --project=chromium",
     "test:e2e:research": "playwright test research.spec.ts --project=chromium",
     "test:e2e:contact": "playwright test contact.spec.ts --project=chromium",
-    "test:e2e:priority": "playwright test skeleton-alignment.spec.ts navigation.spec.ts footer.spec.ts contact.spec.ts --project=chromium",
+    "test:e2e:priority": "playwright test skeleton-alignment.spec.ts skeletons.transition.spec.ts navigation.spec.ts footer.spec.ts contact.spec.ts recommendations.spec.ts experience.spec.ts research.spec.ts --project=chromium",
     "test:e2e:full": "playwright test --project=chromium",
     "verify": "npm run docs:check && npm run lint && npm run typecheck && npm run test && npm run build",
     "verify:priority": "npm run docs:check && npm run lint && npm run typecheck && npm run test:priority && npm run test:e2e:priority && npm run build",

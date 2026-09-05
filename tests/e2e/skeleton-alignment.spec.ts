@@ -39,6 +39,7 @@ type ProjectFootprint = {
 type ResearchFootprint = {
   abstracts: number;
   formalTitle: boolean;
+  mediaTitles: number;
   mediaStacks: number;
   overviewRows: number;
   resources: number;
@@ -402,6 +403,7 @@ test("matches real Project and Research detail footprints at compact, phone, tab
       cards.map((card) => ({
         abstracts: card.querySelectorAll(".research-abstract").length,
         formalTitle: Boolean(card.querySelector(".research-project__formal-title")),
+        mediaTitles: card.querySelectorAll(".research-media-title").length,
         mediaStacks: card.querySelectorAll(".research-media-stack").length,
         overviewRows: card.querySelectorAll(".detail-list > .detail-section").length,
         resources: card.querySelectorAll(".research-project__resource").length,
@@ -423,6 +425,8 @@ test("matches real Project and Research detail footprints at compact, phone, tab
         await expect(card.locator(".research-skeleton__resources > .skeleton-block")).toHaveCount(footprint.resources);
         await expect(card.locator(".research-skeleton__media-stack")).toHaveCount(footprint.mediaStacks);
         await expect(card.locator(".research-skeleton__abstract-frame")).toHaveCount(footprint.abstracts);
+        await expect(card.locator(".research-skeleton__video-toolbar > .skeleton-block")).toHaveCount(footprint.videoActions);
+        await expect(card.locator(".research-skeleton__media-title")).toHaveCount(footprint.mediaTitles);
         await expect(card.locator(".research-skeleton__video-toolbar > .skeleton-block")).toHaveCount(footprint.videoActions);
       }
       await assertViewportHasNoOverflow(researchFixturePage, `Research skeleton does not overflow at ${viewport.name}`);

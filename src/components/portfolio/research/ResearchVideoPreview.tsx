@@ -220,7 +220,7 @@ export function ResearchVideoPreview({ poster, title, video }: ResearchVideoPrev
       <section aria-label={`${title} video`} className="research-video">
         <div className="research-video__header">
           <div>
-            <p className="research-video__title">Scientific workflow video</p>
+            <p className="research-media-title research-video__title">{video.displayTitle}</p>
             <span className="research-video__duration">{video.durationLabel}</span>
           </div>
         </div>
