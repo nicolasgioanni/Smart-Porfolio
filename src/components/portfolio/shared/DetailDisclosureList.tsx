@@ -1,4 +1,7 @@
-import type { KeyboardEvent } from "react";
+"use client";
+
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useReducedMotionPreference } from "@/components/motion/useReducedMotionPreference";
 import type { DetailMode, DetailSection } from "@/lib/content/detailNarratives";
 
 type DetailDisclosureListProps = {
@@ -7,14 +10,18 @@ type DetailDisclosureListProps = {
   mode: DetailMode;
   onToggle: (sectionId: string) => void;
   openSectionId?: string;
+  overlayEnabled: boolean;
   sections: DetailSection[];
 };
 
 type DetailDisclosureProps = Omit<DetailDisclosureListProps, "openSectionId" | "sections"> & {
   open: boolean;
   order: number;
+  overlayEnabled: boolean;
   section: DetailSection;
 };
+
+type DetailVisualState = "closed" | "closing" | "open";
 
 function safeId(value: string): string {
   return value.replace(/[^A-Za-z0-9_-]/g, "-");
@@ -28,11 +35,65 @@ function DisclosureIcon() {
   );
 }
 
-function DetailDisclosure({ idPrefix, itemId, mode, onToggle, open, order, section }: DetailDisclosureProps) {
+function DetailDisclosure({
+  idPrefix,
+  itemId,
+  mode,
+  onToggle,
+  open,
+  order,
+  overlayEnabled,
+  section
+}: DetailDisclosureProps) {
   const disclosureId = `${safeId(idPrefix)}-${safeId(itemId)}-${mode}-${safeId(section.id)}`;
   const panelId = `${disclosureId}-panel`;
   const titleId = `${disclosureId}-title`;
   const expandable = section.details.length > 0 || Boolean(section.tools?.length);
+  const [visualState, setVisualState] = useState<DetailVisualState>(open ? "open" : "closed");
+  const panelRef = useRef<HTMLDivElement>(null);
+  const closeGenerationRef = useRef(0);
+  const previousOverlayEnabledRef = useRef(overlayEnabled);
+  const prefersReducedMotion = useReducedMotionPreference();
+
+  useLayoutEffect(() => {
+    const layoutChanged = previousOverlayEnabledRef.current !== overlayEnabled;
+
+    previousOverlayEnabledRef.current = overlayEnabled;
+    if (open) {
+      closeGenerationRef.current += 1;
+      setVisualState("open");
+      return;
+    }
+
+    setVisualState((current) => {
+      if (layoutChanged || prefersReducedMotion || current === "closed") return "closed";
+      closeGenerationRef.current += 1;
+      return "closing";
+    });
+  }, [open, overlayEnabled, prefersReducedMotion]);
+
+  useEffect(() => {
+    if (open || visualState !== "closing") return;
+
+    const panel = panelRef.current;
+    const clip = panel?.querySelector<HTMLElement>(".detail-section__panel-clip");
+    if (!clip) return;
+
+    const closeGeneration = closeGenerationRef.current;
+    const settleWhenCollapsed = () => {
+      if (closeGenerationRef.current !== closeGeneration || clip.getBoundingClientRect().height > 0.5) return;
+
+      setVisualState((current) => (current === "closing" ? "closed" : current));
+    };
+    const frame = window.requestAnimationFrame(settleWhenCollapsed);
+    const resizeObserver = typeof ResizeObserver === "function" ? new ResizeObserver(settleWhenCollapsed) : undefined;
+    resizeObserver?.observe(clip);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      resizeObserver?.disconnect();
+    };
+  }, [open, visualState]);
 
   const summary = (
     <>
@@ -57,22 +118,21 @@ function DetailDisclosure({ idPrefix, itemId, mode, onToggle, open, order, secti
     );
   }
 
-  function handleKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
-    if (event.key === "Escape" && open) {
-      event.preventDefault();
-      onToggle(section.id);
-    }
-  }
+  const panelIsInteractive = open;
 
   return (
-    <div className="detail-section" data-open={open ? "true" : "false"}>
+    <div
+      className="detail-section"
+      data-open={open ? "true" : "false"}
+      data-section-id={section.id}
+      data-visual-state={visualState}
+    >
       <button
         aria-controls={panelId}
         aria-expanded={open}
         className="detail-section__trigger"
         id={disclosureId}
         onClick={() => onToggle(section.id)}
-        onKeyDown={handleKeyDown}
         type="button"
       >
         {summary}
@@ -81,13 +141,28 @@ function DetailDisclosure({ idPrefix, itemId, mode, onToggle, open, order, secti
         </span>
       </button>
       <div
-        aria-hidden={!open}
+        aria-hidden={!panelIsInteractive}
         aria-labelledby={titleId}
         className="detail-section__panel"
         id={panelId}
+        inert={!panelIsInteractive}
+        onTransitionEnd={(event) => {
+          if (event.target !== event.currentTarget || event.propertyName !== "grid-template-rows") return;
+
+          const clip = event.currentTarget.querySelector<HTMLElement>(".detail-section__panel-clip");
+          if (!open && visualState === "closing" && (clip?.getBoundingClientRect().height ?? 1) <= 0.5) {
+            setVisualState("closed");
+          }
+        }}
+        ref={panelRef}
         role="region"
       >
-        <div className="detail-section__panel-clip">
+        <div
+          aria-labelledby={titleId}
+          className="detail-section__panel-clip"
+          role="group"
+          tabIndex={panelIsInteractive ? 0 : -1}
+        >
           <div className="detail-section__panel-content">
             {section.details.length > 0 ? (
               <ul className="detail-section__details">
@@ -116,12 +191,13 @@ export function DetailDisclosureList({
   mode,
   onToggle,
   openSectionId,
+  overlayEnabled,
   sections
 }: DetailDisclosureListProps) {
   if (sections.length === 0) return null;
 
   return (
-    <div className="detail-list">
+    <div className="detail-list" data-detail-item-id={itemId} data-layout-mode={overlayEnabled ? "overlay" : "natural"}>
       {sections.map((section, index) => (
         <DetailDisclosure
           idPrefix={idPrefix}
@@ -131,6 +207,7 @@ export function DetailDisclosureList({
           onToggle={onToggle}
           open={openSectionId === section.id}
           order={index}
+          overlayEnabled={overlayEnabled}
           section={section}
         />
       ))}
