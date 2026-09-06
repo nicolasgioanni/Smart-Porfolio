@@ -11,7 +11,6 @@ import { selectResearchDetailContent } from "@/lib/content/selectDetailContent";
 type ResearchSkeletonMedia = "abstract" | "video-and-abstract";
 
 export type ResearchSkeletonProfile = {
-  actionWidths: readonly number[];
   formalTitle: boolean;
   id: "cytocv-miller-lab" | "adversarial-machine-learning" | "yeast-dna-target-selection";
   impact: boolean;
@@ -38,7 +37,6 @@ export type ResearchPageSkeletonProps = {
  */
 export const researchSkeletonProfiles = [
   {
-    actionWidths: [112, 118, 132],
     formalTitle: true,
     id: "cytocv-miller-lab",
     impact: true,
@@ -48,7 +46,6 @@ export const researchSkeletonProfiles = [
     resourceWidths: [112, 126, 118, 104]
   },
   {
-    actionWidths: [],
     formalTitle: false,
     id: "adversarial-machine-learning",
     impact: true,
@@ -58,7 +55,6 @@ export const researchSkeletonProfiles = [
     resourceWidths: [132, 118, 124]
   },
   {
-    actionWidths: [],
     formalTitle: true,
     id: "yeast-dna-target-selection",
     impact: true,
@@ -96,6 +92,7 @@ function resolveResearchSkeletonProfiles(items: readonly ResearchItem[]): Resear
 function ResearchAbstractSkeleton({ inset = false }: { inset?: boolean }) {
   return (
     <div className={["research-skeleton__abstract", inset ? "research-skeleton__abstract--inset" : null].filter(Boolean).join(" ")}>
+      <SkeletonBlock className="research-skeleton__media-title research-skeleton__abstract-title" height={14} width="58%" />
       <div className="research-skeleton__abstract-frame">
         <SkeletonBlock className="research-skeleton__abstract-surface" height="100%" radius={0} />
         <SkeletonBlock className="research-skeleton__abstract-hint" height={44} radius="999px" width={44} />
@@ -104,18 +101,18 @@ function ResearchAbstractSkeleton({ inset = false }: { inset?: boolean }) {
   );
 }
 
-function ResearchVideoSkeleton({ actionWidths }: { actionWidths: readonly number[] }) {
+function ResearchVideoSkeleton() {
   return (
     <section className="research-skeleton__video">
       <div className="research-skeleton__video-header">
-        <SkeletonBlock height={14} width="46%" />
-        <SkeletonBlock height={12} width="28%" />
-      </div>
-      <div className="research-skeleton__video-actions">
-        {actionWidths.map((width, index) => <SkeletonBlock height={44} key={index} radius="999px" width={width} />)}
+        <SkeletonBlock className="research-skeleton__media-title research-skeleton__video-title" height={14} width="46%" />
+        <SkeletonBlock className="research-skeleton__video-duration" height={12} width="28%" />
       </div>
       <div className="research-skeleton__video-viewport">
         <SkeletonBlock className="research-skeleton__video-surface" height="100%" radius={0} />
+        <div className="research-skeleton__video-toolbar">
+          {Array.from({ length: 3 }).map((_, index) => <SkeletonBlock height={44} key={index} radius="var(--radius-card)" width={44} />)}
+        </div>
         <div className="research-skeleton__video-controls">
           <SkeletonBlock height={2} radius="999px" width="100%" />
           <div>
@@ -134,7 +131,7 @@ function ResearchMediaSkeleton({ profile }: { profile: ResearchSkeletonProfile }
 
   return (
     <div className="research-skeleton__media-stack">
-      <ResearchVideoSkeleton actionWidths={profile.actionWidths} />
+      <ResearchVideoSkeleton />
       <ResearchAbstractSkeleton inset />
     </div>
   );

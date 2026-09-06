@@ -52,6 +52,13 @@ The persistent desktop route indicator moves after pathname commit. Its `420ms` 
 
 Reduced motion disables lift, arrow travel, and route-indicator travel while preserving hover, focus, pressed, expanded, and selected surfaces.
 
+## Research video toolbar
+
+On fine pointers, the in-player research-video toolbar reveals with a short opacity and upward-transform transition
+on viewport hover or keyboard focus within. It remains available on touch and no-hover devices, and reduced motion
+applies the visible state without a transition. Tooltips use the same restrained transition and never replace the
+accessible icon labels.
+
 ## Header and theme disclosure
 
 Above `980px`, header expansion and compaction are state-driven, not continuously scroll-linked. Scroll input changes state only after the implemented direction and distance thresholds. Header pieces share the centralized `460ms` transition token. Keep the property list explicit and confined to the header island. At `max-width: 980px`, the header becomes a fixed bottom dock, remains expanded, and disables scroll and pointer geometry transitions.
@@ -88,6 +95,8 @@ Card-wide elevation belongs exclusively to active fine-pointer hover. A disclosu
 
 Reduced motion applies audience and disclosure state immediately while preserving selected and expanded state. The global scroll-motion setting controls only the optional staggered card entrance; user-triggered audience and disclosure behavior remains available regardless of that setting.
 
+The priority browser gate covers Experience and Research detail controls and the Recommendations expansion flow at desktop, responsive, and reduced-motion states. See [Testing](../quality/TESTING.md#browser-experience-and-research-coverage) for the executable coverage boundary.
+
 ## Footer disclosure
 
 The footer expands into reserved normal-flow space. Each pathname owns a fresh compact disclosure, and automatic expansion requires new user scroll intent on that route plus a fully visible runway activation band. Observer callbacks, loading-layout changes, scroll restoration, and programmatic scrolling must not initiate the transition. The transition may animate width, padding, grid-row height, opacity, and a small vertical translation over roughly `420ms`. It must not animate blur or scale, change total document length, block native scrolling, or hide focused details. Reduced motion applies compact or expanded state immediately.
@@ -105,3 +114,4 @@ Use layered solid tiers, fine borders, and restrained neutral shadows. Accent co
 - [Design system](DESIGN_SYSTEM.md)
 - [Accessibility](ACCESSIBILITY.md)
 - [Skeleton loading guidelines](SKELETON_LOADING_GUIDELINES.md)
+- [Testing](../quality/TESTING.md)
