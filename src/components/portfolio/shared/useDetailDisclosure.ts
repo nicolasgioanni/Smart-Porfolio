@@ -99,7 +99,7 @@ export function useDetailDisclosure(rootRef: RefObject<HTMLElement | null>) {
       const activePanel = rootRef.current?.querySelector<HTMLElement>('.detail-section[data-open="true"] .detail-section__panel');
 
       if (!target) return;
-      if (target.closest(".detail-section__trigger")) return;
+      if (target.closest("button.detail-section__trigger")) return;
       if (activePanel?.contains(target) && (hasTextSelection() || isInteractiveTarget(target))) return;
 
       close(activeDetail);
