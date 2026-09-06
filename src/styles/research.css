@@ -411,12 +411,13 @@
 
 .research-abstract {
   display: grid;
-  place-items: center;
-  align-content: center;
+  align-content: start;
   height: 100%;
   min-height: 100%;
   margin: 0;
-  padding: clamp(var(--space-4), 3vw, var(--space-8));
+  padding: var(--space-4);
+  overflow: hidden;
+  border-radius: var(--radius-card);
   gap: var(--space-3);
   background: var(--visual-surface);
 }
@@ -432,7 +433,7 @@
   position: relative;
   display: block;
   width: 100%;
-  max-width: 44rem;
+  max-width: none;
   aspect-ratio: 16 / 9;
   padding: 0;
   overflow: hidden;
@@ -546,12 +547,12 @@
 .research-media-stack > .research-abstract {
   height: auto;
   min-height: 0;
-  padding: clamp(var(--space-4), 2vw, var(--space-6));
+  padding: var(--space-4);
   border-top: 1px solid var(--color-line);
 }
 
 .research-media-stack > .research-abstract .research-abstract__trigger {
-  max-width: 32rem;
+  max-width: none;
 }
 
 .research-media-stack > .research-abstract .research-abstract__title {
@@ -1101,11 +1102,12 @@
 
 .research-skeleton__abstract {
   display: grid;
-  place-items: center;
-  align-content: center;
+  align-content: start;
   min-width: 0;
   min-height: 100%;
-  padding: clamp(var(--space-4), 3vw, var(--space-8));
+  padding: var(--space-4);
+  overflow: hidden;
+  border-radius: var(--radius-card);
   gap: var(--space-3);
   background: var(--color-surface-soft);
 }
@@ -1117,14 +1119,14 @@
 
 .research-skeleton__abstract--inset {
   min-height: 0;
-  padding: clamp(var(--space-4), 2vw, var(--space-6));
+  padding: var(--space-4);
   border-top: 1px solid var(--color-line);
 }
 
 .research-skeleton__abstract-frame {
   position: relative;
   width: 100%;
-  max-width: 44rem;
+  max-width: none;
   aspect-ratio: 16 / 9;
   overflow: hidden;
   border: 1px solid var(--color-line-strong);
@@ -1133,13 +1135,12 @@
 }
 
 .research-skeleton__abstract--inset .research-skeleton__abstract-frame {
-  max-width: 32rem;
+  max-width: none;
 }
 
 .research-skeleton__abstract--inset .research-skeleton__abstract-title {
   max-width: 32rem;
 }
-
 .research-skeleton__abstract-surface {
   width: 100% !important;
   height: 100% !important;
