@@ -232,6 +232,10 @@ describe("contact payload validation", () => {
 
   it.each([
     "person@example.co",
+    "person@example.gov",
+    "person@example.org",
+    "person@example.edu",
+    "person@example.dev",
     "PERSON@EXAMPLE.COM",
     "person@sub.example.co.uk",
     "person@example.xn--p1ai"
@@ -243,6 +247,9 @@ describe("contact payload validation", () => {
     "person@example",
     "person@example.",
     "person@example.c",
+    "person@gmail.con",
+    "person@test.gomm",
+    "person@example.xn--bcher-kva",
     "person@example.123",
     "person@example.c0",
     "person@example.xn--abc",
@@ -270,6 +277,15 @@ describe("contact payload validation", () => {
 });
 
 describe("Cloudflare contact function security boundary", () => {
+  it.each(["person@gmail.con", "person@test.gomm"])("rejects unknown endings in %s before DNS, quota, or email providers", async (email) => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const response = await invoke(requestFor(validPayload({ email }), { cookie: await ticketCookie() }));
+    expect(response.status).toBe(400);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(rateLimitDatabase.rows).toHaveLength(0);
+  });
+
   it("allows POST only and returns non-cacheable generic responses", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
@@ -437,7 +453,7 @@ describe("email-domain validation", () => {
     await expect(validateEmailDomain("Avery@Example.co")).resolves.toEqual({ kind: "valid" });
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock.mock.calls[0]?.[0]).toContain("name=example.co&type=MX");
-    expect((fetchMock.mock.calls[0]?.[1] as RequestInit).redirect).toBe("error");
+    expect((fetchMock.mock.calls[0]?.[1] as RequestInit).redirect).toBe("manual");
   });
 
   it("does not wait for cancellation when a DNS JSON body exceeds its cap", async () => {
@@ -722,8 +738,8 @@ describe("sequential contact delivery", () => {
     expect(cancellationCount).toBe(2);
     const resendCalls = fetchMock.mock.calls.filter(([url]) => url === "https://api.resend.com/emails");
     expect(resendCalls).toHaveLength(2);
-    expect((resendCalls[0]?.[1] as RequestInit).redirect).toBe("error");
-    expect((resendCalls[1]?.[1] as RequestInit).redirect).toBe("error");
+    expect((resendCalls[0]?.[1] as RequestInit).redirect).toBe("manual");
+    expect((resendCalls[1]?.[1] as RequestInit).redirect).toBe("manual");
   });
 
   it("does not contact the owner when visitor delivery is rejected", async () => {
