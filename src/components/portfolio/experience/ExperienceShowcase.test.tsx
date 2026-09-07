@@ -134,9 +134,9 @@ describe("ExperienceShowcase", () => {
     const trigger = screen.getByRole("button", { name: /Scientific workflow/i });
     fireEvent.click(trigger);
     const panel = document.getElementById(trigger.getAttribute("aria-controls")!);
-    const clip = panel?.querySelector<HTMLElement>(".detail-section__panel-clip");
-    expect(clip).not.toBeNull();
-    clip!.focus();
+    const scrollport = panel?.querySelector<HTMLElement>(".detail-section__panel-scroll");
+    expect(scrollport).not.toBeNull();
+    scrollport!.focus();
 
     fireEvent.keyDown(document, { key: "Escape" });
     await waitFor(() => expect(trigger).toHaveAttribute("aria-expanded", "false"));
