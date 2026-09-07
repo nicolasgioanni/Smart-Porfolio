@@ -11,6 +11,11 @@ type DetailOverlaySelectors = {
   resource: string;
 };
 
+type DetailPanelScrollportSample = {
+  clientHeight: number;
+  scrollHeight: number;
+};
+
 export async function getDetailOverlaySample(root: Locator, selectors: DetailOverlaySelectors): Promise<DetailOverlaySample> {
   return root.evaluate((element, options) => {
     const rootTop = element.getBoundingClientRect().top;
@@ -86,6 +91,60 @@ export async function sampleDetailOverlay(
   );
 }
 
+export async function sampleDetailPanelScrollport(panel: Locator, durationMs = 620): Promise<DetailPanelScrollportSample[]> {
+  return panel.locator(".detail-section__panel-scroll").evaluate(
+    (element, duration) =>
+      new Promise<DetailPanelScrollportSample[]>((resolve) => {
+        const samples: DetailPanelScrollportSample[] = [];
+        const startedAt = performance.now();
+        const sample = () => {
+          samples.push({ clientHeight: element.clientHeight, scrollHeight: element.scrollHeight });
+
+          if (performance.now() - startedAt >= duration) {
+            resolve(samples);
+            return;
+          }
+
+          window.requestAnimationFrame(sample);
+        };
+
+        window.requestAnimationFrame(sample);
+      }),
+    durationMs
+  );
+}
+
+export async function expectDetailPanelScrollportFocusVisible(scrollport: Locator) {
+  const focusGeometry = await scrollport.evaluate((element) => {
+    const clip = element.parentElement;
+    if (!clip) throw new Error("The detail scrollport is missing its animation clip.");
+
+    const scrollportRect = element.getBoundingClientRect();
+    const clipRect = clip.getBoundingClientRect();
+    return {
+      boxShadow: getComputedStyle(element).boxShadow,
+      clip: {
+        bottom: clipRect.bottom,
+        left: clipRect.left,
+        right: clipRect.right,
+        top: clipRect.top
+      },
+      scrollport: {
+        bottom: scrollportRect.bottom,
+        left: scrollportRect.left,
+        right: scrollportRect.right,
+        top: scrollportRect.top
+      }
+    };
+  });
+
+  expect(focusGeometry.boxShadow).toContain("inset");
+  expect(focusGeometry.scrollport.top).toBeGreaterThanOrEqual(focusGeometry.clip.top - 1);
+  expect(focusGeometry.scrollport.right).toBeLessThanOrEqual(focusGeometry.clip.right + 1);
+  expect(focusGeometry.scrollport.bottom).toBeLessThanOrEqual(focusGeometry.clip.bottom + 1);
+  expect(focusGeometry.scrollport.left).toBeGreaterThanOrEqual(focusGeometry.clip.left - 1);
+}
+
 export async function settleDetailOverlayMotion(root: Locator) {
   await root.evaluate(async (element) => {
     const animatedElements = Array.from(
@@ -134,5 +193,14 @@ export function expectStableDetailOverlay(
     sample.resources.forEach((top, index) => {
       expect(Math.abs(top - expected.resources[index]!)).toBeLessThanOrEqual(tolerance);
     });
+  }
+}
+
+export function expectDetailPanelScrollportWithoutOverflow(samples: DetailPanelScrollportSample[]) {
+  expect(samples.length).toBeGreaterThan(2);
+
+  for (const sample of samples) {
+    expect(sample.clientHeight).toBeGreaterThan(0);
+    expect(sample.scrollHeight).toBeLessThanOrEqual(sample.clientHeight);
   }
 }
