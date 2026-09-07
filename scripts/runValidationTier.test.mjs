@@ -1,7 +1,11 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { priorityTestTargets, requiredPriorityFiles } from "./runValidationTier.mjs";
+import {
+  priorityTestDirectories,
+  priorityTestTargets,
+  requiredPriorityFiles
+} from "./runValidationTier.mjs";
 
 const projectRoot = path.resolve(import.meta.dirname, "..");
 
@@ -14,6 +18,11 @@ describe("priority validation tier", () => {
       "src/components/contact/ContactNotifications.test.tsx",
       "src/styles/contactStyles.test.ts"
     ]));
+
+    for (const directory of priorityTestDirectories) {
+      expect(existsSync(path.join(projectRoot, directory))).toBe(true);
+      expect(priorityTestTargets).toContain(directory);
+    }
 
     for (const requiredFile of requiredPriorityFiles) {
       expect(existsSync(path.join(projectRoot, requiredFile))).toBe(true);
