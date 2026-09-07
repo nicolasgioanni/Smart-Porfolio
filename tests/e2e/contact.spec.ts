@@ -98,6 +98,8 @@ test("keeps stacked notifications readable, fixed, dismissible, and bounded on a
     await triggerContactChallenge(page, "expired");
     await triggerContactChallenge(page, "error");
     await page.getByRole("button", { name: "Run check again" }).press("Enter");
+    // Retry restores focus to this status on the next frame before keyboard activation can continue.
+    await expect(page.locator(".contact-turnstile__status-row [role=status]")).toBeFocused();
     await page.getByRole("button", { name: "Complete test security check" }).press("Enter");
     const stack = page.getByRole("region", { name: "Contact notifications" });
     const cards = stack.locator(".contact-notice");

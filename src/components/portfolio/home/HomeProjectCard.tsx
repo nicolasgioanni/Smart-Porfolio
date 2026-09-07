@@ -3,6 +3,7 @@ import { GlassButton } from "@/components/glass/GlassButton";
 import { PortfolioCard } from "@/components/portfolio/shared/PortfolioCard";
 import { ProjectSkillShowcase } from "@/components/portfolio/projects/ProjectSkillShowcase";
 import { getLinkKind, getSummary } from "@/lib/content/displayHelpers";
+import { HomeCardSummary } from "@/components/portfolio/home/HomeCardSummary";
 
 type HomeProjectCardProps = {
   item: ProjectItem;
@@ -37,7 +38,7 @@ export function HomeProjectCard({ item }: HomeProjectCardProps) {
         {item.subtitle ? <p className="home-project-card__subtitle">{item.subtitle}</p> : null}
       </header>
 
-      {summary ? <p className="home-project-card__summary">{summary}</p> : null}
+      {summary ? <HomeCardSummary className="home-project-card__summary" id={item.id} kind="projects" summary={summary} /> : null}
 
       {visibleSkills.length > 0 ? (
         <div className="home-project-card__skills">

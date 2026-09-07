@@ -6,7 +6,7 @@ const longQuote =
   "Nicolas consistently translated ambiguous research needs into clear, maintainable software while communicating thoughtfully across disciplines. " +
   "He anticipated risks, documented decisions carefully, and delivered reliable work that made the entire team more effective.";
 
-function installReducedMotionPreference(matches: boolean) {
+function installReducedMotionPreference(matches: boolean, phone = false) {
   const mediaQuery = {
     addEventListener: vi.fn(),
     addListener: vi.fn(),
@@ -18,7 +18,10 @@ function installReducedMotionPreference(matches: boolean) {
     removeListener: vi.fn()
   } as unknown as MediaQueryList;
 
-  vi.stubGlobal("matchMedia", vi.fn(() => mediaQuery));
+  vi.stubGlobal("matchMedia", vi.fn((query: string) => ({
+    ...mediaQuery,
+    matches: query.includes("prefers-reduced-motion") ? matches : phone && query === "(max-width: 720px)"
+  })));
 }
 
 describe("ExpandableRecommendationText", () => {
@@ -51,7 +54,8 @@ describe("ExpandableRecommendationText", () => {
     const quote = container.querySelector("blockquote");
     const button = screen.getByRole("button", { name: /show more recommendation from brent lagesse/i });
 
-    expect(screen.getAllByText(longQuote)).toHaveLength(1);
+    expect(container.querySelectorAll("blockquote")).toHaveLength(1);
+    expect(quote?.textContent).toBe(longQuote);
     expect(quote).toHaveClass("recommendation-expandable__quote");
     expect(root).toHaveAttribute("data-collapsed-lines", "4");
     expect(root).toHaveAttribute("data-expanded", "false");
@@ -152,6 +156,41 @@ describe("ExpandableRecommendationText", () => {
 
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
     expect(container.querySelector(".recommendation-expandable")).toHaveAttribute("data-can-expand", "false");
+  });
+
+  it("expands even a short two-sentence quote on phones while preserving its inline link", () => {
+    installReducedMotionPreference(false, true);
+    const quote = "Excellent work. Read the evidence.";
+    const { container } = render(
+      <ExpandableRecommendationText id="phone" quote={quote} recommenderName="Alex Manager"
+        fullQuoteLink={{ label: "the evidence", url: "https://example.com/evidence" }} />
+    );
+    const toggle = screen.getByRole("button", { name: /show more/i });
+    expect(container.querySelector(".recommendation-expandable")).toHaveAttribute("data-can-expand", "true");
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(container.querySelector("blockquote")?.textContent).toBe(quote);
+    expect(screen.getByRole("link", { name: "the evidence" })).toHaveAttribute("href", "https://example.com/evidence");
+  });
+
+  it("keeps a long single sentence fully available on phones without a toggle", () => {
+    installReducedMotionPreference(false, true);
+    const quote = "A thoughtful collaborator " + "who delivered reliable software ".repeat(12) + ".";
+    const { container } = render(<ExpandableRecommendationText id="single" quote={quote} recommenderName="Alex Manager" />);
+    expect(container.querySelector("blockquote")?.textContent).toBe(quote);
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("escapes authored markup even when an inline link crosses the sentence boundary", () => {
+    const quote = "Strong work. <script>example</script> & more.";
+    const { container } = render(
+      <ExpandableRecommendationText id="literal" quote={quote} recommenderName="Alex Manager"
+        fullQuoteLink={{ label: "work. <script>example</script>", url: "https://example.com/evidence" }} />
+    );
+    expect(container.querySelector("blockquote")?.textContent).toBe(quote);
+    expect(container.querySelector("script")).toBeNull();
+    expect(screen.getAllByRole("link").map((link) => link.textContent).join("")).toBe("work. <script>example</script>");
+    for (const link of screen.getAllByRole("link")) expect(link).toHaveAttribute("rel", "noopener noreferrer");
   });
 
   it("supports a three-line preview and remeasures when the line count changes", async () => {
