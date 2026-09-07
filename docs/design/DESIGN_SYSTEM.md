@@ -36,7 +36,7 @@ The supported palette identifiers are `navy`, `light`, and `dark`. System is an 
 | Identifier | Menu label | Role |
 | --- | --- | --- |
 | `light` | Light | Warm editorial light mode: ivory canvas, parchment panels, mist-blue cards, and deep navy structure. |
-| `navy` | My mode | Signature mode: layered midnight navy with parchment, champagne, and muted blue-gray accents. |
+| `navy` | My mode | Signature mode: layered midnight navy with cream accents, quiet secondary neutrals, and muted blue-gray surface tiers. |
 | `dark` | Dark | Layered graphite mode: neutral charcoal surfaces with restrained electric blue and violet interaction color. |
 
 The `navy` identifier intentionally remains stable for generated content, `data-theme`, and existing browser preferences, while its visitor-facing name is My mode. The generated `default_theme` setting selects the server-rendered fallback. Before body paint, `ThemePreferenceScript` gives a valid stored override precedence and otherwise maps the device preference to Light or Dark. `ThemeSwitcher` presents System before the three palettes as a labelled button group. `useThemePreference` follows live system changes until a manual palette is selected, stores only manual overrides, synchronizes cross-tab changes, and removes the override when System is selected.
@@ -44,6 +44,8 @@ The `navy` identifier intentionally remains stable for generated content, `data-
 `src/lib/theme/themeTransition.ts` is the single hydrated write boundary. It progressively uses the browser View Transitions API for a `160ms` opacity-only root snapshot fade after interaction or a live preference update. It never delays or animates the prepaint script or first hydration reconciliation, and it falls back to the same immediate token swap when motion is reduced, the document is hidden, the palette is unchanged, or the API is unavailable or fails. Components continue to consume semantic palette tokens rather than declaring their own theme transition rules.
 
 Components must use semantic variables such as `--color-ink`, `--color-muted`, `--color-line`, and `--color-surface`. Do not read a palette-specific variable from a component rule when a semantic token expresses the role.
+
+My mode keeps its midnight-navy canvas and solid surface hierarchy. Its principal cream accent is `#F4F1EA`, with `#FCFAF5` for strong text and `#CECDC7` for secondary text. Buttons, brand marks, links, focus rings, borders, and surface tints use those cream values through semantic tokens; alpha values remain role-specific.
 
 ## Semantic tokens
 
@@ -173,17 +175,19 @@ Home section route actions use compact buttons aligned with the section heading.
 
 The dedicated Research route opens with the focused title `Applied AI Research` and a short summary that foregrounds CytoCV and adversarial machine learning. Its projects remain in content-defined order and render as full-width research modules. On desktop, each contained graphical abstract and its evidence content alternate left and right. At `920px` and below, every abstract moves above its content in a 16:9 containment area so reading order and touch navigation stay predictable.
 
-The source abstract remains uncropped with `object-fit: contain`. Its native preview button receives a restrained direct lift on fine-pointer hover and keyboard focus without adding decorative glow or elevating the entire card. Activation opens a near-viewport dialog with a solid frame that preserves the full image in both axes and provides a visible close control. Unknown projects without a valid abstract use a neutral labelled research diagram rather than an invented project mark.
+Each abstract keeps a solid, rounded, locally clipped visual column with a fixed 16px top-aligned inset that fills the available column width. The source abstract remains uncropped with `object-fit: contain`. Resolver-owned media labels appear as compact text immediately above the player or abstract preview; they identify the media and do not replace the project heading. The video duration remains secondary to its label. Its native preview button receives a restrained direct lift on fine-pointer hover and keyboard focus without adding decorative glow or elevating the entire card. Activation opens a near-viewport dialog with a solid frame that preserves the full image in both axes and provides a visible close control. Unknown projects without a valid abstract use a neutral labelled research diagram rather than an invented project mark.
 
-The shared `Overview` and `Technical` selector changes all research narratives at once. Each collapsed evidence row carries a complete lead; expansion adds supporting bullets and tools. Only one row per project remains open. Research cards pair a subtle content-order label with the authored organization mark, omit redundant timeline metadata, and retain 44 CSS-pixel resource targets. Verified resources stay interactive, while the CytoCV `Manuscript` placeholder is a native disabled button with its exact visible label.
+CytoCV's self-hosted supplementary video keeps the title above its native player and duration as secondary metadata. A three-control, top-right in-player toolbar uses existing 18px icons inside 44px labelled targets for the transcript, MP4 download, and enlarged player. On fine pointers, the toolbar and its text tooltip appear on hover or keyboard focus; on no-hover and coarse-pointer devices, the horizontal toolbar remains visible. The enlarged player reuses the same compact transcript and download treatment while its close control stays independent.
+
+The shared `Overview` and `Technical` selector changes all research narratives at once. Each collapsed evidence row carries a complete lead; expansion adds supporting bullets and tools. One evidence row across the whole route may be selected at a time. Research cards pair a subtle content-order label with the authored organization mark, omit redundant timeline metadata, and retain 44 CSS-pixel resource targets. Above `980px`, every summary row stays in document flow and only its selected evidence panel layers below it; the panel never reserves or reflows later rows. The visual column keeps local clipping and the outer-side card corners, so media remains contained while the content column can let an evidence panel layer over following cards. At `980px` and below, the same panel returns to normal flow. Verified resources stay interactive, while the CytoCV `Manuscript` placeholder is a native disabled button with its exact visible label.
 
 ### Experience showcase
 
 The dedicated Experience route combines its heading, spreadsheet-backed summary, and page-wide detail control in one strong introduction panel. The same compact `Overview` and `Technical` selector used by Research is inset at the panel's top-right edge on desktop, while the heading and summary retain the remaining width. The selector swaps the narrative depth for every logo-led role card while identity metadata remains stable.
 
-The segmented selector uses one translated solid lens, measures 12.25rem, and keeps each mode button at least 44 by 44 CSS pixels for every pointer capability. Below `760px`, the selector returns to document flow beneath the summary without expanding to the panel width. On small screens, evidence returns to the full card width and result signals move below their disclosure summaries. Each collapsed evidence row communicates its central fact; expansion adds context and tools tied to that row, and only one row per role remains open.
+The segmented selector uses one translated solid lens, measures 12.25rem, and keeps each mode button at least 44 by 44 CSS pixels for every pointer capability. Below `760px`, the selector returns to document flow beneath the summary without expanding to the panel width. On small screens, evidence returns to the full card width and result signals move below their disclosure summaries. Each collapsed evidence row communicates its central fact; expansion adds context and tools tied to that row, and one row across the route may be selected.
 
-Experience and Research cards use a restrained neutral shadow and two-pixel lift only during genuine fine-pointer hover. When a disclosure retains focus, the card keeps its resting geometry and shadow while the focused control supplies the keyboard-visible ring; `:focus-within` may strengthen only the card border. This prevents persistent card-wide elevation from reading as an extra layer after scrolling.
+Experience and Research cards use a restrained neutral shadow and two-pixel lift only during genuine fine-pointer hover. Their selected detail panel is opaque, may scroll internally after `60dvh` on desktop, and closes before a changed audience level or responsive mode can carry it across layouts. When a disclosure retains focus, the card keeps its resting geometry and shadow while the focused control supplies the keyboard-visible ring; `:focus-within` may strengthen only the card border. This prevents persistent card-wide elevation from reading as an extra layer after scrolling.
 
 ## Skills
 
@@ -227,6 +231,10 @@ Footer state may animate width, padding, grid-row height, opacity, and small tra
 - `--route` supplies the server-rendered active-route fallback.
 
 Use `aria-current`, `aria-pressed`, `aria-expanded`, or native disabled state to express semantics. The one state pseudo-element uses a solid role token and `pointer-events: none`; no sheen or traveling highlight is permitted. Reduced motion disables lift, arrow travel, and route-indicator travel while preserving state colors.
+
+## Contact feedback
+
+The verification well reserves flexible (minimum 300 by 65 pixels) or compact (150 by 140 pixels) widget space, plus status and recovery rows, throughout security states. Later form steps fit their content. Contact outcome banners render through a body portal, centered at the viewport top with safe-area spacing and a 680-pixel maximum width. The three-card stack sits above navigation and below dialogs, exposes 10-pixel peeks, and expands into scrollable readable cards. Errors use danger tokens and successes use success tokens in every theme. The shared icon-button primitive supplies a 44-pixel X with transparent resting surface/border and visible Hover Base 1 treatment. Field feedback remains beside inputs. See [Contact System](../security/CONTACT_SYSTEM.md#contact-notifications) for timing and recovery.
 
 ## Motion
 

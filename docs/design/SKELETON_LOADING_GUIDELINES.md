@@ -59,6 +59,8 @@ Experience is the only generated page-header override. Both its resolved route a
 
 Research card footprint counts come from validated selected detail items and the same `getResearchVisibleResources()` resolver used by resolved cards. Only the isolated visual renderer may inject controlled canonical local-template Research items; normal loading boundaries and direct alignment remain generated-workbook driven.
 
+Research graphical-abstract frames preserve the resolved route's local 16px top-aligned inset, full available visual-column width, rounded clipping, and 16:9 containment geometry. Keep the placeholders noninteractive while updating this frame.
+
 ## Accessibility
 
 Primitive blocks use `aria-hidden="true"`. `PageSkeleton` exposes a labelled region with `aria-busy="true"`. The canonical header strings exist only inside an `aria-hidden` ancestor and are transparent, non-selectable, and noninteractive, so they do not become headings, copy, focus targets, or announcements in the accessibility tree. Body skeletons contain no fake text, links, buttons, or form controls.
@@ -79,9 +81,11 @@ Skeletons use static solid `--color-skeleton-surface` fills in every motion sett
 
 Research visual snapshots inject controlled canonical local-template detail items only through the isolated renderer for deterministic baselines. Normal Research loading boundaries and component or alignment coverage remain generated-workbook driven.
 
+The Research video loader reserves three static 44px toolbar blocks inside the video frame to match the transcript, download, and enlargement footprint. They remain `aria-hidden` placeholders without links, buttons, tooltips, or playback behavior.
+
 `tests/e2e/skeletons.transition.spec.ts` disables viewport prefetch before hydration, clicks real rendered Next links, and holds a target non-prefetch RSC request for every non-Home route. A route with no source link or no held navigation request fails; it must never pass by skipping. With these synchronous Server Component routes, holding the whole Flight response keeps the source body in place rather than mounting a streamable `loading.tsx` fallback. This validates App Router request and navigation ownership in development. The published site is a static export, where Next 16 does not support loading UI streaming, so canonical static markup, busy semantics, and no-animation contracts remain the deployed-artifact geometry protection.
 
-The required Ubuntu CI command, `npm run test:e2e:skeletons`, runs the direct alignment, held-navigation transition, and Linux zero-difference visual specifications together.
+The portable `npm run test:e2e:priority` command runs direct alignment and held-navigation transition coverage. Pull-request CI adds `npm run test:e2e:skeletons:visual` as a separate Ubuntu 24.04 step; local Windows priority runs must not compare Linux baselines. The required full-tier Ubuntu command, `npm run test:e2e:skeletons`, runs the direct alignment, held-navigation transition, and Linux zero-difference visual specifications together.
 
 ## Baseline maintenance
 

@@ -20,6 +20,10 @@ Keep this effect CSS-only and limited to opacity and transform. Do not add route
 
 After each invalid Next or Review attempt, shake each invalid control and its validation message for `180ms` with `ease-in-out`, two iterations, and no more than `2px` of horizontal travel in either direction. Replay the shake for every invalid attempt even when the validation text has not changed. Under `prefers-reduced-motion: reduce`, disable the shake while preserving the error message, red field treatment, and focus behavior.
 
+## Contact notifications
+
+The contact body portal enters from 8 pixels above with a 200ms opacity/transform animation. Cards use 10-pixel peeks and small 1.00/0.98/0.96 scales, expanding into measured separate rows through 200ms transforms. Dismissal fades and travels up 8 pixels over 200ms. Reserve stack geometry immediately; do not animate the contact form or surrounding page to accommodate notifications. Reduced motion disables these animations and removes dismissed cards immediately. Independent notification countdowns pause during hover, focus, touch-expanded reading, and document hiding. The verification well separately reserves widget/status/recovery space so provider lifecycle changes never move the surrounding gate.
+
 ## Home role rotation
 
 The desktop Home role uses a fixed-height, overflow-hidden window sized for the widest configured role so neither the line nor surrounding layout shifts. Server rendering and initial hydration show the first configured engineer role. Its hard clipping edge keeps text sharp. Do not animate `filter` or text blur.
@@ -52,6 +56,13 @@ The persistent desktop route indicator moves after pathname commit. Its `420ms` 
 
 Reduced motion disables lift, arrow travel, and route-indicator travel while preserving hover, focus, pressed, expanded, and selected surfaces.
 
+## Research video toolbar
+
+On fine pointers, the in-player research-video toolbar reveals with a short opacity and upward-transform transition
+on viewport hover or keyboard focus within. It remains available on touch and no-hover devices, and reduced motion
+applies the visible state without a transition. Tooltips use the same restrained transition and never replace the
+accessible icon labels.
+
 ## Header and theme disclosure
 
 Above `980px`, header expansion and compaction are state-driven, not continuously scroll-linked. Scroll input changes state only after the implemented direction and distance thresholds. Header pieces share the centralized `460ms` transition token. Keep the property list explicit and confined to the header island. At `max-width: 980px`, the header becomes a fixed bottom dock, remains expanded, and disables scroll and pointer geometry transitions.
@@ -82,11 +93,13 @@ Scroll motion must not blur text. The `enable_scroll_motion` setting gates scrol
 
 ## Experience and research disclosure
 
-The shared audience lens translates over `260ms`; selected text changes immediately through `aria-pressed`. Switching views settles the new card copy with a short opacity and vertical-transform transition. Opening a chapter uses one bounded `300ms` grid-row transition, while its refraction line, copy, and chevron use opacity or transform. Only one chapter per card can be open, which bounds layout work. Fine-pointer card lift is decorative and never required to find content.
+The shared audience lens translates over `260ms`; selected text changes immediately through `aria-pressed`. Switching views clears the selected evidence row before the new card copy settles with its short opacity and vertical-transform transition. Research and Experience share the recommendation disclosure tokens: panel height uses `520ms`, panel opacity uses `320ms`, and both use `cubic-bezier(0.22, 1, 0.36, 1)`. Exactly one row across each route may be selected. Above `980px`, only its opaque panel is absolutely layered below the permanently normal-flow summary, with no reserve or card reflow; the panel body scrolls after `60dvh`. Semantic close immediately applies `aria-hidden`, inertness, and pointer inactivity, while its visual layer stays stacked beneath a newly active panel until the height transition settles and releases that stacking state. At `980px` and below, the panel follows normal document flow. Fine-pointer card lift is decorative and never required to find content.
 
 Card-wide elevation belongs exclusively to active fine-pointer hover. A disclosure keeps focus after it opens, so `:focus-within` may strengthen the card border but must not apply the large surface shadow or translation. Keyboard focus remains visible on the focused control without leaving a tall elevated rectangle around expanded content while the page scrolls.
 
-Reduced motion removes audience, card, chapter, and chevron transitions while preserving selected and expanded state. The global scroll-motion setting controls only the optional staggered card entrance; user-triggered audience and disclosure behavior remains available regardless of that setting.
+Reduced motion applies audience and disclosure state immediately while preserving selected and expanded state. The global scroll-motion setting controls only the optional staggered card entrance; user-triggered audience and disclosure behavior remains available regardless of that setting.
+
+The priority browser gate covers Experience and Research detail controls and the Recommendations expansion flow at desktop, responsive, and reduced-motion states. See [Testing](../quality/TESTING.md#browser-experience-and-research-coverage) for the executable coverage boundary.
 
 ## Footer disclosure
 
@@ -105,3 +118,4 @@ Use layered solid tiers, fine borders, and restrained neutral shadows. Accent co
 - [Design system](DESIGN_SYSTEM.md)
 - [Accessibility](ACCESSIBILITY.md)
 - [Skeleton loading guidelines](SKELETON_LOADING_GUIDELINES.md)
+- [Testing](../quality/TESTING.md)

@@ -122,7 +122,7 @@ describe("static portfolio security contracts", () => {
     expect(tokensCss).toMatch(/--hover-base-1-route-easing:\s*cubic-bezier\(0\.65,\s*0,\s*0\.35,\s*1\)/);
     expect(tokensCss.match(/--hover-base-1-hover-surface:/g)).toHaveLength(3);
     expect(tokensCss.match(/--hover-base-1-selected-surface:/g)).toHaveLength(3);
-    expect(tokensCss).toMatch(/:root,\s*\[data-theme="navy"\][\s\S]*--hover-base-1-hover-surface:\s*#dfbd83/);
+    expect(tokensCss).toMatch(/:root,\s*\[data-theme="navy"\][\s\S]*--hover-base-1-hover-surface:\s*#f4f1ea/);
     expect(tokensCss).toMatch(/\[data-theme="light"\][\s\S]*--hover-base-1-hover-surface:\s*#174968/);
     expect(tokensCss).toMatch(/\[data-theme="dark"\][\s\S]*--hover-base-1-hover-surface:\s*#5266bd/);
     expect(interactionsCss).toMatch(/\.hover-base-1::before\s*{[^}]*pointer-events:\s*none/s);
@@ -358,6 +358,7 @@ describe("static portfolio security contracts", () => {
   it("keeps project, skill, and recommendation Home cards structured and motion-safe", () => {
     const portfolioCss = readFileSync(path.join(projectRoot, "src", "styles", "portfolio.css"), "utf8");
     const dialogCss = readFileSync(path.join(projectRoot, "src", "styles", "dialog.css"), "utf8");
+    const tokensCss = readFileSync(path.join(projectRoot, "src", "styles", "tokens.css"), "utf8");
     const projectSource = readFileSync(
       path.join(projectRoot, "src", "components", "portfolio", "home", "HomeProjectCard.tsx"),
       "utf8"
@@ -484,16 +485,16 @@ describe("static portfolio security contracts", () => {
     expect(recommendationDividerRule).toMatch(/background:\s*var\(--color-line-strong\)/);
     expect(recommendationViewportRule).toMatch(/overflow:\s*hidden/);
     expect(recommendationViewportRule).toMatch(
-      /transition:\s*max-height 520ms cubic-bezier\(0\.22,\s*1,\s*0\.36,\s*1\)/
+      /transition:\s*max-height var\(--disclosure-height-duration\) var\(--disclosure-easing\)/
     );
+    expect(tokensCss).toMatch(/--disclosure-height-duration:\s*520ms/);
+    expect(tokensCss).toMatch(/--disclosure-opacity-duration:\s*320ms/);
+    expect(tokensCss).toMatch(/--disclosure-easing:\s*cubic-bezier\(0\.22,\s*1,\s*0\.36,\s*1\)/);
     expect(portfolioCss).not.toMatch(/mask-image|gradient/);
     expect(portfolioCss).not.toMatch(/\.recommendation-expandable__viewport::after/);
     expect(recommendationQuoteRule).toMatch(/font-size:\s*var\(--font-size-body\)/);
     expect(recommendationQuoteRule).toMatch(
-      /transition:\s*opacity 320ms cubic-bezier\(0\.22,\s*1,\s*0\.36,\s*1\)/
-    );
-    expect(recommendationQuoteRule).toMatch(
-      /transition:\s*opacity 320ms cubic-bezier\(0\.22,\s*1,\s*0\.36,\s*1\)/
+      /transition:\s*opacity var\(--disclosure-opacity-duration\) var\(--disclosure-easing\)/
     );
     expect(researchSummaryRule).toMatch(/font-size:\s*var\(--font-size-body\)/);
     expect(projectSummaryRule).toMatch(/font-size:\s*var\(--font-size-body\)/);

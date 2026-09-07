@@ -21,6 +21,7 @@ export function ResearchGraphicalAbstractPreview({
   return (
     <>
       <figure className="research-abstract">
+        <figcaption className="research-media-title research-abstract__title">{abstract.displayTitle}</figcaption>
         <button
           aria-controls={dialogId}
           aria-expanded={open}
