@@ -299,6 +299,7 @@
   border-radius: 0 0 var(--radius-card) var(--radius-card);
   background: var(--detail-panel-surface);
   visibility: visible;
+  transition-timing-function: ease-in-out, ease-in-out, linear;
 }
 
 .detail-section__panel-clip {
