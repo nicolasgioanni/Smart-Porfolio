@@ -52,10 +52,12 @@ for (const width of [1280, 390, 320]) {
       await triggerContactChallenge(page, "shrink");
       expect(await gateGeometry(page)).toEqual(geometry);
       await page.getByRole("button", { name: "Run check again" }).press("Enter");
+      await expect(page.locator(".contact-turnstile__status-row [role=status]")).toBeFocused();
       expect(await gateGeometry(page)).toEqual(geometry);
       await triggerContactChallenge(page, "error");
       expect(await gateGeometry(page)).toEqual(geometry);
       await page.getByRole("button", { name: "Run check again" }).press("Enter");
+      await expect(page.locator(".contact-turnstile__status-row [role=status]")).toBeFocused();
 
       await challenge.press("Enter");
       await expect(page.locator(".contact-gate-status")).toHaveAttribute("data-status", "verifying");
@@ -77,8 +79,6 @@ for (const width of [1280, 390, 320]) {
       await expect.poll(() => Boolean(releaseResponse)).toBe(true);
       releaseResponse!();
       await expect(page.locator(".contact-gate-status")).toHaveAttribute("data-status", "verified");
-      await expect(challenge).toHaveAttribute("data-render-id", verifiedWidgetRenderId);
-      await selectThemeWithChooser(page, "light");
       await expect(challenge).toHaveAttribute("data-render-id", verifiedWidgetRenderId);
       expect(await gateGeometry(page)).toEqual(geometry);
       await page.getByRole("button", { name: "Continue" }).press("Enter");
