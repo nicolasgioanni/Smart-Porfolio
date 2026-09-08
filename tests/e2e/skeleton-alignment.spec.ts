@@ -64,6 +64,7 @@ const headedRoutes = [
   siteRoutes.recommendations,
   siteRoutes.resume,
   siteRoutes.contact,
+  siteRoutes.contactTerms,
   siteRoutes.terms,
   siteRoutes.privacy,
   siteRoutes.security
@@ -313,6 +314,7 @@ test("tracks representative source wrap transitions without route-specific geome
     [siteRoutes.recommendations, 339],
     [siteRoutes.resume, 336],
     [siteRoutes.contact, 323],
+    [siteRoutes.contactTerms, 363],
     [siteRoutes.terms, 334],
     [siteRoutes.privacy, 337],
     [siteRoutes.security, 346],

@@ -25,6 +25,10 @@ function TermsPageSkeleton() {
   return <LegalPageSkeleton pathname={siteRoutes.terms} sectionProfiles={legalSkeletonProfiles[siteRoutes.terms]} />;
 }
 
+function ContactTermsPageSkeleton() {
+  return <LegalPageSkeleton pathname={siteRoutes.contactTerms} sectionProfiles={legalSkeletonProfiles[siteRoutes.contactTerms]} />;
+}
+
 function PrivacyPageSkeleton() {
   return <LegalPageSkeleton pathname={siteRoutes.privacy} sectionProfiles={legalSkeletonProfiles[siteRoutes.privacy]} />;
 }
@@ -41,6 +45,7 @@ export const routeSkeletons = {
   [siteRoutes.recommendations]: RecommendationsPageSkeleton,
   [siteRoutes.resume]: ResumePageSkeleton,
   [siteRoutes.contact]: ContactPageSkeleton,
+  [siteRoutes.contactTerms]: ContactTermsPageSkeleton,
   [siteRoutes.terms]: TermsPageSkeleton,
   [siteRoutes.privacy]: PrivacyPageSkeleton,
   [siteRoutes.security]: SecurityPageSkeleton
