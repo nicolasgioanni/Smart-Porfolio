@@ -20,10 +20,11 @@ vi.mock("@/components/contact/TurnstileWidget", async () => {
     cData: string;
     onStatusChange?: (status: MockStatus) => void;
     onTokenChange: (token: string) => void;
+    serverVerified?: boolean;
     siteKey: string;
   };
 
-  function TurnstileWidget({ cData, onStatusChange, onTokenChange, siteKey }: MockProps) {
+  function TurnstileWidget({ cData, onStatusChange, onTokenChange, serverVerified = false, siteKey }: MockProps) {
     const [status, setStatus] = React.useState<MockStatus>(siteKey ? "loading" : "unavailable");
     const statusCallbackRef = React.useRef<NonNullable<MockProps["onStatusChange"]>>(() => undefined);
     const tokenCallbackRef = React.useRef<MockProps["onTokenChange"]>(() => undefined);
@@ -58,6 +59,7 @@ vi.mock("@/components/contact/TurnstileWidget", async () => {
         data-appearance="always"
         data-cdata={cData}
         data-execution="render"
+        data-server-verified={serverVerified ? "true" : "false"}
         data-site-key={siteKey}
         data-status={status}
         data-testid="turnstile-mock"
@@ -268,6 +270,8 @@ describe("contact route", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Complete human verification" }));
     await waitFor(() => expect(screen.getByRole("button", { name: "Continue" })).toBeEnabled());
+    expect(await currentGateWidget()).toBe(widget);
+    expect(widget).toHaveAttribute("data-server-verified", "true");
     expect(screen.getByText(/Security check complete\. Continuing to your contact details/i)).toBeInTheDocument();
     expect(screen.queryByLabelText(/First name/i)).not.toBeInTheDocument();
     expect(callsFor(fetchMock, "/api/contact")).toHaveLength(0);
