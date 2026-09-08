@@ -743,12 +743,15 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
               <div className="contact-verification-well">
                 <div className="contact-verification-slot">
                   {submissionId &&
-                  (verificationGateStatus === "waiting" || verificationGateStatus === "verifying") ? (
+                  (verificationGateStatus === "waiting" ||
+                    verificationGateStatus === "verifying" ||
+                    verificationGateStatus === "verified") ? (
                     <TurnstileWidget
                       cData={submissionId}
                       key={turnstileWidgetAttempt}
                       onStatusChange={handleTurnstileStatusChange}
                       onTokenChange={handleTurnstileTokenChange}
+                      serverVerified={verificationGateStatus === "verified"}
                       siteKey={turnstileSiteKey}
                     />
                   ) : (

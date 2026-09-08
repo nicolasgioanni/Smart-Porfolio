@@ -11,6 +11,7 @@ type TurnstileOptions = {
 
 type TurnstileWidget = {
   container: HTMLElement;
+  id: string;
   options: TurnstileOptions;
 };
 
@@ -41,6 +42,7 @@ export async function installTurnstileMock(page: Page) {
       button.style.height = widget.options.size === "compact" ? "140px" : "65px";
       button.dataset.size = widget.options.size;
       button.dataset.theme = widget.options.theme;
+      button.dataset.renderId = widget.id;
       button.addEventListener("click", () => widget.options.callback(`test-turnstile-token-${sequence}`));
       widget.container.replaceChildren(button);
     };
@@ -56,7 +58,7 @@ export async function installTurnstileMock(page: Page) {
       render(container, options) {
         sequence += 1;
         const widgetId = `test-turnstile-${sequence}`;
-        const widget = { container, options };
+        const widget = { container, id: widgetId, options };
         widgets.set(widgetId, widget);
         renderChallenge(widget);
         return widgetId;
