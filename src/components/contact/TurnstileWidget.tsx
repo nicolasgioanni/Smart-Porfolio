@@ -42,6 +42,7 @@ type TurnstileWidgetProps = {
   cData: string;
   onStatusChange?: (status: TurnstileStatus) => void;
   onTokenChange: (token: string) => void;
+  serverVerified?: boolean;
   siteKey: string;
 };
 
@@ -49,12 +50,13 @@ function resolveWidgetTheme(): TurnstileTheme {
   return document.documentElement.dataset.theme === "light" ? "light" : "dark";
 }
 
-export function TurnstileWidget({ cData, onStatusChange, onTokenChange, siteKey }: TurnstileWidgetProps) {
+export function TurnstileWidget({ cData, onStatusChange, onTokenChange, serverVerified = false, siteKey }: TurnstileWidgetProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const statusRef = useRef<HTMLParagraphElement>(null);
   const widgetIdRef = useRef<string | undefined>(undefined);
   const onStatusChangeRef = useRef(onStatusChange);
   const onTokenChangeRef = useRef(onTokenChange);
+  const serverVerifiedRef = useRef(serverVerified);
   const [scriptReady, setScriptReady] = useState(false);
   const [status, setStatus] = useState<TurnstileStatus>(siteKey ? "loading" : "unavailable");
   const [theme, setTheme] = useState<TurnstileTheme>("dark");
@@ -65,6 +67,7 @@ export function TurnstileWidget({ cData, onStatusChange, onTokenChange, siteKey 
     const container = containerRef.current;
     if (!container) return;
     const measure = () => {
+      if (serverVerifiedRef.current) return;
       const width = container.getBoundingClientRect().width;
       setSize(width > 0 && width < 300 ? "compact" : "flexible");
     };
@@ -79,6 +82,10 @@ export function TurnstileWidget({ cData, onStatusChange, onTokenChange, siteKey 
     onStatusChangeRef.current = onStatusChange;
     onTokenChangeRef.current = onTokenChange;
   }, [onStatusChange, onTokenChange]);
+
+  useLayoutEffect(() => {
+    serverVerifiedRef.current = serverVerified;
+  }, [serverVerified]);
 
   const updateStatus = useCallback((nextStatus: TurnstileStatus) => {
     setStatus(nextStatus);
@@ -100,6 +107,8 @@ export function TurnstileWidget({ cData, onStatusChange, onTokenChange, siteKey 
   }, []);
 
   const resetWidget = useCallback((): boolean => {
+    if (serverVerifiedRef.current) return false;
+
     const widgetId = widgetIdRef.current;
     if (!window.turnstile) {
       clearToken("unavailable");
@@ -129,7 +138,7 @@ export function TurnstileWidget({ cData, onStatusChange, onTokenChange, siteKey 
     setTheme(resolveWidgetTheme());
 
     const observer = new MutationObserver(() => {
-      setTheme(resolveWidgetTheme());
+      if (!serverVerifiedRef.current) setTheme(resolveWidgetTheme());
     });
 
     observer.observe(document.documentElement, { attributeFilter: ["data-theme"] });
@@ -171,22 +180,22 @@ export function TurnstileWidget({ cData, onStatusChange, onTokenChange, siteKey 
         size,
         theme,
         callback: (token) => {
-          if (!active) return;
+          if (!active || serverVerifiedRef.current) return;
           tokenReceivedDuringRender = true;
           updateStatus("ready");
           onTokenChangeRef.current(token);
         },
         "expired-callback": () => {
-          if (active) clearToken("expired");
+          if (active && !serverVerifiedRef.current) clearToken("expired");
         },
         "error-callback": () => {
-          if (active) clearToken("error");
+          if (active && !serverVerifiedRef.current) clearToken("error");
         },
         "timeout-callback": () => {
-          if (active) clearToken("expired");
+          if (active && !serverVerifiedRef.current) clearToken("expired");
         },
         "unsupported-callback": () => {
-          if (active) clearToken("error");
+          if (active && !serverVerifiedRef.current) clearToken("error");
         },
         "response-field": false,
         retry: "never",
@@ -236,10 +245,17 @@ export function TurnstileWidget({ cData, onStatusChange, onTokenChange, siteKey 
       ) : null}
       <div className="contact-turnstile__widget" ref={containerRef} />
       <div className="contact-turnstile__status-row">
-        <p aria-atomic="true" aria-live="polite" ref={statusRef} role="status" tabIndex={-1}>
-          {statusMessage[status]}
+        <p
+          aria-atomic="true"
+          aria-hidden={serverVerified || undefined}
+          aria-live={serverVerified ? undefined : "polite"}
+          ref={statusRef}
+          role={serverVerified ? undefined : "status"}
+          tabIndex={serverVerified ? undefined : -1}
+        >
+          {serverVerified ? null : statusMessage[status]}
         </p>
-        {status === "expired" || status === "error" ? (
+        {!serverVerified && (status === "expired" || status === "error") ? (
           <button className="contact-text-button" onClick={resetWidget} type="button">
             Run check again
           </button>
