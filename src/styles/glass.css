@@ -32,7 +32,7 @@
 .site-shell[data-glass-effects="false"] .glass-surface,
 .site-shell[data-glass-effects="false"] .glass-card,
 .site-shell[data-glass-effects="false"] .glass-blob {
-  background: var(--color-background-elevated);
+  background: var(--glass-fallback-surface);
   box-shadow: var(--shadow-card);
   backdrop-filter: none;
 }
@@ -44,23 +44,32 @@
 }
 
 .glass-surface {
+  --glass-fallback-surface: var(--color-background-elevated);
+
   border-radius: var(--radius-panel);
 }
 
 .glass-surface--strong {
+  --glass-fallback-surface: var(--color-surface-strong);
+
   background: var(--color-surface-strong);
   border-color: var(--color-line-strong);
   box-shadow: var(--shadow-soft), var(--shadow-glow);
 }
 
 .glass-surface--subtle {
+  --glass-fallback-surface: var(--color-surface-soft);
+
   background: var(--color-surface-soft);
 }
 
 .glass-card {
+  --glass-fallback-surface: var(--color-card-surface);
+
   display: grid;
   gap: var(--space-4);
   border-radius: var(--radius-card);
+  background: var(--color-card-surface);
 }
 
 .glass-card--comfortable {
@@ -68,15 +77,23 @@
 }
 
 .glass-card--compact {
+  --glass-fallback-surface: var(--color-card-surface-soft);
+
   padding: var(--space-4);
+  background: var(--color-card-surface-soft);
 }
 
 .glass-blob {
+  --glass-fallback-surface: var(--color-glass-blob);
+
   border-radius: var(--radius-dock);
 }
 
 .glass-blob--nav {
-  background: var(--color-header-surface);
+  --glass-fallback-surface: var(--color-header-surface);
+
+  background-color: var(--color-header-surface);
+  background-image: var(--gradient-header-surface);
   overflow: visible;
 }
 
@@ -86,6 +103,8 @@
 }
 
 .glass-blob--footer {
+  --glass-fallback-surface: var(--color-glass-blob);
+
   background: var(--color-glass-blob);
 }
 

@@ -124,7 +124,7 @@ See [Content mapping](CONTENT_MAPPING.md) for field-to-component ownership and [
 
 ## Theme and visual composition
 
-The default theme is resolved from generated site settings. `ThemePreferenceScript` runs before hydration and applies a valid stored Navy, Light, or Dark preference from `portfolio-theme`; otherwise it retains the generated default.
+The default theme is resolved from generated site settings. `ThemePreferenceScript` runs before hydration and applies a valid stored `navy`, `light`, or `dark` preference from `portfolio-theme`; otherwise it retains the generated default. The visitor-facing label for the stable `navy` identifier is Gioanni.
 
 Semantic values in `tokens.css` isolate components from theme-specific colors. Glass surfaces, cards, blobs, controls, navigation, motion, loading states, and the Hover Base interaction system compose those values through focused style sheets. The application remains usable when generated settings disable glass effects or scroll motion.
 

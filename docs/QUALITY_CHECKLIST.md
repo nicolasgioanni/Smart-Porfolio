@@ -21,8 +21,8 @@ Run this checklist before shipping meaningful changes.
 
 - Links have clear labels.
 - External new-tab links use safe `rel` attributes.
-- Text contrast remains strong on glass surfaces.
-- Focus states remain visible.
+- Text contrast remains strong across the Light, Gioanni, and Dark surface layers.
+- Dual-layer focus states remain visible on each palette's canvas, panels, cards, and controls.
 - Reduced-motion users do not receive entrance, compression, or shimmer effects.
 - Dialog focus, disclosure state, and form errors remain keyboard accessible.
 

@@ -170,7 +170,7 @@ Home and detail cards both display the unchanged `full_quote`, recommender name,
 | --- | --- |
 | `site_title` | Metadata title, with profile full name fallback. |
 | `site_description` | Default metadata description, with short bio fallback. |
-| `default_theme` | Initial `navy`, `light`, or `dark` theme; unsupported values resolve to `navy`. |
+| `default_theme` | Initial `navy`, `light`, or `dark` theme; unsupported values resolve to `navy`. The `navy` identifier is displayed to visitors as Gioanni. |
 | `enable_skeletons` | Loading fallback behavior. |
 | `enable_scroll_motion` | Page and section motion behavior. |
 | `enable_glass_effects` | `data-glass-effects` value on the site shell. |

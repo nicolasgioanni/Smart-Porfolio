@@ -100,7 +100,7 @@ See [Content pipeline](docs/CONTENT_PIPELINE.md), [sheet schema](docs/CONTENT_SH
 
 The interface uses glass-inspired surfaces as restrained hierarchy, not as a full-screen effect. Text sits on quiet backgrounds, large panels use bounded blur, and nested cards reduce visual weight.
 
-- Navy, Light, and Dark themes share semantic color and interaction tokens.
+- Light, Gioanni, and Dark themes use separate warm, signature-navy, and graphite palettes through shared semantic color and interaction tokens.
 - A floating desktop header provides profile preview, navigation, social links, and theme selection. At `980px` and below, a safe-area-aware bottom dock replaces it with one swipeable rail containing the routes, GitHub, LinkedIn, Email, and theme controls.
 - Home combines a profile overview with experience, education, research, projects, skills, and recommendations.
 - The role line can rotate through spreadsheet-configured titles while exposing one stable accessible label.

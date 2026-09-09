@@ -143,11 +143,11 @@
 .contact-field textarea {
   width: 100%;
   min-width: 0;
-  border: 1px solid var(--color-line);
+  border: 1px solid var(--color-control-border);
   border-radius: var(--radius-card);
   color: var(--color-ink-strong);
   background: var(--color-control-surface);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  box-shadow: inset 0 1px 0 var(--color-field-inset-highlight);
   font: inherit;
   transition:
     border-color var(--hover-base-1-transition-duration) ease,
@@ -169,7 +169,7 @@
 
 .contact-field input:hover,
 .contact-field textarea:hover {
-  border-color: var(--color-line-strong);
+  border-color: var(--color-control-border-strong);
   background: var(--color-control-surface-strong);
 }
 

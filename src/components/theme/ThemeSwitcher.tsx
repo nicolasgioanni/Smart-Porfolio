@@ -13,16 +13,10 @@ import { GlassIconButton } from "@/components/glass/GlassIconButton";
 import { ThemeIcon } from "@/components/icons/ThemeIcon";
 import { useThemePreference } from "@/components/theme/useThemePreference";
 import type { ThemeName } from "@/lib/theme/resolveThemeName";
+import { themeLabels, themeOptions } from "@/lib/theme/themeOptions";
 
 export const themeMenuCloseDelayMs = 240;
 export const themeMenuPortalViewportGutterPx = 12;
-
-const themeMenuOrder: ThemeName[] = ["light", "navy", "dark"];
-const themeLabels: Record<ThemeName, string> = {
-  navy: "Navy",
-  light: "Light",
-  dark: "Dark"
-};
 
 type ThemeSwitcherProps = {
   initialTheme: ThemeName;
@@ -257,17 +251,17 @@ export function ThemeSwitcher({
       style={portalStyle}
     >
       <div aria-label="Color theme" className="theme-switcher__panel" role="group">
-        {themeMenuOrder.map((theme) => (
+        {themeOptions.map(({ label, name }) => (
           <button
-            aria-pressed={selectedTheme === theme}
+            aria-pressed={selectedTheme === name}
             className="theme-switcher__option hover-base-1 hover-base-1--compact hover-base-1--inline"
-            key={theme}
-            onClick={() => updateTheme(theme)}
+            key={name}
+            onClick={() => updateTheme(name)}
             onPointerDown={preservePointerFocus}
             tabIndex={open ? 0 : -1}
             type="button"
           >
-            <span>{themeLabels[theme]}</span>
+            <span>{label}</span>
           </button>
         ))}
       </div>

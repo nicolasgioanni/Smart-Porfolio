@@ -1,6 +1,6 @@
 # Design system
 
-Smart Portfolio uses a restrained glass-inspired visual language to organize evidence without reducing readability. Semantic tokens, focused CSS files, and reusable React primitives keep Navy, Light, and Dark behavior aligned.
+Smart Portfolio uses a restrained glass-inspired visual language to organize evidence without reducing readability. Semantic tokens, focused CSS files, and reusable React primitives keep Light, Gioanni, and Dark behavior aligned while allowing each mode to have its own visual character.
 
 ## Design goals
 
@@ -29,15 +29,15 @@ Smart Portfolio uses a restrained glass-inspired visual language to organize evi
 
 ## Themes
 
-The supported themes are `navy`, `light`, and `dark`.
+The supported theme identifiers are `navy`, `light`, and `dark`.
 
-| Theme | Role |
-| --- | --- |
-| Navy | Default cool dark presentation with blue-gray emphasis. |
-| Light | High-lightness neutral presentation with graphite interactions. |
-| Dark | Neutral dark presentation with restrained indigo emphasis. |
+| Identifier | Menu label | Role |
+| --- | --- | --- |
+| `light` | Light | Warm editorial light mode: ivory canvas, parchment panels, mist-blue cards, and deep navy structure. |
+| `navy` | Gioanni | Default signature mode: layered midnight navy with parchment, champagne, and muted blue-gray accents. |
+| `dark` | Dark | Layered graphite mode: neutral charcoal surfaces with restrained electric blue and violet interaction color. |
 
-The generated `default_theme` setting selects the server-rendered value. `ThemePreferenceScript` applies a valid stored `portfolio-theme` preference before hydration. `ThemeSwitcher` presents Light, Navy, and Dark as a labelled button group and persists selection through `useThemePreference`.
+The `navy` identifier intentionally remains stable for generated content, `data-theme`, and existing browser preferences, while its visitor-facing name is Gioanni. The generated `default_theme` setting selects the server-rendered value. `ThemePreferenceScript` applies a valid stored `portfolio-theme` preference before hydration. `ThemeSwitcher` presents Light, Gioanni, and Dark as a labelled button group and persists selection through `useThemePreference`.
 
 Components must use semantic variables such as `--color-ink`, `--color-muted`, `--color-line`, and `--color-surface`. Do not read a palette-specific variable from a component rule when a semantic token expresses the role.
 
@@ -51,7 +51,7 @@ Components must use semantic variables such as `--color-ink`, `--color-muted`, `
 - transition timing and easing;
 - semantic color, surface, shadow, gradient, and interaction values per theme.
 
-Aliases such as `--color-canvas`, `--color-ink`, `--color-surface`, and `--color-line` let layout and component styles remain theme-independent. New theme values must define the complete semantic set rather than depending on another theme's cascade accidentally.
+Aliases such as `--color-canvas`, `--color-ink`, `--color-surface`, and `--color-line` let layout and component styles remain theme-independent. Role-specific tokens distinguish card layers, header and menu surfaces, page accents, fields, focus rings, status colors, and interaction gradients without component-level theme selectors. Each glass primitive also supplies a role-aware `--glass-fallback-surface`, preserving that hierarchy when blur is disabled. New theme values must define the complete semantic set rather than depending on another theme's cascade accidentally.
 
 ## Typography
 
@@ -268,7 +268,7 @@ Every file under `public/` is directly retrievable. Use an approved asset, a saf
 3. Confirm structure and accessible state before adding animation.
 4. Add fine-pointer hover only after keyboard focus behavior exists.
 5. Implement reduced-motion behavior with the interaction.
-6. Test Navy, Light, and Dark at desktop, mobile, and 200 percent zoom.
+6. Test Light, Gioanni, and Dark at desktop, mobile, and 200 percent zoom.
 7. Add or update component and CSS-contract tests.
 8. Update this guide when the change creates a reusable rule.
 
