@@ -54,6 +54,7 @@ describe("legal document routes", () => {
     expect(introModule).toHaveTextContent("How portfolio information may be used, verified, and attributed.");
     expect(introModule).not.toContainElement(effectiveDate);
     expect(effectiveDate?.querySelector("time")).toBeInTheDocument();
+    expect(effectiveDate?.querySelector("time")).toHaveAttribute("datetime", "2026-08-30");
     expect(effectiveDate).toHaveClass("legal-document__effective-date");
     expect(
       screen.getByText(/Employment, education, credentials, metrics, authorship, project status, and availability/).closest("p")
@@ -78,7 +79,13 @@ describe("legal document routes", () => {
     );
     expect(introModule).not.toContainElement(effectiveDate);
     expect(effectiveDate).toHaveClass("legal-document__effective-date");
+    expect(effectiveDate?.querySelector("time")).toHaveAttribute("datetime", "2026-09-09");
+    expect(effectiveDate?.querySelector("time")).toHaveTextContent("September 9, 2026");
     expect(screen.getByText("portfolio-theme")).toBeInTheDocument();
+    expect(screen.getByText(/reads your browser or device light-or-dark color preference locally/)).toBeInTheDocument();
+    expect(screen.getByText(/system preference is not written to browser storage or retained as a site preference/)).toBeInTheDocument();
+    expect(screen.getByText(/theme feature does not transmit it to the portfolio owner/)).toBeInTheDocument();
+    expect(screen.getByText(/Choosing System or clearing the value removes the override/)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Browser storage and essential verification cookie" })).toBeInTheDocument();
     expect(screen.getByText(/sets a signed contact-verification cookie for up to 30 minutes/)).toBeInTheDocument();
     expect(screen.getByText(/not your name, email address, phone number, message/)).toBeInTheDocument();
@@ -142,6 +149,7 @@ describe("legal document routes", () => {
     );
     expect(introModule).not.toContainElement(effectiveDate);
     expect(effectiveDate).toHaveClass("legal-document__effective-date");
+    expect(effectiveDate?.querySelector("time")).toHaveAttribute("datetime", "2026-08-30");
     expect(screen.getByText(/public portfolio pages are statically generated/)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Contact submission safeguards" })).toBeInTheDocument();
     expect(screen.getByText(/interaction-only Turnstile widget.*executes it only/)).toBeInTheDocument();
@@ -189,7 +197,7 @@ describe("legal document routes", () => {
 });
 
 describe("legal effective-date normalization", () => {
-  it("publishes and formats the current legal effective date", () => {
+  it("publishes and formats the shared legal effective date", () => {
     expect(siteSettingsTemplate).toMatch(/^legal_effective_date,2026-08-30$/m);
     expect(resolveLegalEffectiveDate("2026-08-30")).toEqual({ iso: "2026-08-30", label: "August 30, 2026" });
   });

@@ -170,7 +170,7 @@ Home and detail cards both display the unchanged `full_quote`, recommender name,
 | --- | --- |
 | `site_title` | Metadata title, with profile full name fallback. |
 | `site_description` | Default metadata description, with short bio fallback. |
-| `default_theme` | Initial `navy`, `light`, or `dark` theme; unsupported values resolve to `navy`. The `navy` identifier is displayed to visitors as Gioanni. |
+| `default_theme` | Server-rendered and no-JavaScript fallback using `navy`, `light`, or `dark`; unsupported values resolve to `navy`. With scripting and media-query support, visitors without a saved override follow their device Light or Dark preference. The `navy` identifier is displayed as Gioanni. |
 | `enable_skeletons` | Loading fallback behavior. |
 | `enable_scroll_motion` | Page and section motion behavior. |
 | `enable_glass_effects` | `data-glass-effects` value on the site shell. |
@@ -186,7 +186,7 @@ Home and detail cards both display the unchanged `full_quote`, recommender name,
 | `license_name`, `license_url` | Footer license resource when both are populated. |
 | `repository_url` | Preferred footer source-code destination. |
 | `legal_contact_email` | Footer contact email, with profile email fallback. |
-| `legal_effective_date` | Privacy, security, and terms notice content. |
+| `legal_effective_date` | Shared security and terms notice date. The Privacy Notice keeps a component-owned revision date beside its implementation-specific disclosure copy. |
 | `hosting_provider_name`, `hosting_privacy_url` | Privacy and hosting notice content. |
 
 The footer's notice labels, internal notice routes, descriptive text, and closing statement are component-owned. The footer always includes the contact form, adds contact email when available, and conditionally adds repository and license resources.

@@ -386,7 +386,7 @@ These rows must exist, but blank values leave the built-in defaults in place. Th
 | --- | --- | --- |
 | `site_title` | `siteTitle` | `Portfolio` |
 | `site_description` | `siteDescription` | Generic professional portfolio description. |
-| `default_theme` | `defaultTheme` | `navy`; unsupported values resolve to `navy` in the theme resolver, and the `navy` identifier is displayed to visitors as Gioanni. |
+| `default_theme` | `defaultTheme` | `navy`; server-rendered, no-JavaScript, and unavailable-media-query fallback. Unsupported values resolve to `navy`; visitors with scripting and no saved override follow device Light or Dark, and the `navy` identifier is displayed as Gioanni. |
 | `enable_skeletons` | `enableSkeletons` | `true` |
 | `enable_scroll_motion` | `enableScrollMotion` | `false` |
 | `enable_glass_effects` | `enableGlassEffects` | `true` |
@@ -403,7 +403,7 @@ These rows must exist, but blank values leave the built-in defaults in place. Th
 | `copyright_owner` | `copyrightOwner` | Optional text; footer falls back to profile name. |
 | `repository_url` | `repositoryUrl` | Optional HTTPS URL. |
 | `legal_contact_email` | `legalContactEmail` | Optional validated email address. |
-| `legal_effective_date` | `legalEffectiveDate` | Optional real ISO date after normalization. |
+| `legal_effective_date` | `legalEffectiveDate` | Optional shared Terms and Security notice date using a real ISO date after normalization; the implementation-specific Privacy Notice owns its revision date in the route component. |
 | `hosting_provider_name` | `hostingProviderName` | Optional text. |
 | `hosting_privacy_url` | `hostingPrivacyUrl` | Optional HTTPS URL. |
 

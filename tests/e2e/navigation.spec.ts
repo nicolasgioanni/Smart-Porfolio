@@ -102,7 +102,7 @@ test("opens the mobile theme chooser above the dock", async ({ page }) => {
 
   await scrollRailToEnd(page);
   await page.getByRole("button", { name: /choose color theme/i }).click();
-  const themeGroup = page.getByRole("group", { name: "Color theme" });
+  const themeGroup = page.getByRole("group", { name: "Color theme preference" });
   await expect(themeGroup).toBeVisible();
 
   const dockBox = await page.locator(".blob-header__island").boundingBox();
@@ -115,6 +115,42 @@ test("opens the mobile theme chooser above the dock", async ({ page }) => {
   expect(panelBox).not.toBeNull();
   expect(popoverBox?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(dockBox?.y ?? 0);
   expect((panelBox?.y ?? 0) + (panelBox?.height ?? 0)).toBeLessThanOrEqual((dockBox?.y ?? 0) + 2);
+});
+
+test("follows the system color scheme until a visitor chooses an override", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.addInitScript(() => window.localStorage.removeItem("portfolio-theme"));
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/");
+
+  const root = page.locator("html");
+  const trigger = page.getByRole("button", { name: /choose color theme/i });
+  await expect(root).toHaveAttribute("data-theme", "dark");
+  await trigger.click();
+
+  const group = page.getByRole("group", { name: "Color theme preference" });
+  const systemOption = group.getByRole("button", { name: /^System, follows device setting/ });
+  await expect(systemOption).toHaveAttribute("aria-pressed", "true");
+  await expect(group.getByRole("button", { name: "Dark", exact: true })).toHaveAttribute("aria-pressed", "false");
+  await expect(trigger).toHaveAccessibleName("Choose color theme. Current setting: System; using Dark");
+
+  await page.emulateMedia({ colorScheme: "light" });
+  await expect(root).toHaveAttribute("data-theme", "light");
+  await expect(trigger).toHaveAccessibleName("Choose color theme. Current setting: System; using Light");
+
+  await group.getByRole("button", { name: "Gioanni", exact: true }).click();
+  await expect(root).toHaveAttribute("data-theme", "navy");
+  await expect.poll(() => page.evaluate(() => window.localStorage.getItem("portfolio-theme"))).toBe("navy");
+
+  await page.emulateMedia({ colorScheme: "dark" });
+  await expect(root).toHaveAttribute("data-theme", "navy");
+
+  await systemOption.click();
+  await expect(root).toHaveAttribute("data-theme", "dark");
+  await expect.poll(() => page.evaluate(() => window.localStorage.getItem("portfolio-theme"))).toBeNull();
+
+  await page.emulateMedia({ colorScheme: "light" });
+  await expect(root).toHaveAttribute("data-theme", "light");
 });
 
 test("moves the whole rail, pauses after touch, and resumes in place after five seconds", async ({ page }) => {

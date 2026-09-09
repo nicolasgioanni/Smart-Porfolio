@@ -56,6 +56,12 @@ const palettes = {
 };
 
 describe("theme palette contract", () => {
+  it("keeps native browser controls aligned with each resolved palette", () => {
+    expect(tokenStyles.match(themePatterns.light)?.[1]).toMatch(/color-scheme:\s*light/);
+    expect(tokenStyles.match(themePatterns.navy)?.[1]).toMatch(/color-scheme:\s*dark/);
+    expect(tokenStyles.match(themePatterns.dark)?.[1]).toMatch(/color-scheme:\s*dark/);
+  });
+
   it("defines the same complete semantic contract in every theme", () => {
     const expectedTokenNames = [...palettes.navy.keys()];
 

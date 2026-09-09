@@ -8,6 +8,7 @@ import { getPortfolioContent } from "@/lib/content/getPortfolioContent";
 const pageTitle = "Privacy Notice";
 const pageDescription =
   "Privacy information for this portfolio, including theme storage, hosting request data, contact submissions, email communications, and visitor choices.";
+const privacyNoticeEffectiveDate = resolveLegalEffectiveDate("2026-09-09");
 
 export function generateMetadata(): Metadata {
   return createPageMetadata(getPortfolioContent(), {
@@ -20,7 +21,6 @@ export function generateMetadata(): Metadata {
 export default function PrivacyPage() {
   const content = getPortfolioContent();
   const contactEmail = resolveLegalContactEmail(content.siteSettings.legalContactEmail);
-  const effectiveDate = resolveLegalEffectiveDate(content.siteSettings.legalEffectiveDate);
   const hostingProvider =
     typeof content.siteSettings.hostingProviderName === "string" && content.siteSettings.hostingProviderName.trim()
       ? content.siteSettings.hostingProviderName.trim()
@@ -33,7 +33,7 @@ export default function PrivacyPage() {
   return (
     <LegalDocument
       description="What information may be processed when you visit this portfolio or choose to make contact."
-      effectiveDate={effectiveDate}
+      effectiveDate={privacyNoticeEffectiveDate}
       motionEnabled={content.siteSettings.enableScrollMotion}
       title={pageTitle}
     >
@@ -59,16 +59,18 @@ export default function PrivacyPage() {
       <section>
         <h2>Browser storage and essential verification cookie</h2>
         <p>
-          When you select a color theme, the site stores the selected value in your browser&apos;s local storage under the key{" "}
-          <code>portfolio-theme</code>. The value is used only to restore your chosen appearance on later visits. It is not used
-          for advertising, analytics, cross-site tracking, or identification.
+          The site reads your browser or device light-or-dark color preference locally. In System mode, it uses that signal to
+          select Light or Dark and follows later changes. The system preference is not written to browser storage or retained
+          as a site preference, and the theme feature does not transmit it to the portfolio owner or use it for advertising,
+          analytics, cross-site tracking, or identification.
         </p>
         <p>
-          The preference remains on your device until you change it or clear this site&apos;s local storage through your browser&apos;s
-          site-data or privacy controls. Clearing the value restores the site&apos;s default theme. The site does not present a
-          separate consent banner for this user-selected appearance setting or the essential verification cookie described
-          below. Both mechanisms support a visitor-requested feature or necessary abuse prevention, and neither is used by the
-          portfolio owner for advertising, analytics, or cross-site tracking. The UK Information Commissioner&apos;s Office
+          If you explicitly select Light, Gioanni, or Dark, the site stores that palette value in your browser&apos;s local storage
+          under the key <code>portfolio-theme</code> so the manual override can be restored on later visits. Choosing System or
+          clearing the value removes the override and resumes device-preference following. The site does not present a separate
+          consent banner for this user-selected appearance setting or the essential verification cookie described below. Both
+          mechanisms support a visitor-requested feature or necessary abuse prevention, and neither is used by the portfolio
+          owner for advertising, analytics, or cross-site tracking. The UK Information Commissioner&apos;s Office
           guidance on{" "}
           <SmartLink href="https://ico.org.uk/for-organisations/direct-marketing-and-privacy-and-electronic-communications/guidance-on-the-use-of-storage-and-access-technologies/what-are-the-exceptions/">
             storage and access exceptions
@@ -225,7 +227,7 @@ export default function PrivacyPage() {
           backup, and operational settings, this Notice does not represent a fixed deletion date.
         </p>
         <p>
-          The local theme preference remains in your browser until you remove it. The contact-verification cookie is cleared
+          A manually selected theme override remains in your browser until you choose System or remove it. The contact-verification cookie is cleared
           after successful delivery or expires after 30 minutes; a failed delivery leaves it available only for a retry during
           that original period. Cloudflare&apos;s{" "}
           <SmartLink href="https://developers.cloudflare.com/d1/reference/data-security/">

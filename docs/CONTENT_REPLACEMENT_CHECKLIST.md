@@ -94,11 +94,11 @@ Use this checklist when replacing local sample content or preparing a public wor
 
 ## Site settings, footer, and contact
 
-- [ ] Set `site_title`, `site_description`, and a supported `default_theme`.
+- [ ] Set `site_title`, `site_description`, and a supported `default_theme`; treat that theme as the server/no-JavaScript fallback because visitors without an override follow their device preference.
 - [ ] Review motion, skeleton, glass, and Recommendations feature flags.
 - [ ] Use positive Home limits where a cap is intended. Do not rely on `max_home_experience_items`; current Home experience is unlimited after selection.
 - [ ] Set `copyright_owner` if it should differ from `profile.full_name`.
-- [ ] Set and verify `legal_contact_email`, `legal_effective_date`, `hosting_provider_name`, and the provider's HTTPS `hosting_privacy_url`.
+- [ ] Set and verify `legal_contact_email`, the shared Terms/Security `legal_effective_date`, `hosting_provider_name`, and the provider's HTTPS `hosting_privacy_url`; review the component-owned Privacy Notice date whenever its disclosure copy changes.
 - [ ] Keep the footer-only Contact form link pointed at `/contact`, and keep the public direct-email link available as a fallback.
 - [ ] Confirm the Privacy and Security notices accurately describe the three-step contact wizard, interaction-only Turnstile execution during final Send, submission custom-data binding, the `/api/contact/verify` ticket endpoint, the `/api/contact` delivery endpoint, the short-lived essential cookie, bounded mail-domain DNS validation, the pseudonymous D1 quota reservation, sequential Resend delivery, required email/optional phone fields, and provider processing.
 - [ ] Confirm the software license separately from the rights reserved in portfolio content.

@@ -505,15 +505,21 @@ describe("static portfolio security contracts", () => {
 
   it("keeps the header theme disclosure tokenized, pointer-safe, and motion-safe", () => {
     const footerSource = readFileSync(path.join(projectRoot, "src", "components", "layout", "BlobFooter.tsx"), "utf8");
+    const layoutSource = readFileSync(path.join(projectRoot, "src", "app", "layout.tsx"), "utf8");
     const navigationCss = readFileSync(path.join(projectRoot, "src", "styles", "navigation.css"), "utf8");
     const themeSource = readFileSync(path.join(projectRoot, "src", "components", "theme", "ThemeSwitcher.tsx"), "utf8");
     const themeOptionsSource = readFileSync(path.join(projectRoot, "src", "lib", "theme", "themeOptions.ts"), "utf8");
 
     expect(themeOptionsSource).toMatch(/\{ label: "Light", name: "light" \}[\s\S]*\{ label: "Gioanni", name: "navy" \}[\s\S]*\{ label: "Dark", name: "dark" \}/);
-    expect(themeSource).toMatch(/themeOptions\.map\(\(\{ label, name \}\)/);
+    expect(themeOptionsSource).toMatch(/themePreferenceOptions[\s\S]*\{ label: "System", name: systemThemePreference \},[\s\S]*\.\.\.themeOptions/);
+    expect(themeSource).toMatch(/themePreferenceOptions\.map\(\(\{ label, name \}\)/);
     expect(themeSource).toMatch(/aria-expanded=\{open\}/);
-    expect(themeSource).toMatch(/aria-pressed=\{selectedTheme === name\}/);
-    expect(themeSource).toMatch(/aria-label="Color theme"[\s\S]*role="group"/);
+    expect(themeSource).toMatch(/aria-pressed=\{selectedPreference === name\}/);
+    expect(themeSource).toMatch(/aria-label="Color theme preference"[\s\S]*role="group"/);
+    expect(themeSource).toMatch(/System, follows device setting/);
+    expect(layoutSource).toMatch(
+      /<html[^>]*suppressHydrationWarning>[\s\S]*<head>[\s\S]*<ThemePreferenceScript initialTheme=\{initialTheme\} \/>[\s\S]*<\/head>[\s\S]*<body/
+    );
     expect(navigationCss).toMatch(
       /\.theme-switcher__popover\s*{(?=[^}]*padding:\s*20px\s+12px\s+12px)(?=[^}]*opacity:\s*0)(?=[^}]*pointer-events:\s*none)(?=[^}]*transform:\s*translate3d\(0,\s*-4px,\s*0\)\s*scale\(0\.985\))[^}]*}/s
     );
