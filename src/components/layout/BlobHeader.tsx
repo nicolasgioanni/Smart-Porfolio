@@ -2,6 +2,7 @@ import type { GeneratedPortfolioContent } from "@/content/types";
 import { InteractiveBlobHeader } from "@/components/layout/InteractiveBlobHeader";
 import { createNavigationItems } from "@/components/navigation/navigationItems";
 import { selectHeaderLinks } from "@/lib/content/selectHomeContent";
+import { SITE_PROFILE_IMAGE } from "@/lib/seo/siteConfig";
 import type { ThemeName } from "@/lib/theme/resolveThemeName";
 
 export function BlobHeader({ content, initialTheme }: { content: GeneratedPortfolioContent; initialTheme: ThemeName }) {
@@ -12,7 +13,7 @@ export function BlobHeader({ content, initialTheme }: { content: GeneratedPortfo
   });
   const brand = {
     initial: content.profile.preferredName?.slice(0, 1) ?? content.profile.fullName.slice(0, 1),
-    markImageSrc: content.profile.faviconImage ?? "/favicon/favicon.png",
+    markImageSrc: content.profile.faviconImage ?? SITE_PROFILE_IMAGE.path,
     name: content.profile.fullName
   };
 

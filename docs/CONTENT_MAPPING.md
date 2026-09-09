@@ -54,7 +54,7 @@ The Home page renders in this order:
 - The header mark uses the first character of `preferred_name`, then `full_name`, and uses `favicon_image` with a component fallback.
 - `role_engineer_prefixes`, `role_engineer_suffix`, and `role_alternate` produce the rotating Home role only when the complete validated set is present. Otherwise Home uses `headline`.
 - About uses `short_bio`. The helper can fall back to `long_bio`, but valid generated content always has the required non-empty `short_bio`.
-- Root metadata uses `site_title` with `full_name` as fallback, `site_description` with `short_bio` as fallback, and `favicon_image` when present.
+- Root metadata uses `site_title` with `full_name` as fallback and `site_description` with `short_bio` as fallback. The search favicon is source-controlled so remote content cannot replace the reviewed profile image; `favicon_image` continues to configure the visible header mark.
 
 ### Current Work
 

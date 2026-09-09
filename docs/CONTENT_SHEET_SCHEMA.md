@@ -143,7 +143,7 @@ Both source modes require those key rows to exist, and normalization requires ea
 | `long_bio` | `longBio` | Optional extended biography. |
 | `experience_summary` | `experienceSummary` | Optional Experience route introductory summary. |
 | `portrait_image` | `portraitImage` | Optional public image path or URL. |
-| `favicon_image` | `faviconImage` | Optional favicon and header mark path or URL. |
+| `favicon_image` | `faviconImage` | Optional header mark path or URL. The search favicon is source-controlled. |
 | `primary_cta_label` | `primaryCtaLabel` | Compatibility field with no current UI consumer. |
 | `secondary_cta_label` | `secondaryCtaLabel` | Compatibility field with no current UI consumer. |
 
