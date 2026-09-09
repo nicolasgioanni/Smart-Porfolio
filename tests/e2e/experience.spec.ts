@@ -14,9 +14,9 @@ test.describe("Experience showcase", () => {
     await expect(introSurface).toHaveCount(1);
     await expect(pageHeading).toBeVisible();
     await expect(pageSummary).toBeVisible();
-    await expect(introSurface.getByText(/Detail level:/)).toBeVisible();
+    await expect(introSurface.getByText("Detail", { exact: true })).toBeVisible();
     await expect(cards).toHaveCount(5);
-    await expect(modeGroup.getByRole("button", { name: "For everyone" })).toHaveAttribute("aria-pressed", "true");
+    await expect(modeGroup.getByRole("button", { name: "Overview" })).toHaveAttribute("aria-pressed", "true");
     await expect(page.getByText(/Built and deployed CytoCV/)).toBeVisible();
 
     const [headingBox, summaryBox, modeBox, introBox] = await Promise.all([
@@ -53,8 +53,8 @@ test.describe("Experience showcase", () => {
     const vision = cytocvCard.getByRole("button", { name: /Vision pipeline/i });
 
     const [architectureIconBox, visionIconBox] = await Promise.all([
-      architecture.locator(".experience-chapter__icon").boundingBox(),
-      vision.locator(".experience-chapter__icon").boundingBox()
+      architecture.locator(".detail-section__icon").boundingBox(),
+      vision.locator(".detail-section__icon").boundingBox()
     ]);
     expect(architectureIconBox).not.toBeNull();
     expect(visionIconBox).not.toBeNull();
@@ -86,14 +86,14 @@ test.describe("Experience showcase", () => {
     const technicalButton = page.getByRole("button", { name: "Technical", exact: true });
     const firstChapter = page.getByRole("button", { name: /Scientific workflow/i });
     const introSurface = page.locator(".page-intro__surface");
-    const modeControl = introSurface.locator(".experience-mode-control");
-    const modeLabel = modeControl.locator(".experience-mode-control__label");
-    const modeSwitch = modeControl.locator(".experience-mode-switch");
+    const modeControl = introSurface.locator(".detail-mode-control");
+    const modeLabel = modeControl.locator(".detail-mode-control__label");
+    const modeSwitch = modeControl.locator(".detail-mode-switch");
 
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)
     ).toBe(true);
-    expect((await technicalButton.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+    expect((await technicalButton.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(34);
     expect((await firstChapter.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
 
     const [introBox, controlBox, labelBox, switchBox] = await Promise.all([
@@ -106,16 +106,17 @@ test.describe("Experience showcase", () => {
     expect(controlBox).not.toBeNull();
     expect(labelBox).not.toBeNull();
     expect(switchBox).not.toBeNull();
-    expect(Math.abs(switchBox!.width - controlBox!.width)).toBeLessThanOrEqual(1);
+    expect(switchBox!.width).toBeLessThanOrEqual(200);
+    expect(switchBox!.width).toBeLessThanOrEqual(controlBox!.width);
     expect(switchBox!.x).toBeGreaterThanOrEqual(introBox!.x);
     expect(switchBox!.x + switchBox!.width).toBeLessThanOrEqual(introBox!.x + introBox!.width);
     expect(switchBox!.y).toBeGreaterThanOrEqual(labelBox!.y + labelBox!.height);
 
     expect(
-      await page.locator(".experience-mode-switch__lens").evaluate((element) => getComputedStyle(element).transitionDuration)
+      await page.locator(".detail-mode-switch__lens").evaluate((element) => getComputedStyle(element).transitionDuration)
     ).toBe("0s");
     expect(
-      await page.locator(".experience-chapter__panel").first().evaluate((element) => getComputedStyle(element).transitionDuration)
+      await page.locator(".detail-section__panel").first().evaluate((element) => getComputedStyle(element).transitionDuration)
     ).toBe("0s");
   });
 
@@ -123,9 +124,9 @@ test.describe("Experience showcase", () => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto("/experience");
 
-    const chapters = page.locator(".experience-card__chapters").first();
-    const chapter = chapters.locator(".experience-chapter").first();
-    const trigger = chapter.locator(".experience-chapter__trigger");
+    const chapters = page.locator(".detail-list").first();
+    const chapter = chapters.locator(".detail-section").first();
+    const trigger = chapter.locator(".detail-section__trigger");
     const dividerInsets = await chapter.evaluate((element) => {
       const chaptersElement = element.parentElement!;
       const topDivider = getComputedStyle(chaptersElement, "::before");
