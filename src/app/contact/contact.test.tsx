@@ -20,10 +20,11 @@ vi.mock("@/components/contact/TurnstileWidget", async () => {
     cData: string;
     onStatusChange?: (status: MockStatus) => void;
     onTokenChange: (token: string) => void;
+    serverVerified?: boolean;
     siteKey: string;
   };
 
-  function TurnstileWidget({ cData, onStatusChange, onTokenChange, siteKey }: MockProps) {
+  function TurnstileWidget({ cData, onStatusChange, onTokenChange, serverVerified = false, siteKey }: MockProps) {
     const [status, setStatus] = React.useState<MockStatus>(siteKey ? "loading" : "unavailable");
     const statusCallbackRef = React.useRef<NonNullable<MockProps["onStatusChange"]>>(() => undefined);
     const tokenCallbackRef = React.useRef<MockProps["onTokenChange"]>(() => undefined);
@@ -58,6 +59,7 @@ vi.mock("@/components/contact/TurnstileWidget", async () => {
         data-appearance="always"
         data-cdata={cData}
         data-execution="render"
+        data-server-verified={serverVerified ? "true" : "false"}
         data-site-key={siteKey}
         data-status={status}
         data-testid="turnstile-mock"
@@ -268,6 +270,8 @@ describe("contact route", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Complete human verification" }));
     await waitFor(() => expect(screen.getByRole("button", { name: "Continue" })).toBeEnabled());
+    expect(await currentGateWidget()).toBe(widget);
+    expect(widget).toHaveAttribute("data-server-verified", "true");
     expect(screen.getByText(/Security check complete\. Continuing to your contact details/i)).toBeInTheDocument();
     expect(screen.queryByLabelText(/First name/i)).not.toBeInTheDocument();
     expect(callsFor(fetchMock, "/api/contact")).toHaveLength(0);
@@ -419,12 +423,21 @@ describe("contact route", () => {
     expect(screen.getByText("0 of 2 acknowledgments checked")).toBeInTheDocument();
     expect(submit).toBeDisabled();
     if (!cards[0] || !cards[1]) throw new Error("Expected two acknowledgment cards.");
+    const contactTerms = screen.getByRole("link", { name: "Contact & Communication Terms (opens in a new tab)" });
+    fireEvent.click(contactTerms);
+    expect(checkboxes[0]).not.toBeChecked();
+    expect(cards[0]).toHaveAttribute("data-checked", "false");
     fireEvent.click(cards[0]);
     expect(screen.getByText("1 of 2 acknowledgments checked")).toBeInTheDocument();
     fireEvent.click(cards[1]);
     expect(screen.getByText("2 of 2 acknowledgments checked")).toBeInTheDocument();
     expect(submit).toBeEnabled();
     expect(screen.getByText(/Legitimate inquiries only.*Sending confirms both acknowledgments/i)).toBeInTheDocument();
+    expect(contactTerms).toHaveAttribute("href", "/contact-terms");
+    expect(contactTerms).toHaveAttribute("target", "_blank");
+    expect(contactTerms).toHaveAttribute("rel", "noopener noreferrer");
+    expect(checkboxes[0]).toHaveAttribute("aria-labelledby", "contact-consent-label");
+    expect(checkboxes[1]).toHaveAttribute("aria-labelledby", "legal-consent-label");
     expect(screen.getByRole("link", { name: "Site Terms & Accuracy Notice" })).toHaveAttribute("href", "/terms");
     expect(screen.getByRole("link", { name: "Privacy Notice" })).toHaveAttribute("href", "/privacy");
     expect(callsFor(fetchMock, "/api/contact/verify")).toHaveLength(1);

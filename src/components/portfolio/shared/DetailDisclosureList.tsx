@@ -76,22 +76,38 @@ function DetailDisclosure({
     if (open || visualState !== "closing") return;
 
     const panel = panelRef.current;
-    const clip = panel?.querySelector<HTMLElement>(".detail-section__panel-clip");
-    if (!clip) return;
+    if (!panel) return;
 
     const closeGeneration = closeGenerationRef.current;
-    const settleWhenCollapsed = () => {
-      if (closeGenerationRef.current !== closeGeneration || clip.getBoundingClientRect().height > 0.5) return;
-
+    let cancelled = false;
+    const settleWhenFinished = () => {
+      if (cancelled || closeGenerationRef.current !== closeGeneration) return;
       setVisualState((current) => (current === "closing" ? "closed" : current));
     };
-    const frame = window.requestAnimationFrame(settleWhenCollapsed);
-    const resizeObserver = typeof ResizeObserver === "function" ? new ResizeObserver(settleWhenCollapsed) : undefined;
-    resizeObserver?.observe(clip);
+    const frame = window.requestAnimationFrame(() => {
+      if (typeof panel.getAnimations !== "function") {
+        settleWhenFinished();
+        return;
+      }
+
+      const transitions = panel.getAnimations().filter((animation) => {
+        if (!("transitionProperty" in animation)) return false;
+
+        const property = (animation as CSSTransition).transitionProperty;
+        return property === "grid-template-rows" || property === "opacity";
+      });
+
+      if (transitions.length === 0) {
+        settleWhenFinished();
+        return;
+      }
+
+      void Promise.allSettled(transitions.map((transition) => transition.finished)).then(settleWhenFinished);
+    });
 
     return () => {
+      cancelled = true;
       window.cancelAnimationFrame(frame);
-      resizeObserver?.disconnect();
     };
   }, [open, visualState]);
 
@@ -146,14 +162,6 @@ function DetailDisclosure({
         className="detail-section__panel"
         id={panelId}
         inert={!panelIsInteractive}
-        onTransitionEnd={(event) => {
-          if (event.target !== event.currentTarget || event.propertyName !== "grid-template-rows") return;
-
-          const clip = event.currentTarget.querySelector<HTMLElement>(".detail-section__panel-clip");
-          if (!open && visualState === "closing" && (clip?.getBoundingClientRect().height ?? 1) <= 0.5) {
-            setVisualState("closed");
-          }
-        }}
         ref={panelRef}
         role="region"
       >

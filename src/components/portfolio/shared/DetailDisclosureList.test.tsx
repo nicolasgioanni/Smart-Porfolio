@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useRef } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { DetailDisclosureList } from "@/components/portfolio/shared/DetailDisclosureList";
@@ -24,8 +24,8 @@ const sectionsWithStaticSummary = [
   }
 ];
 
-function renderList(openSectionId?: string) {
-  return render(
+function detailDisclosureList(openSectionId?: string) {
+  return (
     <DetailDisclosureList
       idPrefix="test"
       itemId="item"
@@ -36,6 +36,10 @@ function renderList(openSectionId?: string) {
       sections={sections}
     />
   );
+}
+
+function renderList(openSectionId?: string) {
+  return render(detailDisclosureList(openSectionId));
 }
 
 function ControlledListWithStaticSummary() {
@@ -91,39 +95,97 @@ describe("DetailDisclosureList", () => {
     expect(panel.closest(".detail-section")).toHaveAttribute("data-visual-state", "closing");
   });
 
-  it("does not let a stale close completion clear a reopened panel", () => {
+  it("closes immediately when no visual transition starts", async () => {
+    const { rerender } = renderList("evidence");
+    const panel = screen.getByRole("region", { name: "Evidence" });
+    const requestAnimationFrame = vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
+      callback(0);
+      return 1;
+    });
+    const getAnimations = vi.fn(() => []);
+    Object.defineProperty(panel, "getAnimations", { configurable: true, value: getAnimations });
+
+    try {
+      rerender(detailDisclosureList());
+
+      await waitFor(() => expect(panel.closest(".detail-section")).toHaveAttribute("data-visual-state", "closed"));
+      expect(getAnimations).toHaveBeenCalledTimes(1);
+    } finally {
+      requestAnimationFrame.mockRestore();
+    }
+  });
+
+  it("settles when an interrupted close transition rejects", async () => {
+    const { rerender } = renderList("evidence");
+    const panel = screen.getByRole("region", { name: "Evidence" });
+    const requestAnimationFrame = vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
+      callback(0);
+      return 1;
+    });
+    const getAnimations = vi.fn(() => [
+      { finished: Promise.reject(new Error("The transition was interrupted.")), transitionProperty: "grid-template-rows" }
+    ]);
+    Object.defineProperty(panel, "getAnimations", { configurable: true, value: getAnimations });
+
+    try {
+      rerender(detailDisclosureList());
+
+      await waitFor(() => expect(panel.closest(".detail-section")).toHaveAttribute("data-visual-state", "closed"));
+    } finally {
+      requestAnimationFrame.mockRestore();
+    }
+  });
+
+  it("does not let a stale close transition clear a reopened panel", async () => {
     const { rerender } = renderList("evidence");
     const trigger = screen.getByRole("button", { name: /Evidence/i });
     const panel = screen.getByRole("region", { name: "Evidence" });
+    const requestAnimationFrame = vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
+      callback(0);
+      return 1;
+    });
+    let resolveFirstTransition: (() => void) | undefined;
+    let resolveSecondTransition: (() => void) | undefined;
+    const firstTransition = new Promise<void>((resolve) => {
+      resolveFirstTransition = resolve;
+    });
+    const secondTransition = new Promise<void>((resolve) => {
+      resolveSecondTransition = resolve;
+    });
+    const getAnimations = vi
+      .fn()
+      .mockReturnValueOnce([{ finished: firstTransition, transitionProperty: "grid-template-rows" }])
+      .mockReturnValueOnce([{ finished: secondTransition, transitionProperty: "opacity" }]);
+    Object.defineProperty(panel, "getAnimations", { configurable: true, value: getAnimations });
 
-    rerender(
-      <DetailDisclosureList
-        idPrefix="test"
-        itemId="item"
-        mode="overview"
-        onToggle={vi.fn()}
-        overlayEnabled
-        sections={sections}
-      />
-    );
-    expect(panel.closest(".detail-section")).toHaveAttribute("data-visual-state", "closing");
+    try {
+      rerender(detailDisclosureList());
+      await waitFor(() => expect(getAnimations).toHaveBeenCalledTimes(1));
+      expect(panel.closest(".detail-section")).toHaveAttribute("data-visual-state", "closing");
 
-    rerender(
-      <DetailDisclosureList
-        idPrefix="test"
-        itemId="item"
-        mode="overview"
-        onToggle={vi.fn()}
-        openSectionId="evidence"
-        overlayEnabled
-        sections={sections}
-      />
-    );
-    fireEvent.transitionEnd(panel, { propertyName: "grid-template-rows" });
+      rerender(detailDisclosureList("evidence"));
 
-    expect(trigger).toHaveAttribute("aria-expanded", "true");
-    expect(panel).toHaveAttribute("aria-hidden", "false");
-    expect(panel.closest(".detail-section")).toHaveAttribute("data-visual-state", "open");
+      rerender(detailDisclosureList());
+      await waitFor(() => expect(getAnimations).toHaveBeenCalledTimes(2));
+
+      await act(async () => {
+        resolveFirstTransition?.();
+        await Promise.resolve();
+      });
+
+      expect(panel.closest(".detail-section")).toHaveAttribute("data-visual-state", "closing");
+
+      resolveSecondTransition?.();
+      await waitFor(() => expect(panel.closest(".detail-section")).toHaveAttribute("data-visual-state", "closed"));
+
+      rerender(detailDisclosureList("evidence"));
+
+      expect(trigger).toHaveAttribute("aria-expanded", "true");
+      expect(panel).toHaveAttribute("aria-hidden", "false");
+      expect(panel.closest(".detail-section")).toHaveAttribute("data-visual-state", "open");
+    } finally {
+      requestAnimationFrame.mockRestore();
+    }
   });
 
   it("dismisses an active disclosure after a separate static summary is clicked", async () => {

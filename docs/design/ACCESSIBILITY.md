@@ -32,7 +32,7 @@ Desktop and mobile navigation are separate presentations of the same generated i
 - GitHub, LinkedIn, Email, and theme controls remain outside the scrolling rail so they stay available at every rail position.
 - External HTTP destinations that open a new tab use `noopener noreferrer`.
 
-The Contact, Privacy, Terms, and Security routes are intentionally available from the footer rather than primary navigation.
+The Contact, Contact Terms, Privacy, Terms, and Security routes are intentionally available from the footer rather than primary navigation.
 
 ## Theme control
 
