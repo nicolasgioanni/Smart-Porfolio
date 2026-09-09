@@ -94,7 +94,7 @@ Check at least:
 - skill and project-skill dialogs;
 - image and logo paths with no 404 responses;
 - footer resources and contact email fallbacks;
-- metadata title, description, favicon, and initial theme.
+- metadata title, description, favicon, and server/no-JavaScript fallback theme.
 
 Use [Content Mapping](CONTENT_MAPPING.md) when a valid field does not appear where expected. Several accepted compatibility fields intentionally have no current UI consumer.
 
