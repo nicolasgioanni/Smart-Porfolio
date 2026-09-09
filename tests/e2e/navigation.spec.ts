@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { siteRoutePaths } from "../../src/components/navigation/siteRoutes";
 
 const mobileWidths = [320, 390, 768] as const;
 const viewportHeight = 844;
@@ -186,4 +187,67 @@ test("preserves the desktop top header, brand, routes, and compact scroll state"
   await expect(header).toHaveAttribute("data-header-state", "compact");
   await page.evaluate(() => window.scrollTo(0, 250));
   await expect(header).toHaveAttribute("data-header-state", "expanded");
+});
+
+for (const pathname of siteRoutePaths) {
+  test(`animates the resolved body on ${pathname} without including the shared shell`, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await page.goto(pathname);
+
+    const pageBody = page.locator(".site-main > .page-container");
+    await expect(pageBody).toHaveCount(1);
+    await expect(pageBody).toHaveCSS("animation-name", "page-body-enter");
+    await expect(page.locator(".site-main > .skeleton-page")).toHaveCount(0);
+    await expect(page.locator(".blob-header")).not.toHaveCSS("animation-name", "page-body-enter");
+    await expect(page.locator(".blob-footer")).not.toHaveCSS("animation-name", "page-body-enter");
+  });
+}
+
+test("restarts page entry motion after client-side navigation", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto("/");
+
+  const initialPageBody = page.locator(".site-main > .page-container");
+  await expect(initialPageBody).toHaveCSS("animation-name", "page-body-enter");
+  await initialPageBody.evaluate((element) => {
+    const navigationWindow = window as Window & {
+      __initialPageBody?: Element;
+      __pageEntryDocumentMarker?: string;
+    };
+    navigationWindow.__initialPageBody = element;
+    navigationWindow.__pageEntryDocumentMarker = "same-document";
+  });
+
+  await page
+    .getByRole("navigation", { name: "Main navigation" })
+    .getByRole("link", { name: "Projects", exact: true })
+    .click();
+  await page.waitForURL((url) => url.pathname === "/projects");
+
+  const nextPageBody = page.locator(".site-main > .page-container");
+  await expect(nextPageBody).toHaveCSS("animation-name", "page-body-enter");
+  await expect(page.getByRole("heading", { level: 1, name: "Projects" })).toBeVisible();
+  const navigationResult = await nextPageBody.evaluate((element) => {
+    const navigationWindow = window as Window & {
+      __initialPageBody?: Element;
+      __pageEntryDocumentMarker?: string;
+    };
+
+    return {
+      replacedPageBody: navigationWindow.__initialPageBody !== element,
+      sameDocument: navigationWindow.__pageEntryDocumentMarker === "same-document"
+    };
+  });
+  expect(navigationResult.sameDocument).toBe(true);
+  expect(navigationResult.replacedPageBody).toBe(true);
+});
+
+test("shows page content immediately when reduced motion is requested", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+
+  const pageBody = page.locator(".site-main > .page-container");
+  await expect(pageBody).toHaveCSS("animation-name", "none");
+  await expect(pageBody).toHaveCSS("opacity", "1");
+  await expect(pageBody).toHaveCSS("transform", "none");
 });
