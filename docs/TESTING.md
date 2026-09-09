@@ -29,6 +29,7 @@ Smart Portfolio uses a layered quality gate for documentation, static content, R
 | `npm run test:navigation` | Focused mobile rail, header, responsive-query, theme, and navigation style tests | Also runs again inside the full suite |
 | `npm run test:e2e:navigation` | Playwright navigation specification in Chromium | Uses port 3100 by default and reuses a compatible running local server outside CI |
 | `npm run test:e2e:footer` | Playwright footer specification in Chromium | Covers every route, first paint, client navigation, restored scroll, and scroll activation |
+| `npm run test:e2e:recommendations` | Playwright recommendation specification in Chromium | Samples desktop geometry through expansion and dismissal, then checks responsive and reduced-motion behavior |
 | `npm run test` | Complete Vitest suite | Uses mocks and jsdom, not a real browser or Cloudflare runtime |
 | `npm run build` | `prebuild`, Next.js static export, then content-version write | Regenerates content before building |
 | `npm run build:generated` | Next.js static export and content-version write | Consumes existing generated JSON without another content fetch |
@@ -115,6 +116,12 @@ The suite verifies the fixed bottom dock at 320, 390, and 768 CSS pixels; canoni
 
 `tests/e2e/footer.spec.ts` records semantic footer mutations and painted animation frames. It verifies that every registered page and the not-found route remain compact through hydration and layout settlement, and that expanded state never carries into a client-side route transition. It also covers restored deep scroll positions and confirms that expansion occurs only after real downward wheel input reaches the reserved runway.
 
+## Browser recommendation coverage
+
+`tests/e2e/recommendations.spec.ts` samples every desktop recommendation slot across the full expand and collapse transition. It protects compact-height caching and row positions during explicit collapse, outside-pointer dismissal, cross-card focus, and direct card switching. Responsive cases preserve natural document flow, while keyboard and reduced-motion cases protect accessible dismissal and transition fallbacks.
+
+Pull-request runs use the checked-in recommendation templates and exercise every scenario. Deploy candidates use validated workbook content, so the suite selects expandable cards by capability, derives counts and row geometry at runtime, and skips only a scenario whose valid content shape cannot exhibit that contract. An empty recommendation collection must still render its configured empty state.
+
 ## Deployment automation coverage
 
 | Test | What it verifies |
@@ -140,7 +147,7 @@ Pull requests targeting `main` or `develop`:
 4. Run typecheck.
 5. Run the focused footer and navigation suites.
 6. Run the full Vitest suite.
-7. Install Chromium and run the navigation and footer browser regressions.
+7. Install Chromium and run the navigation, footer, and recommendation browser regressions.
 8. Build with `build:generated`.
 9. Stop without creating a deployment artifact.
 
@@ -163,7 +170,7 @@ Scheduled runs and non-forced manual runs perform the strict content work before
 
 ### Focused regression duplication
 
-CI deliberately runs `test:footer` and `test:navigation` before `test`. The complete suite includes the same Vitest files, so they execute twice. The focused steps preserve named regression signals while the full suite catches cross-component failures. After the full suite passes, CI conditionally installs Chromium and runs both Playwright suites; candidates that skip verification do not download the browser.
+CI deliberately runs `test:footer` and `test:navigation` before `test`. The complete suite includes the same Vitest files, so they execute twice. The focused steps preserve named regression signals while the full suite catches cross-component failures. After the full suite passes, CI conditionally installs Chromium and runs the navigation, footer, and recommendation Playwright suites; candidates that skip verification do not download the browser.
 
 ## Post-deployment smoke tests
 
@@ -198,13 +205,14 @@ Run a related group:
 npx --no-install vitest run functions/api/contact.test.ts functions/api/contact/verify.test.ts
 ```
 
-Run the focused navigation layers:
+Run the focused interaction layers:
 
 ```bash
 npm run test:navigation
 npx playwright install chromium
 npm run test:e2e:navigation
 npm run test:e2e:footer
+npm run test:e2e:recommendations
 ```
 
 Use `--reporter=dot` for compact output or the default reporter for individual test names.
@@ -225,7 +233,7 @@ Avoid snapshot tests that hide semantic changes. Prefer explicit assertions for 
 ## Current limitations
 
 - No coverage percentage is generated or enforced.
-- Real-browser coverage is intentionally limited to shared navigation and footer behavior in Chromium.
+- Real-browser coverage is intentionally limited to shared navigation, recommendation, and footer behavior in Chromium.
 - No automated Lighthouse or performance threshold runs in CI.
 - No automated browser accessibility scanner is configured.
 - No Workers emulator integration test runs in CI.

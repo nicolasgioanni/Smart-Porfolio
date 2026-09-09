@@ -36,7 +36,7 @@ Do not substitute typing, letter-by-letter, bounce, large-scale, spinning-carous
 
 Recommendation quotes display four lines while collapsed by default. Within a multi-card Home row, a card with a taller header may use three lines so collapsed cards remain level. Single-card Home rows and detail cards remain at four lines.
 
-Overflowing quotes use a true alpha mask over the lower half of the final visible line. `Show more` and `Show less` animate the clipped viewport over `520ms` and lightly fade the quote over `320ms`, both with `cubic-bezier(0.22, 1, 0.36, 1)`.
+Overflowing quotes use a true alpha mask over the lower half of the final visible line. `Show more` and `Show less` animate the clipped viewport over `520ms` and lightly fade the quote over `320ms`, both with `cubic-bezier(0.22, 1, 0.36, 1)`. Desktop detail cards remain outside grid flow throughout both directions of that transition, and cached compact heights are refreshed only after the viewport has fully settled closed.
 
 The button retains `aria-expanded` and `aria-controls`; quote text is not duplicated into a live region. Above `980px`, a selected Home card may protrude beyond its fixed panel while an invisible reserve keeps later sections in normal document flow. On the detail route, the expanded card becomes an opaque overlay while every collapsed grid slot retains its measured height, so later recommendation rows do not move. Recalculate overlap during expansion and dim only cards physically covered by the overlay to approximately `0.58` opacity; add trailing reserve only when a bottom-row overlay would otherwise cover the footer.
 

@@ -217,6 +217,10 @@ jobs:
         if: steps.decision.outputs.should_verify == 'true'
         run: npm run test:e2e:footer
 
+      - name: Browser recommendation regression tests
+        if: steps.decision.outputs.should_verify == 'true'
+        run: npm run test:e2e:recommendations
+
       - name: Build the pull-request snapshot without remote credentials
         if: steps.decision.outputs.should_verify == 'true' && steps.decision.outputs.deploy_target == 'none'
         env:

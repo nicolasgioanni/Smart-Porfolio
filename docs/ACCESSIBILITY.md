@@ -80,7 +80,7 @@ Each expandable evidence chapter is a native button with `aria-expanded` and `ar
 
 Each available provenance link opens the recommendation source, and the separate `View profile` and `View recommendation` actions expose recommender-specific accessible names. The shield-check and any LinkedIn icons that accompany visible labels are decorative. External links opened in a new tab retain `noopener noreferrer`; provenance hover and focus emphasize only the visible verification text without making the icon the sole cue.
 
-Long recommendations expose a native button with `aria-expanded`, `aria-controls`, and a recommender-specific label. The quote stays in one blockquote and is not duplicated into a live region. The detail route permits only one expanded card at a time; Escape collapses it and returns focus to its toggle, and moving focus into another card collapses the open overlay. Above `980px`, only cards physically covered by the opaque expanded card are visually dimmed, without hiding them from the accessibility tree. At `980px` and below, cards expand in natural flow with no dimming. Reduced-motion mode changes expansion and overlap state without height or opacity transitions.
+Long recommendations expose a native button with `aria-expanded`, `aria-controls`, and a recommender-specific label. The quote stays in one blockquote and is not duplicated into a live region. The detail route permits only one expanded card at a time; Escape collapses it and returns focus to its toggle, while pointer interaction outside the active card dismisses it after the clicked control activates. Above `980px`, focus entering another card also dismisses the open overlay, and only cards physically covered by it are visually dimmed without being hidden from the accessibility tree. At `980px` and below, cards expand in natural flow with no dimming; pointer focus does not collapse the current card before a newly targeted control receives its click. Reduced-motion mode changes expansion and overlap state without height or opacity transitions.
 
 ### Footer disclosure
 
@@ -135,6 +135,6 @@ Verify meaningful UI changes at 200 percent zoom, at the 980 and 720 pixel layou
 6. Repeat the interaction with reduced motion enabled.
 7. Inspect desktop, mobile, and 200 percent zoom layouts.
 8. Check image alt text and decorative-image handling.
-9. Run focused component tests, both `npm run test:e2e:navigation` and `npm run test:e2e:footer`, and `npm run verify`.
+9. Run focused component tests, the relevant `test:e2e:*` browser suites, and `npm run verify`.
 
 Related guidance is in the [Design system](DESIGN_SYSTEM.md), [Animation guidelines](ANIMATION_GUIDELINES.md), [Quality checklist](QUALITY_CHECKLIST.md), and [Testing](TESTING.md).
