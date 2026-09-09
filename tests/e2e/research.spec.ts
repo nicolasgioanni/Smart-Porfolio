@@ -7,9 +7,13 @@ import { captureBrowserConsole, expectNoBrowserConsoleIssues } from "./browserCo
 import {
   expectDetailPanelScrollportFocusVisible,
   expectDetailPanelScrollportWithoutOverflow,
+  expectDetailPanelClosingMotion,
+  expectDetailPanelRapidReopen,
   expectStableDetailOverlay,
+  getDetailPanelMotionSample,
   getDetailOverlaySample,
   sampleDetailOverlay,
+  sampleDetailPanelMotion,
   sampleDetailPanelScrollport,
   settleDetailPanelMotion,
   settleDetailOverlayMotion
@@ -989,28 +993,48 @@ test.describe("Research showcase", () => {
       await page.mouse.move(0, 0);
       await settleDetailOverlayMotion(root);
     }
+    const openedPanelMotion = await getDetailPanelMotionSample(panel);
+    const closingPanelMotionSamples = sampleDetailPanelMotion(panel);
     const closingSamples = sampleDetailOverlay(root, selectors);
     const closingScrollportSamples = sampleDetailPanelScrollport(panel);
     await activeTrigger.press("Escape");
     await expect(activeTrigger).toHaveAttribute("aria-expanded", "false");
     await expect(activeTrigger).toBeFocused();
+    expectDetailPanelClosingMotion(await closingPanelMotionSamples, openedPanelMotion);
     expectStableDetailOverlay(await closingSamples, collapsedLayout);
     expectDetailPanelScrollportWithoutOverflow(await closingScrollportSamples);
 
-    await activeTrigger.press("Enter");
+    await activeTrigger.click();
+    await expect(activeTrigger).toHaveAttribute("aria-expanded", "true");
+    await settleDetailPanelMotion(panel);
+    const openedPointerClosePanelMotion = await getDetailPanelMotionSample(panel);
+    const pointerClosePanelMotionSamples = sampleDetailPanelMotion(panel);
+    await activeTrigger.click();
+    await expect(activeTrigger).toHaveAttribute("aria-expanded", "false");
+    expectDetailPanelClosingMotion(await pointerClosePanelMotionSamples, openedPointerClosePanelMotion);
+
+    await activeTrigger.click();
+    await expect(activeTrigger).toHaveAttribute("aria-expanded", "true");
     const rapidScrollportSamples = sampleDetailPanelScrollport(panel);
+    const rapidPanelMotionSamples = sampleDetailPanelMotion(panel);
     await activeTrigger.press("Escape");
     await activeTrigger.press("Enter");
     await expect(activeTrigger).toHaveAttribute("aria-expanded", "true");
     await settleDetailPanelMotion(panel);
     await expect(activeTrigger.locator("..")).toHaveAttribute("data-visual-state", "open");
+    expectDetailPanelRapidReopen(await rapidPanelMotionSamples);
     expectDetailPanelScrollportWithoutOverflow(await rapidScrollportSamples);
+
+    await page.mouse.move(0, 0);
+    await settleDetailOverlayMotion(root);
 
     const globalSwitchIndex = expandableIndexes.find((index) => index !== activeIndex);
     if (globalSwitchIndex !== undefined) {
       const switchTrigger = projects.nth(globalSwitchIndex).locator("button.detail-section__trigger").first();
       const switchPanel = page.locator(`#${await switchTrigger.getAttribute("aria-controls")}`);
 
+      const openedSwitchPanelMotion = await getDetailPanelMotionSample(panel);
+      const switchingPanelMotionSamples = sampleDetailPanelMotion(panel);
       await switchTrigger.focus();
       const switchingSamples = sampleDetailOverlay(root, selectors);
       const switchingScrollportSamples = Promise.all([
@@ -1020,6 +1044,7 @@ test.describe("Research showcase", () => {
       await page.keyboard.press("Enter");
       await expect(activeTrigger).toHaveAttribute("aria-expanded", "false");
       await expect(switchTrigger).toHaveAttribute("aria-expanded", "true");
+      expectDetailPanelClosingMotion(await switchingPanelMotionSamples, openedSwitchPanelMotion);
       expectStableDetailOverlay(await switchingSamples, collapsedLayout);
       for (const samples of await switchingScrollportSamples) {
         expectDetailPanelScrollportWithoutOverflow(samples);
@@ -1028,6 +1053,8 @@ test.describe("Research showcase", () => {
       const switchTriggerId = await switchTrigger.getAttribute("id");
       expect(switchTriggerId).toBeTruthy();
       if (!switchTriggerId) throw new Error("The switched Research disclosure needs an id.");
+      const openedPointerSwitchPanelMotion = await getDetailPanelMotionSample(switchPanel);
+      const pointerSwitchPanelMotionSamples = sampleDetailPanelMotion(switchPanel);
       await activeTrigger.evaluate((button, openTriggerId) => {
         document.documentElement.removeAttribute("data-detail-expanded-at-outside-activation");
         button.addEventListener(
@@ -1043,6 +1070,7 @@ test.describe("Research showcase", () => {
       await expect(page.locator("html")).toHaveAttribute("data-detail-expanded-at-outside-activation", "true");
       await expect(switchTrigger).toHaveAttribute("aria-expanded", "false");
       await expect(activeTrigger).toHaveAttribute("aria-expanded", "true");
+      expectDetailPanelClosingMotion(await pointerSwitchPanelMotionSamples, openedPointerSwitchPanelMotion);
     }
 
     await activeProject.locator(".research-project__header").click();
