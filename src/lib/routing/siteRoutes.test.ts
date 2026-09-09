@@ -14,15 +14,16 @@ const approvedIndexableRoutes = [
   "/projects",
   "/recommendations",
   "/resume",
+  "/contact-terms",
   "/terms",
   "/privacy",
   "/security"
 ];
 
 describe("site route indexing classification", () => {
-  it("declares exactly the nine approved indexable routes", () => {
+  it("declares exactly the ten approved indexable routes", () => {
     expect(indexableSiteRoutePaths).toEqual(approvedIndexableRoutes);
-    expect(indexableSiteRoutePaths).toHaveLength(9);
+    expect(indexableSiteRoutePaths).toHaveLength(10);
     approvedIndexableRoutes.forEach((pathname) => expect(isIndexableSiteRoutePath(pathname)).toBe(true));
   });
 

@@ -10,6 +10,7 @@ const termsHeader = routeHeaderContent[siteRoutes.terms];
 const pageTitle = termsHeader.title;
 const pageDescription =
   "Notice for this informational portfolio, including accuracy, verification, intellectual property, and availability information.";
+const termsEffectiveDate = resolveLegalEffectiveDate("2026-09-13");
 
 export function generateMetadata(): Metadata {
   return createPageMetadata(getPortfolioContent(), {
@@ -22,13 +23,12 @@ export function generateMetadata(): Metadata {
 export default function TermsPage() {
   const content = getPortfolioContent();
   const contactEmail = resolveLegalContactEmail(content.siteSettings.legalContactEmail);
-  const effectiveDate = resolveLegalEffectiveDate(content.siteSettings.legalEffectiveDate);
 
   return (
     <LegalDocument
       description={termsHeader.description}
       eyebrow={termsHeader.eyebrow}
-      effectiveDate={effectiveDate}
+      effectiveDate={termsEffectiveDate}
       motionEnabled={content.siteSettings.enableScrollMotion}
       title={pageTitle}
     >
@@ -37,10 +37,10 @@ export default function TermsPage() {
         <p>
           This website is an informational portfolio maintained by Nicolas Gioanni to present selected professional,
           academic, research, and project work. It is not an official transcript, employment verification, certification,
-          offer, contract, or source of legal, financial, security, or other professional advice.
+          offer of employment or services, or source of legal, financial, security, or other professional advice.
         </p>
         <p>
-          Nothing on this site creates an employment, advisory, fiduciary, contractual, or other professional relationship.
+          Nothing on this site creates an employment, advisory, fiduciary, or other professional relationship.
           Any discussion of methods, tools, results, or security practices is provided for portfolio context only.
         </p>
       </section>
@@ -85,9 +85,9 @@ export default function TermsPage() {
         <h2>Contact requests</h2>
         <p>
           A contact request is an invitation to communicate and does not by itself create an employment, advisory, fiduciary,
-          contractual, confidential, or other professional relationship. The contact form asks visitors to acknowledge this
-          Notice and confirm that they have reviewed the Privacy Notice; it does not require visitors to accept a service
-          provider&apos;s separate terms.
+          confidential, or other professional relationship. The contact form asks visitors to acknowledge this Notice and the{" "}
+          Privacy Notice, and to agree to the <SmartLink href={siteRoutes.contactTerms}>Contact &amp; Communication Terms</SmartLink>{" "}
+          for the requested communications. It does not require visitors to accept a service provider&apos;s separate terms.
         </p>
       </section>
 

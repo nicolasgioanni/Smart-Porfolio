@@ -17,6 +17,7 @@ import {
 import { ContactNotifications } from "./ContactNotifications";
 import { useContactNotifications } from "./useContactNotifications";
 import { TurnstileWidget, type TurnstileStatus } from "@/components/contact/TurnstileWidget";
+import { siteRoutes } from "@/lib/routing/siteRoutes";
 
 type ContactStep = 1 | 2 | 3;
 type ContactView = "verification" | "form";
@@ -966,6 +967,7 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
                   onClick={(event) => toggleConsentFromCard("contact", event.target)}
                 >
                   <input
+                    aria-labelledby="contact-consent-label"
                     checked={consents.contact}
                     disabled={reviewLocked}
                     id="contact-consent"
@@ -974,10 +976,14 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
                     required
                     type="checkbox"
                   />
-                  <label htmlFor="contact-consent">
-                    I agree that Nicolas Gioanni may respond by email and, if I provide a phone number, by a manual call
-                    or text. No automated or marketing messages.
-                  </label>
+                  <span id="contact-consent-label">
+                    I agree to the{" "}
+                    <SmartLink href={siteRoutes.contactTerms} onClick={(event) => event.stopPropagation()} target="_blank">
+                      Contact &amp; Communication Terms<span className="visually-hidden"> (opens in a new tab)</span>
+                    </SmartLink>{" "}
+                    for email confirmations and replies, plus manual calls/texts if I provide a number. Carrier charges may
+                    apply. No marketing.
+                  </span>
                 </div>
                 <div
                   className="contact-consent-card"

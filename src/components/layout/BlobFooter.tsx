@@ -62,6 +62,7 @@ export function BlobFooter({ content }: { content: GeneratedPortfolioContent }) 
       compactCopyright={`\u00a9 ${currentYear} ${owner}. All rights reserved except where otherwise stated.`}
       identityDescription={content.profile.headline}
       noticeLinks={[
+        { href: siteRoutes.contactTerms, label: "Contact & Communication Terms" },
         { href: "/terms", label: "Site Terms & Accuracy" },
         { href: "/privacy", label: "Privacy Notice" },
         { href: "/security", label: "Security & Responsible Disclosure" }

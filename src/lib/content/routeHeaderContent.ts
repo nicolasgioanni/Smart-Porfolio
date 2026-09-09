@@ -61,6 +61,13 @@ export const routeHeaderContent = {
     placement: "page",
     title: "Contact"
   },
+  [siteRoutes.contactTerms]: {
+    accessory: "none",
+    description: "Conditions for contact requests, replies, communication costs, and responsible use.",
+    eyebrow: "Site notice",
+    placement: "page",
+    title: "Contact & Communication Terms"
+  },
   [siteRoutes.terms]: {
     accessory: "none",
     description: "How portfolio information may be used, verified, and attributed.",

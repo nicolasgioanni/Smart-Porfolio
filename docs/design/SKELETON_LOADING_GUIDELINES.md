@@ -38,7 +38,7 @@ Reusable primitives and compositions include:
 | Recommendations | Page introduction and recommendation cards. |
 | Resume | Page introduction and private-resume request panel. |
 | Contact | Page introduction and form-shell footprint while the static contact route resolves. |
-| Terms, Privacy, Security | Canonical legal header and route-specific section footprints. |
+| Contact Terms, Terms, Privacy, Security | Canonical legal header and route-specific section footprints. |
 
 Each route `loading.tsx` calls `shouldRenderSkeletons()` before returning the page-specific composition. The setting changes loading polish, not route content.
 

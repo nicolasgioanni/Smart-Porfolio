@@ -25,7 +25,7 @@ Research visual snapshots receive controlled canonical local-template detail ite
 
 ## Review Linux baselines
 
-Baselines are Linux-only and currently contain 23 images under `tests/e2e/__screenshots__/linux/`. Capture them only with the manual Ubuntu 24.04 workflow for the exact selected revision. Review every uploaded image before committing the approved artifact bytes. Do not create Windows or macOS snapshots, weaken the zero-difference threshold, or accept an unreviewed update.
+Baselines are Linux-only and currently contain 25 images under `tests/e2e/__screenshots__/linux/`. Capture them only with the manual Ubuntu 24.04 workflow for the exact selected revision. Review every uploaded image before committing the approved artifact bytes. Do not create Windows or macOS snapshots, weaken the zero-difference threshold, or accept an unreviewed update.
 
 If route coverage or the viewport matrix changes intentionally, update the visual specification, baseline-workflow count guard, workflow tests, documentation, and reviewed images together.
 
