@@ -73,6 +73,14 @@
   text-align: end;
 }
 
+.contact-step__counter--status[data-tone="error"] {
+  color: var(--color-danger);
+}
+
+.contact-step__counter--status[data-tone="success"] {
+  color: var(--color-success);
+}
+
 .contact-step__heading h2 {
   color: var(--color-ink-strong);
   font-size: var(--font-size-page-title);
