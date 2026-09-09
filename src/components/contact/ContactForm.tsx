@@ -113,11 +113,13 @@ function FieldLabel({ error, errorId, htmlFor, label, optional = false }: FieldL
 function StepHeading({
   description,
   status,
+  statusTone,
   step,
   title
 }: {
   description: string;
   status?: string;
+  statusTone?: "error" | "success";
   step: ContactStep;
   title: string;
 }) {
@@ -126,7 +128,12 @@ function StepHeading({
       <div className="contact-step__counter-row">
         <p className="contact-step__counter">Step {step} of 3</p>
         {status ? (
-          <p aria-atomic="true" aria-live="polite" className="contact-step__counter contact-step__counter--status">
+          <p
+            aria-atomic="true"
+            aria-live="polite"
+            className="contact-step__counter contact-step__counter--status"
+            data-tone={statusTone}
+          >
             {status}
           </p>
         ) : null}
@@ -937,6 +944,7 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
               <StepHeading
                 description="Review your details and confirm both acknowledgments before sending."
                 status={`${acceptedConsentCount} of 2 acknowledgments checked`}
+                statusTone={acceptedConsentCount === 2 ? "success" : "error"}
                 step={3}
                 title="Review your request"
               />
