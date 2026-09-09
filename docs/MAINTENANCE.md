@@ -141,13 +141,13 @@ When adding one:
 
 ## Add or change a theme token
 
-Supported themes are Navy, Light, and Dark.
+Supported visitor-facing themes are Light, Gioanni, and Dark. Their stable identifiers are `light`, `navy`, and `dark`, respectively.
 
 1. Define the semantic token in the root token group if it is structural.
 2. Define a value in every theme when it represents color, surface, shadow, or gradient.
 3. Consume the semantic token from component CSS.
-4. Check focus, selection, disabled state, text contrast, and glass-disabled behavior.
-5. Test the affected component in each theme and at responsive breakpoints.
+4. Check the dual focus rings, selection, disabled state, text contrast, and glass-disabled behavior.
+5. Test the affected component in each palette and at responsive breakpoints.
 6. Update [Design system](DESIGN_SYSTEM.md) if the token becomes part of the reusable contract.
 
 Do not add a component rule that switches directly on `[data-theme]` unless the component genuinely needs behavior beyond token substitution.

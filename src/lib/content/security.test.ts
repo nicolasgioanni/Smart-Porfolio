@@ -104,8 +104,9 @@ describe("static portfolio security contracts", () => {
     expect(navigationCss).toMatch(/\.blob-header--compact\s+\.blob-header__island\s*{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+auto\s+minmax\(0,\s*1fr\)/s);
     expect(navigationCss).toMatch(/\.main-navigation__link\s*{[^}]*min-height:\s*var\(--header-nav-link-height\)[^}]*padding:\s*0\s+var\(--header-nav-link-padding-inline\)/s);
     expect(navigationCss).toMatch(/\.blob-header--compact\s+\.main-navigation__link\s*{[^}]*min-height:\s*var\(--header-nav-link-compact-height\)[^}]*padding:\s*0\s+var\(--header-nav-link-compact-padding-inline\)/s);
-    expect(tokensCss).toMatch(/--color-header-surface:\s*rgba\(5,\s*16,\s*31,\s*0\.9\)/);
-    expect(glassCss).toMatch(/\.glass-blob--nav\s*{[^}]*background:\s*var\(--color-header-surface\)/s);
+    expect(tokensCss.match(/--color-header-surface:/g)).toHaveLength(3);
+    expect(tokensCss.match(/--gradient-header-surface:/g)).toHaveLength(3);
+    expect(glassCss).toMatch(/\.glass-blob--nav\s*{[^}]*--glass-fallback-surface:\s*var\(--color-header-surface\)[^}]*background-color:\s*var\(--color-header-surface\)[^}]*background-image:\s*var\(--gradient-header-surface\)/s);
     expect(glassCss).toMatch(/\.glass-blob--nav\s*{[^}]*overflow:\s*visible/s);
     expect(glassCss).toMatch(/\.glass-blob--nav::before\s*{[^}]*border-radius:\s*inherit/s);
   });
@@ -119,12 +120,11 @@ describe("static portfolio security contracts", () => {
     expect(tokensCss).toMatch(/--hover-base-1-wave-duration:\s*1600ms/);
     expect(tokensCss).toMatch(/--hover-base-1-route-duration:\s*420ms/);
     expect(tokensCss).toMatch(/--hover-base-1-route-easing:\s*cubic-bezier\(0\.65,\s*0,\s*0\.35,\s*1\)/);
-    expect(tokensCss).toMatch(/--hover-base-1-hover-surface:\s*linear-gradient\(135deg,\s*#1e4b99,\s*#112d65\)/);
-    expect(tokensCss).toMatch(/--hover-base-1-selected-surface:\s*linear-gradient\(135deg,\s*rgba\(30,\s*75,\s*153,\s*0\.28\),\s*rgba\(17,\s*45,\s*101,\s*0\.22\)\)/);
-    expect(tokensCss).toMatch(/\[data-theme="light"\][\s\S]*--hover-base-1-hover-surface:\s*linear-gradient\(135deg,\s*#6b7078,\s*#4d5158\)/);
-    expect(tokensCss).toMatch(/\[data-theme="light"\][\s\S]*--hover-base-1-selected-surface:\s*linear-gradient\(135deg,\s*rgba\(107,\s*112,\s*120,\s*0\.16\),\s*rgba\(77,\s*81,\s*88,\s*0\.11\)\)/);
-    expect(tokensCss).toMatch(/\[data-theme="dark"\][\s\S]*--hover-base-1-hover-surface:\s*linear-gradient\(135deg,\s*#425990,\s*#273965\)/);
-    expect(tokensCss).toMatch(/\[data-theme="dark"\][\s\S]*--hover-base-1-selected-surface:\s*linear-gradient\(135deg,\s*rgba\(66,\s*89,\s*144,\s*0\.21\),\s*rgba\(39,\s*57,\s*101,\s*0\.15\)\)/);
+    expect(tokensCss.match(/--hover-base-1-hover-surface:/g)).toHaveLength(3);
+    expect(tokensCss.match(/--hover-base-1-selected-surface:/g)).toHaveLength(3);
+    expect(tokensCss).toMatch(/:root,\s*\[data-theme="navy"\][\s\S]*--hover-base-1-hover-surface:\s*linear-gradient\(135deg,\s*#f4ddb0,\s*#c99d62\)/);
+    expect(tokensCss).toMatch(/\[data-theme="light"\][\s\S]*--hover-base-1-hover-surface:\s*linear-gradient\(135deg,\s*#1b547a,\s*#103c60\)/);
+    expect(tokensCss).toMatch(/\[data-theme="dark"\][\s\S]*--hover-base-1-hover-surface:\s*linear-gradient\(135deg,\s*#3864bd,\s*#654dbe\)/);
     expect(interactionsCss).toMatch(/\.hover-base-1::before,\s*\.hover-base-1::after\s*{[^}]*pointer-events:\s*none/s);
     expect(interactionsCss).toMatch(/\.hover-base-1::before\s*{(?=[^}]*background:\s*var\(--hover-base-1-hover-surface\))(?=[^}]*opacity:\s*0)[^}]*}/s);
     expect(interactionsCss).toMatch(/aria-current="page"[\s\S]*aria-pressed="true"[\s\S]*aria-expanded="true"[\s\S]*data-selected="true"/);
@@ -507,10 +507,12 @@ describe("static portfolio security contracts", () => {
     const footerSource = readFileSync(path.join(projectRoot, "src", "components", "layout", "BlobFooter.tsx"), "utf8");
     const navigationCss = readFileSync(path.join(projectRoot, "src", "styles", "navigation.css"), "utf8");
     const themeSource = readFileSync(path.join(projectRoot, "src", "components", "theme", "ThemeSwitcher.tsx"), "utf8");
+    const themeOptionsSource = readFileSync(path.join(projectRoot, "src", "lib", "theme", "themeOptions.ts"), "utf8");
 
-    expect(themeSource).toMatch(/const themeMenuOrder:\s*ThemeName\[\]\s*=\s*\["light",\s*"navy",\s*"dark"\]/);
+    expect(themeOptionsSource).toMatch(/\{ label: "Light", name: "light" \}[\s\S]*\{ label: "Gioanni", name: "navy" \}[\s\S]*\{ label: "Dark", name: "dark" \}/);
+    expect(themeSource).toMatch(/themeOptions\.map\(\(\{ label, name \}\)/);
     expect(themeSource).toMatch(/aria-expanded=\{open\}/);
-    expect(themeSource).toMatch(/aria-pressed=\{selectedTheme === theme\}/);
+    expect(themeSource).toMatch(/aria-pressed=\{selectedTheme === name\}/);
     expect(themeSource).toMatch(/aria-label="Color theme"[\s\S]*role="group"/);
     expect(navigationCss).toMatch(
       /\.theme-switcher__popover\s*{(?=[^}]*padding:\s*20px\s+12px\s+12px)(?=[^}]*opacity:\s*0)(?=[^}]*pointer-events:\s*none)(?=[^}]*transform:\s*translate3d\(0,\s*-4px,\s*0\)\s*scale\(0\.985\))[^}]*}/s
