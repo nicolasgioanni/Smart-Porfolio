@@ -10,6 +10,12 @@ Animate `transform` and `opacity` first. Experience disclosure, recommendation d
 
 Always respect `prefers-reduced-motion`. Disable or simplify shimmer, entrance motion, scroll effects, disclosure transitions, and decorative travel for motion-sensitive users. State, content, focus, and controls must remain available.
 
+## Page entrance
+
+Every resolved route enters through the shared `.site-main > .page-container` boundary. Fade the complete page body from zero opacity while it settles upward over `8px` for `280ms` with `cubic-bezier(0.16, 1, 0.3, 1)`. The header and footer are siblings of `main` and must not participate. Route skeletons use their separate `.skeleton-page` root and remain visible without this entrance; the animation starts only when resolved content replaces the loading fallback.
+
+Keep this effect CSS-only and limited to opacity and transform. Do not add route state, a client wrapper, layout animation, scale, blur, or a persistent `will-change`. `prefers-reduced-motion: reduce` removes the animation and leaves the body fully visible. The page entrance is independent of `enable_scroll_motion`, which controls optional scroll-triggered reveals rather than route loading.
+
 ## Form validation feedback
 
 After each invalid Next or Review attempt, shake each invalid control and its validation message for `180ms` with `ease-in-out`, two iterations, and no more than `2px` of horizontal travel in either direction. Replay the shake for every invalid attempt even when the validation text has not changed. Under `prefers-reduced-motion: reduce`, disable the shake while preserving the error message, red field treatment, and focus behavior.
