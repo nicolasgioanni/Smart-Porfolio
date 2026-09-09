@@ -61,7 +61,10 @@ describe("recommendation styles", () => {
       /\.home-section--recommendations \.recommendation-card--summary\s*\{[^}]*background:\s*var\(--color-recommendation-card-solid\);[^}]*backdrop-filter:\s*none/
     );
     expect(portfolioStyles).toMatch(
-      /\.recommendations-list\[data-layout-mode="overlay"\]\[data-overlay-ready="true"\][\s\S]*\.recommendation-card--detail\s*\{[^}]*position:\s*absolute;[^}]*background:\s*var\(--color-recommendation-card-solid\);[^}]*box-shadow:[^}]*backdrop-filter:\s*none/
+      /\.recommendations-list\[data-layout-mode="overlay"\]\[data-overlay-ready="true"\][\s\S]*\.recommendations-list__item\s*\.recommendation-card--detail\s*\{[^}]*position:\s*absolute/
+    );
+    expect(portfolioStyles).toMatch(
+      /\.recommendations-list\[data-layout-mode="overlay"\]\[data-overlay-ready="true"\][\s\S]*\.recommendations-list__item\[data-expanded="true"\][\s\S]*\.recommendation-card--detail\s*\{[^}]*background:\s*var\(--color-recommendation-card-solid\);[^}]*box-shadow:[^}]*backdrop-filter:\s*none/
     );
     expect(portfolioStyles).toMatch(
       /\.home-section__surface \.portfolio-card\s*\{[^}]*background:\s*var\(--color-surface-soft\)/
