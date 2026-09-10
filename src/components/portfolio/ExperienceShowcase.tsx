@@ -1,31 +1,21 @@
 "use client";
 
-import type { CSSProperties, KeyboardEvent } from "react";
+import type { CSSProperties } from "react";
 import { useState } from "react";
 import type { ExperienceItem } from "@/content/types";
 import { GlassSurface } from "@/components/glass/GlassSurface";
 import { PageContainer } from "@/components/layout/PageContainer";
+import { DetailDisclosureList } from "@/components/portfolio/DetailDisclosureList";
+import { DetailLevelControl } from "@/components/portfolio/DetailLevelControl";
 import { EmptyState } from "@/components/portfolio/EmptyState";
-import {
-  getExperienceModeContent,
-  type ExperienceDetailMode,
-  type ExperienceDetailSection
-} from "@/lib/content/experienceNarratives";
+import type { DetailMode } from "@/lib/content/detailNarratives";
+import { getExperienceModeContent } from "@/lib/content/experienceNarratives";
 import { formatProfileOverviewDateRange } from "@/lib/content/profileOverview";
 
 type ExperienceShowcaseProps = {
   items: ExperienceItem[];
   motionEnabled?: boolean;
   summary: string;
-};
-
-const modeCopy: Record<ExperienceDetailMode, { label: string }> = {
-  overview: {
-    label: "For everyone"
-  },
-  technical: {
-    label: "Technical"
-  }
 };
 
 const initialsStopWords = new Set(["and", "at", "for", "of", "on", "the"]);
@@ -61,111 +51,8 @@ function isCurrentRole(item: ExperienceItem): boolean {
   return !normalizedEndDate || normalizedEndDate === "present" || normalizedEndDate === "current";
 }
 
-function safeId(value: string): string {
-  return value.replace(/[^A-Za-z0-9_-]/g, "-");
-}
-
-function DisclosureIcon() {
-  return (
-    <svg aria-hidden="true" fill="none" viewBox="0 0 20 20">
-      <path d="M5 7.5 10 12.5 15 7.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" />
-    </svg>
-  );
-}
-
-type ExperienceChapterProps = {
-  itemId: string;
-  mode: ExperienceDetailMode;
-  onToggle: () => void;
-  open: boolean;
-  order: number;
-  section: ExperienceDetailSection;
-};
-
-function ExperienceChapter({ itemId, mode, onToggle, open, order, section }: ExperienceChapterProps) {
-  const chapterId = `experience-${safeId(itemId)}-${mode}-${safeId(section.id)}`;
-  const panelId = `${chapterId}-panel`;
-  const titleId = `${chapterId}-title`;
-  const expandable = section.details.length > 0 || Boolean(section.tools?.length);
-
-  const chapterSummary = (
-    <>
-      <span aria-hidden="true" className="experience-chapter__number">
-        {String(order + 1).padStart(2, "0")}
-      </span>
-      <span className="experience-chapter__copy">
-        <span aria-level={3} className="experience-chapter__title" id={titleId} role="heading">
-          {section.title}
-        </span>
-        <span className="experience-chapter__lead">{section.lead}</span>
-      </span>
-      {section.signal ? <span className="experience-chapter__signal">{section.signal}</span> : null}
-    </>
-  );
-
-  if (!expandable) {
-    return (
-      <div className="experience-chapter experience-chapter--static">
-        <div className="experience-chapter__trigger experience-chapter__trigger--static">{chapterSummary}</div>
-      </div>
-    );
-  }
-
-  function handleKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
-    if (event.key === "Escape" && open) {
-      event.preventDefault();
-      onToggle();
-    }
-  }
-
-  return (
-    <div className="experience-chapter" data-open={open ? "true" : "false"}>
-      <button
-        aria-controls={panelId}
-        aria-expanded={open}
-        className="experience-chapter__trigger"
-        id={chapterId}
-        onClick={onToggle}
-        onKeyDown={handleKeyDown}
-        type="button"
-      >
-        {chapterSummary}
-        <span aria-hidden="true" className="experience-chapter__icon">
-          <DisclosureIcon />
-        </span>
-      </button>
-      <div
-        aria-hidden={!open}
-        aria-labelledby={titleId}
-        className="experience-chapter__panel"
-        id={panelId}
-        role="region"
-      >
-        <div className="experience-chapter__panel-clip">
-          <div className="experience-chapter__panel-content">
-            {section.details.length > 0 ? (
-              <div className="experience-chapter__details">
-                {section.details.map((detail) => (
-                  <p key={detail}>{detail}</p>
-                ))}
-              </div>
-            ) : null}
-            {section.tools && section.tools.length > 0 ? (
-              <ul aria-label={`${section.title} tools`} className="experience-chapter__tools">
-                {section.tools.map((tool) => (
-                  <li key={tool}>{tool}</li>
-                ))}
-              </ul>
-            ) : null}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export function ExperienceShowcase({ items, motionEnabled = true, summary }: ExperienceShowcaseProps) {
-  const [mode, setMode] = useState<ExperienceDetailMode>("overview");
+  const [mode, setMode] = useState<DetailMode>("overview");
   const [openByRole, setOpenByRole] = useState<Record<string, string | undefined>>({});
 
   function toggleSection(itemId: string, sectionId: string) {
@@ -180,36 +67,7 @@ export function ExperienceShowcase({ items, motionEnabled = true, summary }: Exp
       className="page-container--experience"
       description={summary}
       introAccessory={
-        items.length > 0 ? (
-          <div className="experience-mode-control">
-            <p className="experience-mode-control__label" id="experience-detail-level-label">
-              <span className="visually-hidden">Experience </span>
-              Detail level:
-            </p>
-            <div
-              aria-labelledby="experience-detail-level-label"
-              className="experience-mode-switch"
-              data-mode={mode}
-              role="group"
-            >
-              <span aria-hidden="true" className="experience-mode-switch__lens" />
-              {(Object.keys(modeCopy) as ExperienceDetailMode[]).map((modeOption) => (
-                <button
-                  aria-pressed={mode === modeOption}
-                  className="experience-mode-switch__button"
-                  key={modeOption}
-                  onClick={() => setMode(modeOption)}
-                  type="button"
-                >
-                  {modeCopy[modeOption].label}
-                </button>
-              ))}
-            </div>
-            <p aria-live="polite" className="visually-hidden">
-              {mode === "overview" ? "Showing plain-language details." : "Showing technical details."}
-            </p>
-          </div>
-        ) : undefined
+        items.length > 0 ? <DetailLevelControl contextLabel="Experience" mode={mode} onChange={setMode} /> : undefined
       }
       introVariant="panel"
       motionEnabled={motionEnabled}
@@ -267,9 +125,7 @@ export function ExperienceShowcase({ items, motionEnabled = true, summary }: Exp
                         <div className="experience-card__metadata">
                           {dateLabel ? <span>{dateLabel}</span> : null}
                           {item.location ? <span>{item.location}</span> : null}
-                          {item.type ? (
-                            <span className="experience-card__badge">{formatRoleType(item.type)}</span>
-                          ) : null}
+                          {item.type ? <span className="experience-card__badge">{formatRoleType(item.type)}</span> : null}
                           {current ? (
                             <span className="experience-card__badge experience-card__badge--current">
                               <span aria-hidden="true" className="experience-card__status-dot" />
@@ -282,21 +138,14 @@ export function ExperienceShowcase({ items, motionEnabled = true, summary }: Exp
 
                     <div className="experience-card__body" key={mode}>
                       <p className="experience-card__summary">{modeContent.summary}</p>
-                      {modeContent.sections.length > 0 ? (
-                        <div className="experience-card__chapters">
-                          {modeContent.sections.map((section, sectionIndex) => (
-                            <ExperienceChapter
-                              itemId={item.id}
-                              key={section.id}
-                              mode={mode}
-                              onToggle={() => toggleSection(item.id, section.id)}
-                              open={openByRole[item.id] === section.id}
-                              order={sectionIndex}
-                              section={section}
-                            />
-                          ))}
-                        </div>
-                      ) : null}
+                      <DetailDisclosureList
+                        idPrefix="experience"
+                        itemId={item.id}
+                        mode={mode}
+                        onToggle={(sectionId) => toggleSection(item.id, sectionId)}
+                        openSectionId={openByRole[item.id]}
+                        sections={modeContent.sections}
+                      />
                     </div>
                   </GlassSurface>
                 </div>

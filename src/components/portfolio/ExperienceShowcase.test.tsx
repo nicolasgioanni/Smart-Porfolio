@@ -14,8 +14,8 @@ const cytocvExperience: ExperienceItem = {
   startDate: "2024-08",
   endDate: "2026-08",
   homeSummary: "Built and deployed full-stack computer-vision tools for scientific microscopy analysis.",
-  detailSummary: "Architected a Django REST API and JavaScript frontend.",
-  bullets: ["Reduced manual microscopy analysis by 97%"],
+  detailSummary: "Architected a Django application with JSON endpoints and a JavaScript frontend.",
+  bullets: ["Built DIC-guided Mask R-CNN analysis workflows"],
   skills: ["Python", "Django"],
   featured: true,
   showOnHome: true
@@ -47,17 +47,17 @@ describe("ExperienceShowcase", () => {
     const pageHeading = screen.getByRole("heading", { level: 1, name: "Experience" });
     const introSurface = pageHeading.closest<HTMLElement>(".page-intro__surface");
     const modeGroup = screen.getByRole("group", { name: /Experience detail level/i });
-    const modeLabel = introSurface?.querySelector(".experience-mode-control__label");
+    const modeLabel = introSurface?.querySelector(".detail-mode-control__label");
 
     expect(container.querySelectorAll(".page-intro__surface")).toHaveLength(1);
     expect(introSurface).toHaveClass("page-intro__surface--with-accessory");
     expect(introSurface).toContainElement(modeGroup);
     expect(within(introSurface!).getByText(experienceSummary)).toBeInTheDocument();
-    expect(modeLabel).toHaveTextContent(/Detail level:/);
-    expect(within(modeGroup).getByRole("button", { name: "For everyone" })).toHaveAttribute("aria-pressed", "true");
+    expect(modeLabel).toHaveTextContent("Detail");
+    expect(within(modeGroup).getByRole("button", { name: "Overview" })).toHaveAttribute("aria-pressed", "true");
     expect(within(modeGroup).getByRole("button", { name: "Technical" })).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getByText("Showing plain-language details.")).toHaveClass("visually-hidden");
-    expect(screen.getByText("Showing plain-language details.")).toHaveAttribute("aria-live", "polite");
+    expect(screen.getByText("Showing overview details.")).toHaveClass("visually-hidden");
+    expect(screen.getByText("Showing overview details.")).toHaveAttribute("aria-live", "polite");
     expect(screen.getByRole("heading", { level: 2, name: "Research Assistant (Software Engineering)" })).toBeInTheDocument();
     expect(screen.getByText("UW Bothell School of STEM")).toBeInTheDocument();
     expect(screen.getByText("Aug 2024 – Aug 2026")).toBeInTheDocument();
@@ -79,7 +79,7 @@ describe("ExperienceShowcase", () => {
 
     expect(screen.getByRole("button", { name: "Technical" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText("Showing technical details.")).toHaveClass("visually-hidden");
-    expect(screen.queryByText("Showing plain-language details.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Showing overview details.")).not.toBeInTheDocument();
     expect(screen.getByText(/Architected a Django and JavaScript application/)).toBeInTheDocument();
     const architectureButton = screen.getByRole("button", { name: /Application architecture/i });
     const architecturePanel = document.getElementById(architectureButton.getAttribute("aria-controls")!);

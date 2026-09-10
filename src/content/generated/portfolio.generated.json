@@ -1,7 +1,7 @@
 {
   "metadata": {
-    "generatedAt": "2026-09-04T04:02:51.431Z",
-    "contentHash": "8fbf9fd8cbc0b06364cedbc55a801951f43660c0806bf0644e81697ae6ca550e",
+    "generatedAt": "2026-09-09T23:18:19.045Z",
+    "contentHash": "cb5aec0c24ea44a13cfed73cf2acb7dd7c0817fd22585a03fe84cf43634d75f2",
     "sourceMode": "templates",
     "sources": {
       "profile": "template",
@@ -85,7 +85,7 @@
   "research": [
     {
       "id": "cytocv-miller-lab",
-      "title": "CytoCV: Web-based platform for reproducible yeast microscopy image analysis",
+      "title": "CytoCV: Reproducible Yeast Microscopy Analysis",
       "homeTitle": "CytoCV",
       "role": "Graduate Research Assistant",
       "organization": "UW Bothell School of STEM",
@@ -94,27 +94,27 @@
       "location": "Bothell, Washington, United States",
       "startDate": "2024-08",
       "endDate": "2026-08",
-      "homeSummary": "Built by UW Bothell School of STEM’s SEE Lab for the University of Utah Miller Lab, CytoCV is a Django platform using Mask R-CNN to segment yeast microscopy stacks and export per-cell fluorescence measurements.",
-      "profileByline": "Lead Engineer & First Author",
+      "homeSummary": "Open-source Django platform that uses DIC-guided Mask R-CNN segmentation to turn DeltaVision and TIFF yeast microscopy stacks into reviewable per-cell fluorescence measurements and structured exports.",
+      "profileByline": "Lead Engineer & First-Listed Software Author",
       "profileLabs": [
         "SEE Lab, UW Bothell School of STEM",
         "Miller Lab, University of Utah"
       ],
-      "detailSummary": "Built a Django and JavaScript platform for the University of Utah Miller Lab with REST APIs, deterministic batch ML processing, PostgreSQL data storage, and Linux VM deployment for 15+ scientists.",
-      "impact": "Reduced manual analysis by 97%, cut processing time by 73%, and reduced file storage by 56.6%.",
+      "detailSummary": "Architected microscopy ingestion, DIC-guided Mask R-CNN inference, worker-backed analysis, PostgreSQL persistence, and production Linux delivery.",
+      "impact": "Released CytoCV v2.0.0 as a citable open-source software artifact with a versioned DOI.",
       "bullets": [
-        "Architected Python Django REST APIs and a JavaScript Fetch API frontend",
-        "Built TensorFlow/Keras Mask R-CNN segmentation workflows with OpenCV scikit-image and NumPy",
-        "Extracted 30+ cell-level metrics from microscopy data",
-        "Migrated SQLite to PostgreSQL and optimized storage by converting TIFF caches to PNG",
-        "Led a 6-person Agile team and maintained CI/CD deployment on a UW-IT Linux VM"
+        "Translated biology-facing requirements into channel-aware DeltaVision and TIFF ingestion",
+        "Engineered cell and cell-pair segmentation with reviewable multichannel overlays",
+        "Built configurable puncta distance, biorientation, contour intensity, and nuclear analysis workflows",
+        "Designed background jobs, progress and cancellation flows, protected artifacts, and durable result storage",
+        "Led production deployment, regression testing, documentation, and ongoing maintenance"
       ],
       "skills": [
         "Python",
         "Django",
-        "REST APIs",
         "JavaScript",
         "TensorFlow/Keras",
+        "Mask R-CNN",
         "OpenCV",
         "scikit-image",
         "NumPy",
@@ -131,6 +131,10 @@
         {
           "label": "Source code",
           "url": "https://github.com/BrentLagesse/CytoCV"
+        },
+        {
+          "label": "Software DOI",
+          "url": "https://doi.org/10.5281/zenodo.21988218"
         }
       ],
       "pendingLinks": [
@@ -143,26 +147,30 @@
     },
     {
       "id": "adversarial-machine-learning",
-      "title": "Adversarial Machine Learning: Analysis of Causative Attacks against SVMs Learning from Data Streams",
-      "role": "Undergraduate Researcher (Adversarial Machine Learning)",
+      "title": "Adversarial Machine Learning",
+      "homeTitle": "Adversarial Machine Learning",
+      "role": "Undergraduate Researcher",
       "organization": "UW Bothell School of STEM",
       "organizationLogo": "/images/organizations/uwb_stem_logo.png",
       "organizationLogoAlt": "UW Bothell School of STEM logo",
       "location": "Bothell, Washington, United States",
       "startDate": "2024-09",
       "endDate": "2024-12",
-      "homeSummary": "Experimental study of targeted training-data poisoning against SVMs learning from streams, testing whether attacks can evade loss-based anomaly filtering and whether a feature-space stability metric can detect decision-boundary manipulation.",
+      "homeSummary": "Independent study that prototyped four adversarial attack families and four defensive strategies with ART and TensorFlow/Keras across standard image-classification benchmarks.",
       "profileLabs": [],
-      "detailSummary": "Used Python, TensorFlow/Keras, NumPy, and Matplotlib to automate attack and defense testing while tracking success rates, latency, and accuracy.",
-      "impact": "Optimized batched Keras defense execution to under 5 seconds while preserving 94% clean-data accuracy.",
+      "detailSummary": "Integrated ART primitives with TensorFlow/Keras models to test evasion, extraction, inversion, poisoning, detection, preprocessing, postprocessing, and distillation workflows.",
+      "impact": "Built eight focused attack-and-defense prototypes across MNIST, Fashion-MNIST, and CIFAR-10.",
       "bullets": [
-        "Implemented attack and defense workflows for image classification models",
-        "Automated experiment reporting for success rates latency and accuracy",
-        "Improved defense execution with batched Keras evaluation"
+        "Generated DeepFool adversarial examples and built Copycat CNN extraction experiments",
+        "Built MIFace model-inversion and corner-trigger backdoor-poisoning experiments",
+        "Trained an adversarial-input detector on FGM samples and evaluated JPEG preprocessing",
+        "Compared Gaussian-noise postprocessing and defensive distillation",
+        "Measured attack success and clean, attacked, and defended model accuracy"
       ],
       "skills": [
         "Python",
         "TensorFlow/Keras",
+        "Adversarial Robustness Toolbox",
         "NumPy",
         "Matplotlib",
         "Adversarial ML"
@@ -173,8 +181,12 @@
           "url": "https://github.com/nicolasgioanni/Independent-Study"
         },
         {
-          "label": "Manuscript",
+          "label": "Reference manuscript",
           "url": "https://faculty.washington.edu/lagesse/publications/CausativeSVM.pdf"
+        },
+        {
+          "label": "Reference DOI",
+          "url": "https://doi.org/10.1145/3041008.3041012"
         }
       ],
       "pendingLinks": [],
@@ -185,29 +197,34 @@
     },
     {
       "id": "yeast-dna-target-selection",
-      "title": "Guide Donor Scheduler: Yeast DNA target selection automation",
-      "role": "Research Assistant (AI/ML)",
+      "title": "Guide Donor Scheduler: Yeast CRISPR Sequence Design",
+      "homeTitle": "Guide Donor Scheduler",
+      "role": "Research Assistant (Software Engineering)",
       "organization": "UW Bothell School of STEM",
       "organizationLogo": "/images/organizations/uwb_stem_logo.png",
       "organizationLogoAlt": "UW Bothell School of STEM logo",
       "location": "Bothell, Washington, United States",
       "startDate": "2024-03",
       "endDate": "2024-08",
-      "homeSummary": "Python sequence-design pipeline for yeast CRISPR/Cas9 experiments that selects 20-base guides near NGG PAMs, builds 132-base donor sequences around requested mutations, adds silent edits to prevent re-cutting, and exports XLS results.",
+      "homeSummary": "Python pipeline that converts yeast FASTA sequences and requested amino-acid substitutions into CRISPR/Cas9 guide and donor constructs with strand-aware PAM handling and researcher-ready XLS output.",
       "profileLabs": [],
-      "detailSummary": "Used Python, pandas, Biopython, and regex to analyze 18,000+ FASTA files and export validated sequences to Excel.",
-      "impact": "Reduced manual research workflows by 99%.",
+      "detailSummary": "Built a configurable Python CLI with FASTA ingestion, strand-aware PAM discovery, codon-aware mutation rules, ranked candidate selection, and XLS generation.",
+      "impact": "Automated guide and donor design from sequence input to traceable, order-ready results.",
       "bullets": [
-        "Built automated target selection workflows for yeast DNA research",
-        "Analyzed 18,000+ FASTA files with Python pandas Biopython and regex",
-        "Exported validated sequence results for researchers"
+        "Located forward NGG and reverse-strand CCN PAM sites across FASTA records",
+        "Encoded amino-acid substitutions with codon-aware silent PAM and seed edits",
+        "Supported guide filtering, ranking, duplicate removal, validation, kill guides, and reverse complements",
+        "Generated color-coded XLS workbooks with guides, PAMs, mutation offsets, cut-site distances, and decision rationale",
+        "Tested inversion, PAM discovery, mutation generation, disruption, and adjacent mutations in GitHub Actions"
       ],
       "skills": [
         "Python",
-        "pandas",
-        "Biopython",
+        "fastaparser",
         "Regex",
-        "Excel"
+        "CRISPR/Cas9",
+        "XLS",
+        "unittest",
+        "GitHub Actions"
       ],
       "links": [
         {
@@ -398,27 +415,29 @@
       "location": "Bothell, WA",
       "startDate": "2024-08",
       "endDate": "2026-08",
-      "homeSummary": "Built and deployed full-stack computer-vision tools for scientific microscopy analysis.",
-      "detailSummary": "Architected a Django REST API and JavaScript frontend for the University of Utah Miller Lab, paired with deterministic ML processing and Linux VM deployment for 15+ scientists.",
+      "homeSummary": "Built and deployed CytoCV, an open-source platform for reviewable yeast microscopy analysis.",
+      "detailSummary": "Architected a Django and JavaScript application with JSON endpoints, DIC-guided Mask R-CNN inference, worker-backed analysis, PostgreSQL persistence, and Linux deployment.",
       "bullets": [
-        "Reduced manual microscopy analysis by 97%",
-        "Cut ML processing time by 73% with TensorFlow/Keras OpenCV scikit-image and NumPy",
-        "Reduced file storage by 56.6% by migrating previews and preprocessing caches",
-        "Migrated SQLite to PostgreSQL and deployed with Nginx Gunicorn and Let's Encrypt TLS",
-        "Led a 6-person Agile development team and maintained CI/CD pipelines"
+        "Translated biology-facing requirements into channel-aware DeltaVision and TIFF ingestion",
+        "Engineered cell and cell-pair segmentation with reviewable multichannel overlays",
+        "Designed background jobs, progress and cancellation controls, protected artifacts, and durable result storage",
+        "Migrated application data from SQLite to PostgreSQL",
+        "Led production deployment, regression testing, documentation, and the citable CytoCV v2.0.0 release"
       ],
       "skills": [
         "Python",
         "Django",
         "JavaScript",
-        "REST APIs",
         "TensorFlow/Keras",
+        "Mask R-CNN",
         "OpenCV",
+        "scikit-image",
+        "NumPy",
         "PostgreSQL",
         "Linux",
         "Nginx",
         "Gunicorn",
-        "Docker"
+        "GitHub Actions"
       ],
       "featured": true,
       "showOnHome": true,
@@ -466,19 +485,22 @@
       "location": "Bothell, WA",
       "startDate": "2024-09",
       "endDate": "2024-12",
-      "homeSummary": "Implemented adversarial attack and defense pipelines for image classification models.",
-      "detailSummary": "Automated adversarial machine learning tests with Python, TensorFlow/Keras, NumPy, and Matplotlib while tracking model accuracy, latency, and attack success rates.",
+      "homeSummary": "Built four adversarial attack prototypes and four defensive strategies for image-classification models.",
+      "detailSummary": "Integrated Adversarial Robustness Toolbox primitives with TensorFlow/Keras models across MNIST, Fashion-MNIST, and CIFAR-10 experiments.",
       "bullets": [
-        "Implemented adversarial attack and defense pipelines for image classification models",
-        "Optimized batched Keras defense execution to under 5 seconds",
-        "Preserved 94% clean-data accuracy during defense evaluation"
+        "Generated DeepFool examples and built Copycat CNN extraction experiments",
+        "Built MIFace inversion and corner-trigger backdoor-poisoning experiments",
+        "Trained an adversarial-input detector on FGM samples and evaluated JPEG preprocessing",
+        "Compared Gaussian-noise postprocessing and defensive distillation",
+        "Measured attack success and clean, attacked, and defended model accuracy"
       ],
       "skills": [
         "Python",
         "TensorFlow/Keras",
+        "Adversarial Robustness Toolbox",
         "NumPy",
         "Matplotlib",
-        "Machine Learning"
+        "Adversarial ML"
       ],
       "featured": false,
       "showOnHome": true,
@@ -487,7 +509,7 @@
     },
     {
       "id": "research-assistant-ai-ml",
-      "title": "Research Assistant (AI/ML)",
+      "title": "Research Assistant (Software Engineering)",
       "organization": "UW Bothell School of STEM",
       "organizationLogo": "/images/organizations/uwb_stem_logo.png",
       "organizationLogoAlt": "UW Bothell School of STEM logo",
@@ -495,19 +517,25 @@
       "location": "Bothell, WA",
       "startDate": "2024-03",
       "endDate": "2024-08",
-      "homeSummary": "Automated yeast DNA target selection workflows for researchers.",
-      "detailSummary": "Developed a Python system that analyzed 18,000+ FASTA files with pandas, Biopython, and regex, then exported validated sequences to Excel.",
+      "homeSummary": "Automated yeast CRISPR guide and donor-sequence design for researchers.",
+      "detailSummary": "Built a Python CLI with fastaparser, strand-aware PAM discovery, codon-aware mutation rules, and color-coded XLS generation.",
       "bullets": [
-        "Reduced manual workflows by 99%",
-        "Parsed and analyzed 18,000+ FASTA files",
-        "Produced validated Excel exports for research use"
+        "Located forward NGG and reverse-strand CCN PAM sites across FASTA records",
+        "Selected 20-base guides and constructed configurable 132-base donor sequences",
+        "Applied codon-aware silent PAM and seed edits to reduce re-cutting risk",
+        "Supported guide filtering, ranking, duplicate removal, reverse complements, and kill-guide generation",
+        "Tested inversion, PAM discovery, mutation generation, PAM disruption, and adjacent mutation cases in GitHub Actions"
       ],
       "skills": [
         "Python",
-        "pandas",
-        "Biopython",
+        "fastaparser",
         "Regex",
-        "Excel"
+        "CRISPR/Cas9",
+        "xlwt",
+        "xlrd",
+        "xlutils",
+        "unittest",
+        "GitHub Actions"
       ],
       "featured": false,
       "showOnHome": true,
@@ -678,7 +706,7 @@
       "icon": "tensorflow",
       "proficiency": "Advanced",
       "summary": "Deep-learning frameworks for building and evaluating neural-network pipelines.",
-      "whereUsed": "Built CytoCV's Mask R-CNN segmentation workflow and adversarial attack-and-defense experiments; optimized batched Keras evaluation to under five seconds while preserving 94% clean-data accuracy.",
+      "whereUsed": "Built CytoCV's DIC-guided Mask R-CNN segmentation workflow and eight adversarial attack-and-defense prototypes with the Adversarial Robustness Toolbox.",
       "priority": 1,
       "featured": true,
       "showOnHome": true,
@@ -692,7 +720,7 @@
       "icon": "opencv",
       "proficiency": "Proficient",
       "summary": "A computer-vision toolkit for reproducible image processing and analysis.",
-      "whereUsed": "Used alongside scikit-image in CytoCV's microscopy pipeline to preprocess images, support segmentation, and extract 30+ cell metrics; the pipeline cut processing time by 73%.",
+      "whereUsed": "Used OpenCV alongside scikit-image and NumPy to postprocess CytoCV's Mask R-CNN predictions into reviewable cell masks, overlays, and measurements.",
       "priority": 1,
       "featured": true,
       "showOnHome": true,
@@ -706,7 +734,7 @@
       "icon": "numpy",
       "proficiency": "Proficient",
       "summary": "Numerical and tabular data tools for efficient array processing, analysis, and automation.",
-      "whereUsed": "Used NumPy in CytoCV and adversarial-ML automation to process arrays and evaluate metrics; used pandas in Guide Donor Scheduler to analyze 18,000+ FASTA files and export results.",
+      "whereUsed": "Used NumPy and pandas in CytoCV's image-analysis pipeline, and NumPy in adversarial-machine-learning evaluation across MNIST, Fashion-MNIST, and CIFAR-10.",
       "priority": 1,
       "featured": true,
       "showOnHome": true,
@@ -734,7 +762,7 @@
       "icon": "django",
       "proficiency": "Advanced",
       "summary": "A Python web framework for secure, data-backed applications and APIs.",
-      "whereUsed": "Architected CytoCV's Django backend, REST API, data model, and full-stack workflow for 15+ scientists; the platform reduced manual microscopy analysis by 97%.",
+      "whereUsed": "Architected CytoCV's Django backend, JSON endpoints, PostgreSQL data model, authentication, and worker-backed analysis workflows.",
       "priority": 1,
       "featured": true,
       "showOnHome": true,
@@ -762,7 +790,7 @@
       "icon": "api",
       "proficiency": "Proficient",
       "summary": "Service interfaces that connect frontends with application, data, and AI backends.",
-      "whereUsed": "Built Django REST endpoints and a JavaScript Fetch client for CytoCV, plus a modular Flask API coordinating NotePal's OCR, speech, LLM, authentication, and retrieval workflows.",
+      "whereUsed": "Built a modular Flask API coordinating NotePal's OCR, speech, LLM, authentication, and retrieval workflows, with browser clients consuming structured service responses.",
       "priority": 1,
       "featured": true,
       "showOnHome": true,
@@ -776,7 +804,7 @@
       "icon": "docker",
       "proficiency": "Working proficiency",
       "summary": "Tools for reproducible development environments and production server operations.",
-      "whereUsed": "Deployed CytoCV on a UW-IT Linux VM with Nginx, Gunicorn, CI/CD, and TLS; used Docker in UW teaching, project review, and developer workshops.",
+      "whereUsed": "Deployed CytoCV on a UW-IT Linux VM with Nginx, Gunicorn, systemd-managed services, and TLS; used Docker in UW teaching, project review, and developer workshops.",
       "priority": 1,
       "featured": true,
       "showOnHome": true,

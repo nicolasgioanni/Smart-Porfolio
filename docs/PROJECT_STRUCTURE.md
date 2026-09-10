@@ -71,7 +71,7 @@ Every route under `src/app/` is compatible with the Next.js static export. Clien
 | --- | --- | --- | --- |
 | `/` | `src/app/page.tsx` | Profile and portfolio overview | Yes |
 | `/experience` | `src/app/experience/page.tsx` | Two-depth, expandable experience showcase | Yes |
-| `/research` | `src/app/research/page.tsx` | Detailed research evidence | Yes |
+| `/research` | `src/app/research/page.tsx` | Two-depth, alternating visual research showcase | Yes |
 | `/projects` | `src/app/projects/page.tsx` | Detailed project evidence | Yes |
 | `/recommendations` | `src/app/recommendations/page.tsx` | Recommendation list or configured empty state | Conditional |
 | `/resume` | `src/app/resume/page.tsx` | Private resume request instructions without a published file | Yes |

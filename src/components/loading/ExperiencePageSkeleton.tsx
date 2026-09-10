@@ -12,8 +12,8 @@ export function ExperiencePageSkeleton() {
             <SkeletonText rows={2} />
           </div>
           <div className="experience-skeleton__intro-control">
-            <SkeletonBlock height={16} width={76} />
-            <SkeletonBlock height={54} radius="999px" width={300} />
+            <SkeletonBlock height={12} width={42} />
+            <SkeletonBlock height={40} radius="999px" width={196} />
           </div>
         </div>
         {Array.from({ length: 4 }).map((_, index) => (

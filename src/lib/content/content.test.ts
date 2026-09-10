@@ -924,12 +924,12 @@ describe("portfolio normalization", () => {
       maxHomeRecommendationItems: 3
     });
     expect(cytocv).toMatchObject({
-      title: "CytoCV: Web-based platform for reproducible yeast microscopy image analysis",
+      title: "CytoCV: Reproducible Yeast Microscopy Analysis",
       homeTitle: "CytoCV",
       role: "Graduate Research Assistant",
       homeSummary:
-        "Built by UW Bothell School of STEM’s SEE Lab for the University of Utah Miller Lab, CytoCV is a Django platform using Mask R-CNN to segment yeast microscopy stacks and export per-cell fluorescence measurements.",
-      profileByline: "Lead Engineer & First Author",
+        "Open-source Django platform that uses DIC-guided Mask R-CNN segmentation to turn DeltaVision and TIFF yeast microscopy stacks into reviewable per-cell fluorescence measurements and structured exports.",
+      profileByline: "Lead Engineer & First-Listed Software Author",
       profileLabs: [
         "SEE Lab, UW Bothell School of STEM",
         "Miller Lab, University of Utah"
@@ -937,15 +937,15 @@ describe("portfolio normalization", () => {
     });
     expect(cytocv?.profileSummary).toBeUndefined();
     expect(adversarialMl?.homeSummary).toBe(
-      "Experimental study of targeted training-data poisoning against SVMs learning from streams, testing whether attacks can evade loss-based anomaly filtering and whether a feature-space stability metric can detect decision-boundary manipulation."
+      "Independent study that prototyped four adversarial attack families and four defensive strategies with ART and TensorFlow/Keras across standard image-classification benchmarks."
     );
     expect(guideDonor?.homeSummary).toBe(
-      "Python sequence-design pipeline for yeast CRISPR/Cas9 experiments that selects 20-base guides near NGG PAMs, builds 132-base donor sequences around requested mutations, adds silent edits to prevent re-cutting, and exports XLS results."
+      "Python pipeline that converts yeast FASTA sequences and requested amino-acid substitutions into CRISPR/Cas9 guide and donor constructs with strand-aware PAM handling and researcher-ready XLS output."
     );
     const profileOverview = createProfileOverviewContent(content);
     expect(profileOverview.research).toMatchObject({
       title: "CytoCV",
-      byline: "Lead Engineer & First Author",
+      byline: "Lead Engineer & First-Listed Software Author",
       labs: [
         "SEE Lab, UW Bothell School of STEM",
         "Miller Lab, University of Utah"
@@ -965,12 +965,14 @@ describe("portfolio normalization", () => {
     });
     expect(cytocv?.links).toEqual([
       { label: "Live site", url: "https://cytocv.uwb.edu" },
-      { label: "Source code", url: "https://github.com/BrentLagesse/CytoCV" }
+      { label: "Source code", url: "https://github.com/BrentLagesse/CytoCV" },
+      { label: "Software DOI", url: "https://doi.org/10.5281/zenodo.21988218" }
     ]);
     expect(cytocv?.pendingLinks).toEqual(["Manuscript"]);
     expect(adversarialMl?.links).toEqual([
       { label: "Source code", url: "https://github.com/nicolasgioanni/Independent-Study" },
-      { label: "Manuscript", url: "https://faculty.washington.edu/lagesse/publications/CausativeSVM.pdf" }
+      { label: "Reference manuscript", url: "https://faculty.washington.edu/lagesse/publications/CausativeSVM.pdf" },
+      { label: "Reference DOI", url: "https://doi.org/10.1145/3041008.3041012" }
     ]);
     expect(guideDonor?.links).toEqual([
       { label: "Source code", url: "https://github.com/BrentLagesse/GuideDonorScheduler" }
