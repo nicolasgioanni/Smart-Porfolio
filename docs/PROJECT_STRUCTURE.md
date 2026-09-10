@@ -19,6 +19,7 @@ Smart-Porfolio/
 |-- public/
 |   |-- _headers
 |   |-- _routes.json
+|   |-- favicon.ico
 |   |-- favicon/
 |   `-- images/
 |-- scripts/

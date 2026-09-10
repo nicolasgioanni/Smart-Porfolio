@@ -9,6 +9,8 @@ import {
   CANONICAL_SITE_ORIGIN,
   OPEN_GRAPH_LOCALE,
   PREFERRED_SITE_NAME,
+  ROOT_FAVICON,
+  SITE_PROFILE_IMAGE,
   createCanonicalUrl
 } from "@/lib/seo/siteConfig";
 
@@ -28,6 +30,19 @@ function resolveCanonicalProfileImage(imagePath: string | undefined): string | u
   }
 }
 
+function createFaviconMetadata(): Metadata["icons"] {
+  return {
+    icon: [
+      {
+        url: SITE_PROFILE_IMAGE.path,
+        type: SITE_PROFILE_IMAGE.type,
+        sizes: SITE_PROFILE_IMAGE.sizes
+      }
+    ],
+    shortcut: [{ url: ROOT_FAVICON.path, type: ROOT_FAVICON.type }]
+  };
+}
+
 export function createPageMetadata(
   content: GeneratedPortfolioContent,
   { pathname, title, description }: CreatePageMetadataOptions
@@ -35,7 +50,6 @@ export function createPageMetadata(
   const siteTitle = content.siteSettings.siteTitle || content.profile.fullName || "Portfolio";
   const pageTitlePrefix = content.profile.fullName || PREFERRED_SITE_NAME;
   const siteDescription = content.siteSettings.siteDescription || content.profile.shortBio;
-  const faviconPath = content.profile.faviconImage;
   const pageDescription = description ?? siteDescription;
   const resolvedTitle = title ? `${pageTitlePrefix} | ${title}` : siteTitle;
   const canonicalUrl = createCanonicalUrl(pathname);
@@ -65,7 +79,7 @@ export function createPageMetadata(
     authors: [{ name: PREFERRED_SITE_NAME, url: CANONICAL_HOMEPAGE_URL }],
     creator: PREFERRED_SITE_NAME,
     publisher: PREFERRED_SITE_NAME,
-    icons: faviconPath ? [{ rel: "icon", url: faviconPath }] : undefined,
+    icons: createFaviconMetadata(),
     alternates: {
       canonical: canonicalUrl
     },
