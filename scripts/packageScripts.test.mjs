@@ -35,7 +35,7 @@ describe("package and CI deployment automation", () => {
     expect(packageJson.scripts.verify).toBe(
       "npm run docs:check && npm run lint && npm run typecheck && npm run test && npm run build"
     );
-    expect(packageJson.devDependencies.wrangler).toBe("4.127.0");
+    expect(packageJson.devDependencies.wrangler).toBe("4.131.0");
     expect(packageJson.devDependencies.vitest).toBe("4.1.11");
     expect(packageJson.devDependencies["@playwright/test"]).toMatch(/^\^1\./);
     expect(packageJson.scripts["test:footer"]).toBe(
