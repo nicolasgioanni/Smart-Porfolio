@@ -37,4 +37,17 @@ describe("research showcase styles", () => {
       /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.research-list\[data-motion="enabled"\] \.research-project-wrap[\s\S]*?animation:\s*none/
     );
   });
+
+  it("keeps full-card elevation exclusive to pointer hover", () => {
+    const sharedAttentionRule =
+      researchStyles.match(/\.research-project:hover,\s*\.research-project:focus-within\s*\{[^}]*}/s)?.[0] ?? "";
+    const hoverElevationRule = researchStyles.match(/\.research-project:hover\s*\{[^}]*}/s)?.[0] ?? "";
+
+    expect(sharedAttentionRule).toMatch(/border-color:\s*var\(--detail-accent-border\)/);
+    expect(sharedAttentionRule).not.toMatch(/box-shadow|transform/);
+    expect(hoverElevationRule).toMatch(
+      /box-shadow:\s*var\(--shadow-soft\),\s*0 0 64px var\(--detail-accent-soft\)/
+    );
+    expect(hoverElevationRule).toMatch(/transform:\s*translate3d\(0, -2px, 0\)/);
+  });
 });
