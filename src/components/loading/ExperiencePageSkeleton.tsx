@@ -8,7 +8,12 @@ export function ExperiencePageSkeleton() {
       <div className="experience-skeleton" aria-hidden="true">
         <div className="experience-skeleton__intro">
           <div className="experience-skeleton__intro-copy">
-            <SkeletonBlock height={44} radius={14} width="min(100%, 260px)" />
+            <SkeletonBlock
+              className="skeleton-page__title"
+              height={28}
+              radius={14}
+              width="min(100%, 260px)"
+            />
             <SkeletonText rows={2} />
           </div>
           <div className="experience-skeleton__intro-control">
