@@ -53,11 +53,14 @@ describe("package and CI deployment automation", () => {
     expect(packageJson.scripts["test:e2e:navigation"]).toBe(
       "playwright test navigation.spec.ts --project=chromium"
     );
+    expect(packageJson.scripts["test:e2e:skeletons:alignment"]).toBe(
+      "playwright test skeleton-alignment.spec.ts --project=chromium"
+    );
     expect(packageJson.scripts["test:e2e:skeletons:visual"]).toBe(
       "playwright test skeletons.visual.spec.ts --project=chromium"
     );
     expect(packageJson.scripts["test:e2e:skeletons"]).toBe(
-      "playwright test skeletons.transition.spec.ts skeletons.visual.spec.ts --project=chromium"
+      "playwright test skeleton-alignment.spec.ts skeletons.transition.spec.ts skeletons.visual.spec.ts --project=chromium"
     );
     expect(packageJson.scripts["test:skeleton-guidance"]).toBe(
       "vitest run scripts/skeletonGuidance.test.mjs"
