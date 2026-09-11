@@ -128,8 +128,8 @@ Pull-request runs use the checked-in recommendation templates and exercise every
 
 | Test | What it verifies |
 | --- | --- |
-| `scripts/packageScripts.test.mjs` | Node and tool pins, workflow triggers, one-fetch conditions, branch isolation, permissions, no-op behavior, artifact transfer, target validation, heartbeat boundaries, no-cache metadata, and Wrangler invocation |
-| `scripts/checkDeployedContent.test.mjs` | Post-deployment smoke requests both contact Functions and requires their exact JSON method rejection |
+| `scripts/packageScripts.test.mjs` | Node and tool pins, workflow triggers, single-snapshot conditions, branch isolation, permissions, exact-candidate no-op behavior, artifact transfer, target validation, heartbeat boundaries, no-cache metadata, and Wrangler invocation |
+| `scripts/checkDeployedContent.test.mjs` | Independent deployed content and commit comparison, missing or malformed manifest behavior, and post-deployment smoke requests with exact contact Function method rejection |
 | Artifact tests inside `scripts/packageScripts.test.mjs` | Content-version creation, hidden file inclusion, manifest structure, commit binding, digest verification, and tamper rejection |
 | `scripts/localAutomation.test.mjs` | Project discovery, environment copy safety, dependency-state hashing, stale content, and port selection |
 
@@ -168,7 +168,7 @@ Latest pushes to `main` or `develop`:
 
 ### Scheduled and manual checks
 
-Scheduled runs and non-forced manual runs perform the strict content work before deciding whether full verification is required. When the candidate hash matches production, documentation integrity, lint, typecheck, tests, build, artifact upload, and deployment are skipped. Forced manual runs always select the full production path after strict content validation.
+Scheduled runs and non-forced manual runs perform the strict content work before deciding whether full verification is required. When both the candidate content hash and commit SHA match production, documentation integrity, lint, typecheck, tests, build, artifact upload, and deployment are skipped. A mismatch in either field selects the complete path, while forced manual runs always select it after strict content validation.
 
 ### Focused regression duplication
 

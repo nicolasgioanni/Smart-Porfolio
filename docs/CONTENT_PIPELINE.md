@@ -188,7 +188,7 @@ The generator calculates the new hash, then compares it with `metadata.contentHa
 
 The script logs and, when `GITHUB_OUTPUT` is set, exports `content_changed`, `content_hash`, and `generated_at`.
 
-Preservation is relative to the existing local output file. CI starts from the committed template snapshot, so a strict remote candidate can receive a new `generatedAt` even when its remote hash matches the active deployment. Deployment decisions therefore compare `contentHash`, not `generatedAt`.
+Preservation is relative to the existing local output file. CI starts from the committed template snapshot, so a strict remote candidate can receive a new `generatedAt` even when its remote hash matches the active deployment. Deployment decisions therefore compare `contentHash` and the candidate commit SHA, not `generatedAt`.
 
 ## Build and deployment use
 
@@ -208,7 +208,7 @@ Pull requests generate from local templates without remote credentials. Current 
 - generated timestamp;
 - deployment timestamp.
 
-Scheduled and non-forced manual checks compare the candidate hash with the active production manifest. An unchanged hash is a successful no-op before lint, tests, build, artifact upload, and deployment. A failure before Wrangler Direct Upload does not change the active target. Once Wrangler returns successfully, a later smoke failure can mean the new deployment is already active; the workflow does not roll it back automatically.
+Scheduled and non-forced manual checks compare both the candidate content hash and exact commit SHA with the active production manifest. Equality on both fields is a successful no-op before lint, tests, build, artifact upload, and deployment. If either field differs, the complete verified deployment path runs. A failure before Wrangler Direct Upload does not change the active target. Once Wrangler returns successfully, a later smoke failure can mean the new deployment is already active; the workflow does not roll it back automatically.
 
 See [Deployment](DEPLOYMENT.md) for branch, artifact, Cloudflare, and rollback behavior.
 

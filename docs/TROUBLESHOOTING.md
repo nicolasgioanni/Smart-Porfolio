@@ -302,11 +302,11 @@ The domain value must be a lowercase `pages.dev` hostname without a scheme or pa
 
 ### A scheduled or non-forced run stops before quality checks
 
-Inspect the `Compare the validated snapshot with production` and decision steps. When `deployed_content_matches=true`, stopping before documentation, lint, tests, build, artifact upload, and deploy is the intended successful no-op.
+Inspect the `Compare the validated snapshot with production` and decision steps. Stopping before documentation, lint, tests, build, artifact upload, and deploy is the intended successful no-op only when both `deployed_content_matches=true` and `deployed_commit_matches=true`.
 
-### A code change needs redeployment but a non-forced run is unchanged
+### A code change still appears undeployed after a scheduled check
 
-The comparison considers only normalized content. Dispatch with `force_deploy=true` to verify and deploy the current `main` source even when its content hash matches production.
+Confirm the scheduled run checked out current `main` and reported `deployed_commit_matches=false`. That mismatch should select the complete verified deployment path even when normalized content is unchanged. If it did not, inspect the decision-step inputs and the live manifest, then use `force_deploy=true` for an immediate full retry after correcting the workflow or external failure.
 
 ### The production manifest returns 404
 
