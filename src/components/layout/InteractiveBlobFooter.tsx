@@ -22,6 +22,8 @@ type InteractiveBlobFooterProps = {
 type ScrollDirection = "down" | "idle" | "up";
 
 const DOWNWARD_SCROLL_KEYS = new Set([" ", "ArrowDown", "End", "PageDown", "Spacebar"]);
+const initialFooterInertScript =
+  'document.querySelector(".blob-footer__details[aria-hidden=\\"true\\"]")?.setAttribute("inert", "");';
 
 type RunwayPosition = {
   bottom: number;
@@ -44,6 +46,16 @@ function isEditableOrInteractiveTarget(target: EventTarget | null): boolean {
     target.closest(
       "a, button, input, select, textarea, [contenteditable]:not([contenteditable='false']), [role='button'], [role='combobox'], [role='link'], [role='textbox']"
     )
+  );
+}
+
+function InitialFooterInertScript() {
+  return (
+    <script
+      dangerouslySetInnerHTML={{ __html: initialFooterInertScript }}
+      suppressHydrationWarning
+      type={typeof window === "undefined" ? "text/javascript" : "text/plain"}
+    />
   );
 }
 
@@ -80,7 +92,7 @@ function RouteScopedInteractiveBlobFooter({
 }: InteractiveBlobFooterProps) {
   const [expanded, setExpanded] = useState(false);
   const detailsId = useId();
-  const detailsRef = useRef<HTMLDivElement>(null);
+  const detailsRef = useRef<HTMLDivElement | null>(null);
   const footerRef = useRef<HTMLElement>(null);
   const runwaySentinelRef = useRef<HTMLSpanElement>(null);
   const toggleRef = useRef<HTMLButtonElement>(null);
@@ -90,6 +102,14 @@ function RouteScopedInteractiveBlobFooter({
   const manualCollapseSuppressedRef = useRef(false);
   const pendingCollapseRef = useRef(false);
   const scrollActivationArmedRef = useRef(false);
+
+  const setDetailsRef = useCallback(
+    (details: HTMLDivElement | null) => {
+      detailsRef.current = details;
+      details?.toggleAttribute("inert", !expanded);
+    },
+    [expanded]
+  );
 
   const expandNow = useCallback(() => {
     pendingCollapseRef.current = false;
@@ -268,11 +288,11 @@ function RouteScopedInteractiveBlobFooter({
         </div>
 
         <div
-          inert={!expanded}
           aria-hidden={!expanded}
           className="blob-footer__details"
           id={detailsId}
-          ref={detailsRef}
+          ref={setDetailsRef}
+          suppressHydrationWarning
         >
           <div className="blob-footer__details-inner">
             <div className="blob-footer__details-grid">
@@ -288,6 +308,7 @@ function RouteScopedInteractiveBlobFooter({
             <p className="blob-footer__closing">{closingStatement}</p>
           </div>
         </div>
+        <InitialFooterInertScript />
       </GlassBlob>
     </footer>
   );

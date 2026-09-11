@@ -15,7 +15,7 @@ type FooterSample = {
   inert: boolean;
   label: string;
   pathname: string;
-  phase: "frame" | "mutation";
+  phase: "frame" | "mutation" | "parser";
   state: string | null;
 };
 
@@ -28,6 +28,7 @@ async function installFooterRecorder(page: Page) {
     const recorderWindow = window as Window & { __footerSamples?: FooterSample[] };
     const samples: FooterSample[] = [];
     let previousSignature = "";
+    let recordedParserFooter = false;
     recorderWindow.__footerSamples = samples;
 
     const record = (phase: FooterSample["phase"]) => {
@@ -35,7 +36,7 @@ async function installFooterRecorder(page: Page) {
       const toggle = footer?.querySelector<HTMLButtonElement>(".blob-footer__toggle");
       const details = footer?.querySelector<HTMLElement>(".blob-footer__details");
       const heading = document.querySelector<HTMLElement>("main h1");
-      if (!footer || !toggle || !details || !heading) return;
+      if (!footer || !toggle || !details || !heading) return false;
 
       const sample: FooterSample = {
         detailsHeight: Math.round(details.getBoundingClientRect().height * 100) / 100,
@@ -49,13 +50,21 @@ async function installFooterRecorder(page: Page) {
         state: footer.getAttribute("data-footer-state")
       };
       const signature = JSON.stringify(sample);
-      if (signature === previousSignature) return;
+      if (signature === previousSignature) return true;
 
       previousSignature = signature;
       samples.push(sample);
+      return true;
     };
 
-    new MutationObserver(() => record("mutation")).observe(document, {
+    new MutationObserver(() => {
+      if (!recordedParserFooter) {
+        recordedParserFooter = record("parser");
+        return;
+      }
+
+      record("mutation");
+    }).observe(document, {
       attributes: true,
       attributeFilter: ["aria-expanded", "aria-hidden", "class", "data-footer-state", "inert"],
       childList: true,
@@ -109,6 +118,29 @@ async function expectNoExpandedSamples(page: Page, pathname: string, heading: st
   ).toEqual([]);
 }
 
+async function expectParserCompactFooter(page: Page, pathname: string, heading: string) {
+  const samples = await page.evaluate(() => {
+    const recorderWindow = window as Window & { __footerSamples?: FooterSample[] };
+    return recorderWindow.__footerSamples ?? [];
+  });
+  const parserSamples = samples.filter(
+    (sample) => sample.phase === "parser" && sample.pathname === pathname && sample.heading === heading
+  );
+
+  expect(parserSamples.length, `No parser-time footer sample was recorded for ${pathname}.`).toBeGreaterThan(0);
+  expect(
+    parserSamples.filter(
+      (sample) =>
+        sample.state !== "compact" ||
+        sample.label !== "Details" ||
+        sample.expanded !== "false" ||
+        sample.hidden !== "true" ||
+        !sample.inert
+    ),
+    `The parser-time footer state was not compact and inert for ${pathname}.`
+  ).toEqual([]);
+}
+
 test.beforeEach(async ({ page }) => {
   captureBrowserConsole(page);
   await installFooterRecorder(page);
@@ -129,6 +161,7 @@ for (const pathname of [...siteRoutePaths, missingRoute]) {
     await expectCompactFooter(page);
 
     const heading = (await page.locator("main h1").innerText()).trim();
+    await expectParserCompactFooter(page, pathname, heading);
     await expectNoExpandedSamples(page, pathname, heading);
   });
 }
@@ -176,7 +209,7 @@ test("expands only after a real downward wheel reaches the footer runway", async
   await expect(page.locator(".blob-footer__details")).not.toHaveAttribute("inert");
 });
 
-test("blocks programmatic detail focus while compact and restores it when expanded", async ({ page }) => {
+test("blocks programmatic detail focus while compact, restores it when expanded, and restores inert when collapsed", async ({ page }) => {
   await page.goto("/terms");
   await settleLayout(page);
 
@@ -196,6 +229,13 @@ test("blocks programmatic detail focus while compact and restores it when expand
     (element as HTMLAnchorElement).focus();
     return document.activeElement === element;
   })).toBe(true);
+
+  await footer.locator(".blob-footer__toggle").click();
+  await expectCompactFooter(page);
+  expect(await firstDetailLink.evaluate((element) => {
+    (element as HTMLAnchorElement).focus();
+    return document.activeElement === element;
+  })).toBe(false);
 });
 
 test("keeps a restored deep position compact after reload", async ({ page }) => {

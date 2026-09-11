@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { hydrateRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 import { InteractiveBlobFooter } from "@/components/layout/InteractiveBlobFooter";
@@ -217,12 +218,13 @@ describe("InteractiveBlobFooter", () => {
     vi.unstubAllGlobals();
   });
 
-  it("server-renders the compact accessible fallback with inert details", () => {
+  it("server-renders the compact accessible fallback with a parser-time inert initializer", () => {
     const serverMarkup = renderToString(<InteractiveBlobFooter {...footerProps} />);
     expect(serverMarkup).toContain('data-footer-state="compact"');
     expect(serverMarkup).toContain('aria-expanded="false"');
     expect(serverMarkup).toContain('aria-hidden="true"');
-    expect(serverMarkup).toContain('inert=""');
+    expect(serverMarkup).not.toContain('inert=""');
+    expect(serverMarkup).toContain('setAttribute("inert", "")');
     expect(serverMarkup).toContain('class="blob-footer__runway"');
     expect(serverMarkup).toContain('class="blob-footer__runway-sentinel"');
 
@@ -237,6 +239,53 @@ describe("InteractiveBlobFooter", () => {
     expect(details).toHaveAttribute("inert");
     expect(screen.getByText(footerProps.compactCopyright)).toBeInTheDocument();
     expect(container.querySelector(".glass-icon-link")).not.toBeInTheDocument();
+  });
+
+  it("initializes inert before hydration and synchronizes it with disclosure state without hydration warnings", async () => {
+    const staticContainer = document.createElement("div");
+    staticContainer.innerHTML = renderToString(<InteractiveBlobFooter {...footerProps} />);
+    document.body.append(staticContainer);
+
+    const staticDetails = staticContainer.querySelector<HTMLElement>(".blob-footer__details");
+    const initialScript = staticDetails?.nextElementSibling;
+    if (!(initialScript instanceof HTMLScriptElement) || !initialScript.textContent) {
+      throw new Error("The footer inert initializer is missing from the server markup.");
+    }
+
+    expect(staticDetails).toHaveAttribute("aria-hidden", "true");
+    expect(staticDetails).not.toHaveAttribute("inert");
+    Function(initialScript.textContent)();
+    expect(staticDetails).toHaveAttribute("inert");
+
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    let root: ReturnType<typeof hydrateRoot> | undefined;
+
+    try {
+      await act(async () => {
+        root = hydrateRoot(staticContainer, <InteractiveBlobFooter {...footerProps} />);
+      });
+
+      const details = staticContainer.querySelector<HTMLElement>(".blob-footer__details");
+      const toggle = staticContainer.querySelector<HTMLButtonElement>(".blob-footer__toggle");
+      if (!details || !toggle) throw new Error("The hydrated footer controls are missing.");
+
+      expect(details).toHaveAttribute("aria-hidden", "true");
+      expect(details).toHaveAttribute("inert");
+
+      fireEvent.click(toggle);
+      expect(toggle).toHaveAttribute("aria-expanded", "true");
+      expect(details).toHaveAttribute("aria-hidden", "false");
+      expect(details).not.toHaveAttribute("inert");
+
+      fireEvent.click(toggle);
+      expect(toggle).toHaveAttribute("aria-expanded", "false");
+      expect(details).toHaveAttribute("aria-hidden", "true");
+      expect(details).toHaveAttribute("inert");
+      expect(consoleError).not.toHaveBeenCalled();
+    } finally {
+      await act(async () => root?.unmount());
+      staticContainer.remove();
+    }
   });
 
   it("keeps the explicit Details fallback working without IntersectionObserver", () => {
