@@ -394,7 +394,7 @@ These rows must exist, but blank values leave the built-in defaults in place. Th
 | --- | --- | --- |
 | `site_title` | `siteTitle` | `Portfolio` |
 | `site_description` | `siteDescription` | Generic professional portfolio description. |
-| `default_theme` | `defaultTheme` | `navy`; server-rendered, no-JavaScript, and unavailable-media-query fallback. Unsupported values resolve to `navy`; visitors with scripting and no saved override follow device Light or Dark, and the `navy` identifier is displayed as Gioanni. |
+| `default_theme` | `defaultTheme` | `navy`; server-rendered, no-JavaScript, and unavailable-media-query fallback. Unsupported values resolve to `navy`; visitors with scripting and no saved override follow device Light or Dark, and the `navy` identifier is displayed as My mode. |
 | `enable_skeletons` | `enableSkeletons` | `true` |
 | `enable_scroll_motion` | `enableScrollMotion` | `false` |
 | `enable_glass_effects` | `enableGlassEffects` | `true` |

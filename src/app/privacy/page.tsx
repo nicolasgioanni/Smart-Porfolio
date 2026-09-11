@@ -65,7 +65,7 @@ export default function PrivacyPage() {
           analytics, cross-site tracking, or identification.
         </p>
         <p>
-          If you explicitly select Light, Gioanni, or Dark, the site stores that palette value in your browser&apos;s local storage
+          If you explicitly select Light, My mode, or Dark, the site stores that palette value in your browser&apos;s local storage
           under the key <code>portfolio-theme</code> so the manual override can be restored on later visits. Choosing System or
           clearing the value removes the override and resumes device-preference following. The site does not present a separate
           consent banner for this user-selected appearance setting or the essential verification cookie described below. Both

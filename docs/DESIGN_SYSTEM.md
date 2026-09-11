@@ -1,6 +1,6 @@
 # Design system
 
-Smart Portfolio uses a restrained glass-inspired visual language to organize evidence without reducing readability. Semantic tokens, focused CSS files, and reusable React primitives keep Light, Gioanni, and Dark behavior aligned while allowing each mode to have its own visual character.
+Smart Portfolio uses a restrained glass-inspired visual language to organize evidence without reducing readability. Semantic tokens, focused CSS files, and reusable React primitives keep Light, My mode, and Dark behavior aligned while allowing each mode to have its own visual character.
 
 ## Design goals
 
@@ -35,10 +35,10 @@ The supported palette identifiers are `navy`, `light`, and `dark`. System is an 
 | Identifier | Menu label | Role |
 | --- | --- | --- |
 | `light` | Light | Warm editorial light mode: ivory canvas, parchment panels, mist-blue cards, and deep navy structure. |
-| `navy` | Gioanni | Signature mode: layered midnight navy with parchment, champagne, and muted blue-gray accents. |
+| `navy` | My mode | Signature mode: layered midnight navy with parchment, champagne, and muted blue-gray accents. |
 | `dark` | Dark | Layered graphite mode: neutral charcoal surfaces with restrained electric blue and violet interaction color. |
 
-The `navy` identifier intentionally remains stable for generated content, `data-theme`, and existing browser preferences, while its visitor-facing name is Gioanni. The generated `default_theme` setting selects the server-rendered fallback. Before body paint, `ThemePreferenceScript` gives a valid stored override precedence and otherwise maps the device preference to Light or Dark. `ThemeSwitcher` presents System before the three palettes as a labelled button group. `useThemePreference` follows live system changes until a manual palette is selected, stores only manual overrides, synchronizes cross-tab changes, and removes the override when System is selected.
+The `navy` identifier intentionally remains stable for generated content, `data-theme`, and existing browser preferences, while its visitor-facing name is My mode. The generated `default_theme` setting selects the server-rendered fallback. Before body paint, `ThemePreferenceScript` gives a valid stored override precedence and otherwise maps the device preference to Light or Dark. `ThemeSwitcher` presents System before the three palettes as a labelled button group. `useThemePreference` follows live system changes until a manual palette is selected, stores only manual overrides, synchronizes cross-tab changes, and removes the override when System is selected.
 
 Components must use semantic variables such as `--color-ink`, `--color-muted`, `--color-line`, and `--color-surface`. Do not read a palette-specific variable from a component rule when a semantic token expresses the role.
 
@@ -171,7 +171,7 @@ Home section route actions use compact buttons aligned with the section heading.
 
 The dedicated Research route opens with the focused title `Applied AI Research` and a short summary that foregrounds CytoCV and adversarial machine learning. Its projects remain in content-defined order and render as full-width research modules. On desktop, a project-specific scientific SVG and its evidence content alternate left and right. At `920px` and below, every visualization moves above its content so reading order and touch navigation stay predictable.
 
-CytoCV uses a multichannel yeast-segmentation lens, Adversarial Machine Learning uses an eight-prototype attack-and-defense matrix, and Guide Donor Scheduler uses a guide, PAM, donor, and export diagram. These SVGs are semantic diagrams rather than external brand marks. They share structural styling while each project owns a bounded accent palette that remains legible in Navy, Light, and Dark.
+CytoCV uses a multichannel yeast-segmentation lens, Adversarial Machine Learning uses an eight-prototype attack-and-defense matrix, and Guide Donor Scheduler uses a guide, PAM, donor, and export diagram. These SVGs are semantic diagrams rather than external brand marks. They share structural styling while each project owns a bounded accent palette that remains legible in My mode, Light, and Dark.
 
 The shared `Overview` and `Technical` selector changes all research narratives at once. Each collapsed evidence row carries a complete lead; expansion adds supporting bullets and tools. Only one row per project remains open. Research cards pair a subtle content-order label with the authored organization mark, omit redundant timeline metadata, and retain 44 CSS-pixel resource targets. Verified resources stay interactive, while the CytoCV `Manuscript` placeholder is a native disabled button with its exact visible label.
 
@@ -280,7 +280,7 @@ Every file under `public/` is directly retrievable. Use an approved asset, a saf
 3. Confirm structure and accessible state before adding animation.
 4. Add fine-pointer hover only after keyboard focus behavior exists.
 5. Implement reduced-motion behavior with the interaction.
-6. Test System in both device schemes plus Light, Gioanni, and Dark at desktop, mobile, and 200 percent zoom.
+6. Test System in both device schemes plus Light, My mode, and Dark at desktop, mobile, and 200 percent zoom.
 7. Add or update component and CSS-contract tests.
 8. Update this guide when the change creates a reusable rule.
 

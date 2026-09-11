@@ -20,7 +20,7 @@ Keep components focused around one rendering job. Reuse glass primitives, conten
 
 ## Styling
 
-Use semantic tokens from `src/styles/tokens.css`. Preserve readable surfaces, visible focus, responsive reflow, and reduced-motion behavior in Light, Gioanni, and Dark. Keep System as preference logic that resolves to Light or Dark; never introduce `data-theme="system"` or a fourth token palette.
+Use semantic tokens from `src/styles/tokens.css`. Preserve readable surfaces, visible focus, responsive reflow, and reduced-motion behavior in Light, My mode, and Dark. Keep System as preference logic that resolves to Light or Dark; never introduce `data-theme="system"` or a fourth token palette.
 
 Avoid heavy visual dependencies, full-screen blur, decorative animation systems, and low-contrast text.
 

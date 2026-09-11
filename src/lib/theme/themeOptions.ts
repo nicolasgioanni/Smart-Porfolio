@@ -3,7 +3,7 @@ import { systemThemePreference, type ThemePreference } from "@/lib/theme/themePr
 
 export const themeOptions = [
   { label: "Light", name: "light" },
-  { label: "Gioanni", name: "navy" },
+  { label: "My mode", name: "navy" },
   { label: "Dark", name: "dark" }
 ] as const satisfies ReadonlyArray<{ label: string; name: ThemeName }>;
 
@@ -15,5 +15,5 @@ export const themePreferenceOptions = [
 export const themeLabels: Record<ThemeName, string> = {
   dark: "Dark",
   light: "Light",
-  navy: "Gioanni"
+  navy: "My mode"
 };

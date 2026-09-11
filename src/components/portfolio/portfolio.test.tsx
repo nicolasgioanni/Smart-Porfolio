@@ -1186,7 +1186,7 @@ describe("portfolio UI helpers", () => {
     expect(emailLink.closest("li")?.nextElementSibling).toBe(contactLink.closest("li"));
     expect(container.querySelector(".glass-icon-link")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /choose color theme/i })).not.toBeInTheDocument();
-    expect(screen.queryByText(/^(Light|Gioanni|Dark)$/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^(Light|My mode|Dark)$/)).not.toBeInTheDocument();
     expect(screen.queryByText(/built as a static/i)).not.toBeInTheDocument();
   });
 

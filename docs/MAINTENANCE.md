@@ -141,7 +141,7 @@ When adding one:
 
 ## Add or change a theme token
 
-Supported visitor-facing palettes are Light, Gioanni, and Dark. Their stable identifiers are `light`, `navy`, and `dark`, respectively. System is a preference behavior that resolves only to Light or Dark.
+Supported visitor-facing palettes are Light, My mode, and Dark. Their stable identifiers are `light`, `navy`, and `dark`, respectively. System is a preference behavior that resolves only to Light or Dark.
 
 1. Define the semantic token in the root token group if it is structural.
 2. Define a value in every theme when it represents color, surface, shadow, or gradient.

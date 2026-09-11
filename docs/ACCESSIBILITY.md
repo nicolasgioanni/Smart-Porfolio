@@ -36,7 +36,7 @@ The Contact, Privacy, Terms, and Security routes are intentionally available fro
 
 ## Theme control
 
-The theme disclosure is a labelled button with `aria-expanded` and `aria-controls`. System, Light, Gioanni, and Dark preferences form a labelled group and expose selection with `aria-pressed`. System is a behavior rather than a fourth palette: it announces the effective Light or Dark result from the device preference, while the corresponding manual palette button remains unpressed. Gioanni retains the internal `navy` value so existing saved choices continue to work.
+The theme disclosure is a labelled button with `aria-expanded` and `aria-controls`. System, Light, My mode, and Dark preferences form a labelled group and expose selection with `aria-pressed`. System is a behavior rather than a fourth palette: it announces the effective Light or Dark result from the device preference, while the corresponding manual palette button remains unpressed. My mode retains the internal `navy` value so existing saved choices continue to work.
 
 Keyboard focus opens the disclosure. Escape closes it and restores focus to the trigger. Closed options use `tabIndex=-1`. Before hydration, a valid `portfolio-theme` override is applied first; without one, the device color preference selects Light or Dark. System changes continue to update the page until the visitor chooses a manual override.
 

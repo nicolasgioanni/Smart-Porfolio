@@ -531,7 +531,7 @@ describe("static portfolio security contracts", () => {
     const themeSource = readFileSync(path.join(projectRoot, "src", "components", "theme", "ThemeSwitcher.tsx"), "utf8");
     const themeOptionsSource = readFileSync(path.join(projectRoot, "src", "lib", "theme", "themeOptions.ts"), "utf8");
 
-    expect(themeOptionsSource).toMatch(/\{ label: "Light", name: "light" \}[\s\S]*\{ label: "Gioanni", name: "navy" \}[\s\S]*\{ label: "Dark", name: "dark" \}/);
+    expect(themeOptionsSource).toMatch(/\{ label: "Light", name: "light" \}[\s\S]*\{ label: "My mode", name: "navy" \}[\s\S]*\{ label: "Dark", name: "dark" \}/);
     expect(themeOptionsSource).toMatch(/themePreferenceOptions[\s\S]*\{ label: "System", name: systemThemePreference \},[\s\S]*\.\.\.themeOptions/);
     expect(themeSource).toMatch(/themePreferenceOptions\.map\(\(\{ label, name \}\)/);
     expect(themeSource).toMatch(/aria-expanded=\{open\}/);
