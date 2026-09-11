@@ -124,7 +124,7 @@ Important normalization rules include:
 - Project Home skills accept at most three ordered entries and require each optional summary/details pair together.
 - Skill popup copy requires `proficiency`, `summary`, and `where_used` together.
 - Research graphical abstracts and videos must use allowlisted, root-relative paths under `/images/research/`. Validation rejects traversal, backslashes, and null bytes even when repeated percent decoding reveals them. Abstract paths require meaningful alt text, and a video requires an abstract that can serve as its poster.
-- Until the public XLSX is migrated, remote generation also accepts only the exact legacy Research header set with `image` in place of all three media columns. Legacy image values are not converted into graphical abstracts; mixed schemas fail closed. Remove that compatibility after the anonymous public workbook uses the canonical headers and remote-generation CI verifies it.
+- Until the public XLSX is migrated, remote generation also accepts only the exact legacy Research header set with `image` in place of all three media columns. Legacy image values are discarded rather than converted into graphical abstracts; mixed schemas fail closed. The presentation resolver supplies checked-in abstracts only for the three established project IDs while this compatibility is active. Remove the compatibility after the anonymous public workbook uses the canonical headers and remote-generation CI verifies it.
 - Recommendation source, LinkedIn, and inline quote destinations require HTTPS.
 - Profile role rotation requires all three role fields together and at least one non-empty pipe-delimited prefix.
 

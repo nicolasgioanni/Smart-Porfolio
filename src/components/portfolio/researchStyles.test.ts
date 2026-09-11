@@ -38,12 +38,16 @@ describe("research showcase styles", () => {
     );
   });
 
-  it("uses opaque per-project surfaces behind every research diagram", () => {
+  it("uses opaque per-project surfaces behind every research visual", () => {
     const visualSurfaces = [...researchStyles.matchAll(/--visual-surface:\s*([^;]+);/g)].map(([, surface]) => surface.trim());
+    const abstractRule = researchStyles.match(/\.research-abstract\s*\{[^}]*}/s)?.[0] ?? "";
 
     expect(visualSurfaces).toHaveLength(6);
     expect(visualSurfaces.every((surface) => /^#[\da-f]{6}$/i.test(surface))).toBe(true);
     expect(researchStyles).toMatch(/\.research-visual\s*{[^}]*background:\s*var\(--visual-surface\)/s);
+    expect(abstractRule).toMatch(/background:\s*var\(--visual-surface\)/);
+    expect(abstractRule).toMatch(/place-items:\s*center/);
+    expect(abstractRule).not.toMatch(/gradient|rgba|transparent/);
   });
 
   it("keeps full-card elevation exclusive to pointer hover", () => {
@@ -68,5 +72,55 @@ describe("research showcase styles", () => {
     expect(identityRule).toMatch(/display:\s*flex/);
     expect(researchStyles).not.toMatch(/research-project__kicker-row/);
     expect(researchStyles).not.toMatch(/research-project__metadata/);
+  });
+
+  it("contains graphical abstracts and limits lift motion to direct pointer or keyboard attention", () => {
+    const graphicalAbstractFeatureBlock = researchStyles.slice(
+      researchStyles.indexOf(".research-abstract {"),
+      researchStyles.indexOf(".research-skeleton {")
+    );
+    const triggerRule = researchStyles.match(/\.research-abstract__trigger\s*\{[^}]*}/s)?.[0] ?? "";
+    const thumbnailRule = researchStyles.match(/\.research-abstract__thumbnail\s*\{[^}]*}/s)?.[0] ?? "";
+    const focusRule = researchStyles.match(/\.research-abstract__trigger:focus-visible\s*\{[^}]*}/s)?.[0] ?? "";
+    const dialogFrameRule = researchStyles.match(/\.research-abstract-dialog__frame\s*\{[^}]*}/s)?.[0] ?? "";
+    const dialogRootRule = researchStyles.match(/\.research-abstract-dialog\s*\{[^}]*}/s)?.[0] ?? "";
+    const dialogFigureRule = researchStyles.match(/\.research-abstract-dialog__figure\s*\{[^}]*}/s)?.[0] ?? "";
+    const dialogImageRule = researchStyles.match(/\.research-abstract-dialog__image\s*\{[^}]*}/s)?.[0] ?? "";
+    const dialogCloseRule =
+      researchStyles.match(/\.research-abstract-dialog__frame > \.research-abstract-dialog__close\s*\{[^}]*}/s)?.[0] ?? "";
+
+    expect(thumbnailRule).toMatch(/width:\s*100%/);
+    expect(thumbnailRule).toMatch(/height:\s*100%/);
+    expect(thumbnailRule).toMatch(/object-fit:\s*contain/);
+    expect(triggerRule).toMatch(
+      /transition:\s*box-shadow 180ms ease,\s*transform 180ms cubic-bezier\(0\.16, 1, 0\.3, 1\)/
+    );
+    expect(triggerRule).not.toMatch(/transition:[^;]*border-color/);
+    expect(focusRule).toMatch(/outline:\s*3px solid var\(--detail-accent\)/);
+    expect(focusRule).toMatch(/transform:\s*translate3d\(0, -2px, 0\)/);
+    expect(dialogFrameRule).toMatch(/grid-template-rows:\s*minmax\(0, 1fr\)/);
+    expect(dialogFrameRule).toMatch(/height:\s*100%/);
+    expect(dialogFrameRule).toMatch(/box-shadow:\s*var\(--shadow-soft\)/);
+    expect(dialogFrameRule).not.toMatch(/gradient|glow|backdrop-filter/);
+    expect(dialogRootRule).toMatch(/background:\s*var\(--color-profile-preview-backdrop\)/);
+    expect(dialogRootRule).not.toMatch(/backdrop-filter|blur/);
+    expect(dialogFigureRule).toMatch(/overflow:\s*hidden/);
+    expect(dialogImageRule).toMatch(/position:\s*absolute/);
+    expect(dialogImageRule).toMatch(/inset:\s*0/);
+    expect(dialogImageRule).toMatch(/max-inline-size:\s*100%/);
+    expect(dialogImageRule).toMatch(/max-block-size:\s*100%/);
+    expect(dialogImageRule).toMatch(/object-fit:\s*contain/);
+    expect(dialogCloseRule).toMatch(/position:\s*absolute/);
+    expect(graphicalAbstractFeatureBlock).not.toMatch(/gradient|backdrop-filter|blur|shadow-glow/i);
+    expect(graphicalAbstractFeatureBlock).not.toMatch(/box-shadow\s*:\s*[^;]*\b0\s+0\b/i);
+    expect(researchStyles).toMatch(
+      /@media \(hover: hover\) and \(pointer: fine\)[\s\S]*?\.research-abstract__trigger:hover[\s\S]*?transform:\s*translate3d\(0, -2px, 0\)/
+    );
+    expect(researchStyles).toMatch(
+      /@media \(max-width: 920px\)[\s\S]*?\.research-abstract__trigger\s*\{[^}]*max-width:\s*none/
+    );
+    expect(researchStyles).toMatch(
+      /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.research-abstract__trigger\s*\{[^}]*transition:\s*none[\s\S]*?\.research-abstract__trigger:focus-visible[\s\S]*?transform:\s*none/
+    );
   });
 });

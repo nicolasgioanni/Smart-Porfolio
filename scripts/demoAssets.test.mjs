@@ -1,7 +1,9 @@
 ﻿import { existsSync, readFileSync, statSync } from "node:fs";
 import { createHash } from "node:crypto";
+import { readdirSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { parsePng, restrictedPngMetadataChunkTypes } from "./lib/pngMetadata.mjs";
 
 const projectRoot = process.cwd();
 const templateDirectory = path.join(projectRoot, "src", "content", "templates");
@@ -13,12 +15,40 @@ const generatedContentPath = path.join(
   "portfolio.generated.json",
 );
 
-const requiredLocalAssets = ["/favicon/favicon.png"];
+const requiredLocalAssets = [
+  "/favicon/favicon.png",
+  "/images/research/cytocv-graphical-abstract.png",
+  "/images/research/independent-study-graphical-abstract.png",
+  "/images/research/guide-donor-scheduler-graphical-abstract.png"
+];
 const profileFaviconPath = path.join(projectRoot, "public", "favicon", "favicon.png");
 const rootFaviconPath = path.join(projectRoot, "public", "favicon.ico");
 const expectedProfileFaviconSha256 = "24e6115767710a44e7a7d27947d1fb0c822b3a9b6c8892475c7d089c762054a1";
 const expectedRootFaviconSha256 = "e7a8e31c3c178392b8bc87f5b27c41520f507b71ea9212bf2b33e14e3d9fefc0";
 const expectedRootFaviconSizes = [16, 32, 48, 64, 128, 256];
+const expectedResearchAbstracts = Object.freeze({
+  "cytocv-graphical-abstract.png": {
+    byteLength: 1_525_043,
+    height: 941,
+    idatSha256: "9c6993184e4f8638919f3e822b31cdec6b1e84d9a12b9fe1545b1a1eb5fb86b7",
+    sha256: "e6125dd48bf499550aa079a3553780feea1cda74c318b5334e0b0b2df67209a6",
+    width: 1672
+  },
+  "guide-donor-scheduler-graphical-abstract.png": {
+    byteLength: 519_097,
+    height: 2160,
+    idatSha256: "c6969eae915228b2c8fb9f4619a979cc12be9c3ebafd0add67184aced07d8b09",
+    sha256: "3732612554b66a644f27a252ac78a6b04998578df6fba78689eeacacc805d180",
+    width: 3840
+  },
+  "independent-study-graphical-abstract.png": {
+    byteLength: 610_488,
+    height: 2160,
+    idatSha256: "2f7ccaa917323f7be667c1a822336aac9281c8d086fb589a6c230ba532b99c51",
+    sha256: "3e1a4c66a08febdf468c0642fb53227e0f1b58015464cd61dddbc30d23a0887e",
+    width: 3840
+  }
+});
 const supportedResearchAbstractExtensions = new Set([".avif", ".jpg", ".jpeg", ".png", ".webp"]);
 const supportedResearchVideoExtensions = new Set([".mp4", ".webm"]);
 const privateResumeAssets = [
@@ -115,6 +145,37 @@ describe("demo asset references", () => {
         expect(existsSync(publicPath), `${assetPath} should exist under public`).toBe(true);
         expect(statSync(publicPath).size, `${assetPath} should not be empty`).toBeGreaterThan(0);
       }
+    }
+  });
+
+  it("locks structurally valid research PNGs without embedded text or provenance chunks", () => {
+    const researchMediaDirectory = path.join(projectRoot, "public", "images", "research");
+    const pngFileNames = readdirSync(researchMediaDirectory).filter(
+      (fileName) => path.extname(fileName).toLowerCase() === ".png"
+    );
+
+    expect(pngFileNames).toEqual(expect.arrayContaining(Object.keys(expectedResearchAbstracts)));
+    for (const fileName of pngFileNames) {
+      const image = readFileSync(path.join(researchMediaDirectory, fileName));
+      const parsed = parsePng(image);
+      expect(
+        parsed.chunks.filter(({ type }) => restrictedPngMetadataChunkTypes.has(type)),
+        `${fileName} should not contain embedded text or provenance chunks`
+      ).toEqual([]);
+
+      const expected = expectedResearchAbstracts[fileName];
+      if (!expected) continue;
+
+      const idatStream = Buffer.concat(
+        parsed.chunks.filter(({ type }) => type === "IDAT").map(({ data }) => data)
+      );
+      expect(parsed, `${fileName} should keep its reviewed dimensions`).toMatchObject({
+        height: expected.height,
+        width: expected.width
+      });
+      expect(image.length, `${fileName} should keep its reviewed byte length`).toBe(expected.byteLength);
+      expect(sha256(image), `${fileName} should keep its reviewed file hash`).toBe(expected.sha256);
+      expect(sha256(idatStream), `${fileName} should keep its reviewed IDAT stream`).toBe(expected.idatSha256);
     }
   });
 
