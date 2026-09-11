@@ -1,8 +1,9 @@
-import { ExperiencePageSkeleton } from "@/components/loading/ExperiencePageSkeleton";
+import { RouteSkeleton } from "@/components/loading/RouteSkeleton";
 import { shouldRenderSkeletons } from "@/components/loading/shouldRenderSkeletons";
+import { siteRoutes } from "@/components/navigation/siteRoutes";
 
 export default function Loading() {
   if (!shouldRenderSkeletons()) return null;
 
-  return <ExperiencePageSkeleton />;
+  return <RouteSkeleton pathname={siteRoutes.experience} />;
 }

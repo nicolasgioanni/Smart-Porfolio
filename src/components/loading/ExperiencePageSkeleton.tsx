@@ -16,7 +16,7 @@ export function ExperiencePageSkeleton() {
             <SkeletonBlock height={40} radius="999px" width={196} />
           </div>
         </div>
-        {Array.from({ length: 4 }).map((_, index) => (
+        {Array.from({ length: 5 }).map((_, index) => (
           <article className="experience-skeleton__card" key={index}>
             <div className="experience-skeleton__header">
               <SkeletonBlock height={64} radius="999px" width={64} />
