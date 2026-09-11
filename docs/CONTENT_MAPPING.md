@@ -134,11 +134,13 @@ Home Research cards display:
 - at most one inferred publication action using its authored label;
 - at most one inferred website action using its authored label.
 
-Those action kinds always appear in the order above, while labels such as `Reference manuscript`, `Software DOI`, and `Live site` retain their precise authored meaning. Home cards ignore `pending_links`, role, impact, bullets, skills, profile-only fields, image, and organization logo.
+Those action kinds always appear in the order above, while labels such as `Reference manuscript`, `Software DOI`, and `Live site` retain their precise authored meaning. Home cards ignore `pending_links`, role, impact, bullets, skills, profile-only fields, research media, and organization logo.
 
-The Research route gives the three established projects concise display titles, then uses `home_title` with formal `title` fallback for other IDs. It also displays a distinct formal title when appropriate, role, organization, date range, location, impact, every published link, and deduplicated pending-link labels. CytoCV, Adversarial Machine Learning, and Guide Donor Scheduler receive verified project-specific Overview and Technical narratives plus scientific SVG diagrams. Unknown research IDs fall back to `home_summary`, `detail_summary`, bullets, and skills. Content order controls the left-right visual alternation. The route does not render `image` or organization logo fields.
+The Research route gives the three established projects concise display titles, then uses `home_title` with formal `title` fallback for other IDs. It also displays a distinct formal title when appropriate, role, organization, date range, location, impact, every published link, and deduplicated pending-link labels. CytoCV, Adversarial Machine Learning, and Guide Donor Scheduler receive verified project-specific Overview and Technical narratives plus scientific SVG diagrams. Unknown research IDs fall back to `home_summary`, `detail_summary`, bullets, and skills. Content order controls the left-right visual alternation. This schema-only stage does not yet render `graphical_abstract`, `graphical_abstract_alt`, `video`, or organization logo fields on the Research route.
 
 Published links keep their authored labels and order. A pending label that matches a published label is suppressed case-insensitively. Other pending labels render as disabled status controls; the CytoCV `Manuscript` entry therefore appears as `Manuscript forthcoming` until a URL is published.
+
+Research media fields are validated staging inputs for the graphical-abstract and self-hosted-video presentation. The abstract path and alternative text are paired, and the optional video depends on that abstract as its poster. Existing `links` and `pending_links` continue to own live-site, source, DOI, manuscript, and later publication destinations.
 
 ## Projects
 
@@ -199,7 +201,6 @@ These accepted fields should not be treated as display controls:
 
 - profile: `previous_experience_id`, `primary_cta_label`, `secondary_cta_label`;
 - links: `icon`, `show_in_footer`;
-- research: `image`;
 - recommendations: `home_quote`, `context`, `skills`;
 - education: `home_summary`, `detail_summary`, `detail_order`;
 - site settings: `max_home_experience_items`.

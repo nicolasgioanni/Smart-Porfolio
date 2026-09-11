@@ -94,8 +94,8 @@ const expectedHeaders: Record<PortfolioSheetName, readonly string[]> = {
   research: [
     "id", "title", "home_title", "role", "organization", "organization_logo", "organization_logo_alt",
     "location", "start_date", "end_date", "home_summary", "profile_summary", "profile_byline", "profile_labs",
-    "detail_summary", "impact", "bullets", "skills", "links", "pending_links", "image", "featured",
-    "show_on_home", "home_order", "detail_order"
+    "detail_summary", "impact", "bullets", "skills", "links", "pending_links", "graphical_abstract",
+    "graphical_abstract_alt", "video", "featured", "show_on_home", "home_order", "detail_order"
   ],
   projects: [
     "id", "title", "subtitle", "home_summary", "home_skills", "home_skill_1_summary", "home_skill_1_details",

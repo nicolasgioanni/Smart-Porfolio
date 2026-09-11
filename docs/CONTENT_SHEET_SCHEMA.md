@@ -179,7 +179,7 @@ Header links are selected only by `show_in_header`; see [Content Mapping](CONTEN
 Canonical header:
 
 ```csv
-id,title,home_title,role,organization,organization_logo,organization_logo_alt,location,start_date,end_date,home_summary,profile_summary,profile_byline,profile_labs,detail_summary,impact,bullets,skills,links,pending_links,image,featured,show_on_home,home_order,detail_order
+id,title,home_title,role,organization,organization_logo,organization_logo_alt,location,start_date,end_date,home_summary,profile_summary,profile_byline,profile_labs,detail_summary,impact,bullets,skills,links,pending_links,graphical_abstract,graphical_abstract_alt,video,featured,show_on_home,home_order,detail_order
 ```
 
 | Field | Required | Rule |
@@ -204,13 +204,17 @@ id,title,home_title,role,organization,organization_logo,organization_logo_alt,lo
 | `skills` | No | Pipe-delimited detail skill chips. |
 | `links` | No | Pipe-delimited general content links. |
 | `pending_links` | No | Pipe-delimited labels without destinations. |
-| `image` | No | Validated compatibility field with no current research renderer. |
+| `graphical_abstract` | No | Safe root-relative raster path under `/images/research/`; requires `graphical_abstract_alt`. |
+| `graphical_abstract_alt` | No | Meaningful alternative text; requires `graphical_abstract`. |
+| `video` | No | Optional safe root-relative `.mp4` or `.webm` path under `/images/research/`; requires `graphical_abstract` for its poster. |
 | `featured` | No | Boolean selection and sort priority. |
 | `show_on_home` | No | Boolean Home eligibility. |
 | `home_order` | No | Numeric Home order. |
 | `detail_order` | No | Numeric detail order. |
 
 The compact profile panel removes pending labels that duplicate a published link label, case-insensitively, and deduplicates repeated pending labels for that view. Generated JSON preserves the original normalized list.
+
+Research media is local-only. Graphical abstracts accept `.avif`, `.jpg`, `.jpeg`, `.png`, and `.webp`; videos accept `.mp4` and `.webm`. Paths cannot contain whitespace, query strings, fragments, remote origins, traversal, backslashes, or null bytes, including forms revealed after repeated percent decoding. Place the corresponding non-empty files under `public/images/research/` before publishing their paths.
 
 ## `projects`
 
