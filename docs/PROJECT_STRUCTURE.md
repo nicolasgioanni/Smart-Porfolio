@@ -28,6 +28,8 @@ Smart-Porfolio/
 |   |-- lib/
 |   |-- artifactIntegrity.mjs
 |   |-- checkDeployedContent.mjs
+|   |-- nextBuildAdapter.mjs
+|   |-- normalizeNextStaticExport.mjs
 |   |-- writeContentVersion.mjs
 |   `-- local automation and tests
 |-- tests/

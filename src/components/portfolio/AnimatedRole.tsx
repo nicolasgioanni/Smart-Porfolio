@@ -177,7 +177,13 @@ export function AnimatedRole({ motionEnabled = true, role }: AnimatedRoleProps) 
     // The shared preference hook updates after hydration. This synchronous check
     // prevents even a short-lived timer when the initial media query already matches.
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
-      setRotationState(createIdleRotationState(roleConfigurationKey));
+      setRotationState((currentState) =>
+        currentState.configurationKey === roleConfigurationKey &&
+        currentState.phase === "idle" &&
+        currentState.currentIndex === 0
+          ? currentState
+          : createIdleRotationState(roleConfigurationKey)
+      );
       return;
     }
 

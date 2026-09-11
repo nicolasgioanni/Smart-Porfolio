@@ -268,7 +268,7 @@ function RouteScopedInteractiveBlobFooter({
         </div>
 
         <div
-          {...(!expanded ? ({ inert: "" } as unknown as { inert: boolean }) : {})}
+          inert={!expanded}
           aria-hidden={!expanded}
           className="blob-footer__details"
           id={detailsId}

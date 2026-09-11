@@ -2,6 +2,7 @@ import { expect, type Page } from "@playwright/test";
 import type { ThemeName } from "../../src/lib/theme/resolveThemeName";
 import { themeLabels } from "../../src/lib/theme/themeOptions";
 import { themeStorageKey } from "../../src/lib/theme/themePreference";
+import { settleLayout } from "./settleLayout";
 
 /**
  * Loads a palette through the production pre-hydration preference contract.
@@ -16,7 +17,7 @@ export async function reloadWithStoredTheme(page: Page, theme: ThemeName): Promi
     [themeStorageKey, theme]
   );
   await page.reload();
-  await page.waitForLoadState("networkidle");
+  await settleLayout(page);
 
   const root = page.locator("html");
   await expect(root).toHaveAttribute("data-theme", theme);

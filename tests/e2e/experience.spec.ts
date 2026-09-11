@@ -3,16 +3,16 @@ import {
   expectDisclosureFocusToKeepRestingElevation,
   findFirstExpandableCard
 } from "./cardFocusElevation";
+import { captureBrowserConsole, expectNoBrowserConsoleIssues } from "./browserConsole";
+import { settleLayout } from "./settleLayout";
 
-async function settleLayout(page: Page) {
-  await page.waitForLoadState("networkidle");
-  await page.evaluate(async () => {
-    await document.fonts.ready;
-    await new Promise<void>((resolve) => {
-      window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve()));
-    });
-  });
-}
+test.beforeEach(async ({ page }) => {
+  captureBrowserConsole(page);
+});
+
+test.afterEach(async ({ page }) => {
+  expectNoBrowserConsoleIssues(page);
+});
 
 async function expectExperienceCardsOrEmptyState(page: Page): Promise<Locator | undefined> {
   const cards = page.locator("article.experience-card");

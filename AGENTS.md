@@ -35,4 +35,15 @@
 - Add focused component tests for interaction state and Playwright coverage when behavior depends on scrolling, focus, responsive layout, or browser painting.
 - Verify keyboard dismissal, focus containment and restoration, backdrop isolation, reduced motion, and all supported themes for new modal consumers.
 - Run `npm run docs:check`, `npm run lint`, `npm run typecheck`, focused tests, the applicable browser suite, and `npm run build` before handoff.
+- Keep the local `next.config.mjs` build adapter and `scripts/normalizeNextStaticExport.mjs` together. The adapter repairs Next 16 segment-cache filenames emitted as nested paths by Windows builds and must fail on malformed trees or collisions rather than overwrite export data.
 - Update architecture, accessibility, design-system, testing, and content-pipeline documentation when their contracts change.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

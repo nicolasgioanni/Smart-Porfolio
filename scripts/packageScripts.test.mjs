@@ -22,6 +22,7 @@ function section(source, start, end) {
 describe("package and CI deployment automation", () => {
   it("pins local Wrangler and writes content-version metadata after both build modes", async () => {
     const packageJson = JSON.parse(await readFile(path.join(projectRoot, "package.json"), "utf8"));
+    const nextConfigSource = await readFile(path.join(projectRoot, "next.config.mjs"), "utf8");
     const nvmVersion = (await readFile(path.join(projectRoot, ".nvmrc"), "utf8")).trim();
 
     expect(packageJson.engines.node).toBe(">=22.13.0");
@@ -30,6 +31,8 @@ describe("package and CI deployment automation", () => {
     expect(packageJson.scripts["build:generated"]).toBe(
       "next build && node scripts/writeContentVersion.mjs"
     );
+    expect(nextConfigSource).toMatch(/adapterPath:\s*fileURLToPath\(new URL\("\.\/scripts\/nextBuildAdapter\.mjs"/);
+    expect(nextConfigSource).toMatch(/output:\s*"export"/);
     expect(packageJson.scripts["dev:pages"]).toContain("npx --no-install wrangler");
     expect(packageJson.scripts["docs:check"]).toBe("node scripts/validateDocumentation.mjs");
     expect(packageJson.scripts.verify).toBe(
