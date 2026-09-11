@@ -4,8 +4,10 @@ import { siteRoutes } from "@/components/navigation/siteRoutes";
 import { SmartLink } from "@/components/navigation/SmartLink";
 import { createPageMetadata } from "@/lib/content/createPageMetadata";
 import { getPortfolioContent } from "@/lib/content/getPortfolioContent";
+import { routeHeaderContent } from "@/lib/content/routeHeaderContent";
 
-const pageTitle = "Security & Responsible Disclosure";
+const securityHeader = routeHeaderContent[siteRoutes.security];
+const pageTitle = securityHeader.title;
 const pageDescription =
   "Security architecture, reporting instructions, testing boundaries, and coordinated-disclosure expectations for this portfolio.";
 
@@ -24,7 +26,8 @@ export default function SecurityPage() {
 
   return (
     <LegalDocument
-      description="How to report a suspected portfolio security issue without disrupting visitors or third-party services."
+      description={securityHeader.description}
+      eyebrow={securityHeader.eyebrow}
       effectiveDate={effectiveDate}
       motionEnabled={content.siteSettings.enableScrollMotion}
       title={pageTitle}

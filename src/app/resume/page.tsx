@@ -5,11 +5,14 @@ import { siteRoutes } from "@/components/navigation/siteRoutes";
 import { ResumePanel } from "@/components/portfolio/ResumePanel";
 import { createPageMetadata } from "@/lib/content/createPageMetadata";
 import { getPortfolioContent } from "@/lib/content/getPortfolioContent";
+import { routeHeaderContent } from "@/lib/content/routeHeaderContent";
+
+const resumeHeader = routeHeaderContent[siteRoutes.resume];
 
 export function generateMetadata(): Metadata {
   return createPageMetadata(getPortfolioContent(), {
     pathname: siteRoutes.resume,
-    title: "Resume",
+    title: resumeHeader.title,
     description: "Request Nicolas Gioanni's private resume by email or through the priority contact form."
   });
 }
@@ -21,8 +24,8 @@ export default function ResumePage() {
 
   return (
     <PageContainer
-      title="Resume"
-      description="My resume is private and shared directly with legitimate professional contacts."
+      title={resumeHeader.title}
+      description={resumeHeader.description}
       introVariant="panel"
       motionEnabled={content.siteSettings.enableScrollMotion}
     >

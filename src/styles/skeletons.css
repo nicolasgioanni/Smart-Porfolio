@@ -107,12 +107,20 @@
 .skeleton-page__header {
   display: grid;
   gap: var(--space-3);
-  margin-bottom: var(--space-10);
   padding: clamp(var(--space-6), 4vw, var(--space-10));
   border: 1px solid var(--color-line-strong);
   border-radius: var(--radius-panel);
   background: var(--color-surface-strong);
   box-shadow: var(--shadow-soft);
+}
+
+.route-header-skeleton__ink {
+  color: transparent;
+  background-color: var(--color-skeleton-surface);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  pointer-events: none;
+  user-select: none;
 }
 
 .skeleton-page__section {
@@ -269,6 +277,34 @@
   border-block-start: 1px solid var(--color-line);
 }
 
+.home-skeleton__experience-group {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+  padding-block: var(--space-5);
+  border-block-start: 1px solid var(--color-line);
+}
+
+.home-skeleton__experience-group:first-of-type {
+  padding-top: 0;
+  border-block-start: 0;
+}
+
+.home-skeleton__experience-group:last-child {
+  padding-bottom: 0;
+}
+
+.home-skeleton__experience-group > div,
+.home-skeleton__experience-role {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.home-skeleton__experience-group > div {
+  gap: var(--space-3);
+}
+
 .home-skeleton__row:first-of-type {
   padding-top: 0;
   border-block-start: 0;
@@ -370,6 +406,11 @@
 
 .detail-card-skeleton__deep-dive {
   gap: var(--space-3);
+}
+
+.detail-card-skeleton__deep-dive-group {
+  display: grid;
+  gap: var(--space-2);
 }
 
 .detail-card-skeleton__actions {
@@ -532,10 +573,6 @@
     padding: var(--space-6);
   }
 
-  .skeleton-page__header {
-    padding: var(--space-6);
-  }
-
   .home-skeleton__hero {
     grid-template-areas:
       "profile"
@@ -549,6 +586,7 @@
     max-width: 320px;
     justify-self: center;
     width: 100%;
+    margin-bottom: clamp(var(--space-10), 5vw, 3.5rem);
   }
 
   .home-skeleton__portrait {
@@ -584,10 +622,6 @@
     width: min(100% - 24px, 980px);
   }
 
-  .skeleton-page__title {
-    height: 25px !important;
-  }
-
 }
 
 @media (max-width: 720px) {
@@ -616,6 +650,7 @@
     gap: var(--space-3);
     max-width: none;
     width: 100%;
+    margin-bottom: 0;
   }
 
   .home-skeleton__portrait-column {
@@ -638,6 +673,17 @@
   .home-skeleton__portrait {
     width: clamp(96px, 28vw, 132px) !important;
     height: clamp(96px, 28vw, 132px) !important;
+  }
+
+  .home-skeleton__experience-group {
+    grid-template-columns: 42px minmax(0, 1fr);
+    gap: var(--space-3);
+    padding-block: var(--space-4);
+  }
+
+  .home-skeleton__experience-group > .skeleton-block {
+    width: 42px !important;
+    height: 42px !important;
   }
 
   .home-skeleton__academic-grid {

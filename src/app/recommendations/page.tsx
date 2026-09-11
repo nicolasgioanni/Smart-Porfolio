@@ -4,12 +4,15 @@ import { siteRoutes } from "@/components/navigation/siteRoutes";
 import { RecommendationsList } from "@/components/portfolio/RecommendationsList";
 import { createPageMetadata } from "@/lib/content/createPageMetadata";
 import { getPortfolioContent } from "@/lib/content/getPortfolioContent";
+import { routeHeaderContent } from "@/lib/content/routeHeaderContent";
 import { selectRecommendationDetailContent } from "@/lib/content/selectHomeContent";
+
+const recommendationsHeader = routeHeaderContent[siteRoutes.recommendations];
 
 export function generateMetadata(): Metadata {
   return createPageMetadata(getPortfolioContent(), {
     pathname: siteRoutes.recommendations,
-    title: "Recommendations",
+    title: recommendationsHeader.title,
     description: "Professional recommendations and social proof with source links when available."
   });
 }
@@ -20,8 +23,8 @@ export default function RecommendationsPage() {
 
   return (
     <PageContainer
-      title="Recommendations"
-      description="Read how professors, managers, and teammates describe my engineering, collaboration, and communication below."
+      title={recommendationsHeader.title}
+      description={recommendationsHeader.description}
       className="page-container--recommendations"
       introVariant="panel"
       motionEnabled={content.siteSettings.enableScrollMotion}
