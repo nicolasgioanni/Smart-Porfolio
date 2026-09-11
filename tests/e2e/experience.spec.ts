@@ -98,6 +98,22 @@ test.describe("Experience showcase", () => {
 
     const disclosures = disclosureCard.locator("button.detail-section__trigger");
     const firstDisclosure = disclosures.first();
+    const hasSecondDisclosure = (await disclosures.count()) >= 2;
+    const secondDisclosure = disclosures.nth(1);
+
+    if (hasSecondDisclosure) {
+      // Compare matching collapsed icons before opening one rotates its bounding box.
+      const [firstIconBox, secondIconBox] = await Promise.all([
+        firstDisclosure.locator(".detail-section__icon").boundingBox(),
+        secondDisclosure.locator(".detail-section__icon").boundingBox()
+      ]);
+      expect(firstIconBox).not.toBeNull();
+      expect(secondIconBox).not.toBeNull();
+      expect(
+        Math.abs(firstIconBox!.x + firstIconBox!.width - (secondIconBox!.x + secondIconBox!.width))
+      ).toBeLessThanOrEqual(1);
+    }
+
     await firstDisclosure.click();
     await expect(firstDisclosure).toHaveAttribute("aria-expanded", "true");
     const panelId = await firstDisclosure.getAttribute("aria-controls");
@@ -106,18 +122,7 @@ test.describe("Experience showcase", () => {
     await expect(panel).toHaveAttribute("aria-hidden", "false");
     await expect(panel.getByRole("list").first()).toBeVisible();
 
-    if (await disclosures.count() < 2) return;
-
-    const secondDisclosure = disclosures.nth(1);
-    const [firstIconBox, secondIconBox] = await Promise.all([
-      firstDisclosure.locator(".detail-section__icon").boundingBox(),
-      secondDisclosure.locator(".detail-section__icon").boundingBox()
-    ]);
-    expect(firstIconBox).not.toBeNull();
-    expect(secondIconBox).not.toBeNull();
-    expect(
-      Math.abs(firstIconBox!.x + firstIconBox!.width - (secondIconBox!.x + secondIconBox!.width))
-    ).toBeLessThanOrEqual(1);
+    if (!hasSecondDisclosure) return;
 
     await secondDisclosure.click();
     await expect(firstDisclosure).toHaveAttribute("aria-expanded", "false");
