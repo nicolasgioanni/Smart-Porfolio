@@ -27,7 +27,10 @@ Smart Portfolio uses a layered quality gate for documentation, static content, R
 | `npm run typecheck` | `next typegen && tsc --noEmit` | Regenerates Next route types and the ignored managed `next-env.d.ts` before strict TypeScript checking |
 | `npm run test:footer` | Two focused footer regression files | Also runs again inside the full suite |
 | `npm run test:navigation` | Focused mobile rail, header, responsive-query, theme, and navigation style tests | Also runs again inside the full suite |
+| `npm run test:skeletons` | Focused skeleton component, content, style, and page-entry tests | Protects route fallback semantics, fixture geometry, and static no-motion placeholders |
 | `npm run test:e2e:navigation` | Playwright navigation specification in Chromium | Uses port 3100 by default and reuses a compatible running local server outside CI |
+| `npm run test:e2e:skeletons:visual` | Linux-only Playwright screenshot specification | Captures or compares 23 reviewed skeleton geometry baselines on Ubuntu 24.04 only, rejecting browser diagnostics before any screenshot |
+| `npm run test:e2e:skeletons` | Playwright route-transition and visual skeleton specifications | Holds non-prefetch RSC navigation for each non-Home route and includes the Linux visual matrix; it does not claim static-export streaming |
 | `npm run test:e2e:footer` | Playwright footer specification in Chromium | Covers every route, first paint, client navigation, restored scroll, and scroll activation |
 | `npm run test:e2e:recommendations` | Playwright recommendation specification in Chromium | Samples desktop geometry through expansion and dismissal, then checks responsive and reduced-motion behavior |
 | `npm run test:e2e:experience` | Playwright experience specification in Chromium | Protects detail-level switching, disclosure semantics, responsive controls, and reduced-motion behavior |
