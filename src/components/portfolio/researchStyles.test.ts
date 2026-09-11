@@ -50,4 +50,16 @@ describe("research showcase styles", () => {
     );
     expect(hoverElevationRule).toMatch(/transform:\s*translate3d\(0, -2px, 0\)/);
   });
+
+  it("keeps research resource targets touch-safe and the header identity compact", () => {
+    const resourceRule = researchStyles.match(/\.research-project__resource\s*\{[^}]*}/s)?.[0] ?? "";
+    const pendingResourceRule = researchStyles.match(/\.research-project__resource--pending\s*\{[^}]*}/s)?.[0] ?? "";
+    const identityRule = researchStyles.match(/\.research-project__identity\s*\{[^}]*}/s)?.[0] ?? "";
+
+    expect(resourceRule).toMatch(/min-height:\s*44px/);
+    expect(pendingResourceRule).toMatch(/min-height:\s*44px/);
+    expect(identityRule).toMatch(/display:\s*flex/);
+    expect(researchStyles).not.toMatch(/research-project__kicker-row/);
+    expect(researchStyles).not.toMatch(/research-project__metadata/);
+  });
 });

@@ -46,10 +46,9 @@ const researchNarratives: Record<string, DetailNarrative> = {
         {
           id: "release",
           title: "Open research software",
-          lead: "Released CytoCV v2.0.0 as a citable software artifact while continuing manuscript preparation.",
+          lead: "Released CytoCV v2.0.0 as a citable software artifact with reproducibility documentation.",
           details: [
-            "The public release includes citation metadata, reproducibility documentation, and a versioned software DOI.",
-            "The journal manuscript is still in preparation and is shown as forthcoming."
+            "The public release includes citation metadata and a versioned software DOI."
           ],
           signal: "Citable v2.0.0"
         }

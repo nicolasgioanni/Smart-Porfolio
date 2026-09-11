@@ -2,6 +2,7 @@ import type { ProfileOverviewContent, ProfileOverviewLogo } from "@/content/type
 import { SmartLink } from "@/components/navigation/SmartLink";
 import { siteRoutes } from "@/components/navigation/siteRoutes";
 import { AnimatedRole } from "@/components/portfolio/AnimatedRole";
+import { DisabledResourceButton } from "@/components/portfolio/DisabledResourceButton";
 import { formatEducationProgram } from "@/lib/content/profileOverview";
 
 const profileResearchResourceClassName =
@@ -222,15 +223,12 @@ export function ProfileOverviewDetails({ overview }: ProfileOverviewDetailsProps
                   ))}
                   {overview.research.pendingLinks.map((label) => (
                     <li key={`pending-${label}`}>
-                      <button
-                        aria-label={`${label} — not yet published`}
+                      <DisabledResourceButton
                         className={`${profileResearchResourceClassName} profile-overview__research-link--pending`}
-                        disabled
-                        title="Not yet published"
-                        type="button"
+                        label={label}
                       >
                         {label}
-                      </button>
+                      </DisabledResourceButton>
                     </li>
                   ))}
                 </ul>

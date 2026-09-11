@@ -173,7 +173,7 @@ The dedicated Research route opens with the focused title `Applied AI Research` 
 
 CytoCV uses a multichannel yeast-segmentation lens, Adversarial Machine Learning uses an eight-prototype attack-and-defense matrix, and Guide Donor Scheduler uses a guide, PAM, donor, and export diagram. These SVGs are semantic diagrams rather than external brand marks. They share structural styling while each project owns a bounded accent palette that remains legible in Navy, Light, and Dark.
 
-The shared `Overview` and `Technical` selector changes all research narratives at once. Each collapsed evidence row carries a complete lead; expansion adds supporting bullets and tools. Only one row per project remains open. Verified resources stay interactive, while the CytoCV manuscript placeholder is visibly inactive and labelled as forthcoming.
+The shared `Overview` and `Technical` selector changes all research narratives at once. Each collapsed evidence row carries a complete lead; expansion adds supporting bullets and tools. Only one row per project remains open. Research cards pair a subtle content-order label with the authored organization mark, omit redundant timeline metadata, and retain 44 CSS-pixel resource targets. Verified resources stay interactive, while the CytoCV `Manuscript` placeholder is a native disabled button with its exact visible label.
 
 ### Experience showcase
 
