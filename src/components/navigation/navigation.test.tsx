@@ -195,10 +195,12 @@ describe("navigation helpers", () => {
     navigationMock.pathname = "/";
     installMediaQueries();
     setScrollY(0);
+    document.body.style.overflow = "";
   });
 
   afterEach(() => {
     setScrollY(0);
+    document.body.style.overflow = "";
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
 
@@ -500,46 +502,53 @@ describe("navigation helpers", () => {
   });
 
   it("opens the profile photo preview and closes when clicking outside the frame", async () => {
-    const { container } = renderHeader();
+    renderHeader();
 
-    fireEvent.click(screen.getByRole("button", { name: /view demo owner profile photo/i }));
-    expect(screen.getByRole("dialog", { name: /demo owner profile photo/i })).toBeInTheDocument();
+    const trigger = screen.getByRole("button", { name: /view demo owner profile photo/i });
+    fireEvent.click(trigger);
+    const dialog = screen.getByRole("dialog", { name: /demo owner profile photo/i });
+    expect(dialog).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /demo owner profile photo/i })).toHaveAttribute("src", "/favicon/favicon.png");
-    expect(screen.getByRole("button", { name: /close profile photo preview/i })).toHaveClass(
+    const closeButton = screen.getByRole("button", { name: /close profile photo preview/i });
+    expect(closeButton).toHaveClass(
       "hover-base-1",
       "hover-base-1--compact"
     );
+    await waitFor(() => expect(closeButton).toHaveFocus());
+    expect(document.body.style.overflow).toBe("hidden");
 
     fireEvent.click(screen.getByRole("img", { name: /demo owner profile photo/i }));
     expect(screen.getByRole("dialog", { name: /demo owner profile photo/i })).toBeInTheDocument();
 
-    const backdrop = container.querySelector(".profile-image-preview");
+    const backdrop = document.body.querySelector(".profile-image-preview");
     expect(backdrop).not.toBeNull();
     fireEvent.click(backdrop as Element);
-    expect(backdrop).toHaveAttribute("data-state", "closed");
+    expect(backdrop).toHaveAttribute("data-state", "closing");
     await waitFor(() => expect(screen.queryByRole("dialog", { name: /demo owner profile photo/i })).not.toBeInTheDocument());
+    expect(trigger).toHaveFocus();
+    expect(document.body.style.overflow).toBe("");
   });
 
   it("closes the profile photo preview with Escape", async () => {
-    const { container } = renderHeader();
+    renderHeader();
 
     fireEvent.click(screen.getByRole("button", { name: /view demo owner profile photo/i }));
     expect(screen.getByRole("dialog", { name: /demo owner profile photo/i })).toBeInTheDocument();
 
-    fireEvent.keyDown(window, { key: "Escape" });
-    expect(container.querySelector(".profile-image-preview")).toHaveAttribute("data-state", "closed");
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(document.body.querySelector(".profile-image-preview")).toHaveAttribute("data-state", "closing");
     await waitFor(() => expect(screen.queryByRole("dialog", { name: /demo owner profile photo/i })).not.toBeInTheDocument());
   });
 
   it("closes an open profile photo preview when the header enters mobile UI mode", async () => {
-    const { container } = renderHeader();
+    renderHeader();
 
     fireEvent.click(screen.getByRole("button", { name: /view demo owner profile photo/i }));
     expect(screen.getByRole("dialog", { name: /demo owner profile photo/i })).toBeInTheDocument();
 
     setMediaQueryMatches(MOBILE_UI_QUERY, true);
 
-    expect(container.querySelector(".profile-image-preview")).toHaveAttribute("data-state", "closed");
+    expect(document.body.querySelector(".profile-image-preview")).toHaveAttribute("data-state", "closing");
     await waitFor(() => expect(screen.queryByRole("dialog", { name: /demo owner profile photo/i })).not.toBeInTheDocument());
   });
 
