@@ -1,6 +1,8 @@
 import type { ResearchItem } from "@/content/types";
 import { ResearchGraphicalAbstractPreview } from "@/components/portfolio/ResearchGraphicalAbstractPreview";
+import { ResearchVideoPreview } from "@/components/portfolio/ResearchVideoPreview";
 import { getResearchGraphicalAbstract } from "@/lib/content/researchGraphicalAbstracts";
+import { getResearchVideo } from "@/lib/content/researchVideos";
 
 type ResearchProjectVisualProps = {
   item: ResearchItem;
@@ -22,6 +24,16 @@ function FallbackVisual() {
 
 export function ResearchProjectVisual({ item, order, title }: ResearchProjectVisualProps) {
   const graphicalAbstract = getResearchGraphicalAbstract(item);
+  const video = getResearchVideo(item);
+
+  if (graphicalAbstract && video) {
+    return (
+      <div className="research-media-stack">
+        <ResearchVideoPreview poster={graphicalAbstract} title={title} video={video} />
+        <ResearchGraphicalAbstractPreview abstract={graphicalAbstract} title={title} />
+      </div>
+    );
+  }
 
   if (graphicalAbstract) {
     return <ResearchGraphicalAbstractPreview abstract={graphicalAbstract} title={title} />;

@@ -37,6 +37,7 @@ This documentation explains how Smart Portfolio is authored, built, tested, depl
 | [Content mapping](CONTENT_MAPPING.md) | Mapping from source fields through generated types and selectors to routes and components. |
 | [Local content editing](LOCAL_CONTENT_EDITING.md) | Owner-focused procedure for editing local templates, assets, and workbook-backed content. |
 | [Content replacement checklist](CONTENT_REPLACEMENT_CHECKLIST.md) | Short publication checklist for replacing portfolio content safely. |
+| [Research media](RESEARCH_MEDIA.md) | Publication facts, accessibility artifacts, and integrity contracts for self-hosted Research media. |
 
 ## Design and user experience
 

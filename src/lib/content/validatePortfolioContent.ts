@@ -39,6 +39,8 @@ function isSafeRootRelativePath(value: string): boolean {
 
 const supportedResearchAbstractExtensions = [".avif", ".jpg", ".jpeg", ".png", ".webp"] as const;
 const supportedResearchVideoExtensions = [".mp4", ".webm"] as const;
+const supportedResearchCaptionExtensions = [".vtt"] as const;
+const supportedResearchTranscriptExtensions = [".txt"] as const;
 
 function isSupportedResearchMediaPath(value: string, extensions: readonly string[]): boolean {
   const trimmedValue = value.trim();
@@ -73,6 +75,18 @@ function isSupportedResearchMediaPath(value: string, extensions: readonly string
 
 export function isSupportedResearchGraphicalAbstractPath(value: string): boolean {
   return isSupportedResearchMediaPath(value, supportedResearchAbstractExtensions);
+}
+
+export function isSupportedResearchVideoPath(value: string): boolean {
+  return isSupportedResearchMediaPath(value, supportedResearchVideoExtensions);
+}
+
+export function isSupportedResearchCaptionPath(value: string): boolean {
+  return isSupportedResearchMediaPath(value, supportedResearchCaptionExtensions);
+}
+
+export function isSupportedResearchTranscriptPath(value: string): boolean {
+  return isSupportedResearchMediaPath(value, supportedResearchTranscriptExtensions);
 }
 
 export function isSupportedUrl(value: string, options: { allowMailto?: boolean; allowRootRelative?: boolean } = {}): boolean {
@@ -228,7 +242,7 @@ function validateResearch(items: ResearchItem[], errors: string[]): void {
       errors.push(`research.${item.id} has an invalid graphicalAbstract path: ${item.graphicalAbstract}`);
     }
 
-    if (item.video && !isSupportedResearchMediaPath(item.video, supportedResearchVideoExtensions)) {
+    if (item.video && !isSupportedResearchVideoPath(item.video)) {
       errors.push(`research.${item.id} has an invalid video path: ${item.video}`);
     }
 

@@ -523,7 +523,7 @@ test.describe("Research showcase", () => {
       if (!themedProjects) throw new Error("Research projects disappeared after selecting a stored palette.");
 
       const visualSurfaces = await themedProjects
-        .locator(".research-project__visual > :is(.research-visual, .research-abstract)")
+        .locator(".research-project__visual > :is(.research-visual, .research-abstract, .research-media-stack)")
         .evaluateAll((visuals) => {
         return visuals.map((visual) => {
           const styles = getComputedStyle(visual);
@@ -603,5 +603,59 @@ test.describe("Research showcase", () => {
     test.skip(!project, "Legacy research content can legitimately omit expandable detail disclosures.");
 
     await expectDisclosureFocusToKeepRestingElevation(page, project!);
+  });
+
+  test("keeps the CytoCV captioned video modal contained with native media fallbacks", async ({ page }) => {
+    test.slow();
+
+    for (const viewport of [
+      { width: 1280, height: 600 },
+      { width: 320, height: 568 }
+    ]) {
+      await page.setViewportSize(viewport);
+      await page.goto("/research");
+      await settleLayout(page);
+
+      const project = page.locator('article.research-project[id="cytocv-miller-lab"]');
+      await expect(project).toHaveCount(1);
+      const player = project.locator("video.research-video__player");
+      const openButton = project.getByRole("button", { name: /Expand video for CytoCV/ });
+      await expect(player).toHaveAttribute("controls", "");
+      await expect(player).toHaveAttribute("preload", "metadata");
+      await expect(player).toHaveAttribute("playsinline", "");
+      await expect(player).not.toHaveAttribute("autoplay");
+      await expect(player).not.toHaveAttribute("controlslist", /./);
+      await expect(player).not.toHaveAttribute("disablepictureinpicture", /./);
+      await expect(project.getByRole("link", { name: "Read transcript" })).toHaveAttribute(
+        "href",
+        "/images/research/cytocv-supplementary-video-s1-transcript.txt"
+      );
+      await expect(project.getByRole("link", { name: "Download MP4" })).toHaveAttribute("download", "");
+
+      await openButton.scrollIntoViewIfNeeded();
+      await openButton.click();
+      const dialog = page.getByRole("dialog", { name: "CytoCV supplementary workflow video" });
+      const dialogPlayer = dialog.locator("video.research-video-dialog__player");
+      const closeButton = dialog.getByRole("button", { name: /Close video for CytoCV/ });
+      await expect(dialog).toBeVisible();
+      await expect(closeButton).toBeFocused();
+      await expect(dialogPlayer).toHaveAttribute("controls", "");
+      await expect(dialogPlayer.locator("track")).toHaveAttribute(
+        "src",
+        "/images/research/cytocv-supplementary-video-s1.en.vtt"
+      );
+      await expectNoHorizontalOverflow(page);
+
+      const [dialogBox, viewportBox] = await Promise.all([dialog.boundingBox(), dialog.locator(".research-video-dialog__viewport").boundingBox()]);
+      expect(dialogBox).not.toBeNull();
+      expect(viewportBox).not.toBeNull();
+      expect(dialogBox!.x).toBeGreaterThanOrEqual(0);
+      expect(dialogBox!.y).toBeGreaterThanOrEqual(0);
+      expect(dialogBox!.x + dialogBox!.width).toBeLessThanOrEqual(viewport.width + 1);
+      expect(dialogBox!.y + dialogBox!.height).toBeLessThanOrEqual(viewport.height + 1);
+      await closeButton.click();
+      await expect(dialog).toHaveCount(0);
+      await expect(openButton).toBeFocused();
+    }
   });
 });

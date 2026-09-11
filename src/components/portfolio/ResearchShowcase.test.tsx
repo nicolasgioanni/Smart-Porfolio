@@ -96,6 +96,15 @@ describe("ResearchShowcase", () => {
       "/images/research/independent-study-graphical-abstract.png",
       "/images/research/guide-donor-scheduler-graphical-abstract.png"
     ]);
+    const cytocvProject = projects[0]!;
+    expect(cytocvProject.querySelector(".research-video__player source")).toHaveAttribute(
+      "src",
+      "/images/research/cytocv-supplementary-video-s1.mp4"
+    );
+    expect(cytocvProject.querySelector(".research-abstract__thumbnail")).toHaveAttribute(
+      "src",
+      "/images/research/cytocv-graphical-abstract.png"
+    );
     expect(screen.queryByRole("img", { name: /segmentation diagram|attack and defense matrix|sequence design diagram/i })).not.toBeInTheDocument();
     expect(screen.queryByText("Graduate Research Assistant")).not.toBeInTheDocument();
     expect(screen.queryByText("Bothell, Washington, United States")).not.toBeInTheDocument();
@@ -125,7 +134,9 @@ describe("ResearchShowcase", () => {
     const cytocvProject = screen.getByRole("heading", { level: 2, name: "CytoCV" }).closest("article");
 
     expect(cytocvProject).not.toBeNull();
-    expect(within(cytocvProject!).getAllByRole("link").map((link) => link.textContent)).toEqual([
+    const resources = cytocvProject!.querySelector<HTMLElement>(".research-project__resources");
+    expect(resources).not.toBeNull();
+    expect(within(resources!).getAllByRole("link").map((link) => link.textContent)).toEqual([
       "Live site",
       "Source code",
       "Software DOI"

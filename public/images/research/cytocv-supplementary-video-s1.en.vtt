@@ -1,0 +1,339 @@
+WEBVTT
+
+NOTE Locally generated draft captions; verify scientific terminology before publication.
+
+1
+00:00:00.430 --> 00:00:05.510
+I'm going to demonstrate how to use CytoCV to automate measurement of nuclear to cytoplasmic
+
+2
+00:00:05.510 --> 00:00:09.150
+intensity ratios for a fluorescently tagged protein.
+
+3
+00:00:09.150 --> 00:00:14.070
+This experiment requires a fluorescent protein that will define the location of the nucleus.
+
+4
+00:00:14.070 --> 00:00:18.430
+Here I'm using a nucleoporin protein that is tagged with a red fluorophore.
+
+5
+00:00:18.430 --> 00:00:23.970
+This red image shows the cell contour, which was obtained from the DIC image, and the outline
+
+6
+00:00:23.970 --> 00:00:25.710
+of the red nucleus.
+
+7
+00:00:25.710 --> 00:00:30.190
+The green images show my protein of interest, which is tagged with a green fluorophore and
+
+8
+00:00:30.190 --> 00:00:33.150
+accumulates in the nucleus in two distinct puncta.
+
+9
+00:00:33.150 --> 00:00:37.830
+Visually, we can see that this mutant on the bottom does not enter the nucleus as efficiently
+
+10
+00:00:37.830 --> 00:00:39.910
+as the wild type on top.
+
+11
+00:00:39.910 --> 00:00:44.590
+I'm now going to use CytoCV to calculate the difference in the nuclear versus cytoplasmic
+
+12
+00:00:44.590 --> 00:00:51.240
+intensity ratio of this green protein in individual cells for these two strains.
+
+13
+00:00:51.240 --> 00:00:56.400
+I have already signed in and uploaded two files, one each for wild type and mutant.
+
+14
+00:00:56.400 --> 00:01:00.480
+I will use the statistics plugin options to select the type of analysis that I want
+
+15
+00:01:00.480 --> 00:01:02.240
+to perform with these images.
+
+16
+00:01:02.240 --> 00:01:06.920
+First, I need to decide what types of cells to include in the analysis.
+
+17
+00:01:06.920 --> 00:01:11.260
+The cells for this experiment have been arrested in metaphase of mitosis and should therefore
+
+18
+00:01:11.260 --> 00:01:16.670
+be large-budded cell pairs, so I'll select the cell pairs only option.
+
+19
+00:01:16.670 --> 00:01:21.270
+Under signal quantification, I will choose nuclear cell pair intensity.
+
+20
+00:01:21.270 --> 00:01:25.870
+Under nucleus contour source, I need to choose the appropriate color option for this
+
+21
+00:01:25.870 --> 00:01:26.870
+experiment.
+
+22
+00:01:26.870 --> 00:01:32.030
+By selecting the red nucleus, measure green option, because I want to tell CytoCV to use
+
+23
+00:01:32.030 --> 00:01:36.410
+the red protein to make the nuclear contour, and then measure the intensity of the green
+
+24
+00:01:36.410 --> 00:01:39.020
+protein within that contour.
+
+25
+00:01:39.020 --> 00:01:42.780
+For the nucleus contour mode, I'm choosing the balanced option.
+
+26
+00:01:42.780 --> 00:01:47.140
+The signal for my nuclear protein can often be speckled, and I want all of those speckles
+
+27
+00:01:47.140 --> 00:01:49.860
+combined together into a single contour.
+
+28
+00:01:49.860 --> 00:01:54.220
+In the aggressive mode, CytoCV will split up the speckles into different contours.
+
+29
+00:01:54.580 --> 00:01:59.860
+I'll now turn off anything else selected that is irrelevant for what I want to analyze.
+
+30
+00:01:59.860 --> 00:02:04.780
+CytoCV can automatically identify and assign channel roles when sufficient metadata is
+
+31
+00:02:04.780 --> 00:02:06.340
+available.
+
+32
+00:02:06.340 --> 00:02:10.980
+Because my older source files do not contain the required metadata, I'm going to manually
+
+33
+00:02:10.980 --> 00:02:16.860
+set the channels by defining the order of the fluorescent images in my TIFF stack here.
+
+34
+00:02:16.860 --> 00:02:33.590
+Now I'll close this window and pre-process the files, and then start the analysis.
+
+35
+00:02:33.670 --> 00:02:37.470
+I've now switched to a window in which the analysis has finished, and I can see the pairs
+
+36
+00:02:37.470 --> 00:02:40.710
+of cells that CytoCV has identified to analyze.
+
+37
+00:02:40.710 --> 00:02:45.870
+Below, I can visualize each individual cell pair and determine whether I want to keep that
+
+38
+00:02:45.870 --> 00:02:47.870
+cell for the analysis.
+
+39
+00:02:47.870 --> 00:02:51.990
+For this experiment, I want to analyze only cells in metaphase with a single nucleus
+
+40
+00:02:51.990 --> 00:02:53.950
+between the two cells.
+
+41
+00:02:53.950 --> 00:02:58.430
+In this first cell, there is a single red nuclear contour that spans the bud neck,
+
+42
+00:02:58.430 --> 00:03:01.270
+so this is the stage of cell that I want to quantitate.
+
+43
+00:03:01.270 --> 00:03:06.310
+I'm going to click through each cell and make sure that I want to keep it for the analysis.
+
+44
+00:03:06.310 --> 00:03:09.900
+All of these cells so far look good.
+
+45
+00:03:09.900 --> 00:03:12.380
+But here in cell 9, we have a problem.
+
+46
+00:03:12.380 --> 00:03:16.700
+The red contour doesn't match visually what I see as the red nuclear signal.
+
+47
+00:03:16.700 --> 00:03:22.060
+If I were to include this cell, the nucleus would be defined as larger than it actually is.
+
+48
+00:03:22.060 --> 00:03:26.180
+This cell is also problematic because there are two distinct red contours,
+
+49
+00:03:26.180 --> 00:03:29.260
+meaning the cell has already undergone anaphase.
+
+50
+00:03:29.420 --> 00:03:33.420
+To remove this cell from the analysis, I will click to the right of the cell and select
+
+51
+00:03:33.420 --> 00:03:35.420
+the delete cell option.
+
+52
+00:03:35.420 --> 00:03:40.380
+I'm going to delete cell 10 as well because it also has gone through anaphase.
+
+53
+00:03:40.380 --> 00:03:42.540
+Cell 11 looks fine.
+
+54
+00:03:42.540 --> 00:03:44.660
+And now I'm back to cell 1.
+
+55
+00:03:44.660 --> 00:03:47.450
+Now I'll go on to the mutant image.
+
+56
+00:03:47.450 --> 00:03:52.070
+Looking through these cells, all of them fit my criteria.
+
+57
+00:03:52.070 --> 00:03:55.170
+At this point, I'm ready to download the numerical data.
+
+58
+00:03:55.170 --> 00:03:59.310
+This table at the bottom has columns for all the types of analysis that CytoCV can
+
+59
+00:03:59.310 --> 00:04:02.790
+do, most of which we're ignoring for this experiment.
+
+60
+00:04:02.790 --> 00:04:06.910
+The numbers that are relevant to us are the ones at the very end of the table.
+
+61
+00:04:06.910 --> 00:04:10.070
+To export the data in a format that's easier for me to use,
+
+62
+00:04:10.070 --> 00:04:12.390
+I'll click Download Statistics.
+
+63
+00:04:12.390 --> 00:04:16.590
+I would like to view the data in Excel, so I'll select that option.
+
+64
+00:04:16.590 --> 00:04:19.430
+Most of these measurements are irrelevant to the current experiment,
+
+65
+00:04:19.430 --> 00:04:23.670
+and the ones at the bottom that pertain to my analysis are already checked.
+
+66
+00:04:23.670 --> 00:04:26.430
+To ensure that I will be downloading data for all the files
+
+67
+00:04:26.430 --> 00:04:31.470
+that I have analyzed in my session, I will click Edit Files, Select All.
+
+68
+00:04:31.470 --> 00:04:34.180
+And now I'm ready to download.
+
+69
+00:04:34.180 --> 00:04:38.940
+When I open this Excel file, I see the name of each image file on the left,
+
+70
+00:04:38.940 --> 00:04:41.180
+followed by all of the measurements and calculations
+
+71
+00:04:41.180 --> 00:04:43.220
+that I had previously selected.
+
+72
+00:04:43.220 --> 00:04:46.620
+Notice that cells 9 and 10 in the wild type image are missing.
+
+73
+00:04:46.620 --> 00:04:48.820
+This is because I deleted them.
+
+74
+00:04:48.820 --> 00:04:53.160
+By uploading many files with images similar to these and downloading the data,
+
+75
+00:04:53.160 --> 00:04:56.220
+I was able to generate a graph in GraphPad Prism
+
+76
+00:04:56.220 --> 00:05:01.140
+that displays the ratios for over 100 cells of both the wild type and the mutant.
+
+77
+00:05:01.140 --> 00:05:04.140
+The calculations show that the mutant protein of interest
+
+78
+00:05:04.140 --> 00:05:08.100
+has a lower nuclear to cytoplasmic intensity ratio than the wild type,
+
+79
+00:05:08.100 --> 00:05:12.180
+which was expected based on what I can see visually in these images.
+
+80
+00:05:12.180 --> 00:05:14.700
+The difference is highly significant.
+
+81
+00:05:14.700 --> 00:05:16.740
+So that's how CytoCV can be used
+
+82
+00:05:16.740 --> 00:05:20.260
+to calculate nuclear versus cytoplasmic intensities.
+
+83
+00:05:20.260 --> 00:05:24.100
+For other types of analysis, I would follow a similar process,
+
+84
+00:05:24.100 --> 00:05:27.380
+but choose different options in the statistics plug-in section.
