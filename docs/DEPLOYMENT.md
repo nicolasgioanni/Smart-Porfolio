@@ -181,7 +181,7 @@ flowchart TD
     M --> N[Smoke test stable Pages alias]
 ```
 
-`npm run build:generated` invokes Next.js and the content-version writer without running the `prebuild` content generator. This keeps generation at one accepted workbook snapshot even if its download needs the single bounded retry. The deploy job does not rebuild or download the workbook.
+`npm run build:generated` invokes Next.js, whose local build-completion adapter normalizes any Windows-emitted nested segment-cache filenames to Next's flat static-export URL layout, and then writes the content version without running the `prebuild` content generator. The normalization is a no-op on the already-flat Linux output and fails on malformed trees or collisions. This keeps generation at one accepted workbook snapshot even if its download needs the single bounded retry. The deploy job does not rebuild or download the workbook.
 
 The verify job runs these required checks against the candidate snapshot:
 

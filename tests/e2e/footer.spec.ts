@@ -5,6 +5,7 @@ import {
   captureBrowserConsole,
   expectNoBrowserConsoleIssues
 } from "./browserConsole";
+import { settleLayout } from "./settleLayout";
 
 type FooterSample = {
   detailsHeight: number;
@@ -66,16 +67,6 @@ async function installFooterRecorder(page: Page) {
       window.requestAnimationFrame(recordFrame);
     };
     window.requestAnimationFrame(recordFrame);
-  });
-}
-
-async function settleLayout(page: Page) {
-  await page.waitForLoadState("networkidle");
-  await page.evaluate(async () => {
-    await document.fonts.ready;
-    await new Promise<void>((resolve) => {
-      window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve()));
-    });
   });
 }
 
