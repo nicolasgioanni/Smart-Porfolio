@@ -74,7 +74,7 @@ Core pages do not require a runtime Next.js server, database, authentication ser
 | Portfolio UI | `src/components/portfolio/` | Home overview, evidence pages, cards, skills, recommendations, and route-specific presentation. |
 | Theme and interaction | `src/components/theme/`, `src/components/motion/`, `src/lib/theme/` | System preference resolution, manual theme persistence, role and scroll motion, reduced-motion behavior, and hydrated state. |
 | Content contracts | `src/content/types.ts` | Generated and UI-facing TypeScript shapes. |
-| Content transformation | `src/lib/content/`, `src/lib/csv/`, `scripts/lib/portfolioContentGeneration.ts` | Parsing, normalization, validation, selection, sorting, hashing, and workbook structure. |
+| Content transformation | `src/lib/content/`, `src/lib/csv/`, `scripts/lib/portfolioContentGeneration.ts` | Parsing, normalization, validation, selection, sorting, hashing, workbook structure, and canonical route-header ownership. |
 | Styling | `src/styles/` | Semantic tokens, themes, layout, glass primitives, portfolio surfaces, navigation, motion, loading, and contact UI. |
 | Runtime contact | `functions/`, `migrations/` | Origin enforcement, Turnstile verification, signed tickets, schema and DNS validation, pseudonymous quota storage, and email delivery. |
 | Operations | `.github/workflows/ci.yml`, `scripts/`, `wrangler.jsonc` | Candidate selection, quality gates, artifact integrity, Direct Upload, smoke tests, and environment configuration. |
@@ -86,6 +86,8 @@ Core pages do not require a runtime Next.js server, database, authentication ser
 `npm run typecheck` runs `next typegen` before strict TypeScript checking. Generated route and root-parameter declarations stay under ignored `.next/`; Next regenerates the ignored root `next-env.d.ts` as part of that command, while the Next-managed TypeScript settings in `tsconfig.json` are accepted only when a clean type-generation run produces the change. Next 16 also maintains a version-matched agent guidance block in the repository guidance file; leave that managed block intact so implementation work can consult the bundled framework documentation.
 
 `src/app/robots.txt` and `src/app/sitemap.xml` use Next.js static metadata file conventions so they are copied into the export without a runtime metadata route. Their focused tests compare crawler policy and canonical sitemap URLs with the shared site configuration and route registry.
+
+`src/lib/content/routeHeaderContent.ts` owns the exhaustive page-header registry shared by resolved routes and `RouteHeaderSkeleton`. The skeleton renders those same strings as transparent, noninteractive, `aria-hidden` ink over a solid fill so browser typography determines the loader's responsive line boxes. Experience is the sole generated header override: the server-side `resolveRouteHeaderContent()` path consumes the validated profile summary for both the resolved route and loading composition, with the same registry fallback. Research skeleton resource counts likewise reuse validated selected detail content and `getResearchVisibleResources()` rather than maintaining a second presentation model.
 
 Next 16's client router requests flattened `__next.*.txt` segment-cache files. On Windows, the framework exporter can preserve platform separators inside those generated names and create nested directories instead, as tracked in Next.js issues [#92339](https://github.com/vercel/next.js/issues/92339) and [#85374](https://github.com/vercel/next.js/issues/85374). Next 16.3.4 runs the stable `adapterPath` build-completion hook after the full static export, so the local adapter invokes `scripts/normalizeNextStaticExport.mjs` before the content-version writer runs. It converts only directory trees that match 16.3.4's filesystem-safe, dot-free encoded-segment grammar, beginning with one `__next.<encoded-segment>` root, to the same flat layout produced on Linux. It rejects malformed trees, symbolic links, unexpected entries, path escapes, and collisions, preserves the segment bytes, and leaves an already-correct export untouched.
 
@@ -232,7 +234,8 @@ The two-step ticket flow avoids sending a consumed Turnstile token twice and kee
 | Runtime and static export | `next.config.mjs` and `src/app/` |
 | Route registry and navigation | `src/components/navigation/siteRoutes.ts` and `navigationItems.ts` |
 | Browser navigation regression | `playwright.config.ts` and `tests/e2e/navigation.spec.ts` |
-| Skeleton visual and transition regressions | `tests/e2e/skeletons.visual.spec.ts`, `tests/e2e/skeletons.transition.spec.ts`, and `.github/workflows/skeleton-baselines.yml` |
+| Skeleton alignment, visual, and transition regressions | `tests/e2e/skeleton-alignment.spec.ts`, `tests/e2e/skeletons.visual.spec.ts`, `tests/e2e/skeletons.transition.spec.ts`, `tests/e2e/standaloneSkeletonDocument.ts`, and `.github/workflows/skeleton-baselines.yml` |
+| Canonical route-header content | `src/lib/content/routeHeaderContent.ts` and `src/components/loading/RouteHeaderSkeleton.tsx` |
 | Content types | `src/content/types.ts` |
 | Workbook contract | `scripts/lib/portfolioContentGeneration.ts` |
 | Source-mode orchestration | `scripts/fetchPortfolioContent.ts` |

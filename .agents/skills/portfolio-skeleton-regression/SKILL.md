@@ -1,6 +1,6 @@
 ---
 name: portfolio-skeleton-regression
-description: Maintain deterministic route-skeleton visual and transition regressions, including reviewed Linux baselines and static-export semantics.
+description: Maintain deterministic route-skeleton alignment, visual, and transition regressions, including reviewed Linux baselines and static-export semantics.
 ---
 
 # Portfolio skeleton regression
@@ -9,11 +9,15 @@ Use this skill when changing a route skeleton, shared loading primitive or CSS, 
 
 ## Preserve loading geometry
 
-Start with `RouteSkeleton`, its route composition, existing profile data, and `skeletons.css`. Keep skeletons static and solid, permitting only intentional control-shaped geometry. Preserve the labelled busy region and hidden primitive blocks. Do not add shimmer, gradients, blur, glow, fake text, or real interactive controls.
+Start with `RouteSkeleton`, its route composition, `RouteHeaderSkeleton`, existing profile data, and `skeletons.css`. Keep skeletons static and solid, permitting only intentional control-shaped geometry. Preserve the labelled busy region and hidden primitive blocks. Do not add shimmer, gradients, blur, glow, fake prose, or real interactive controls.
+
+Treat `src/lib/content/routeHeaderContent.ts` as the exhaustive source for resolved and loading page headers. `RouteHeaderSkeleton` lays out those same strings as transparent, `aria-hidden`, noninteractive ink over a flat skeleton fill; this is the only copy-shaped exception. Keep `box-decoration-break: clone` and the shared typography so the browser derives every responsive line fragment. Do not replace that mechanism with viewport JavaScript or hand-maintained route-width tables.
+
+Experience is the only generated header override. Pass validated content through `resolveRouteHeaderContent()` so the resolved page and loader use the same generated summary or the same canonical fallback. Add any future override to that resolver and its content-contract and browser-alignment tests rather than reading data independently in a skeleton.
 
 ## Preserve the visual harness
 
-`tests/e2e/skeletons.visual.spec.ts` loads the live home document only to collect resolved HTML and body attributes, the generated body font class, and absolute compiled stylesheet URLs. It then fulfills the same-origin fixture route with canonical server-rendered skeleton markup.
+`tests/e2e/standaloneSkeletonDocument.ts` is the shared document and asset-readiness contract for `skeleton-alignment.spec.ts` and `skeletons.visual.spec.ts`. The live page may supply resolved HTML and body attributes, the generated body font class, and absolute compiled stylesheet URLs; each suite fulfills a separate same-origin fixture route with canonical server-rendered skeleton markup.
 
 Keep that fixture inert: no application scripts, development portal, or mutation of React-owned DOM. Do not use `replaceChildren`, remove mounted nodes, or inject a fixture into the hydrated application tree. Preserve stylesheet and font readiness checks, browser-diagnostic rejection, two-frame layout settling, static-animation assertions, and zero-difference screenshots.
 
@@ -27,8 +31,8 @@ If route coverage or the viewport matrix changes intentionally, update the visua
 
 ## Keep CI and transition semantics accurate
 
-The normal verify job runs on Ubuntu 24.04, installs Chromium once, and runs `npm run test:e2e:skeletons` before the other browser suites. Preserve its failure-only diagnostics artifact as separate from the deployable static artifact.
+The normal verify job runs on Ubuntu 24.04, installs Chromium once, and runs `npm run test:e2e:skeletons` before the other browser suites. That aggregate must retain the direct resolved-versus-loader alignment matrix, held-navigation transition suite, and Linux visual matrix. Preserve its failure-only diagnostics artifact as separate from the deployable static artifact.
 
 The transition suite suppresses viewport prefetch and holds the first non-prefetch RSC request. With synchronous route rendering, holding that response preserves the source body rather than mounting a streamable fallback. Static export does not provide loading streaming; do not change this into a fallback-visibility claim.
 
-Run `npm run test:skeletons`, `npm run test:skeleton-guidance`, and `npm run test:skeleton-baseline-workflow` for relevant changes. Run visual comparison only on Linux; a non-Linux visual run must fail rather than emit a platform-specific baseline.
+Run `npm run test:skeletons`, `npm run test:skeleton-guidance`, `npm run test:skeleton-baseline-workflow`, and `npm run test:e2e:skeletons:alignment` for relevant changes. Run visual comparison only on Linux; a non-Linux visual run must fail rather than emit a platform-specific baseline.
