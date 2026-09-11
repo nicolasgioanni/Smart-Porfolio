@@ -68,9 +68,9 @@ Edge rate limiting is an operator control. It does not justify heavier applicati
 
 ## Build and deployment
 
-Production candidates fetch the workbook once and build from the existing generated snapshot. Deploy jobs verify and upload the tested artifact without regenerating content or rebuilding.
+Production candidates accept one complete workbook snapshot through the bounded download policy and build from the existing generated snapshot. Deploy jobs verify and upload the tested artifact without regenerating content or rebuilding.
 
-Semantic no-op behavior avoids the expensive quality and deployment pipeline only after the new source has been downloaded, parsed, validated, normalized, and compared with the active manifest.
+Exact-candidate no-op behavior avoids the expensive quality and deployment pipeline only after the new source has been downloaded, parsed, validated, and normalized and both its semantic content hash and commit SHA have been compared with the active manifest.
 
 ## Measurement
 

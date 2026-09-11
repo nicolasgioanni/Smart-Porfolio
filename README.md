@@ -69,7 +69,7 @@ Deep dives:
 3. The generator verifies the exact visible worksheet set, headers, rows, and file constraints.
 4. Source rows are normalized and validated against the typed content contract.
 5. A deterministic SHA-256 hash is calculated from a canonical normalized content subset.
-6. Eligible scheduled and non-forced manual runs become successful no-ops when the active production hash matches.
+6. Eligible scheduled and non-forced manual runs become successful no-ops only when the active production content hash and commit SHA both match the candidate.
 7. Changed or forced candidates run the complete quality gate.
 8. Next.js builds from the already-tested generated snapshot without downloading again.
 9. The exact static artifact is hashed, transferred, verified, uploaded, and smoke-tested.
@@ -288,8 +288,8 @@ The deployment design makes GitHub Actions the sole deployment owner. Operators 
 | Pull request to `main` or `develop` | Verify a local-template snapshot; never deploy. |
 | Push to `develop` | Verify one strict workbook snapshot and deploy only the `develop` preview. |
 | Push to `main` | Verify one strict workbook snapshot and deploy production. |
-| Daily schedule | Compare the canonical normalized content subset with production; verify and deploy only when changed. |
-| Manual dispatch | Target current `main`; forced mode bypasses only the unchanged optimization. |
+| Daily schedule | Compare the content hash and commit SHA with production; verify and deploy when either differs. |
+| Manual dispatch | Target current `main`; forced mode bypasses only the exact-candidate no-op optimization. |
 
 Configured production URLs are [nicolasmgioanni.dev](https://nicolasmgioanni.dev) and Cloudflare's assigned `smart-portfolio-bds.pages.dev` domain. The configured stable preview alias is `develop.smart-portfolio-bds.pages.dev`.
 

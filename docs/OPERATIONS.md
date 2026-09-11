@@ -66,18 +66,18 @@ The preview build receives only `NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY`. If tha
 
 The daily schedule at `13:17 UTC` checks the current `main` source against one newly downloaded and validated workbook snapshot.
 
-An unchanged check still performs checkout, dependency installation, target validation, strict workbook download, normalization, hashing, and a no-cache production manifest request. It stops before documentation validation, lint, typecheck, tests, build, artifact upload, and deployment.
+An exact-candidate check still performs checkout, dependency installation, target validation, strict workbook download, normalization, hashing, and a no-cache production manifest request. It stops before documentation validation, lint, typecheck, tests, build, artifact upload, and deployment only when both the content hash and commit SHA match production.
 
-When the hash of the canonical normalized content subset differs, the workflow runs the complete production path. Editing workbook formatting or data outside that subset does not intentionally trigger deployment.
+When the hash of the canonical normalized content subset or the candidate commit SHA differs, the workflow runs the complete production path. Editing workbook formatting or data outside that subset does not intentionally trigger deployment unless a source revision also changed.
 
 ### Run a manual content check
 
 Use the `CI` workflow dispatch input:
 
-- `force_deploy=true`, the default, runs full verification and production deployment even when the content hash matches.
-- `force_deploy=false` uses the same content-hash comparison as the schedule and stops early when content matches.
+- `force_deploy=true`, the default, runs full verification and production deployment even when both candidate identifiers match.
+- `force_deploy=false` uses the same content-hash and commit-SHA comparison as the schedule and stops early only when both match.
 
-Use a forced run for a first deployment, an intentional rebuild, a retry after a code-only failure, or recovery after correcting external configuration. Force does not skip any quality or integrity gate.
+Use a forced run for a first deployment, an intentional rebuild, an immediate retry, or recovery after correcting external configuration. Force does not skip any quality or integrity gate. The daily schedule automatically retries an undeployed code-only `main` revision because its commit SHA differs from production.
 
 ## Post-deployment verification
 
@@ -197,7 +197,7 @@ The schedule starts two independent jobs:
 
 The heartbeat does not depend on the verify result and does not deploy. It writes only after 30 days without newer activity on `main` or `automation-heartbeat`. Its `contents: write` permission is intentionally isolated from the verification and deployment jobs.
 
-An unchanged content check is a successful no-op, not a skipped or failed schedule. Investigate a missing scheduled run through GitHub Actions state rather than assuming the workbook has not changed.
+An exact-candidate check is a successful no-op, not a skipped or failed schedule. It requires matching production content and commit metadata. Investigate a missing scheduled run through GitHub Actions state rather than assuming the workbook or source has not changed.
 
 ## Failure triage
 
@@ -268,7 +268,7 @@ Rotating `TURNSTILE_SECRET_KEY` also changes both the verification-ticket signin
 - CI validates only the assigned `pages.dev` aliases, not the custom domain.
 - Automated smoke checks do not exercise valid POST requests, D1 queries, DNS validation, or downstream delivery.
 - Live D1 binding and migration state, WAF, Cloudflare plan, DNS, TLS, custom-domain, provider-secret, and branch-protection state are external and unverified by repository tests.
-- The content comparison is hash-only and does not prove that the active commit matches `main`.
+- The pre-deployment comparison verifies the active content hash and commit SHA, but does not prove that a prior post-upload smoke test or external runtime configuration succeeded.
 - A successful Wrangler upload creates the candidate deployment before smoke runs. A later smoke failure does not undo or automatically roll back that deployment.
 - There is no uptime monitor, performance monitor, or synthetic browser test in the repository.
 - GitHub's one-day artifact retention is not a long-term recovery mechanism.

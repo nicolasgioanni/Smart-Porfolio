@@ -47,11 +47,11 @@ The workflow has one verification job, one conditional deploy job, and one sched
 | Pull request targeting `main` or `develop` | Event SHA | Checked-in templates | Always | Never |
 | Push to `develop` | Exact pushed SHA, if still current | One strict workbook snapshot | Always for the latest candidate | `develop` preview |
 | Push to `main` | Exact pushed SHA, if still current | One strict workbook snapshot | Always for the latest candidate | Production |
-| Daily schedule at `17 13 * * *` | Current `main` | One strict workbook snapshot | Only when the production content hash differs | Production only when changed |
+| Daily schedule at `17 13 * * *` | Current `main` | One strict workbook snapshot | When the production content hash or commit SHA differs | Production when either differs |
 | Manual dispatch, `force_deploy=true` | Current `main` | One strict workbook snapshot | Always | Production |
-| Manual dispatch, `force_deploy=false` | Current `main` | One strict workbook snapshot | Only when the production content hash differs | Production only when changed |
+| Manual dispatch, `force_deploy=false` | Current `main` | One strict workbook snapshot | When the production content hash or commit SHA differs | Production when either differs |
 
-`force_deploy` is a required boolean input and defaults to `true`. It bypasses only the unchanged-content optimization. It does not bypass content validation, documentation validation, lint, typecheck, tests, build, artifact verification, current-branch checks, Wrangler, or post-deployment smoke checks.
+`force_deploy` is a required boolean input and defaults to `true`. It bypasses only the exact-candidate no-op optimization. It does not bypass content validation, documentation validation, lint, typecheck, tests, build, artifact verification, current-branch checks, Wrangler, or post-deployment smoke checks.
 
 Scheduled and manual runs explicitly check out `main`, regardless of the branch shown in the dispatch interface. Push candidates use the pushed branch. Pull requests set no deployment branch and build a verification-only template snapshot.
 
@@ -225,7 +225,7 @@ Every build writes `out/content-version.json` with exactly five fields:
 }
 ```
 
-The `contentHash` covers the canonical normalized content subset and excludes volatile metadata. When that canonical subset is unchanged, generation preserves `generatedAt`. Scheduled and non-forced manual decisions compare only this content hash with the active production manifest.
+The `contentHash` covers the canonical normalized content subset and excludes volatile metadata. When that canonical subset is unchanged, generation preserves `generatedAt`. Scheduled and non-forced manual decisions independently compare this content hash and the candidate `commitSha` with the active production manifest. Only a match on both fields is a no-op.
 
 `public/_headers` marks `/content-version.json` as non-cacheable. The comparison request also sends no-cache headers, adds a cache-busting query, treats `404` as no prior deployment, and fails closed on other inaccessible or malformed responses.
 
@@ -279,7 +279,7 @@ Failure behavior depends on where the run stops:
 - A Wrangler failure normally leaves the prior successful deployment active, but the Cloudflare result remains authoritative.
 - A smoke failure occurs only after Wrangler has successfully created the candidate deployment. The candidate may already be serving through the stable alias, and a failed GitHub job does not undo or roll back that upload. Identify the active deployment from Cloudflare history and live metadata before taking recovery action.
 - A changed workbook hash that fails before deployment differs from the active manifest, so a later scheduled run attempts it again.
-- A code-only candidate can have the same content hash as production. If its push deployment fails, a later non-forced content check can be a no-op. Use a forced manual dispatch to retry that source revision after correcting the failure.
+- A code-only candidate can have the same content hash as production. Its differing commit SHA makes a later scheduled or non-forced run retry the complete verified deployment path automatically.
 
 The one-day GitHub artifact is not a long-term rollback archive. Use Cloudflare Pages deployment history for an authorized provider rollback, or restore the intended source and workbook state and perform a forced green deployment. After either path, verify both assigned and custom domains and record the active content and commit metadata.
 
