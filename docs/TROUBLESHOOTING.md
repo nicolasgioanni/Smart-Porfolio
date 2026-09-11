@@ -382,11 +382,11 @@ Confirm the workflow exists on the default branch, Actions is enabled, and GitHu
 
 ### The heartbeat did not create a commit
 
-This is expected when `main` or `automation-heartbeat` has activity within the previous 30 days. The job also fails closed if any path other than `.github/schedule-heartbeat` changes or is staged.
+This is expected when `main` or `develop` has activity within the previous 30 days. The job also fails closed if remote `develop` does not exist, if any path other than `.github/schedule-heartbeat` changes or is staged, or if `develop` changes before its normal non-force push.
 
 ### The heartbeat succeeded while verification failed
 
-The schedule starts independent `verify` and `automation-heartbeat` jobs. Heartbeat success does not mean content verification or deployment succeeded.
+The schedule starts independent `verify` and `develop-schedule-heartbeat` jobs. Heartbeat success does not mean content verification or deployment succeeded.
 
 ## Escalation record
 

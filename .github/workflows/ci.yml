@@ -387,57 +387,60 @@ jobs:
           node scripts/checkDeployedContent.mjs smoke "$deployment_url" out "$CONTENT_HASH" "$CANDIDATE_SHA"
 
   heartbeat:
-    name: automation-heartbeat
+    name: develop-schedule-heartbeat
     if: github.event_name == 'schedule'
     runs-on: ubuntu-latest
     permissions:
       contents: write
     concurrency:
-      group: automation-heartbeat
+      group: develop-schedule-heartbeat
       cancel-in-progress: false
     steps:
-      - name: Check out main without modifying it
+      - name: Check out develop for its guarded keepalive update
         uses: actions/checkout@v6
         with:
-          ref: main
+          ref: develop
           fetch-depth: 0
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 22
-
-      - name: Refresh the dedicated heartbeat branch after 30 inactive days
+      - name: Refresh the existing develop branch after 30 inactive days
         shell: bash
         run: |
           set -euo pipefail
-          heartbeat_branch="automation-heartbeat"
           heartbeat_path=".github/schedule-heartbeat"
           now_epoch="$(date -u +%s)"
 
-          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
-          main_epoch="$(git log -1 --format=%ct refs/remotes/origin/main)"
-          latest_activity_epoch="$main_epoch"
-          heartbeat_exists=false
+          if ! git ls-remote --exit-code --heads origin develop > /dev/null; then
+            echo "Refusing to create a keepalive branch: origin/develop must already exist."
+            exit 1
+          fi
 
-          if git ls-remote --exit-code --heads origin "$heartbeat_branch" > /dev/null; then
-            heartbeat_exists=true
-            git fetch --no-tags origin "+refs/heads/$heartbeat_branch:refs/remotes/origin/$heartbeat_branch"
-            heartbeat_epoch="$(git log -1 --format=%ct "refs/remotes/origin/$heartbeat_branch")"
-            if (( heartbeat_epoch > latest_activity_epoch )); then
-              latest_activity_epoch="$heartbeat_epoch"
-            fi
+          git fetch --no-tags origin \
+            refs/heads/main:refs/remotes/origin/main \
+            refs/heads/develop:refs/remotes/origin/develop
+          main_epoch="$(git log -1 --format=%ct refs/remotes/origin/main)"
+          develop_sha="$(git rev-parse refs/remotes/origin/develop)"
+          develop_epoch="$(git log -1 --format=%ct refs/remotes/origin/develop)"
+          latest_activity_epoch="$main_epoch"
+
+          if (( develop_epoch > latest_activity_epoch )); then
+            latest_activity_epoch="$develop_epoch"
           fi
 
           if (( now_epoch - latest_activity_epoch < 30 * 24 * 60 * 60 )); then
-            echo "Main or the heartbeat branch has activity within the last 30 days."
+            echo "Main or develop has activity within the last 30 days."
             exit 0
           fi
 
-          if [[ "$heartbeat_exists" == "true" ]]; then
-            git switch --force-create "$heartbeat_branch" "refs/remotes/origin/$heartbeat_branch"
+          if git show-ref --verify --quiet refs/heads/develop; then
+            git switch develop
+            git merge --ff-only refs/remotes/origin/develop
           else
-            git switch --create "$heartbeat_branch"
+            git switch --track --create develop refs/remotes/origin/develop
+          fi
+
+          if [[ "$(git rev-parse HEAD)" != "$develop_sha" ]]; then
+            echo "Refusing to prepare a keepalive from a non-current develop revision."
+            exit 1
           fi
 
           date -u +'%Y-%m-%dT%H:%M:%SZ' > "$heartbeat_path"
@@ -467,4 +470,16 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "chore(ci): refresh scheduled workflow heartbeat"
-          git push origin "HEAD:refs/heads/$heartbeat_branch"
+
+          if ! git merge-base --is-ancestor "$develop_sha" HEAD; then
+            echo "Refusing to push a keepalive that is not a fast-forward of develop."
+            exit 1
+          fi
+
+          remote_develop_sha="$(git ls-remote origin refs/heads/develop | awk '{print $1}')"
+          if [[ "$remote_develop_sha" != "$develop_sha" ]]; then
+            echo "Refusing to update develop because it changed during the keepalive run."
+            exit 1
+          fi
+
+          git push origin "HEAD:refs/heads/develop"

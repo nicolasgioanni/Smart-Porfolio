@@ -33,7 +33,7 @@ The repository cannot verify Cloudflare or GitHub dashboard state. Operators mus
 - No legacy provider continues to publish the custom domain.
 - Cloudflare runtime secrets and separate D1 bindings exist in the correct production and preview environments.
 - WAF rate limiting covers both contact endpoints, and the selected Cloudflare plan or provider-compatible control preserves the JSON API contract.
-- `main` branch protection requires the `verify` check and blocks force-push and deletion.
+- Branch or ruleset protection should be configured as defense in depth for `main` and `develop`: require the `verify` check where applicable and block force-push or deletion. The tracked workflow cannot verify the current GitHub settings.
 - Custom-domain bindings, redirects, certificates, and DNS remain healthy.
 
 Provider-dashboard uploads and deploy hooks bypass the repository quality gate and are not part of the supported release path.
@@ -68,7 +68,7 @@ permissions:
 
 The verify and deploy jobs therefore have read-only repository access. Cloudflare deployment authority comes from the restricted API token passed directly to Wrangler, not from a GitHub repository write permission.
 
-The schedule-only heartbeat job is the sole exception. It declares `contents: write` and can update only `.github/schedule-heartbeat` on the isolated `automation-heartbeat` branch after the inactivity threshold is met.
+The schedule-only heartbeat job is the sole exception. It declares `contents: write`, but the checked-in job is coded and guarded to update only `.github/schedule-heartbeat` on the existing `develop` branch after the inactivity threshold is met. That source-level guard does not replace external branch or ruleset protection.
 
 ### GitHub repository variables
 
@@ -150,7 +150,7 @@ The tracked workflow is configured to use Cloudflare Pages Direct Upload. The cu
 10. Push the reviewed change to `develop`. Confirm the workflow applies all pending migrations, including `0002_contact_payload_fingerprint.sql`, to the preview database before Pages upload. Complete the preview gate, observe its automatic transition or use Continue, and inspect the three data-entry steps, two acknowledgments, and 500-character limit without selecting Send request. This may consume a Turnstile token, but it must not call `/api/contact`, reserve D1 quota, or send email. Reserve any delivery test for a separately authorized owned mailbox.
 11. Merge the verified change to `main` only after the preview and pull-request checks pass. Confirm the same migration is applied to the production database before Pages upload, then perform the automated and manual no-delivery checks described below.
 
-The WAF rule, active Cloudflare plan, runtime secret presence, branch protection, and provider integration state are external prerequisites. Their desired values are documented here, but their current live state is unverified by the tracked files.
+The WAF rule, active Cloudflare plan, runtime secret presence, branch or ruleset protection, and provider integration state are external prerequisites. Their desired values are documented here, but their current live state is unverified by the tracked files.
 
 ## Strict content input
 
@@ -296,7 +296,7 @@ The intended `main` protection policy is:
 
 This policy must be checked in GitHub settings because it is not encoded by the workflow.
 
-The daily schedule also starts `automation-heartbeat`. It compares the newest activity on `main` and the isolated heartbeat branch. If neither has activity within 30 days, it writes only `.github/schedule-heartbeat`, verifies that no other path changed, commits as `github-actions[bot]`, and pushes only `automation-heartbeat`. The job uses its own non-canceling concurrency group and cannot deploy.
+The daily schedule also starts `develop-schedule-heartbeat`. It compares the newest activity on `main` and `develop`. If neither has activity within 30 days, the checked-in job first confirms that remote `develop` already exists, then writes only `.github/schedule-heartbeat`, verifies that no other path changed, and commits as `github-actions[bot]`. It checks that `develop` did not change while the job prepared the commit and uses a normal non-force push to `develop`; a concurrent update is rejected rather than retried or overwritten. The job is coded to make no other ref update, uses its own non-canceling concurrency group, and cannot deploy. Configure branch or ruleset protection separately as defense in depth; its current state is not verified here.
 
 ## Related guides
 
