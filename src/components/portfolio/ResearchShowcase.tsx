@@ -6,14 +6,14 @@ import { PageContainer } from "@/components/layout/PageContainer";
 import { DetailLevelControl } from "@/components/portfolio/DetailLevelControl";
 import { ResearchList } from "@/components/portfolio/ResearchList";
 import type { DetailMode } from "@/lib/content/detailNarratives";
+import { routeHeaderContent } from "@/lib/content/routeHeaderContent";
 
 type ResearchShowcaseProps = {
   items: ResearchItem[];
   motionEnabled?: boolean;
 };
 
-const researchSummary =
-  "My research centers on CytoCV and adversarial machine learning, with additional work in computational biology automation.";
+const researchHeader = routeHeaderContent["/research"];
 
 export function ResearchShowcase({ items, motionEnabled = true }: ResearchShowcaseProps) {
   const [mode, setMode] = useState<DetailMode>("overview");
@@ -29,13 +29,13 @@ export function ResearchShowcase({ items, motionEnabled = true }: ResearchShowca
   return (
     <PageContainer
       className="page-container--research"
-      description={researchSummary}
+      description={researchHeader.description}
       introAccessory={
         items.length > 0 ? <DetailLevelControl contextLabel="Research" mode={mode} onChange={setMode} /> : undefined
       }
       introVariant="panel"
       motionEnabled={motionEnabled}
-      title="Applied AI Research"
+      title={researchHeader.title}
     >
       <ResearchList
         items={items}

@@ -4,12 +4,15 @@ import { siteRoutes } from "@/components/navigation/siteRoutes";
 import { ProjectList } from "@/components/portfolio/ProjectList";
 import { createPageMetadata } from "@/lib/content/createPageMetadata";
 import { getPortfolioContent } from "@/lib/content/getPortfolioContent";
+import { routeHeaderContent } from "@/lib/content/routeHeaderContent";
 import { selectProjectDetailContent } from "@/lib/content/selectHomeContent";
+
+const projectsHeader = routeHeaderContent[siteRoutes.projects];
 
 export function generateMetadata(): Metadata {
   return createPageMetadata(getPortfolioContent(), {
     pathname: siteRoutes.projects,
-    title: "Projects",
+    title: projectsHeader.title,
     description: "Engineering projects with problem framing, decisions, stack, links, and impact."
   });
 }
@@ -20,8 +23,8 @@ export default function ProjectsPage() {
 
   return (
     <PageContainer
-      title="Projects"
-      description="I build practical tools for learning, file organization, and developer automation—explore the projects below."
+      title={projectsHeader.title}
+      description={projectsHeader.description}
       introVariant="panel"
       motionEnabled={content.siteSettings.enableScrollMotion}
     >

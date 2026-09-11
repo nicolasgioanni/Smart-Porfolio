@@ -123,9 +123,9 @@ export const legalSkeletonProfiles = {
   ]
 } as const satisfies Readonly<Record<LegalSkeletonRoutePath, readonly LegalSkeletonSectionProfile[]>>;
 
-export function LegalPageSkeleton({ sectionProfiles }: { sectionProfiles: readonly LegalSkeletonSectionProfile[] }) {
+export function LegalPageSkeleton({ pathname, sectionProfiles }: { pathname: LegalSkeletonRoutePath; sectionProfiles: readonly LegalSkeletonSectionProfile[] }) {
   return (
-    <PageSkeleton headerVariant="legal" variant="legal">
+    <PageSkeleton pathname={pathname} variant="legal">
       <article aria-hidden="true" className="legal-skeleton">
         <header className="legal-skeleton__meta">
           <SkeletonBlock height={14} width={188} />
