@@ -62,6 +62,9 @@ describe("skeleton components", () => {
 
     expect(container.textContent).toBe("");
     expect(container.querySelectorAll(".home-skeleton__skill-group")).toHaveLength(3);
+    expect(container.querySelector(".home-skeleton__portrait-column")).toContainElement(
+      container.querySelector(".home-skeleton__portrait")
+    );
     expect(Array.from(container.querySelectorAll("[data-skeleton-section]")).map((section) => section.getAttribute("data-skeleton-section"))).toEqual([
       "experience",
       "education",
@@ -108,30 +111,85 @@ describe("skeleton components", () => {
   });
 
   it("keeps shared legal sections route-faithful through registered row profiles", () => {
-    const expectedSectionCounts = {
-      "/terms": 7,
-      "/privacy": 8,
-      "/security": 7
+    const expectedLegalContentShapes = {
+      "/terms": [
+        ["paragraph", "paragraph"],
+        ["paragraph", "paragraph", "paragraph"],
+        ["paragraph", "paragraph"],
+        ["paragraph"],
+        ["paragraph", "paragraph"],
+        ["paragraph"],
+        ["paragraph"]
+      ],
+      "/privacy": [
+        ["paragraph", "paragraph", "paragraph"],
+        ["paragraph", "paragraph", "paragraph"],
+        ["paragraph"],
+        ["paragraph", "paragraph", "paragraph", "paragraph", "paragraph", "paragraph", "paragraph", "paragraph", "paragraph"],
+        ["paragraph", "paragraph"],
+        ["paragraph", "paragraph", "paragraph"],
+        ["paragraph"],
+        ["paragraph"]
+      ],
+      "/security": [
+        ["paragraph", "paragraph", "paragraph"],
+        ["paragraph", "paragraph", "paragraph", "paragraph", "paragraph", "paragraph"],
+        ["paragraph", "list", "paragraph"],
+        ["paragraph", "list", "paragraph"],
+        ["paragraph"],
+        ["paragraph"],
+        ["paragraph"]
+      ]
+    } as const;
+    const expectedListItemCounts = {
+      "/terms": [],
+      "/privacy": [],
+      "/security": [4, 6]
+    } as const;
+    const expectedParagraphRowTotals = {
+      "/terms": [5, 8, 8, 3, 7, 4, 2],
+      "/privacy": [9, 15, 5, 51, 6, 16, 5, 3],
+      "/security": [13, 34, 4, 4, 3, 3, 2]
+    } as const;
+    const expectedListItemRows = {
+      "/terms": [],
+      "/privacy": [],
+      "/security": [
+        [1, 2, 1, 2],
+        [1, 2, 2, 2, 2, 3]
+      ]
     } as const;
 
-    expect(Object.keys(legalSkeletonProfiles)).toEqual(Object.keys(expectedSectionCounts));
+    expect(Object.keys(legalSkeletonProfiles)).toEqual(Object.keys(expectedLegalContentShapes));
 
-    for (const [pathname, expectedSectionCount] of Object.entries(expectedSectionCounts) as [
-      keyof typeof expectedSectionCounts,
-      number
-    ][]) {
+    for (const pathname of ["/terms", "/privacy", "/security"] as const) {
+      const profile = legalSkeletonProfiles[pathname];
       const { container, unmount } = render(<RouteSkeleton pathname={pathname} />);
+      const renderedSections = Array.from(container.querySelectorAll(".legal-skeleton__section"));
 
       expect(container.querySelector(".skeleton-page--legal")).toBeInTheDocument();
       expect(container.querySelector(".legal-skeleton")).toBeInTheDocument();
       expect(routeSkeletons[pathname]).toBeDefined();
-      expect(legalSkeletonProfiles[pathname]).toHaveLength(expectedSectionCount);
-      expect(container.querySelectorAll(".legal-skeleton__section")).toHaveLength(expectedSectionCount);
+      expect(profile.map((section) => section.content.map((block) => block.type))).toEqual(
+        expectedLegalContentShapes[pathname]
+      );
       expect(
-        Array.from(container.querySelectorAll(".legal-skeleton__section .skeleton-text")).map(
-          (section) => section.querySelectorAll(".skeleton-block").length
+        profile.map((section) =>
+          section.content.reduce((total, block) => total + (block.type === "paragraph" ? block.rows : 0), 0)
         )
-      ).toEqual(legalSkeletonProfiles[pathname].map((section) => section.rows));
+      ).toEqual(expectedParagraphRowTotals[pathname]);
+      expect(
+        profile.flatMap((section) => section.content.filter((block) => block.type === "list").map((block) => block.itemRows))
+      ).toEqual(expectedListItemRows[pathname]);
+      expect(renderedSections).toHaveLength(expectedLegalContentShapes[pathname].length);
+      expect(
+        renderedSections.map((section) => section.querySelectorAll(":scope > .legal-skeleton__content > .skeleton-text").length)
+      ).toEqual(profile.map((section) => section.content.filter((block) => block.type === "paragraph").length));
+      expect(
+        renderedSections
+          .flatMap((section) => Array.from(section.querySelectorAll(":scope > .legal-skeleton__content > .legal-skeleton__list")))
+          .map((list) => list.querySelectorAll(".legal-skeleton__list-item").length)
+      ).toEqual(expectedListItemCounts[pathname]);
       unmount();
     }
   });

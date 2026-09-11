@@ -37,10 +37,31 @@ describe("skeleton style contracts", () => {
       /@media \(max-width: 980px\)[\s\S]*?\.home-skeleton__card-grid,\s*\.detail-card-skeleton-grid\s*\{[^}]*grid-template-columns: minmax\(0, 1fr\)/s
     );
     expect(skeletonStyles).toMatch(
+      /@media \(max-width: 980px\)[\s\S]*?\.home-skeleton__card-grid--recommendations,\s*\.home-skeleton__skill-grid\s*\{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/s
+    );
+    expect(skeletonStyles).toMatch(
+      /@media \(max-width: 980px\)[\s\S]*?\.home-skeleton__portrait\s*\{[^}]*width: clamp\(150px, 28vw, 220px\) !important[^}]*height: clamp\(150px, 28vw, 220px\) !important/s
+    );
+    expect(skeletonStyles).toMatch(
       /@media \(max-width: 720px\)[\s\S]*?\.home-skeleton__academic-grid\s*\{[^}]*grid-template-columns: minmax\(0, 1fr\)/s
     );
     expect(skeletonStyles).toMatch(
       /@media \(max-width: 720px\)[\s\S]*?\.home-skeleton__hero\s*\{[^}]*grid-template-areas:\s*"introduction"\s*"profile"\s*"details"/s
+    );
+    expect(skeletonStyles).toMatch(
+      /@media \(max-width: 720px\)[\s\S]*?\.home-skeleton__profile\s*\{[^}]*grid-template-columns: minmax\(96px, 0\.82fr\) minmax\(0, 1\.18fr\)[^}]*width: 100%/s
+    );
+    expect(skeletonStyles).toMatch(
+      /@media \(max-width: 720px\)[\s\S]*?\.home-skeleton__portrait-column\s*\{[^}]*grid-column: 1/s
+    );
+    expect(skeletonStyles).toMatch(
+      /@media \(max-width: 720px\)[\s\S]*?\.home-skeleton__identity-list\s*\{[^}]*grid-column: 2[^}]*border-inline-start: 1px solid var\(--color-line\)/s
+    );
+    expect(skeletonStyles).toMatch(
+      /@media \(max-width: 720px\)[\s\S]*?\.home-skeleton__portrait\s*\{[^}]*width: clamp\(96px, 28vw, 132px\) !important[^}]*height: clamp\(96px, 28vw, 132px\) !important/s
+    );
+    expect(skeletonStyles).toMatch(
+      /@media \(max-width: 720px\)[\s\S]*?\.home-skeleton__card-grid--recommendations,\s*\.home-skeleton__skill-grid\s*\{[^}]*grid-template-columns: minmax\(0, 1fr\)/s
     );
     const tabletRules = skeletonStyles.slice(
       skeletonStyles.indexOf("@media (max-width: 980px)"),
