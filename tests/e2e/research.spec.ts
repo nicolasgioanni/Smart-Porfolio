@@ -29,6 +29,12 @@ async function expectDetailModeSwitch(page: Page) {
   await expect(modeControl).toHaveCount(1);
   await expect(modeSwitch).toHaveCount(1);
   await expect(buttons).toHaveCount(2);
+  for (const button of await buttons.all()) {
+    const buttonBox = await button.boundingBox();
+    expect(buttonBox).not.toBeNull();
+    expect(buttonBox!.width).toBeGreaterThanOrEqual(44);
+    expect(buttonBox!.height).toBeGreaterThanOrEqual(44);
+  }
   await expect.poll(() => buttons.evaluateAll((elements) => elements.map((element) => element.getAttribute("aria-pressed"))))
     .toEqual(["true", "false"]);
 
