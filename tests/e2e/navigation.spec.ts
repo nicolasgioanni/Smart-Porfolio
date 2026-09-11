@@ -153,6 +153,65 @@ test("follows the system color scheme until a visitor chooses an override", asyn
   await expect(root).toHaveAttribute("data-theme", "light");
 });
 
+test("keeps rapid hydrated palette changes focused, interruption-safe, and reduced-motion safe", async ({ page }) => {
+  const pageErrors: Error[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error));
+  await page.addInitScript(() => {
+    Object.defineProperty(Document.prototype, "startViewTransition", {
+      configurable: true,
+      value(update: () => void) {
+        document.documentElement.dataset.themeTransitionCount = String(
+          Number(document.documentElement.dataset.themeTransitionCount ?? "0") + 1
+        );
+        update();
+        return { finished: Promise.reject(new Error("Theme transition interrupted")) };
+      }
+    });
+  });
+  await page.addInitScript(() => window.localStorage.removeItem("portfolio-theme"));
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/");
+
+  const root = page.locator("html");
+  const trigger = page.getByRole("button", { name: /choose color theme/i });
+  await expect(root).not.toHaveAttribute("data-theme-transition-count");
+  await trigger.click();
+
+  const group = page.getByRole("group", { name: "Color theme preference" });
+  await group.getByRole("button", { name: "Dark", exact: true }).click();
+  await expect(root).toHaveAttribute("data-theme", "dark");
+  await expect(root).toHaveAttribute("data-theme-transition-count", "1");
+  await group.getByRole("button", { name: "Light", exact: true }).click();
+  await expect(root).toHaveAttribute("data-theme", "light");
+  await expect(root).toHaveAttribute("data-theme-transition-count", "2");
+  await expect(trigger).toHaveAttribute("aria-expanded", "true");
+  await expect(group).toBeVisible();
+  await page.waitForTimeout(0);
+  expect(pageErrors).toEqual([]);
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await group.getByRole("button", { name: "My mode", exact: true }).click();
+  await expect(root).toHaveAttribute("data-theme", "navy");
+  await expect(root).toHaveAttribute("data-theme-transition-count", "2");
+  await expect(trigger).toHaveAttribute("aria-expanded", "true");
+});
+
+test("keeps native outside dismissal available during a palette transition", async ({ page }) => {
+  await page.addInitScript(() => window.localStorage.removeItem("portfolio-theme"));
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/");
+
+  const root = page.locator("html");
+  const trigger = page.getByRole("button", { name: /choose color theme/i });
+  await trigger.click();
+  const group = page.getByRole("group", { name: "Color theme preference" });
+
+  await group.getByRole("button", { name: "Dark", exact: true }).click();
+  await expect(root).toHaveAttribute("data-theme", "dark");
+  await root.dispatchEvent("pointerdown", { pointerType: "mouse" });
+  await expect(trigger).toHaveAttribute("aria-expanded", "false");
+});
+
 test("moves the whole rail, pauses after touch, and resumes in place after five seconds", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: viewportHeight });
   await openHome(page);
