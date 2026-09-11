@@ -412,7 +412,7 @@
   width: min(100%, 780px);
   min-height: 34rem;
   align-content: start;
-  gap: var(--space-6);
+  gap: var(--space-5);
   margin: 0 auto;
   padding: clamp(var(--space-6), 4.5vw, var(--space-10));
   border: 1px solid var(--color-line-strong);
@@ -492,19 +492,40 @@
   align-items: start;
 }
 
-.site-shell[data-glass-effects="false"] :is(
+:where(html[data-glass-effects="false"], .site-shell[data-glass-effects="false"]) :is(
+  .skeleton-card,
+  .skeleton-hero__main,
+  .skeleton-hero__aside,
+  .skeleton-page__section,
+  .home-skeleton__section,
+  .experience-skeleton__card,
+  .research-skeleton__project
+) {
+  border-color: var(--color-line);
+  background: var(--color-background-elevated);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: none;
+}
+
+:where(html[data-glass-effects="false"], .site-shell[data-glass-effects="false"]) :is(
   .skeleton-page__header,
   .home-skeleton__hero,
-  .home-skeleton__section,
-  .detail-card-skeleton,
   .resume-skeleton,
   .contact-skeleton,
   .legal-skeleton,
   .experience-skeleton__intro,
-  .experience-skeleton__card,
-  .research-skeleton__intro,
-  .research-skeleton__project
+  .research-skeleton__intro
 ) {
+  border-color: var(--color-line-strong);
+  background: var(--color-surface-strong);
+  box-shadow: var(--shadow-soft), var(--shadow-glow);
+  backdrop-filter: none;
+}
+
+:where(html[data-glass-effects="false"], .site-shell[data-glass-effects="false"]) .detail-card-skeleton {
+  border-color: var(--color-line);
+  background: var(--color-card-surface-strong);
+  box-shadow: var(--shadow-card);
   backdrop-filter: none;
 }
 
@@ -591,6 +612,10 @@
     width: min(100% - 24px, 980px);
   }
 
+  .skeleton-page__title {
+    height: 25px !important;
+  }
+
 }
 
 @media (max-width: 720px) {
@@ -654,15 +679,6 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .resume-skeleton {
-    grid-template-columns: minmax(0, 1fr);
-    padding: var(--space-6);
-  }
-
-  .resume-skeleton__actions {
-    width: 100%;
-  }
-
   .contact-skeleton {
     min-height: 30rem;
     padding: var(--space-5);
@@ -683,5 +699,21 @@
   .legal-skeleton__body {
     gap: var(--space-6);
     margin-top: var(--space-6);
+  }
+}
+
+@media (max-width: 620px) {
+  .resume-skeleton {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    padding: var(--space-6);
+  }
+
+  .resume-skeleton__actions {
+    width: 100%;
+  }
+
+  .resume-skeleton__actions .skeleton-button {
+    width: 100% !important;
   }
 }

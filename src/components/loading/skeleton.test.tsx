@@ -54,7 +54,7 @@ describe("skeleton components", () => {
     );
 
     expect(screen.getByLabelText("Loading page")).toHaveAttribute("aria-busy", "true");
-    expect(screen.getAllByTestId("skeleton-block")[0]).toHaveStyle({ height: "34px" });
+    expect(screen.getAllByTestId("skeleton-block")[0]).toHaveStyle({ height: "28px" });
   });
 
   it("renders Home page skeleton without real content text", () => {
