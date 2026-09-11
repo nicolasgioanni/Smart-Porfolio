@@ -16,6 +16,24 @@ const MAX_FORM_AGE_MS = 2 * 60 * 60 * 1_000;
 const MAX_CLOCK_SKEW_MS = 30_000;
 export const CONTACT_RATE_LIMIT_WINDOW_SECONDS = 24 * 60 * 60;
 export const CONTACT_RATE_LIMIT_MAX_SUBMISSIONS = 2;
+export const CONTACT_RESERVATION_INSERT_SQL = `INSERT INTO contact_rate_reservations (submission_id, email_hash, payload_hash, reserved_at, expires_at)
+  SELECT ?1, ?2, ?3, ?4, ?5
+  WHERE NOT EXISTS (
+    SELECT 1 FROM contact_rate_reservations
+    WHERE submission_id = ?1
+      AND (email_hash <> ?2 OR payload_hash IS NULL OR payload_hash <> ?3)
+  )
+  AND (
+    EXISTS (
+      SELECT 1 FROM contact_rate_reservations
+      WHERE submission_id = ?1 AND email_hash = ?2 AND payload_hash = ?3
+    )
+    OR (
+      SELECT COUNT(*) FROM contact_rate_reservations
+      WHERE email_hash = ?2 AND expires_at > ?4
+    ) < ${CONTACT_RATE_LIMIT_MAX_SUBMISSIONS}
+  )
+  ON CONFLICT(submission_id) DO NOTHING`;
 const CONTACT_TICKET_VERSION = 1;
 const CONTACT_TICKET_MAX_LENGTH = 768;
 const CONTACT_TICKET_SIGNATURE_BYTES = 32;
@@ -23,6 +41,8 @@ const TICKET_HKDF_SALT = "portfolio-contact-ticket:v1:hkdf-salt";
 const TICKET_HKDF_INFO = "portfolio-contact-ticket:v1:hmac-key";
 const RATE_LIMIT_HKDF_SALT = "portfolio-contact-rate-limit:v1:hkdf-salt";
 const RATE_LIMIT_HKDF_INFO = "portfolio-contact-rate-limit:v1:email-hmac-key";
+const PAYLOAD_FINGERPRINT_HKDF_SALT = "portfolio-contact-payload-fingerprint:v1:hkdf-salt";
+const PAYLOAD_FINGERPRINT_HKDF_INFO = "portfolio-contact-payload-fingerprint:v1:hmac-key";
 
 const CONTACT_KEYS = new Set([
   "submissionId",
@@ -33,7 +53,6 @@ const CONTACT_KEYS = new Set([
   "message",
   "contactConsent",
   "legalConsent",
-  "legitimateConsent",
   "startedAt",
   "website"
 ]);
@@ -41,6 +60,8 @@ const TURNSTILE_VERIFICATION_KEYS = new Set(["submissionId", "turnstileToken"]);
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const EMAIL_LOCAL_PATTERN = /^[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+$/i;
+const EMAIL_ASCII_TLD_PATTERN = /^[a-z]{2,63}$/;
+const EMAIL_PUNYCODE_TLD_PATTERN = /^xn--[a-z0-9](?:[a-z0-9-]{0,57}[a-z0-9])$/;
 const PHONE_CHARACTER_PATTERN = /^[0-9A-Za-z+().,\-\s/#*]+$/;
 
 export interface ContactEnv {
@@ -79,7 +100,6 @@ export interface ContactPayload {
   message: string;
   contactConsent: true;
   legalConsent: true;
-  legitimateConsent: true;
   startedAt: number;
   website: string;
 }
@@ -92,6 +112,7 @@ export interface TurnstileVerificationPayload {
 type PayloadResult =
   | { kind: "valid"; payload: ContactPayload }
   | { kind: "spam" }
+  | { kind: "expired" }
   | { kind: "invalid" };
 
 type TurnstileVerificationPayloadResult =
@@ -247,8 +268,10 @@ export function parseContactPayload(value: unknown, now = Date.now()): PayloadRe
 
   const startedAt = value.startedAt;
   if (!Number.isSafeInteger(startedAt) || typeof startedAt !== "number") return { kind: "invalid" };
-  if (startedAt > now + MAX_CLOCK_SKEW_MS || now - startedAt > MAX_FORM_AGE_MS) return { kind: "invalid" };
-  if (now - startedAt < MIN_COMPLETION_TIME_MS) return { kind: "spam" };
+  if (startedAt > now + MAX_CLOCK_SKEW_MS) return { kind: "invalid" };
+  const formAge = now - startedAt;
+  const formExpired = formAge > MAX_FORM_AGE_MS;
+  if (!formExpired && formAge < MIN_COMPLETION_TIME_MS) return { kind: "spam" };
 
   const submissionId = normalizedString(value.submissionId);
   const firstName = normalizedString(value.firstName);
@@ -262,10 +285,11 @@ export function parseContactPayload(value: unknown, now = Date.now()): PayloadRe
   if (!isValidHumanText(firstName, 80) || !isValidHumanText(lastName, 80)) return { kind: "invalid" };
   if (!email || !isValidEmail(email)) return { kind: "invalid" };
   if (!isValidPhone(phone)) return { kind: "invalid" };
-  if (!message || message.length > 3_000 || hasUnsafeControlCharacters(message)) return { kind: "invalid" };
-  if (value.contactConsent !== true || value.legalConsent !== true || value.legitimateConsent !== true) {
+  if (!message || message.length > 500 || hasUnsafeControlCharacters(message)) return { kind: "invalid" };
+  if (value.contactConsent !== true || value.legalConsent !== true) {
     return { kind: "invalid" };
   }
+  if (formExpired) return { kind: "expired" };
 
   return {
     kind: "valid",
@@ -278,7 +302,6 @@ export function parseContactPayload(value: unknown, now = Date.now()): PayloadRe
       message,
       contactConsent: true,
       legalConsent: true,
-      legitimateConsent: true,
       startedAt,
       website: ""
     }
@@ -489,7 +512,7 @@ export async function validateEmailDomain(email: string): Promise<EmailDomainVal
 }
 
 export async function reserveContactSubmission(
-  payload: Pick<ContactPayload, "submissionId" | "email">,
+  payload: ContactPayload,
   env: ContactEnv,
   now = Date.now()
 ): Promise<ContactReservationResult> {
@@ -502,8 +525,12 @@ export async function reserveContactSubmission(
   const nowSeconds = Math.floor(now / 1_000);
   const expiresAt = nowSeconds + CONTACT_RATE_LIMIT_WINDOW_SECONDS;
   let emailHash: string;
+  let payloadHash: string;
   try {
-    emailHash = await createRateLimitEmailHash(payload.email, secret);
+    [emailHash, payloadHash] = await Promise.all([
+      createRateLimitEmailHash(payload.email, secret),
+      createContactPayloadFingerprint(payload, secret)
+    ]);
   } catch {
     return { kind: "unavailable" };
   }
@@ -512,29 +539,11 @@ export async function reserveContactSubmission(
     const statements = [
       database.prepare("DELETE FROM contact_rate_reservations WHERE expires_at <= ?").bind(nowSeconds),
       database
-        .prepare(
-          `INSERT INTO contact_rate_reservations (submission_id, email_hash, reserved_at, expires_at)
-           SELECT ?1, ?2, ?3, ?4
-           WHERE NOT EXISTS (
-             SELECT 1 FROM contact_rate_reservations
-             WHERE submission_id = ?1 AND email_hash <> ?2
-           )
-           AND (
-             EXISTS (
-               SELECT 1 FROM contact_rate_reservations
-               WHERE submission_id = ?1 AND email_hash = ?2
-             )
-             OR (
-               SELECT COUNT(*) FROM contact_rate_reservations
-               WHERE email_hash = ?2 AND expires_at > ?3
-             ) < ${CONTACT_RATE_LIMIT_MAX_SUBMISSIONS}
-           )
-           ON CONFLICT(submission_id) DO NOTHING`
-        )
-        .bind(payload.submissionId, emailHash, nowSeconds, expiresAt),
+        .prepare(CONTACT_RESERVATION_INSERT_SQL)
+        .bind(payload.submissionId, emailHash, payloadHash, nowSeconds, expiresAt),
       database
         .prepare(
-          "SELECT email_hash, reserved_at, expires_at FROM contact_rate_reservations WHERE submission_id = ? LIMIT 1"
+          "SELECT email_hash, payload_hash, reserved_at, expires_at FROM contact_rate_reservations WHERE submission_id = ? LIMIT 1"
         )
         .bind(payload.submissionId),
       database
@@ -550,7 +559,9 @@ export async function reserveContactSubmission(
 
     const reservation = firstResultRow(results[2]);
     if (reservation) {
-      if (reservation.email_hash !== emailHash) return { kind: "mismatch" };
+      if (reservation.email_hash !== emailHash || reservation.payload_hash !== payloadHash) {
+        return { kind: "mismatch" };
+      }
       const reservedAt = safeIntegerValue(reservation.reserved_at);
       return reservedAt === undefined ? { kind: "unavailable" } : { kind: "reserved", reservedAt };
     }
@@ -793,6 +804,45 @@ async function deriveRateLimitKey(secret: string): Promise<CryptoKey> {
   );
 }
 
+async function createContactPayloadFingerprint(payload: ContactPayload, secret: string): Promise<string> {
+  const canonicalPayload = JSON.stringify({
+    v: 1,
+    submissionId: payload.submissionId,
+    firstName: payload.firstName,
+    lastName: payload.lastName,
+    email: payload.email,
+    phone: payload.phone,
+    message: payload.message,
+    contactConsent: payload.contactConsent,
+    legalConsent: payload.legalConsent,
+    startedAt: payload.startedAt,
+    website: payload.website
+  });
+  const key = await derivePayloadFingerprintKey(secret);
+  const digest = new Uint8Array(
+    await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(canonicalPayload))
+  );
+  return encodeBase64Url(digest);
+}
+
+async function derivePayloadFingerprintKey(secret: string): Promise<CryptoKey> {
+  const encoder = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey("raw", encoder.encode(secret), "HKDF", false, ["deriveKey"]);
+
+  return crypto.subtle.deriveKey(
+    {
+      name: "HKDF",
+      hash: "SHA-256",
+      salt: encoder.encode(PAYLOAD_FINGERPRINT_HKDF_SALT),
+      info: encoder.encode(PAYLOAD_FINGERPRINT_HKDF_INFO)
+    },
+    keyMaterial,
+    { name: "HMAC", hash: "SHA-256", length: 256 },
+    false,
+    ["sign"]
+  );
+}
+
 function readCookie(request: Request, name: string): string | undefined {
   const cookieHeader = request.headers.get("Cookie");
   if (!cookieHeader) return undefined;
@@ -881,9 +931,33 @@ function isValidEmail(value: string): boolean {
   }
   if (domain.length > 253 || !domain.includes(".")) return false;
 
-  return domain.split(".").every((label) => {
-    return Boolean(label && label.length <= 63 && /^[a-z0-9-]+$/.test(label) && !label.startsWith("-") && !label.endsWith("-"));
-  });
+  const labels = domain.split(".");
+  if (
+    !labels.every((label) => {
+      return Boolean(
+        label &&
+          label.length <= 63 &&
+          /^[a-z0-9-]+$/.test(label) &&
+          !label.startsWith("-") &&
+          !label.endsWith("-")
+      );
+    })
+  ) {
+    return false;
+  }
+
+  const finalLabel = labels.at(-1) ?? "";
+  return EMAIL_ASCII_TLD_PATTERN.test(finalLabel) || isValidPunycodeEmailTld(finalLabel);
+}
+
+function isValidPunycodeEmailTld(value: string): boolean {
+  if (!EMAIL_PUNYCODE_TLD_PATTERN.test(value)) return false;
+
+  try {
+    return new URL(`https://${value}`).hostname === value;
+  } catch {
+    return false;
+  }
 }
 
 function isValidFromMailbox(value: string): boolean {

@@ -6,14 +6,36 @@ const contactStyles = readFileSync(path.join(process.cwd(), "src", "styles", "co
 const tokenStyles = readFileSync(path.join(process.cwd(), "src", "styles", "tokens.css"), "utf8");
 
 describe("contact wizard styles", () => {
-  it("supports the three-step flow, final verification states, and standalone success layout", () => {
+  it("supports the upfront gate, three-step flow, and standalone success layout", () => {
     expect(contactStyles).toMatch(/\.contact-progress\s*{[^}]*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/s);
     expect(contactStyles).toMatch(/\.contact-success\s*{[^}]*display: grid[^}]*gap: var\(--space-6\)/s);
     expect(contactStyles).toMatch(
-      /\.contact-turnstile\[data-status="prepared"\] \.contact-turnstile__status-row,[\s\S]*?color: var\(--color-ink-strong\)/
+      /\.contact-turnstile\[data-status="ready"\] \.contact-turnstile__status-row\s*{[^}]*color: var\(--color-ink-strong\)/s
     );
     expect(contactStyles).toMatch(
-      /\.contact-turnstile\[data-status="executing"\] \.contact-turnstile__status-row\s*{[^}]*color: var\(--color-accent\)/s
+      /\.contact-gate-status\[data-status="verified"\]\s*{[^}]*color: var\(--color-success\)/s
+    );
+    expect(contactStyles).toMatch(/\.contact-gate-status\[data-status="failed"\]\s*{[^}]*color: var\(--color-danger\)/s);
+  });
+
+  it("keeps the step count in the heading and lets descriptions use the available width", () => {
+    expect(contactStyles).toMatch(
+      /\.contact-step__counter-row\s*{[^}]*display: flex[^}]*justify-content: space-between/s
+    );
+    expect(contactStyles).toMatch(
+      /\.contact-step__heading > p:not\(\.contact-step__counter\)\s*{[^}]*max-width: none/s
+    );
+    expect(contactStyles).toMatch(
+      /\.contact-step__counter--status\s*{[^}]*color: var\(--color-subtle\)[^}]*text-align: end/s
+    );
+  });
+
+  it("uses compact review fine print and scroll-safe visible verification", () => {
+    expect(contactStyles).toMatch(
+      /\.contact-gate-status,\s*\.contact-review__fine-print,\s*\.contact-submit-status\s*{[^}]*font-size: var\(--font-size-eyebrow\)[^}]*line-height: var\(--line-height-normal\)/s
+    );
+    expect(contactStyles).toMatch(
+      /\.contact-turnstile__widget\s*{[^}]*width: 100%[^}]*overflow-x: auto[^}]*overflow-y: hidden/s
     );
   });
 
@@ -99,20 +121,27 @@ describe("contact wizard styles", () => {
 
   it("stacks controls and makes every action full width on narrow screens", () => {
     expect(contactStyles).toMatch(
-      /@media \(max-width: 720px\)[\s\S]*?\.contact-step__actions\s*{[^}]*flex-direction: column-reverse/s
+      /@media \(max-width: 720px\)[\s\S]*?\.contact-step__actions\s*{[^}]*flex-direction: column/s
     );
+    expect(contactStyles).not.toMatch(/\.contact-step__actions\s*{[^}]*flex-direction: column-reverse/s);
     expect(contactStyles).toMatch(
       /@media \(max-width: 720px\)[\s\S]*?\.contact-action\s*{[^}]*width: 100%/s
     );
     expect(contactStyles).toMatch(
       /@media \(max-width: 720px\)[\s\S]*?\.contact-review > div\s*{[^}]*grid-template-columns: minmax\(0, 1fr\)/s
     );
+    expect(contactStyles).toMatch(
+      /@media \(max-width: 720px\)[\s\S]*?\.contact-step__counter-row\s*{[^}]*flex-direction: column/s
+    );
   });
 
-  it("allows long errors, review values, acknowledgments, notices, and fallback text to wrap safely", () => {
+  it("allows long errors, review values, acknowledgments, statuses, notices, and fallback text to wrap safely", () => {
     expect(contactStyles).toMatch(/\.contact-field__error\s*{[^}]*overflow-wrap: anywhere/s);
     expect(contactStyles).toMatch(/\.contact-review dd\s*{[^}]*overflow-wrap: anywhere/s);
     expect(contactStyles).toMatch(/\.contact-consent-card\s*{[^}]*overflow-wrap: anywhere/s);
+    expect(contactStyles).toMatch(
+      /\.contact-gate-status,\s*\.contact-review__fine-print,\s*\.contact-submit-status\s*{[^}]*overflow-wrap: anywhere/s
+    );
     expect(contactStyles).toMatch(/\.contact-submit-status\s*{[^}]*overflow-wrap: anywhere/s);
     expect(contactStyles).toMatch(/\.contact-notice\s*{[^}]*overflow-wrap: anywhere/s);
     expect(contactStyles).toMatch(/\.contact-email-fallback\s*{[^}]*overflow-wrap: anywhere/s);

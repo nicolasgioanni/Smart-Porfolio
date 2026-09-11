@@ -45,10 +45,10 @@ Do not infer a successful source deployment from the content hash alone. Code-on
 2. Confirm the `verify` job generated template content and passed documentation integrity, lint, typecheck, focused footer tests, the full suite, and the static build.
 3. Merge or push the reviewed change to `develop`.
 4. Confirm the workflow selected `deploy_target=preview`, validated the preview D1 binding, applied pending preview migrations, and deployed the current `develop` SHA.
-5. Review `https://develop.smart-portfolio-bds.pages.dev` manually. Without selecting the final Send action, confirm the three-step name, contact-details, and review flow, prepared-security status, responsive behavior, focus and error states, and standalone completion layout through the verified component coverage. This no-delivery inspection consumes no Turnstile token, D1 quota slot, or email request.
+5. Review `https://develop.smart-portfolio-bds.pages.dev` manually. Complete the visible gate, observe its automatic transition or use Continue, and confirm the three data-entry steps, two acknowledgments, 500-character limit, responsive behavior, focus, and error states without selecting Send request. The gate may consume a Turnstile token, but this no-delivery inspection must not call `/api/contact`, reserve D1 quota, or send email. Confirm the standalone completion layout through verified component coverage.
 6. Confirm the preview workflow and the pull-request verification workflow both pass for the exact candidate before merge. The automated smoke check covers only the scope listed in [Deployment](DEPLOYMENT.md#exact-automated-smoke-scope).
 
-The preview build receives only `NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY`. If that variable is blank, the contact form remains unavailable instead of using the production key. The key should identify a Managed Turnstile widget restricted to the preview hostname; final-submit execution and interaction-only appearance are controlled by the client.
+The preview build receives only `NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY`. If that variable is blank, the contact form remains unavailable instead of using the production key. The key should identify a Managed Turnstile widget restricted to the preview hostname; visible upfront rendering is controlled by the client.
 
 ### Release source changes to production
 
@@ -59,7 +59,7 @@ The preview build receives only `NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY`. If tha
 5. Confirm the final branch-tip check passes before D1 migration and Wrangler.
 6. Confirm the production D1 target check and pending migrations succeed before Pages upload.
 7. Confirm the assigned-domain smoke step passes.
-8. Verify the public custom domain, key static routes, security headers, and the contact page manually without selecting the final Send action.
+8. Verify the public custom domain, key static routes, security headers, and the contact page manually. Completing the gate is permitted, but do not select Send request.
 9. Record the active `contentHash`, `commitSha`, workflow run, D1 migration result, and any manual checks in the release record.
 
 ### Publish workbook content
@@ -163,11 +163,11 @@ Repeat against the custom domain when validating its routing. An end-to-end cont
 Use only an owned test mailbox and non-sensitive fixture text. In preview first, then production:
 
 1. Inspect Resend logs and the suppression list for earlier visitor-confirmation attempts before assuming the old template failed to generate a second message.
-2. Complete the three-step wizard, select the final Send action once, and confirm the widget remains hidden unless Cloudflare requires interaction.
+2. Complete the visible gate, allow its automatic transition or use Continue, complete all three data-entry steps and both acknowledgments, then select Send request once.
 3. Confirm the standalone green completion view includes the entered address and offers <em>Send another message</em>.
 4. Confirm Resend accepted the visitor confirmation before the owner notification and recorded the expected separate idempotency keys.
 5. Inspect both HTML and plain-text messages. Confirm the visitor copy, correction instructions, absolute Privacy and Terms links, owner reply-to, and compact owner summary.
-6. Select <em>Send another message</em>, then submit a second fresh request with the same normalized address. Confirm it receives a new submission UUID and Turnstile token and succeeds.
+6. Select <em>Send another message</em>, complete the new gate, then submit a second fresh request with the same normalized address. Confirm it receives a new submission UUID and Turnstile token and succeeds.
 7. Submit a third new message and confirm HTTP `429`, JSON error `rate_limited`, a valid `Retry-After` header, a red in-page limit notice, and no Resend request.
 8. Check D1 only through bounded aggregate or redacted queries. Confirm no raw email, name, phone, or message columns exist; do not copy hashes or UUIDs into tickets or logs.
 
@@ -261,7 +261,7 @@ When rotating a contact or Cloudflare credential:
 
 Changes to `NEXT_PUBLIC_TURNSTILE_SITE_KEY` or its preview counterpart require a new static build. Changes to server-only Pages secrets do not alter the static artifact, but still require runtime verification.
 
-Rotating `TURNSTILE_SECRET_KEY` also changes both the verification-ticket signing key and the domain-separated quota HMAC key. Outstanding tickets become invalid, and reservations made with the prior derived key will not match new submissions even though they remain until expiry cleanup. Schedule the rotation with abuse monitoring and accept that the address quota may temporarily allow new slots during the overlap.
+Rotating `TURNSTILE_SECRET_KEY` also changes the verification-ticket signing key and the domain-separated address and payload HMAC keys. Outstanding tickets become invalid, and reservations made with prior derived keys will not match new submissions even though they remain until expiry cleanup. Schedule the rotation with abuse monitoring and accept that the address quota may temporarily allow new slots during the overlap.
 
 ## Operational limits
 

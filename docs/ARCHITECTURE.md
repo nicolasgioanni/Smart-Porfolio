@@ -140,17 +140,17 @@ The Contact page itself is a static route. Runtime work begins only when its cli
 
 ### Verification
 
-The visitor completes the three-step name, contact-details, and review wizard before the browser executes a prepared interaction-only Turnstile widget during the final Send action. The widget remains hidden unless Cloudflare requires interaction. The browser sends the fresh token and generated submission ID to `/api/contact/verify`, and the same ID is supplied as Turnstile custom data. The Function enforces POST, JSON media type, exact origin, a narrow request shape, configuration, Turnstile success, the fixed `portfolio_contact` action, an allowed hostname, and matching `cdata`. One transient Siteverify failure receives one bounded retry with a separate operation UUID that is reused only for that token.
+Before contact fields are rendered, the visitor completes a visible Turnstile gate. The browser sends the fresh token and generated submission ID to `/api/contact/verify`, and the same ID is supplied as Turnstile custom data. The Function enforces POST, JSON media type, exact origin, a narrow request shape, configuration, Turnstile success, the fixed `portfolio_contact` action, an allowed hostname, and matching `cdata`. One transient Siteverify failure receives one bounded retry with a separate operation UUID that is reused only for that token.
 
 A successful result sets a 30-minute `__Host-portfolio_contact_ticket` cookie. It is `HttpOnly`, `Secure`, `SameSite=Strict`, host-only, path-scoped to `/`, signed with an HMAC key derived from `TURNSTILE_SECRET_KEY`, and bound to the submission ID. It contains no contact fields.
 
-The browser preserves the original form-start time through verification, then continues the locked final Send action to delivery. Every new logical message receives a fresh token and submission identity. A still-valid ticket supports safe retries only for the same locked delivery identity and payload.
+Successful verification enables Continue and opens the form automatically after 500 milliseconds unless the visitor continues sooner. Opening the form records the form-start time and presents three data-entry steps: name, contact details, and review. The review requires two acknowledgements and limits the message to 500 characters. Every new logical message receives a fresh token and submission identity. A still-valid ticket supports only the same locked delivery and its retries. If that ticket expires, the browser returns to the gate without changing the locked UUID, start time, acknowledgement values, or byte-equivalent payload. Successful refresh returns to locked review and never starts delivery automatically.
 
 ### Delivery
 
 The browser submits contact fields, acknowledgements, timing metadata, honeypot value, and the same submission ID to `/api/contact`. The Function applies its request and schema rules, verifies the ticket binding, validates mail routing for the email domain, and reserves one of two rolling 24-hour slots in D1. It then asks Resend to accept the visitor confirmation before sending the private owner notification. Each message has its own submission-scoped idempotency key.
 
-Successful delivery clears the ticket. Delivery failure retains an otherwise valid ticket and the original quota reservation for retry. The D1 row stores only the submission UUID, keyed normalized-email hash, and reservation and expiry epoch seconds; it stores no raw contact fields or message. Request bodies or personal fields must not be written to logs.
+Successful delivery clears the ticket. Delivery failure retains an otherwise valid ticket and the original quota reservation for retry. The D1 row stores only the submission UUID, keyed normalized-email hash, opaque keyed full-payload fingerprint, and reservation and expiry epoch seconds; it stores no raw contact fields or message. The fingerprint rejects same-ID retries whose normalized payload differs. Request bodies or personal fields must not be written to logs.
 
 The repository-enforced address quota does not authenticate mailbox ownership and can be bypassed with aliases, so Cloudflare WAF rate limiting remains an operator-managed defense in depth. Source code can document and test the expected endpoint behavior, but it cannot prove the live zone rule, plan capability, or response customization. See [Contact system](CONTACT_SYSTEM.md) and [Security](SECURITY.md).
 
@@ -185,7 +185,7 @@ The active `/content-version.json` remains the deployed source of truth. A failu
 | Workbook locator | Anonymous read locator stored for log redaction | GitHub Actions secret |
 | Cloudflare API token and account identifier | Deployment credentials | GitHub Actions secrets |
 | Turnstile secret, Resend key, and owner recipient | Private runtime configuration | Cloudflare encrypted secrets |
-| Submission UUID, keyed normalized-email hash, and quota timestamps | Pseudonymous runtime data | Environment-specific Cloudflare D1 database |
+| Submission UUID, keyed normalized-email hash, keyed payload fingerprint, and quota timestamps | Pseudonymous runtime data | Environment-specific Cloudflare D1 database |
 | Allowed origins, allowed hostnames, sender, and public reply-to | Reviewed non-secret configuration | `wrangler.jsonc` |
 | Contact fields and message | Personal request data | In-memory validation and email-provider delivery only |
 

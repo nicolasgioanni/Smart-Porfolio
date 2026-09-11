@@ -137,7 +137,7 @@ The tracked workflow is configured to use Cloudflare Pages Direct Upload. The cu
 3. Add the four repository variables and three Actions secrets listed above. Restrict the Cloudflare token to the target account with Pages edit and D1 edit; do not grant unrelated zone or account authority.
 4. Confirm the tracked production and preview D1 UUIDs resolve to the intended distinct databases. If provisioning replacements, update and commit the reviewed configuration. Keep the binding name exactly `CONTACT_RATE_LIMIT_DB` in both environments.
 5. Apply the reviewed non-secret values from `wrangler.jsonc` and configure encrypted runtime secrets separately for production and preview.
-6. Configure Managed Turnstile widgets for their exact production or preview hostnames. Production credentials must not authorize local-development hosts. The application supplies action `portfolio_contact`, the submission UUID as `cData`, `execution: "execute"`, and `appearance: "interaction-only"`; keep those values aligned with the server checks and do not enable a separate interactive endpoint challenge.
+6. Configure Managed Turnstile widgets for their exact production or preview hostnames. Production credentials must not authorize local-development hosts. The application supplies action `portfolio_contact`, the submission UUID as `cData`, `execution: "render"`, and `appearance: "always"` for the visible upfront gate. Keep those values aligned with the server checks and do not enable a separate interactive endpoint challenge.
 7. Verify the Resend sending identity, check its suppression and bounce state, and keep the owner recipient value server-only.
 8. Configure external WAF rate limiting for both JSON endpoints. A combined expression may match:
 
@@ -147,7 +147,7 @@ The tracked workflow is configured to use Cloudflare Pages Direct Upload. The cu
 
    Count by source IP. A Free-plan baseline of 5 requests per 10 seconds with a 10-second block can reduce abuse, but Cloudflare custom rate-limit responses require Pro or higher. Free-plan rate limiting therefore cannot guarantee the required `application/json` response and must not be documented as fully satisfying the contact API contract. On Pro or higher, explicitly configure the rate-limit or block action for both endpoints with the required JSON response and verify the live status, content type, and body. Plan eligibility alone does not satisfy the prerequisite. Otherwise, use another provider-compatible control that preserves the JSON contract. Do not use an interactive Managed Challenge on either endpoint.
 9. Confirm the active custom-domain, redirect, DNS, and TLS state in Cloudflare. The repository allowlists do not attach a domain.
-10. Push the reviewed change to `develop`. Confirm the workflow applies `migrations/0001_contact_rate_reservations.sql` to the preview database before Pages upload. Inspect the three-step contact interface without selecting the final Send action, and reserve any delivery test for a separately authorized owned mailbox.
+10. Push the reviewed change to `develop`. Confirm the workflow applies all pending migrations, including `0002_contact_payload_fingerprint.sql`, to the preview database before Pages upload. Complete the preview gate, observe its automatic transition or use Continue, and inspect the three data-entry steps, two acknowledgments, and 500-character limit without selecting Send request. This may consume a Turnstile token, but it must not call `/api/contact`, reserve D1 quota, or send email. Reserve any delivery test for a separately authorized owned mailbox.
 11. Merge the verified change to `main` only after the preview and pull-request checks pass. Confirm the same migration is applied to the production database before Pages upload, then perform the automated and manual no-delivery checks described below.
 
 The WAF rule, active Cloudflare plan, runtime secret presence, branch protection, and provider integration state are external prerequisites. Their desired values are documented here, but their current live state is unverified by the tracked files.
@@ -198,7 +198,7 @@ The deploy job checks out the same SHA so `functions/`, `migrations/`, and `wran
 
 ## D1 migration lifecycle
 
-Tracked SQL files under `migrations/` are append-only deployment inputs. `0001_contact_rate_reservations.sql` creates the four-column reservation table plus indexes for email-and-expiry lookup and expiry cleanup. Timestamps are Unix epoch seconds. D1 records successful files in its migration ledger, so a later deploy applies only pending migrations.
+Tracked SQL files under `migrations/` are append-only deployment inputs. `0001_contact_rate_reservations.sql` creates the four-column reservation table plus indexes for email-and-expiry lookup and expiry cleanup. `0002_contact_payload_fingerprint.sql` adds the keyed payload-fingerprint column used to reject changed same-ID retries without storing raw fields. Timestamps are Unix epoch seconds. D1 records successful files in its migration ledger, so a later deploy applies only pending migrations.
 
 The workflow commands are:
 
