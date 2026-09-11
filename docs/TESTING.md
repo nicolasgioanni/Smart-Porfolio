@@ -124,7 +124,7 @@ The suite verifies the fixed bottom dock at 320, 390, and 768 CSS pixels; a view
 
 ## Browser recommendation coverage
 
-`tests/e2e/recommendations.spec.ts` samples every desktop recommendation slot across the full expand and collapse transition. It protects compact-height caching and row positions during explicit collapse, outside-pointer dismissal, cross-card focus, and direct card switching. Responsive cases preserve natural document flow, while keyboard and reduced-motion cases protect accessible dismissal and transition fallbacks.
+`tests/e2e/recommendations.spec.ts` samples every desktop recommendation slot across the full expand and collapse transition. It protects compact-height caching and each row's offset within the recommendation list during explicit collapse, outside-pointer dismissal, cross-card focus, and direct card switching, so unrelated shell movement cannot be mistaken for a grid regression. Responsive cases preserve natural document flow, while keyboard and reduced-motion cases protect accessible dismissal and transition fallbacks.
 
 Pull-request runs use the checked-in recommendation templates and exercise every scenario. Deploy candidates use validated workbook content, so the suite selects expandable cards by capability, derives counts and row geometry at runtime, and skips only a scenario whose valid content shape cannot exhibit that contract. An empty recommendation collection must still render its configured empty state.
 
