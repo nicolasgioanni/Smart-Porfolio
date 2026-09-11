@@ -123,4 +123,35 @@ describe("research showcase styles", () => {
       /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.research-abstract__trigger\s*\{[^}]*transition:\s*none[\s\S]*?\.research-abstract__trigger:focus-visible[\s\S]*?transform:\s*none/
     );
   });
+
+  it("contains the self-hosted video on opaque surfaces without blocking native media capabilities", () => {
+    const videoFeatureBlock = researchStyles.slice(
+      researchStyles.indexOf(".research-media-stack {"),
+      researchStyles.indexOf(".research-abstract {")
+    );
+    const videoViewportRule = researchStyles.match(/\.research-video__viewport\s*\{[^}]*}/s)?.[0] ?? "";
+    const videoHeaderRule = researchStyles.match(/\.research-video__header\s*\{[^}]*}/s)?.[0] ?? "";
+    const videoActionsRule = researchStyles.match(/\.research-video__actions\s*\{[^}]*}/s)?.[0] ?? "";
+    const playerRule = researchStyles.match(/\.research-video__player\s*\{[^}]*}/s)?.[0] ?? "";
+    const dialogFrameRule = researchStyles.match(/\.research-video-dialog__frame\s*\{[^}]*}/s)?.[0] ?? "";
+    const dialogViewportRule = researchStyles.match(/\.research-video-dialog__viewport\s*\{[^}]*}/s)?.[0] ?? "";
+    const dialogPlayerRule = researchStyles.match(/\.research-video-dialog__player\s*\{[^}]*}/s)?.[0] ?? "";
+
+    expect(videoFeatureBlock).toMatch(/background:\s*var\(--visual-surface\)/);
+    expect(videoFeatureBlock).not.toMatch(/gradient|backdrop-filter|blur|shadow-glow/i);
+    expect(videoHeaderRule).toMatch(/grid-template-columns:\s*minmax\(0, 1fr\)/);
+    expect(videoActionsRule).toMatch(/grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/);
+    expect(videoActionsRule).toMatch(/min-width:\s*0/);
+    expect(videoViewportRule).toMatch(/aspect-ratio:\s*1710\s*\/\s*1108/);
+    expect(videoViewportRule).toMatch(/overflow:\s*hidden/);
+    expect(playerRule).toMatch(/object-fit:\s*contain/);
+    expect(dialogFrameRule).toMatch(/grid-template-rows:\s*minmax\(0, 1fr\) auto auto/);
+    expect(dialogFrameRule).toMatch(/overflow:\s*hidden/);
+    expect(dialogFrameRule).not.toMatch(/gradient|backdrop-filter|blur/i);
+    expect(dialogViewportRule).toMatch(/background:\s*#000/);
+    expect(dialogPlayerRule).toMatch(/object-fit:\s*contain/);
+    expect(researchStyles).toMatch(
+      /@media \(max-width: 390px\)[\s\S]*?\.research-video__actions,[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\)/
+    );
+  });
 });
