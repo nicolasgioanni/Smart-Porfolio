@@ -40,6 +40,8 @@ The supported palette identifiers are `navy`, `light`, and `dark`. System is an 
 
 The `navy` identifier intentionally remains stable for generated content, `data-theme`, and existing browser preferences, while its visitor-facing name is My mode. The generated `default_theme` setting selects the server-rendered fallback. Before body paint, `ThemePreferenceScript` gives a valid stored override precedence and otherwise maps the device preference to Light or Dark. `ThemeSwitcher` presents System before the three palettes as a labelled button group. `useThemePreference` follows live system changes until a manual palette is selected, stores only manual overrides, synchronizes cross-tab changes, and removes the override when System is selected.
 
+`src/lib/theme/themeTransition.ts` is the single hydrated write boundary. It progressively uses the browser View Transitions API for a `160ms` opacity-only root snapshot fade after interaction or a live preference update. It never delays or animates the prepaint script or first hydration reconciliation, and it falls back to the same immediate token swap when motion is reduced, the document is hidden, the palette is unchanged, or the API is unavailable or fails. Components continue to consume semantic palette tokens rather than declaring their own theme transition rules.
+
 Components must use semantic variables such as `--color-ink`, `--color-muted`, `--color-line`, and `--color-surface`. Do not read a palette-specific variable from a component rule when a semantic token expresses the role.
 
 ## Semantic tokens

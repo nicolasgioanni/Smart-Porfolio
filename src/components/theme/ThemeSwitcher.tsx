@@ -42,6 +42,8 @@ export function ThemeSwitcher({
   const [portalReady, setPortalReady] = useState(false);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const finePointerRef = useRef(true);
+  const themeTransitionIdRef = useRef(0);
+  const ignoreThemeTransitionLeaveRef = useRef(false);
   const open = controlledOpen ?? internalOpen;
   const openRef = useRef(open);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -179,6 +181,12 @@ export function ThemeSwitcher({
   }
 
   function handlePointerLeave() {
+    if (ignoreThemeTransitionLeaveRef.current) {
+      ignoreThemeTransitionLeaveRef.current = false;
+      cancelScheduledClose();
+      return;
+    }
+
     if (finePointerRef.current) {
       scheduleClose();
     }
@@ -223,6 +231,31 @@ export function ThemeSwitcher({
     }
   }
 
+  function selectThemePreference(
+    preference: (typeof themePreferenceOptions)[number]["name"],
+    event: ReactMouseEvent<HTMLButtonElement>
+  ) {
+    const transition = updateThemePreference(preference);
+    const transitionId = themeTransitionIdRef.current + 1;
+    themeTransitionIdRef.current = transitionId;
+    ignoreThemeTransitionLeaveRef.current = transition.animated && finePointerRef.current && event.detail > 0;
+
+    if (!transition.finished) return;
+
+    void transition.finished.then(
+      () => {
+        if (themeTransitionIdRef.current === transitionId) {
+          ignoreThemeTransitionLeaveRef.current = false;
+        }
+      },
+      () => {
+        if (themeTransitionIdRef.current === transitionId) {
+          ignoreThemeTransitionLeaveRef.current = false;
+        }
+      }
+    );
+  }
+
   const isPortaled = portalPopover && portalReady;
   const portalStyle: CSSProperties | undefined = isPortaled
     ? {
@@ -264,7 +297,7 @@ export function ThemeSwitcher({
             aria-pressed={selectedPreference === name}
             className="theme-switcher__option hover-base-1 hover-base-1--compact hover-base-1--inline"
             key={name}
-            onClick={() => updateThemePreference(name)}
+            onClick={(event) => selectThemePreference(name, event)}
             onPointerDown={preservePointerFocus}
             tabIndex={open ? 0 : -1}
             type="button"
