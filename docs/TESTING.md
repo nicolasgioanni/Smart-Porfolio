@@ -30,6 +30,8 @@ Smart Portfolio uses a layered quality gate for documentation, static content, R
 | `npm run test:e2e:navigation` | Playwright navigation specification in Chromium | Uses port 3100 by default and reuses a compatible running local server outside CI |
 | `npm run test:e2e:footer` | Playwright footer specification in Chromium | Covers every route, first paint, client navigation, restored scroll, and scroll activation |
 | `npm run test:e2e:recommendations` | Playwright recommendation specification in Chromium | Samples desktop geometry through expansion and dismissal, then checks responsive and reduced-motion behavior |
+| `npm run test:e2e:experience` | Playwright experience specification in Chromium | Protects detail-level switching, disclosure semantics, responsive controls, and reduced-motion behavior |
+| `npm run test:e2e:research` | Playwright research specification in Chromium | Protects research-card alternation, accessible detail disclosures, responsive stacking, and reduced-motion behavior |
 | `npm run test` | Complete Vitest suite | Uses mocks and jsdom, not a real browser or Cloudflare runtime |
 | `npm run build` | `prebuild`, Next.js static export, then content-version write | Regenerates content before building |
 | `npm run build:generated` | Next.js static export and content-version write | Consumes existing generated JSON without another content fetch |
@@ -124,6 +126,12 @@ The suite verifies the fixed bottom dock at 320, 390, and 768 CSS pixels; canoni
 
 Pull-request runs use the checked-in recommendation templates and exercise every scenario. Deploy candidates use validated workbook content, so the suite selects expandable cards by capability, derives counts and row geometry at runtime, and skips only a scenario whose valid content shape cannot exhibit that contract. An empty recommendation collection must still render its configured empty state.
 
+## Browser experience and research coverage
+
+`tests/e2e/experience.spec.ts` protects the shared detail-level control on the Experience route: it verifies the overview-to-technical switch, live status, exclusive accessible disclosures, Escape dismissal, compact desktop control placement, small-screen control flow, and reduced-motion transitions.
+
+`tests/e2e/research.spec.ts` applies the same browser-level detail contracts to the Research redesign while checking its alternating visual/content rows. Pull-request runs generate the checked-in template content before the suite executes; main and develop pushes use the validated live workbook snapshot instead. The browser test discovers rendered cards and expandable disclosures rather than relying on template IDs, titles, prose, or a fixed project count. It skips only a contract that the valid live content cannot exhibit, while still checking available desktop alternation, detail controls, narrow-screen stacking without horizontal overflow, and reduced-motion fallbacks. Both commands run in Chromium after the shared browser installation step in CI.
+
 ## Deployment automation coverage
 
 | Test | What it verifies |
@@ -149,7 +157,7 @@ Pull requests targeting `main` or `develop`:
 4. Run typecheck.
 5. Run the focused footer and navigation suites.
 6. Run the full Vitest suite.
-7. Install Chromium and run the navigation, footer, and recommendation browser regressions.
+7. Install Chromium and run the navigation, footer, recommendation, experience, and research browser regressions.
 8. Build with `build:generated`.
 9. Stop without creating a deployment artifact.
 
@@ -172,7 +180,7 @@ Scheduled runs and non-forced manual runs perform the strict content work before
 
 ### Focused regression duplication
 
-CI deliberately runs `test:footer` and `test:navigation` before `test`. The complete suite includes the same Vitest files, so they execute twice. The focused steps preserve named regression signals while the full suite catches cross-component failures. After the full suite passes, CI conditionally installs Chromium and runs the navigation, footer, and recommendation Playwright suites; candidates that skip verification do not download the browser.
+CI deliberately runs `test:footer` and `test:navigation` before `test`. The complete suite includes the same Vitest files, so they execute twice. The focused steps preserve named regression signals while the full suite catches cross-component failures. After the full suite passes, CI conditionally installs Chromium and runs the navigation, footer, recommendation, experience, and research Playwright suites; candidates that skip verification do not download the browser.
 
 ## Post-deployment smoke tests
 
@@ -215,6 +223,8 @@ npx playwright install chromium
 npm run test:e2e:navigation
 npm run test:e2e:footer
 npm run test:e2e:recommendations
+npm run test:e2e:experience
+npm run test:e2e:research
 ```
 
 Use `--reporter=dot` for compact output or the default reporter for individual test names.
@@ -235,7 +245,7 @@ Avoid snapshot tests that hide semantic changes. Prefer explicit assertions for 
 ## Current limitations
 
 - No coverage percentage is generated or enforced.
-- Real-browser coverage is intentionally limited to shared navigation, recommendation, and footer behavior in Chromium.
+- Real-browser coverage is intentionally limited to shared navigation, footer, recommendation, experience-detail, and research-detail behavior in Chromium.
 - No automated Lighthouse or performance threshold runs in CI.
 - No automated browser accessibility scanner is configured.
 - No Workers emulator integration test runs in CI.
