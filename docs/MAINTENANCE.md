@@ -262,6 +262,15 @@ When behavior changes:
 5. Run `npm run docs:check` to verify structure, local links, case, privacy patterns, and placeholders.
 6. Run `npm run verify` before delivery.
 
+## Update Next.js or its ESLint plugin
+
+1. Update `next` and `@next/eslint-plugin-next` together in `package.json`, then regenerate `package-lock.json` from the changed manifest.
+2. Next 16 uses the coordinated React 19 line: update React, React DOM, and both React type packages together to their separately reviewed compatible versions.
+3. Remove stale `.next/` output and TypeScript build information, run `npm run typecheck`, confirm Next recreated the ignored `next-env.d.ts`, and review only the managed `tsconfig.json` change. Keep the version-matched managed guidance block that `next dev` writes to the repository guidance file; a subsequent dev start must leave it unchanged.
+4. Preserve `output: "export"`, unoptimized images, static metadata files, and the existing static artifact contract unless an incompatibility is reproduced and documented.
+5. Run both `npm audit` and `npm audit --omit=dev`; resolve framework advisories and document separately scheduled package findings by owner and remediation branch.
+6. Verify the generated `robots.txt` and `sitemap.xml` in the static export, then run the focused navigation suite and the complete quality gate.
+
 ## Do not bypass
 
 - Generated-content helpers and runtime generated-shape validation.

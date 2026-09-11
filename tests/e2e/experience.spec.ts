@@ -3,6 +3,15 @@ import {
   expectDisclosureFocusToKeepRestingElevation,
   findFirstExpandableCard
 } from "./cardFocusElevation";
+import { captureBrowserConsole, expectNoBrowserConsoleIssues } from "./browserConsole";
+
+test.beforeEach(async ({ page }) => {
+  captureBrowserConsole(page);
+});
+
+test.afterEach(async ({ page }) => {
+  expectNoBrowserConsoleIssues(page);
+});
 
 async function settleLayout(page: Page) {
   await page.waitForLoadState("networkidle");

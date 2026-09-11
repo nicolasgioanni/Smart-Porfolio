@@ -3,6 +3,7 @@ import {
   expectDisclosureFocusToKeepRestingElevation,
   findFirstExpandableCard
 } from "./cardFocusElevation";
+import { captureBrowserConsole, expectNoBrowserConsoleIssues } from "./browserConsole";
 import { reloadWithStoredTheme } from "./themePreference";
 
 const authoredAbstractProjectIds = [
@@ -10,6 +11,14 @@ const authoredAbstractProjectIds = [
   "adversarial-machine-learning",
   "yeast-dna-target-selection"
 ] as const;
+
+test.beforeEach(async ({ page }) => {
+  captureBrowserConsole(page);
+});
+
+test.afterEach(async ({ page }) => {
+  expectNoBrowserConsoleIssues(page);
+});
 
 async function settleLayout(page: Page) {
   await page.waitForLoadState("networkidle");

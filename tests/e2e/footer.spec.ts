@@ -1,5 +1,10 @@
 import { expect, test, type Page } from "@playwright/test";
 import { siteRoutePaths } from "../../src/components/navigation/siteRoutes";
+import {
+  allowBrowserConsoleMessage,
+  captureBrowserConsole,
+  expectNoBrowserConsoleIssues
+} from "./browserConsole";
 
 type FooterSample = {
   detailsHeight: number;
@@ -84,7 +89,7 @@ async function expectCompactFooter(page: Page) {
   await expect(toggle).toHaveText("Details");
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
   await expect(details).toHaveAttribute("aria-hidden", "true");
-  await expect(details).toHaveAttribute("inert", "");
+  await expect(details).toHaveAttribute("inert");
   await expect.poll(() => details.evaluate((element) => element.getBoundingClientRect().height)).toBeLessThanOrEqual(1);
 }
 
@@ -114,12 +119,20 @@ async function expectNoExpandedSamples(page: Page, pathname: string, heading: st
 }
 
 test.beforeEach(async ({ page }) => {
+  captureBrowserConsole(page);
   await installFooterRecorder(page);
   await page.setViewportSize({ width: 1280, height: 720 });
 });
 
+test.afterEach(async ({ page }) => {
+  expectNoBrowserConsoleIssues(page);
+});
+
 for (const pathname of [...siteRoutePaths, missingRoute]) {
   test(`keeps ${pathname} compact through its first settled render`, async ({ page }) => {
+    if (pathname === missingRoute) {
+      allowBrowserConsoleMessage(page, /^Failed to load resource: the server responded with a status of 404 \(Not Found\)$/);
+    }
     await page.goto(pathname);
     await settleLayout(page);
     await expectCompactFooter(page);
@@ -169,7 +182,29 @@ test("expands only after a real downward wheel reaches the footer runway", async
   await expect(page.locator(".blob-footer")).toHaveAttribute("data-footer-state", "expanded");
   await expect(page.locator(".blob-footer__toggle")).toHaveAttribute("aria-expanded", "true");
   await expect(page.locator(".blob-footer__details")).toHaveAttribute("aria-hidden", "false");
-  await expect(page.locator(".blob-footer__details")).not.toHaveAttribute("inert", "");
+  await expect(page.locator(".blob-footer__details")).not.toHaveAttribute("inert");
+});
+
+test("blocks programmatic detail focus while compact and restores it when expanded", async ({ page }) => {
+  await page.goto("/terms");
+  await settleLayout(page);
+
+  const footer = page.locator(".blob-footer");
+  const details = footer.locator(".blob-footer__details");
+  const firstDetailLink = details.locator("a").first();
+
+  await expectCompactFooter(page);
+  expect(await firstDetailLink.evaluate((element) => {
+    (element as HTMLAnchorElement).focus();
+    return document.activeElement === element;
+  })).toBe(false);
+
+  await footer.locator(".blob-footer__toggle").click();
+  await expect(details).not.toHaveAttribute("inert");
+  expect(await firstDetailLink.evaluate((element) => {
+    (element as HTMLAnchorElement).focus();
+    return document.activeElement === element;
+  })).toBe(true);
 });
 
 test("keeps a restored deep position compact after reload", async ({ page }) => {

@@ -262,7 +262,7 @@ Deployment credentials and immutable Cloudflare target variables are documented 
 | `npm run generate:content` | Source loading, normalization, validation, hashing, and generated snapshot. |
 | `npm run db:migrate:local` | Apply tracked migrations to Wrangler's local D1 state. |
 | `npm run lint` | Source, test, script, and configuration lint rules with zero warnings. |
-| `npm run typecheck` | Strict TypeScript checking without output. |
+| `npm run typecheck` | Regenerate Next route types, then run strict TypeScript checking without output. |
 | `npm run test:footer` | Focused footer behavior and style regressions. |
 | `npm run test:navigation` | Focused header, route rail, responsive navigation, and style-contract regressions. |
 | `npm run test:e2e:navigation` | Chromium coverage for page entrance, the mobile bottom dock, and the unchanged desktop header. |
