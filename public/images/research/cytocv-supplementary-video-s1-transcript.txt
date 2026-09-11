@@ -1,5 +1,6 @@
-CytoCV Supplementary Video S1 — local accessibility transcript draft
-Timing spans source-audio segments only. Bracketed text marks uncertainty after review.
+CytoCV Supplementary Video S1 — transcript and visual description
+
+Narration transcript
 
 [00:00:00.430–00:00:05.510] I'm going to demonstrate how to use CytoCV to automate measurement of nuclear to cytoplasmic
 [00:00:05.510–00:00:09.150] intensity ratios for a fluorescently tagged protein.
@@ -34,7 +35,8 @@ Timing spans source-audio segments only. Bracketed text marks uncertainty after 
 [00:02:04.780–00:02:06.340] available.
 [00:02:06.340–00:02:10.980] Because my older source files do not contain the required metadata, I'm going to manually
 [00:02:10.980–00:02:16.860] set the channels by defining the order of the fluorescent images in my TIFF stack here.
-[00:02:16.860–00:02:33.590] Now I'll close this window and pre-process the files, and then start the analysis.
+[00:02:16.860–00:02:20.580] Now I'll close this window and pre-process the files,
+[00:02:27.780–00:02:29.370] and then start the analysis.
 [00:02:33.670–00:02:37.470] I've now switched to a window in which the analysis has finished, and I can see the pairs
 [00:02:37.470–00:02:40.710] of cells that CytoCV has identified to analyze.
 [00:02:40.710–00:02:45.870] Below, I can visualize each individual cell pair and determine whether I want to keep that
@@ -85,3 +87,18 @@ Timing spans source-audio segments only. Bracketed text marks uncertainty after 
 [00:05:16.740–00:05:20.260] to calculate nuclear versus cytoplasmic intensities.
 [00:05:20.260–00:05:24.100] For other types of analysis, I would follow a similar process,
 [00:05:24.100–00:05:27.380] but choose different options in the statistics plug-in section.
+
+Visual descriptions
+
+[00:00:00.000–00:00:39.910] An Adobe Illustrator canvas displays a microscopy comparison. Four labeled columns show DIC, DAPI, Nup2-mKATE, and Stu2-GFP images for STU2 wild type on top and stu2 KR/AA below. A one-micrometre scale marker appears beside the images. A scatter plot at right compares nuclear-to-cytoplasmic GFP intensity for the two strains.
+[00:00:51.240–00:02:20.580] A CytoCV browser interface shows uploaded wild-type and mutant files and a Statistics Plugin settings dialog. The dialog contains the cell-pair, signal-quantification, nucleus-contour-source, contour-mode, and channel-order controls discussed in the narration.
+[00:02:20.580–00:02:33.590] The interface queues TIFF upload and prepares previews for a four-channel preprocessing review. The review shows channel controls and a Start Analysis action, followed by queued and detecting-cells progress.
+[00:02:33.670–00:04:12.390] The CytoCV analysis view shows individual cell-pair cards and image channels. DIC, blue, red, and green image panels are displayed with contour overlays; the selected cell pair is inspected and cells can be removed from the analysis.
+[00:04:12.390–00:04:34.180] A Download statistics dialog presents file-type choices labeled CSV and Excel, plus statistic-selection and file-selection controls.
+[00:04:34.180–00:04:37.000] The browser shows download confirmation and then switches away from the CytoCV interface.
+[00:04:37.000–00:04:53.120] A spreadsheet application displays the exported measurements in rows and columns. The leftmost column contains image-file names and cells 9 and 10 are absent from the wild-type data.
+[00:04:53.120–00:04:56.000] The operating-system application switcher appears over the spreadsheet and selects Adobe Illustrator.
+[00:04:56.000–00:05:20.260] The microscopy comparison and scatter plot return in Adobe Illustrator, showing the same wild-type-versus-mutant comparison described at the start of the video.
+[00:05:20.260–00:05:22.500] The microscopy comparison remains visible in Adobe Illustrator.
+[00:05:22.500–00:05:24.700] The operating-system application switcher appears as the video changes applications.
+[00:05:25.000–00:05:27.380] The CytoCV Statistics Plugin settings dialog is shown again as the narration notes that other analyses use different options.
