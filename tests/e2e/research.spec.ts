@@ -10,17 +10,23 @@ async function settleLayout(page: Page) {
   });
 }
 
-async function expectResearchProjects(page: Page): Promise<Locator> {
+async function expectResearchProjectsOrEmptyState(page: Page): Promise<Locator | undefined> {
   const projects = page.locator("article.research-project");
-  const projectCount = await projects.count();
-  test.skip(projectCount === 0, "Research regression requires at least one rendered research project.");
+
+  if ((await projects.count()) === 0) {
+    await expect(page.getByRole("status")).toContainText("Research entries will appear here when content is available.");
+    return undefined;
+  }
+
   return projects;
 }
 
 async function expectDetailModeSwitch(page: Page) {
-  const modeSwitch = page.locator(".detail-mode-switch");
+  const modeControl = page.locator(".detail-mode-control");
+  const modeSwitch = modeControl.locator(".detail-mode-switch");
   const buttons = modeSwitch.getByRole("button");
 
+  await expect(modeControl).toHaveCount(1);
   await expect(modeSwitch).toHaveCount(1);
   await expect(buttons).toHaveCount(2);
   await expect.poll(() => buttons.evaluateAll((elements) => elements.map((element) => element.getAttribute("aria-pressed"))))
@@ -32,7 +38,10 @@ async function expectDetailModeSwitch(page: Page) {
   await expect(buttons.nth(1)).toHaveAttribute("aria-pressed", "true");
   await expect(buttons.nth(0)).toHaveAttribute("aria-pressed", "false");
   await expect(modeSwitch).not.toHaveAttribute("data-mode", initialMode!);
-  await expect(page.locator('[aria-live="polite"]')).toHaveCount(1);
+  const liveStatus = modeControl.locator('[aria-live="polite"]');
+  await expect(liveStatus).toHaveCount(1);
+  await expect(liveStatus).toHaveText("Showing technical details.");
+  await expect(liveStatus).toHaveClass(/visually-hidden/);
 
   return modeSwitch;
 }
@@ -62,7 +71,11 @@ test.describe("Research showcase", () => {
     await page.goto("/research");
     await settleLayout(page);
 
-    const projects = await expectResearchProjects(page);
+    const projects = await expectResearchProjectsOrEmptyState(page);
+    if (!projects) {
+      await expect(page.locator(".detail-mode-control")).toHaveCount(0);
+      return;
+    }
     await expectDetailModeSwitch(page);
 
     const desktopLayout = await projects.evaluateAll((cards) =>
@@ -125,12 +138,19 @@ test.describe("Research showcase", () => {
     await page.goto("/research");
     await settleLayout(page);
 
-    const projects = await expectResearchProjects(page);
+    const projects = await expectResearchProjectsOrEmptyState(page);
+
+    await expectNoHorizontalOverflow(page);
+
+    if (!projects) {
+      await expect(page.locator(".detail-mode-control")).toHaveCount(0);
+      return;
+    }
+
     const modeControl = page.locator(".detail-mode-control");
     const modeSwitch = modeControl.locator(".detail-mode-switch");
     const firstProject = projects.first();
 
-    await expectNoHorizontalOverflow(page);
     await expect(modeControl).toBeVisible();
 
     const [controlBox, switchBox, visualBox, contentBox] = await Promise.all([
@@ -154,7 +174,14 @@ test.describe("Research showcase", () => {
     await page.goto("/research");
     await settleLayout(page);
 
-    const projects = await expectResearchProjects(page);
+    const projects = await expectResearchProjectsOrEmptyState(page);
+    await expectNoHorizontalOverflow(page);
+
+    if (!projects) {
+      await expect(page.locator(".detail-mode-control")).toHaveCount(0);
+      return;
+    }
+
     await expectDetailModeSwitch(page);
 
     await expect(projects.locator(".research-project__body").first()).toHaveCSS("animation-name", "none");
@@ -168,7 +195,5 @@ test.describe("Research showcase", () => {
       expect(panelId).toBeTruthy();
       await expect(page.locator(`#${panelId}`)).toHaveCSS("transition-duration", "0s");
     }
-
-    await expectNoHorizontalOverflow(page);
   });
 });

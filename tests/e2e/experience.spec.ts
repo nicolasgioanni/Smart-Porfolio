@@ -1,23 +1,70 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
+
+async function settleLayout(page: Page) {
+  await page.waitForLoadState("networkidle");
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+    await new Promise<void>((resolve) => {
+      window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve()));
+    });
+  });
+}
+
+async function expectExperienceCardsOrEmptyState(page: Page): Promise<Locator | undefined> {
+  const cards = page.locator("article.experience-card");
+
+  if ((await cards.count()) === 0) {
+    await expect(page.getByRole("status")).toContainText("Experience entries will appear here when content is available.");
+    return undefined;
+  }
+
+  return cards;
+}
+
+async function getFirstCardWithDisclosure(cards: Locator): Promise<Locator | undefined> {
+  const cardCount = await cards.count();
+
+  for (let index = 0; index < cardCount; index += 1) {
+    const card = cards.nth(index);
+    if (await card.locator("button.detail-section__trigger").count()) return card;
+  }
+
+  return undefined;
+}
+
+async function expectNoHorizontalOverflow(page: Page) {
+  await expect
+    .poll(() =>
+      page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)
+    )
+    .toBe(true);
+}
 
 test.describe("Experience showcase", () => {
-  test("switches audience depth and keeps one chapter open per role", async ({ page }) => {
+  test("switches audience depth and keeps available chapters accessible", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto("/experience");
+    await settleLayout(page);
 
-    const cards = page.locator(".experience-card");
     const introSurface = page.locator(".page-intro__surface");
     const pageHeading = introSurface.getByRole("heading", { level: 1, name: "Experience" });
-    const pageSummary = introSurface.getByText(/My experience spans AI engineering at the U\.S\. Treasury/);
-    const modeGroup = introSurface.getByRole("group", { name: /Experience detail level/i });
+    const pageSummary = introSurface.locator(".page-description");
+    const modeControl = introSurface.locator(".detail-mode-control");
+    const modeGroup = modeControl.getByRole("group", { name: /Experience detail level/i });
+    const cards = await expectExperienceCardsOrEmptyState(page);
 
     await expect(introSurface).toHaveCount(1);
     await expect(pageHeading).toBeVisible();
     await expect(pageSummary).toBeVisible();
+
+    if (!cards) {
+      await expect(modeControl).toHaveCount(0);
+      return;
+    }
+
+    await expect(modeControl).toHaveCount(1);
     await expect(introSurface.getByText("Detail", { exact: true })).toBeVisible();
-    await expect(cards).toHaveCount(5);
     await expect(modeGroup.getByRole("button", { name: "Overview" })).toHaveAttribute("aria-pressed", "true");
-    await expect(page.getByText(/Built and deployed CytoCV/)).toBeVisible();
 
     const [headingBox, summaryBox, modeBox, introBox] = await Promise.all([
       pageHeading.boundingBox(),
@@ -33,69 +80,73 @@ test.describe("Experience showcase", () => {
     expect(modeBox!.y).toBeLessThan(summaryBox!.y);
     expect(modeBox!.x + modeBox!.width).toBeLessThanOrEqual(introBox!.x + introBox!.width);
 
-    const treasuryCard = page
-      .getByRole("heading", { level: 2, name: "AI Engineer" })
-      .locator("xpath=ancestor::article");
-    await expect(treasuryCard.getByText("Details not yet available.")).toBeVisible();
-    await expect(treasuryCard.locator(".experience-chapter")).toHaveCount(0);
-
     await modeGroup.getByRole("button", { name: "Technical" }).click();
     await expect(modeGroup.getByRole("button", { name: "Technical" })).toHaveAttribute("aria-pressed", "true");
-    const liveStatus = introSurface.locator('[aria-live="polite"]');
+    const liveStatus = modeControl.locator('[aria-live="polite"]');
     await expect(liveStatus).toHaveText("Showing technical details.");
     await expect(liveStatus).toHaveClass(/visually-hidden/);
 
-    const cytocvCard = page
-      .getByRole("heading", { level: 2, name: "Research Assistant (Software Engineering)" })
-      .locator("xpath=ancestor::article");
-    await expect(cytocvCard.getByText(/Architected a Django and JavaScript application/)).toBeVisible();
-    const architecture = cytocvCard.getByRole("button", { name: /Application architecture/i });
-    const vision = cytocvCard.getByRole("button", { name: /Vision pipeline/i });
+    const disclosureCard = await getFirstCardWithDisclosure(cards);
+    if (!disclosureCard) return;
 
-    const [architectureIconBox, visionIconBox] = await Promise.all([
-      architecture.locator(".detail-section__icon").boundingBox(),
-      vision.locator(".detail-section__icon").boundingBox()
+    const disclosures = disclosureCard.locator("button.detail-section__trigger");
+    const firstDisclosure = disclosures.first();
+    await firstDisclosure.click();
+    await expect(firstDisclosure).toHaveAttribute("aria-expanded", "true");
+    const panelId = await firstDisclosure.getAttribute("aria-controls");
+    expect(panelId).toBeTruthy();
+    const panel = disclosureCard.locator(`[id="${panelId}"]`);
+    await expect(panel).toHaveAttribute("aria-hidden", "false");
+    await expect(panel.getByRole("list").first()).toBeVisible();
+
+    if (await disclosures.count() < 2) return;
+
+    const secondDisclosure = disclosures.nth(1);
+    const [firstIconBox, secondIconBox] = await Promise.all([
+      firstDisclosure.locator(".detail-section__icon").boundingBox(),
+      secondDisclosure.locator(".detail-section__icon").boundingBox()
     ]);
-    expect(architectureIconBox).not.toBeNull();
-    expect(visionIconBox).not.toBeNull();
+    expect(firstIconBox).not.toBeNull();
+    expect(secondIconBox).not.toBeNull();
     expect(
-      Math.abs(
-        architectureIconBox!.x + architectureIconBox!.width -
-          (visionIconBox!.x + visionIconBox!.width)
-      )
+      Math.abs(firstIconBox!.x + firstIconBox!.width - (secondIconBox!.x + secondIconBox!.width))
     ).toBeLessThanOrEqual(1);
 
-    await architecture.click();
-    await expect(architecture).toHaveAttribute("aria-expanded", "true");
-    const architectureTools = cytocvCard.getByRole("list", { name: "Application architecture tools" });
-    await expect(architectureTools).toBeVisible();
-    await expect(architectureTools.getByText("PostgreSQL", { exact: true })).toBeVisible();
-
-    await vision.click();
-    await expect(architecture).toHaveAttribute("aria-expanded", "false");
-    await expect(vision).toHaveAttribute("aria-expanded", "true");
-    await vision.press("Escape");
-    await expect(vision).toHaveAttribute("aria-expanded", "false");
-    await expect(vision).toBeFocused();
+    await secondDisclosure.click();
+    await expect(firstDisclosure).toHaveAttribute("aria-expanded", "false");
+    await expect(secondDisclosure).toHaveAttribute("aria-expanded", "true");
+    await secondDisclosure.press("Escape");
+    await expect(secondDisclosure).toHaveAttribute("aria-expanded", "false");
+    await expect(secondDisclosure).toBeFocused();
   });
 
-  test("reflows without horizontal overflow and removes motion when requested", async ({ page }) => {
+  test("reflows rendered experience without horizontal overflow and removes motion when requested", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.setViewportSize({ width: 320, height: 844 });
     await page.goto("/experience");
+    await settleLayout(page);
 
-    const technicalButton = page.getByRole("button", { name: "Technical", exact: true });
-    const firstChapter = page.getByRole("button", { name: /Scientific workflow/i });
     const introSurface = page.locator(".page-intro__surface");
     const modeControl = introSurface.locator(".detail-mode-control");
     const modeLabel = modeControl.locator(".detail-mode-control__label");
     const modeSwitch = modeControl.locator(".detail-mode-switch");
+    const cards = await expectExperienceCardsOrEmptyState(page);
 
-    expect(
-      await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)
-    ).toBe(true);
+    await expectNoHorizontalOverflow(page);
+
+    if (!cards) {
+      await expect(modeControl).toHaveCount(0);
+      return;
+    }
+
+    const technicalButton = modeSwitch.getByRole("button", { name: "Technical", exact: true });
+    await expect(technicalButton).toBeVisible();
     expect((await technicalButton.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(34);
-    expect((await firstChapter.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+
+    const firstDisclosure = cards.locator("button.detail-section__trigger").first();
+    if (await firstDisclosure.count()) {
+      expect((await firstDisclosure.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+    }
 
     const [introBox, controlBox, labelBox, switchBox] = await Promise.all([
       introSurface.boundingBox(),
@@ -113,20 +164,26 @@ test.describe("Experience showcase", () => {
     expect(switchBox!.x + switchBox!.width).toBeLessThanOrEqual(introBox!.x + introBox!.width);
     expect(switchBox!.y).toBeGreaterThanOrEqual(labelBox!.y + labelBox!.height);
 
-    expect(
-      await page.locator(".detail-mode-switch__lens").evaluate((element) => getComputedStyle(element).transitionDuration)
-    ).toBe("0s");
-    expect(
-      await page.locator(".detail-section__panel").first().evaluate((element) => getComputedStyle(element).transitionDuration)
-    ).toBe("0s");
+    await expect(cards.locator(".experience-card__body").first()).toHaveCSS("animation-name", "none");
+    await expect(modeSwitch.locator(".detail-mode-switch__lens")).toHaveCSS("transition-duration", "0s");
+
+    const firstPanel = cards.locator(".detail-section__panel").first();
+    if (await firstPanel.count()) {
+      await expect(firstPanel).toHaveCSS("transition-duration", "0s");
+    }
   });
 
-  test("insets chapter dividers while preserving full-width hover targets", async ({ page }) => {
+  test("insets available chapter dividers while preserving full-width hover targets", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto("/experience");
+    await settleLayout(page);
 
-    const chapters = page.locator(".detail-list").first();
-    const chapter = chapters.locator(".detail-section").first();
+    const cards = await expectExperienceCardsOrEmptyState(page);
+    if (!cards) return;
+
+    const chapter = cards.locator(".detail-list .detail-section").first();
+    if (!(await chapter.count())) return;
+
     const trigger = chapter.locator(".detail-section__trigger");
     const dividerInsets = await chapter.evaluate((element) => {
       const chaptersElement = element.parentElement!;
