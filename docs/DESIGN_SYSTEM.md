@@ -181,6 +181,8 @@ The dedicated Experience route combines its heading, spreadsheet-backed summary,
 
 The segmented selector uses one translated glass lens, measures 12.25rem, and keeps each mode button at least 44 by 44 CSS pixels for every pointer capability. Below `760px`, the selector returns to document flow beneath the summary without expanding to the panel width. On small screens, evidence returns to the full card width and result signals move below their disclosure summaries. Each collapsed evidence row communicates its central fact; expansion adds context and tools tied to that row, and only one row per role remains open.
 
+Experience and Research cards use the large surface shadow and two-pixel lift only during genuine fine-pointer hover. When a disclosure retains focus, the card keeps its resting geometry and shadow while the focused control supplies the keyboard-visible ring; `:focus-within` may strengthen only the card border. This prevents persistent card-wide elevation from reading as an extra translucent panel after scrolling.
+
 ## Skills
 
 Home groups selected skills by `category` and `category_order`. The published content currently produces three cards with four skills each. A skill with the complete proficiency, summary, and evidence set renders as a button that opens the shared dialog. Incomplete legacy detail sets render as static badges.
