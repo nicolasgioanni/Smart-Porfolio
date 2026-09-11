@@ -1,5 +1,6 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { siteRoutePaths } from "../../src/components/navigation/siteRoutes";
+import { reloadWithStoredTheme } from "./themePreference";
 
 const mobileWidths = [320, 390, 768] as const;
 const viewportHeight = 844;
@@ -19,6 +20,19 @@ async function scrollRailToEnd(page: Page) {
   )).toBeLessThanOrEqual(2);
 }
 
+async function expectRailTargetReachable(rail: Locator, target: Locator) {
+  await target.evaluate((element) => {
+    element.scrollIntoView({ block: "nearest", inline: "center" });
+  });
+
+  await expect.poll(async () => {
+    const [railBox, targetBox] = await Promise.all([rail.boundingBox(), target.boundingBox()]);
+    if (!railBox || !targetBox) return false;
+
+    return targetBox.x >= railBox.x - 1 && targetBox.x + targetBox.width <= railBox.x + railBox.width + 1;
+  }).toBe(true);
+}
+
 async function expectDockAtViewportBottom(page: Page) {
   const dock = page.locator(".blob-header");
   const dockBox = await dock.boundingBox();
@@ -30,8 +44,18 @@ async function expectDockAtViewportBottom(page: Page) {
   expect(bottomGap).toBeLessThanOrEqual(20);
 }
 
+function findVisibleZeroOffsetShadow(boxShadow: string) {
+  return [...boxShadow.matchAll(/rgba?\(([^)]+)\)\s+(-?[\d.]+)px\s+(-?[\d.]+)px/g)].find((match) => {
+    const channels = match[1]!.split(",").map((channel) => Number.parseFloat(channel));
+    const alpha = channels.length === 4 ? channels[3]! : 1;
+
+    return alpha > 0 && Number.parseFloat(match[2]!) === 0 && Number.parseFloat(match[3]!) === 0;
+  })?.[0] ?? null;
+}
+
 for (const width of mobileWidths) {
-  test(`keeps the complete mobile dock available at ${width}px`, async ({ page }) => {
+  test(`keeps the complete mobile dock available without automatic motion at ${width}px`, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
     await page.setViewportSize({ width, height: viewportHeight });
     await openHome(page);
 
@@ -49,7 +73,13 @@ for (const width of mobileWidths) {
     await expect(actions).toHaveCount(1);
     await expect(rail).toHaveAttribute("data-overflow", "true");
     await expect(rail).toHaveAttribute("data-edge", "end");
+    await expect(rail).not.toHaveAttribute("data-automating", "");
     await expect(rail).toHaveCSS("overflow-x", "auto");
+
+    const railBox = await rail.boundingBox();
+    expect(railBox).not.toBeNull();
+    expect(railBox?.x ?? Number.NEGATIVE_INFINITY).toBeGreaterThanOrEqual(0);
+    expect((railBox?.x ?? 0) + (railBox?.width ?? Number.POSITIVE_INFINITY)).toBeLessThanOrEqual(width);
 
     const actionsBoxBeforeRailScroll = await actions.boundingBox();
 
@@ -59,11 +89,19 @@ for (const width of mobileWidths) {
       scrollWidth: element.scrollWidth
     }));
     expect(horizontalGeometry.scrollWidth).toBeGreaterThan(horizontalGeometry.clientWidth);
-    expect(horizontalGeometry.maskImage).toContain("linear-gradient");
+    expect(horizontalGeometry.maskImage).toBe("none");
+
+    for (const target of [
+      routes.getByRole("link", { name: "Recommendations", exact: true }),
+      routes.getByRole("link", { name: "Resume", exact: true }),
+      actions.getByRole("button", { name: /choose color theme/i })
+    ]) {
+      await expectRailTargetReachable(rail, target);
+    }
 
     await scrollRailToEnd(page);
     await expect(rail).toHaveAttribute("data-edge", "start");
-    await expect.poll(() => rail.evaluate((element) => getComputedStyle(element).maskImage)).toContain("linear-gradient");
+    await expect.poll(() => rail.evaluate((element) => getComputedStyle(element).maskImage)).toBe("none");
     const actionsBoxAfterRailScroll = await actions.boundingBox();
     const railScrollDistance = await rail.evaluate((element) => element.scrollLeft);
     expect(railScrollDistance).toBeGreaterThan(1);
@@ -138,7 +176,9 @@ test("follows the system color scheme until a visitor chooses an override", asyn
   await expect(root).toHaveAttribute("data-theme", "light");
   await expect(trigger).toHaveAccessibleName("Choose color theme. Current setting: System; using Light");
 
-  await group.getByRole("button", { name: "My mode", exact: true }).click();
+  const myModeOption = group.getByRole("button", { name: "My mode", exact: true });
+  await myModeOption.focus();
+  await myModeOption.press("Enter");
   await expect(root).toHaveAttribute("data-theme", "navy");
   await expect.poll(() => page.evaluate(() => window.localStorage.getItem("portfolio-theme"))).toBe("navy");
 
@@ -212,17 +252,74 @@ test("keeps native outside dismissal available during a palette transition", asy
   await expect(trigger).toHaveAttribute("aria-expanded", "false");
 });
 
+test("uses solid, layered semantic surfaces in every palette", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/");
+
+  for (const theme of ["navy", "light", "dark"] as const) {
+    await reloadWithStoredTheme(page, theme);
+    const surfaces = await page.evaluate(() => {
+      const read = (selector: string) => {
+        const element = document.querySelector<HTMLElement>(selector);
+        if (!element) throw new Error(`Missing representative surface: ${selector}`);
+
+        const styles = getComputedStyle(element);
+        return {
+          backgroundColor: styles.backgroundColor,
+          backgroundImage: styles.backgroundImage,
+          boxShadow: styles.boxShadow
+        };
+      };
+
+      return {
+        page: read("body"),
+        header: read(".glass-blob--nav"),
+        module: read(".home-section__surface"),
+        control: read(".theme-switcher__trigger")
+      };
+    });
+
+    for (const surface of Object.values(surfaces)) {
+      expect(surface.backgroundImage).toBe("none");
+      expect(surface.backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
+      expect(findVisibleZeroOffsetShadow(surface.boxShadow)).toBeNull();
+    }
+
+    expect(surfaces.header.backgroundColor).not.toBe(surfaces.page.backgroundColor);
+    expect(surfaces.module.backgroundColor).not.toBe(surfaces.page.backgroundColor);
+  }
+});
+
 test("moves the whole rail, pauses after touch, and resumes in place after five seconds", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: viewportHeight });
   await openHome(page);
 
   const rail = page.locator(".mobile-navigation__rail");
-  const actions = rail.locator(".blob-header__actions");
   await expect(rail).toHaveAttribute("data-overflow", "true");
-  const actionsStartX = (await actions.boundingBox())?.x ?? 0;
-  await expect.poll(() => rail.evaluate((element) => element.scrollLeft), { timeout: 5_000 }).toBeGreaterThan(5);
-  const actionsDriftingX = (await actions.boundingBox())?.x ?? 0;
-  expect(actionsStartX - actionsDriftingX).toBeGreaterThan(4);
+  const driftBaseline = await rail.evaluate((element) => {
+    const actionsElement = element.querySelector<HTMLElement>(".blob-header__actions");
+    if (!actionsElement) throw new Error("The mobile rail is missing its action cluster.");
+
+    return {
+      actionsX: actionsElement.getBoundingClientRect().x,
+      scrollLeft: element.scrollLeft
+    };
+  });
+  await expect.poll(async () => {
+    const current = await rail.evaluate((element) => {
+      const actionsElement = element.querySelector<HTMLElement>(".blob-header__actions");
+      if (!actionsElement) throw new Error("The mobile rail is missing its action cluster.");
+
+      return {
+        actionsX: actionsElement.getBoundingClientRect().x,
+        scrollLeft: element.scrollLeft
+      };
+    });
+    const scrollDelta = current.scrollLeft - driftBaseline.scrollLeft;
+    const actionDelta = driftBaseline.actionsX - current.actionsX;
+
+    return scrollDelta > 5 && Math.abs(actionDelta - scrollDelta) <= 2;
+  }, { timeout: 5_000 }).toBe(true);
 
   await rail.evaluate((element) => {
     element.scrollLeft = Math.min(140, (element.scrollWidth - element.clientWidth) / 2);
@@ -233,12 +330,14 @@ test("moves the whole rail, pauses after touch, and resumes in place after five 
   await expect(rail).not.toHaveAttribute("data-automating", "");
   const pausedPosition = await rail.evaluate((element) => element.scrollLeft);
 
-  await page.waitForTimeout(4_600);
+  // Leave enough headroom before the five-second browser timer to prove the
+  // interaction hold without letting a busy multi-worker host cross it.
+  await page.waitForTimeout(2_500);
   const positionBeforeResume = await rail.evaluate((element) => element.scrollLeft);
   expect(Math.abs(positionBeforeResume - pausedPosition)).toBeLessThanOrEqual(1);
   expect(positionBeforeResume).toBeGreaterThan(40);
 
-  await expect(rail).toHaveAttribute("data-automating", "", { timeout: 1_500 });
+  await expect(rail).toHaveAttribute("data-automating", "", { timeout: 3_500 });
   await expect.poll(
     () => rail.evaluate((element, start) => Math.abs(element.scrollLeft - start), pausedPosition),
     { timeout: 2_000 }

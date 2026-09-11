@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { selectThemeWithChooser } from "./themePreference";
 
 type RecommendationGeometry = {
   bottom: number;
@@ -242,21 +243,6 @@ test.describe("recommendation cards", () => {
         .toBeCloseTo(expectedOpacity, 2);
     }
 
-    const expectedThemeSurfaces = {
-      dark: "rgb(35, 38, 45)",
-      light: "rgb(229, 236, 240)",
-      navy: "rgb(17, 43, 69)"
-    } as const;
-
-    for (const [theme, expectedBackground] of Object.entries(expectedThemeSurfaces)) {
-      await page.evaluate((nextTheme) => {
-        document.documentElement.dataset.theme = nextTheme;
-      }, theme);
-      await expect.poll(() => activeCard.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(
-        expectedBackground
-      );
-    }
-
     await activeSlot.getByRole("button", { name: /show less recommendation/i }).click();
     await expect(activeSlot).toHaveAttribute("data-expanded", "false");
     expectStableDesktopLayout(
@@ -265,6 +251,35 @@ test.describe("recommendation cards", () => {
       collapsedLayout.collapsedHeights
     );
     await expectDesktopOverlayCleared(list);
+
+    const expectedThemeSurfaces = {
+      dark: "rgb(35, 38, 45)",
+      light: "rgb(229, 236, 240)",
+      navy: "rgb(17, 43, 69)"
+    } as const;
+
+    for (const [theme, expectedBackground] of Object.entries(expectedThemeSurfaces)) {
+      await selectThemeWithChooser(page, theme as keyof typeof expectedThemeSurfaces);
+      const paletteCollapsedLayout = await getDesktopLayoutSnapshot(list);
+      await activeSlot.getByRole("button", { name: /show more recommendation/i }).click();
+      await expect(activeSlot).toHaveAttribute("data-expanded", "true");
+      await expect.poll(() => activeCard.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(
+        expectedBackground
+      );
+      expectStableDesktopLayout(
+        await sampleDesktopLayout(list),
+        paletteCollapsedLayout.slotTops,
+        paletteCollapsedLayout.collapsedHeights
+      );
+      await activeSlot.getByRole("button", { name: /show less recommendation/i }).click();
+      await expect(activeSlot).toHaveAttribute("data-expanded", "false");
+      expectStableDesktopLayout(
+        await sampleDesktopLayout(list),
+        paletteCollapsedLayout.slotTops,
+        paletteCollapsedLayout.collapsedHeights
+      );
+      await expectDesktopOverlayCleared(list);
+    }
 
     const focusableSlotIndex = await getFocusableSlotIndex(slots, activeIndex!);
     if (focusableSlotIndex >= 0) {

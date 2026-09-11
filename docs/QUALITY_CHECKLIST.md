@@ -22,9 +22,11 @@ Run this checklist before shipping meaningful changes.
 - Links have clear labels.
 - External new-tab links use safe `rel` attributes.
 - Text contrast remains strong across the Light, My mode, and Dark surface layers.
+- Light retains distinct off-white, light-gray, and blue-gray tiers; Dark retains distinct charcoal and slate tiers.
+- UI styles contain no decorative gradients, glow shadows, backdrop blur, page overlays, or CSS mask fades.
 - Dual-layer focus states remain visible on each palette's canvas, panels, cards, and controls.
 - System resolves device light and dark preferences, follows live changes, and never marks an effective palette as a manual selection.
-- Reduced-motion users do not receive entrance, compression, or shimmer effects.
+- Reduced-motion users do not receive entrance or compression effects; skeletons remain static in every motion setting.
 - Dialog focus, disclosure state, and form errors remain keyboard accessible.
 
 ## Code

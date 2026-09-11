@@ -160,7 +160,6 @@
   border-radius: var(--radius-card);
   color: var(--color-ink-strong);
   background: var(--color-control-surface);
-  box-shadow: inset 0 1px 0 var(--color-field-inset-highlight);
   font: inherit;
   transition:
     border-color var(--hover-base-1-transition-duration) ease,
@@ -616,7 +615,6 @@
 .site-shell[data-glass-effects="false"] .contact-review,
 .site-shell[data-glass-effects="false"] .contact-consent-card {
   background: var(--color-background-elevated);
-  backdrop-filter: none;
 }
 
 @media (max-width: 720px) {

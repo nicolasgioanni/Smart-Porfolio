@@ -8,7 +8,7 @@ Animate `transform` and `opacity` first. Experience disclosure, recommendation d
 
 ## Reduced motion
 
-Always respect `prefers-reduced-motion`. Disable or simplify shimmer, entrance motion, scroll effects, disclosure transitions, and decorative travel for motion-sensitive users. State, content, focus, and controls must remain available.
+Always respect `prefers-reduced-motion`. Disable or simplify entrance motion, scroll effects, disclosure transitions, and decorative travel for motion-sensitive users. Skeletons are static. State, content, focus, and controls must remain available.
 
 ## Page entrance
 
@@ -22,7 +22,7 @@ After each invalid Next or Review attempt, shake each invalid control and its va
 
 ## Home role rotation
 
-The desktop Home role uses a fixed-height, overflow-hidden window sized for the widest configured role so neither the line nor surrounding layout shifts. Server rendering and initial hydration show the first configured engineer role. A subtle CSS mask may soften the desktop window edges, but text stays sharp. Do not animate `filter`, backdrop blur, or text blur.
+The desktop Home role uses a fixed-height, overflow-hidden window sized for the widest configured role so neither the line nor surrounding layout shifts. Server rendering and initial hydration show the first configured engineer role. Its hard clipping edge keeps text sharp. Do not animate `filter` or text blur.
 
 Show each role for `3400ms`, then transition for `640ms` over `8px` with `cubic-bezier(0.22, 1, 0.36, 1)`. The vertical flip rotates through `70deg`: outgoing text tilts upward and fades, while incoming text starts below at the opposing angle, settles upright, and fades in.
 
@@ -36,7 +36,7 @@ Do not substitute typing, letter-by-letter, bounce, large-scale, spinning-carous
 
 Recommendation quotes display four lines while collapsed by default. Within a multi-card Home row, a card with a taller header may use three lines so collapsed cards remain level. Single-card Home rows and detail cards remain at four lines.
 
-Overflowing quotes use a true alpha mask over the lower half of the final visible line. `Show more` and `Show less` animate the clipped viewport over `520ms` and lightly fade the quote over `320ms`, both with `cubic-bezier(0.22, 1, 0.36, 1)`. Desktop detail cards remain outside grid flow throughout both directions of that transition, and cached compact heights are refreshed only after the viewport has fully settled closed.
+Overflowing quotes use a hard clipped viewport with a visible `Show more` control rather than a faded final line. `Show more` and `Show less` animate the clipped viewport over `520ms` and lightly fade the quote over `320ms`, both with `cubic-bezier(0.22, 1, 0.36, 1)`. Desktop detail cards remain outside grid flow throughout both directions of that transition, and cached compact heights are refreshed only after the viewport has fully settled closed.
 
 The button retains `aria-expanded` and `aria-controls`; quote text is not duplicated into a live region. Above `980px`, a selected Home card may protrude beyond its fixed panel while an invisible reserve keeps later sections in normal document flow. On the detail route, the expanded card becomes an opaque overlay while every collapsed grid slot retains its measured height, so later recommendation rows do not move. Recalculate overlap during expansion and dim only cards physically covered by the overlay to approximately `0.58` opacity; add trailing reserve only when a bottom-row overlay would otherwise cover the footer.
 
@@ -44,13 +44,13 @@ At `max-width: 980px`, remove fixed-slot, overlay, reserve, and overlap-dimming 
 
 ## Hover Base 1
 
-Hover Base 1 uses one low-opacity diagonal sheen that travels left to right over `1600ms`. It loops only while a control is genuinely hovered on a device matching `(hover: hover)` and `(pointer: fine)`. It never runs for touch-only input.
+Hover Base 1 uses a solid semantic state layer for hover, focus, and selection. It may lift a control by one pixel on a genuine fine-pointer hover, but it does not animate a decorative sheen or highlight.
 
-Use `hover-base-1--no-wave` where the sheen would obscure meaningful imagery. Surface lift is limited to one pixel, pressing removes the lift, and state colors remain available without motion.
+Surface lift is limited to one pixel, pressing removes the lift, and state colors remain available without motion.
 
 The persistent desktop route indicator moves after pathname commit. Its `420ms` FLIP animation uses `cubic-bezier(0.65, 0, 0.35, 1)` and may animate only transform and opacity. During the bounded `480ms` route-settlement window, geometry changes retarget from the indicator's current presentation rectangle using the remaining time. Resizing outside the window and first hydration snap to final geometry. Rapid route changes begin a new bounded transition from the current position.
 
-Reduced motion disables sheen, lift, arrow travel, and route-indicator travel while preserving hover, focus, pressed, expanded, and selected surfaces.
+Reduced motion disables lift, arrow travel, and route-indicator travel while preserving hover, focus, pressed, expanded, and selected surfaces.
 
 ## Header and theme disclosure
 
@@ -70,7 +70,7 @@ Reduced motion removes the transition and entry transform while preserving porta
 
 At `max-width: 980px`, route links followed by GitHub, LinkedIn, Email, and theme controls remain in one native horizontal rail. After each pathname loads, automatic motion waits exactly `3000ms`. If the rail overflows and has not been touched, it returns to the Home edge over `420ms`, then drifts at approximately `20px` per second and reverses at each boundary. Controls are never cloned or reordered, and the motion has no live announcement.
 
-Pointer, swipe, wheel, keyboard, focus, or native scroll interaction inside the rail pauses automatic motion and restarts a `5000ms` inactivity delay. When that delay completes, drift resumes from the current scroll position and preserves its prior direction instead of returning Home. An open theme menu holds the pause; closing it starts a fresh inactivity delay. A new pathname restores the initial `3000ms` behavior. Pause countdowns while the document is hidden, and cancel timers and animation frames when the mobile breakpoint exits or the component unmounts. Reduced motion disables the automatic return and drift while preserving manual horizontal scrolling. Edge fades reflect the current overflow boundary without animating content opacity.
+Pointer, swipe, wheel, keyboard, focus, or native scroll interaction inside the rail pauses automatic motion and restarts a `5000ms` inactivity delay. When that delay completes, drift resumes from the current scroll position and preserves its prior direction instead of returning Home. An open theme menu holds the pause; closing it starts a fresh inactivity delay. A new pathname restores the initial `3000ms` behavior. Pause countdowns while the document is hidden, and cancel timers and animation frames when the mobile breakpoint exits or the component unmounts. Reduced motion disables the automatic return and drift while preserving manual horizontal scrolling. Native hard clipping marks the rail boundary without altering content opacity.
 
 ## Scroll reveal
 
@@ -80,23 +80,23 @@ Scroll motion must not blur text. The `enable_scroll_motion` setting gates scrol
 
 ## Experience and research disclosure
 
-The shared audience lens translates over `260ms`; selected text changes immediately through `aria-pressed`. Switching views settles the new card copy with a short opacity and vertical-transform transition. Opening a chapter uses one bounded `300ms` grid-row transition, while its refraction line, copy, and chevron use opacity or transform. Only one chapter per card can be open, which bounds layout work. Fine-pointer card lift and highlight movement are decorative and never required to find content.
+The shared audience lens translates over `260ms`; selected text changes immediately through `aria-pressed`. Switching views settles the new card copy with a short opacity and vertical-transform transition. Opening a chapter uses one bounded `300ms` grid-row transition, while its refraction line, copy, and chevron use opacity or transform. Only one chapter per card can be open, which bounds layout work. Fine-pointer card lift is decorative and never required to find content.
 
 Card-wide elevation belongs exclusively to active fine-pointer hover. A disclosure keeps focus after it opens, so `:focus-within` may strengthen the card border but must not apply the large surface shadow or translation. Keyboard focus remains visible on the focused control without leaving a tall elevated rectangle around expanded content while the page scrolls.
 
-Reduced motion removes audience, card, highlight, chapter, and chevron transitions while preserving selected and expanded state. The global scroll-motion setting controls only the optional staggered card entrance; user-triggered audience and disclosure behavior remains available regardless of that setting.
+Reduced motion removes audience, card, chapter, and chevron transitions while preserving selected and expanded state. The global scroll-motion setting controls only the optional staggered card entrance; user-triggered audience and disclosure behavior remains available regardless of that setting.
 
 ## Footer disclosure
 
 The footer expands into reserved normal-flow space. Each pathname owns a fresh compact disclosure, and automatic expansion requires new user scroll intent on that route plus a fully visible runway activation band. Observer callbacks, loading-layout changes, scroll restoration, and programmatic scrolling must not initiate the transition. The transition may animate width, padding, grid-row height, opacity, and a small vertical translation over roughly `420ms`. It must not animate blur or scale, change total document length, block native scrolling, or hide focused details. Reduced motion applies compact or expanded state immediately.
 
-## Glass and blur
+## Surface constraints
 
-Keep backdrop blur subtle and bounded to surfaces. Do not use blur as a reveal, route transition, or full-screen motion effect.
+Use opaque semantic surfaces. Do not use backdrop blur, gradients, glow shadows, decorative page overlays, or CSS mask fades for hierarchy or motion.
 
 ## Visual constraint
 
-Use layered translucent surfaces, fine borders, soft highlights, and restrained shadows. Avoid novelty effects that make the interface feel like a visual-effects demonstration.
+Use layered solid tiers, fine borders, and restrained neutral shadows. Accent colors belong only to meaningful controls and states. The sole clipping exception is intentional SVG `clipPath` media geometry.
 
 ## Related guidance
 

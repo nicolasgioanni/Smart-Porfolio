@@ -144,9 +144,9 @@ When adding one:
 Supported visitor-facing palettes are Light, My mode, and Dark. Their stable identifiers are `light`, `navy`, and `dark`, respectively. System is a preference behavior that resolves only to Light or Dark.
 
 1. Define the semantic token in the root token group if it is structural.
-2. Define a value in every theme when it represents color, surface, shadow, or gradient.
+2. Define a value in every theme when it represents color, solid surface tier, border, shadow, or interaction state.
 3. Consume the semantic token from component CSS.
-4. Check the dual focus rings, selection, disabled state, text contrast, and glass-disabled behavior.
+4. Check the dual focus rings, selection, disabled state, text contrast, and legacy glass-setting fallback behavior.
 5. Test the affected component in each palette and at responsive breakpoints.
 6. Verify that System follows both device schemes, manual choices remain stable, and returning to System removes the stored override.
 7. Update [Design system](DESIGN_SYSTEM.md) if the token becomes part of the reusable contract.

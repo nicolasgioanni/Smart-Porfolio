@@ -20,10 +20,9 @@ describe("skeleton style contracts", () => {
     expect(motionStyles).not.toMatch(/\.skeleton-page[^}]*animation:\s*page-body-enter/);
   });
 
-  it("retains a reduced-motion shimmer escape hatch", () => {
-    expect(skeletonStyles).toMatch(
-      /@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.skeleton-block\s*\{\s*animation: none;/s
-    );
+  it("uses static solid loading blocks without shimmer", () => {
+    expect(skeletonStyles).toMatch(/\.skeleton-block\s*\{[^}]*background:\s*var\(--color-skeleton-surface\)/s);
+    expect(skeletonStyles).not.toMatch(/skeleton-shimmer|gradient|animation:/);
   });
 
   it("preserves route geometry and responsive breakpoints from the resolved page styles", () => {
@@ -91,10 +90,10 @@ describe("skeleton style contracts", () => {
 
   it("matches strong intro surfaces to their resolved GlassSurface counterparts", () => {
     expect(experienceStyles).toMatch(
-      /\.experience-skeleton__intro\s*\{[^}]*border: 1px solid var\(--color-line-strong\)[^}]*background: var\(--color-surface-strong\)[^}]*box-shadow: var\(--shadow-soft\), var\(--shadow-glow\)[^}]*backdrop-filter: blur\(var\(--glass-blur-mobile\)\)/s
+      /\.experience-skeleton__intro\s*\{[^}]*border: 1px solid var\(--color-line-strong\)[^}]*background: var\(--color-surface-strong\)[^}]*box-shadow: var\(--shadow-soft\)/s
     );
     expect(researchStyles).toMatch(
-      /\.research-skeleton__intro\s*\{[^}]*border: 1px solid var\(--color-line-strong\)[^}]*background: var\(--color-surface-strong\)[^}]*box-shadow: var\(--shadow-soft\), var\(--shadow-glow\)[^}]*backdrop-filter: blur\(var\(--glass-blur-mobile\)\)/s
+      /\.research-skeleton__intro\s*\{[^}]*border: 1px solid var\(--color-line-strong\)[^}]*background: var\(--color-surface-strong\)[^}]*box-shadow: var\(--shadow-soft\)/s
     );
     expect(experienceStyles).toMatch(
       /\.experience-skeleton__card\s*\{[^}]*border: 1px solid var\(--color-line\)[^}]*background: var\(--color-surface\)[^}]*box-shadow: var\(--shadow-card\)/s
@@ -104,15 +103,15 @@ describe("skeleton style contracts", () => {
     );
   });
 
-  it("uses resolved opaque fallbacks when glass effects are unavailable", () => {
+  it("uses resolved opaque tiers when glass effects are unavailable", () => {
     expect(skeletonStyles).toMatch(
-      /:where\(html\[data-glass-effects="false"\], \.site-shell\[data-glass-effects="false"\]\) :is\([\s\S]*?\.home-skeleton__section,[\s\S]*?\.experience-skeleton__card,[\s\S]*?\.research-skeleton__project[\s\S]*?\)\s*\{[^}]*background: var\(--color-background-elevated\)[^}]*backdrop-filter: none;/s
+      /:where\(html\[data-glass-effects="false"\], \.site-shell\[data-glass-effects="false"\]\) :is\([\s\S]*?\.home-skeleton__section,[\s\S]*?\.experience-skeleton__card,[\s\S]*?\.research-skeleton__project[\s\S]*?\)\s*\{[^}]*background: var\(--color-background-elevated\)/s
     );
     expect(skeletonStyles).toMatch(
-      /:where\(html\[data-glass-effects="false"\], \.site-shell\[data-glass-effects="false"\]\) :is\([\s\S]*?\.skeleton-page__header,[\s\S]*?\.experience-skeleton__intro,[\s\S]*?\.research-skeleton__intro[\s\S]*?\)\s*\{[^}]*background: var\(--color-surface-strong\)[^}]*box-shadow: var\(--shadow-soft\), var\(--shadow-glow\)[^}]*backdrop-filter: none;/s
+      /:where\(html\[data-glass-effects="false"\], \.site-shell\[data-glass-effects="false"\]\) :is\([\s\S]*?\.skeleton-page__header,[\s\S]*?\.experience-skeleton__intro,[\s\S]*?\.research-skeleton__intro[\s\S]*?\)\s*\{[^}]*background: var\(--color-surface-strong\)[^}]*box-shadow: var\(--shadow-soft\)/s
     );
     expect(skeletonStyles).toMatch(
-      /:where\(html\[data-glass-effects="false"\], \.site-shell\[data-glass-effects="false"\]\) \.detail-card-skeleton\s*\{[^}]*background: var\(--color-card-surface-strong\)[^}]*backdrop-filter: none;/s
+      /:where\(html\[data-glass-effects="false"\], \.site-shell\[data-glass-effects="false"\]\) \.detail-card-skeleton\s*\{[^}]*background: var\(--color-card-surface-strong\)/s
     );
   });
 });
