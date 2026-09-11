@@ -2,7 +2,7 @@
 import type { ComponentType } from "react";
 import type { ResearchItem } from "@/content/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { researchSkeletonFixtures } from "../../../tests/fixtures/researchSkeletonContent";
+import { canonicalResearchSkeletonItems, researchSkeletonFixtures } from "../../../tests/fixtures/researchSkeletonContent";
 
 const researchContentFixture = vi.hoisted(() => ({
   items: [] as ResearchItem[]
@@ -52,6 +52,12 @@ const routeLoadingComponents = {
   "/privacy": LoadingPrivacy,
   "/security": LoadingSecurity
 } as const satisfies Readonly<Record<SiteRoutePath, ComponentType>>;
+
+function getResearchResourceCounts(container: HTMLElement): number[] {
+  return Array.from(container.querySelectorAll(".research-skeleton__resources")).map(
+    (resources) => resources.querySelectorAll(":scope > .skeleton-block").length
+  );
+}
 
 describe("skeleton components", () => {
   afterEach(() => {
@@ -129,9 +135,7 @@ describe("skeleton components", () => {
     it(`keeps the custom Research intro title footprint aligned with ${name}`, () => {
       researchContentFixture.items = [...items];
       const { container } = render(<LoadingResearch />);
-      const renderedResourceCounts = Array.from(container.querySelectorAll(".research-skeleton__resources")).map(
-        (resources) => resources.querySelectorAll(":scope > .skeleton-block").length
-      );
+      const renderedResourceCounts = getResearchResourceCounts(container);
       const resolvedResourceCounts = items.map((item) => {
         const resources = getResearchVisibleResources(item);
 
@@ -153,6 +157,19 @@ describe("skeleton components", () => {
       expect(container.querySelectorAll("[role=dialog]")).toHaveLength(0);
     });
   }
+
+  it("forwards canonical Research detail content only when the route composition receives it", () => {
+    const productionFixture = researchSkeletonFixtures[1];
+
+    researchContentFixture.items = [...productionFixture.items];
+    const defaultRender = render(<RouteSkeleton pathname="/research" />);
+    const canonicalRender = render(
+      <RouteSkeleton pathname="/research" researchDetailItems={canonicalResearchSkeletonItems} />
+    );
+
+    expect(getResearchResourceCounts(defaultRender.container)).toEqual(productionFixture.resourceCounts);
+    expect(getResearchResourceCounts(canonicalRender.container)).toEqual(researchSkeletonFixtures[0].resourceCounts);
+  });
 
   it("uses one exhaustive loader-safe header registry and hides canonical ink from assistive technology", () => {
     expect(Object.keys(routeHeaderContent)).toEqual(siteRoutePaths);

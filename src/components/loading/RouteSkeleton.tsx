@@ -1,4 +1,5 @@
 import type { ComponentType } from "react";
+import type { ResearchItem } from "@/content/types";
 import { ContactPageSkeleton } from "@/components/loading/ContactPageSkeleton";
 import { ExperiencePageSkeleton } from "@/components/loading/ExperiencePageSkeleton";
 import { HomePageSkeleton } from "@/components/loading/HomePageSkeleton";
@@ -10,6 +11,15 @@ import { ResumePageSkeleton } from "@/components/loading/ResumePageSkeleton";
 import { siteRoutes, type SiteRoutePath } from "@/components/navigation/siteRoutes";
 
 type RouteSkeletonComponent = ComponentType;
+
+export type RouteSkeletonProps = {
+  pathname: SiteRoutePath;
+  /**
+   * Canonical detail content for an isolated Research skeleton render. Normal
+   * route loading boundaries omit it and preserve generated-content alignment.
+   */
+  researchDetailItems?: readonly ResearchItem[];
+};
 
 function TermsPageSkeleton() {
   return <LegalPageSkeleton pathname={siteRoutes.terms} sectionProfiles={legalSkeletonProfiles[siteRoutes.terms]} />;
@@ -38,12 +48,14 @@ export const routeSkeletons = {
 
 export const skeletonRoutePaths = Object.freeze(Object.keys(routeSkeletons) as SiteRoutePath[]);
 
-export function RouteSkeleton({ pathname }: { pathname: SiteRoutePath }) {
+export function RouteSkeleton({ pathname, researchDetailItems }: RouteSkeletonProps) {
   const Skeleton = routeSkeletons[pathname];
+  const content =
+    pathname === siteRoutes.research ? <ResearchPageSkeleton detailItems={researchDetailItems} /> : <Skeleton />;
 
   return (
     <div data-skeleton-route={pathname} data-testid={`loading-boundary-${pathname}`}>
-      <Skeleton />
+      {content}
     </div>
   );
 }

@@ -73,3 +73,9 @@ export const researchSkeletonFixtures = [
     ]
   }
 ] as const satisfies readonly ResearchSkeletonFixture[];
+
+/**
+ * The reviewed local-template Research content used by standalone visual
+ * snapshots. It is intentionally independent of a production workbook.
+ */
+export const canonicalResearchSkeletonItems = researchSkeletonFixtures[0].items;
