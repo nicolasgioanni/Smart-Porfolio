@@ -29,6 +29,7 @@ Smart Portfolio changes safely when each update follows the full path from sourc
 | Change navigation | route registry and navigation components | Active state, mobile behavior, keyboard checks, tests, docs |
 | Change contact behavior | contact components, Functions, and migrations | Legal copy, Function tests, D1 retention, WAF review, security and contact docs |
 | Add a runtime endpoint | `functions/`, `_routes.json` | Threat model, limits, headers, rate limiting, tests, operations |
+| Remediate a dependency | `package.json` and `package-lock.json` | Narrowest compatible graph change, package-contract and boundary tests, full and production audits, security documentation |
 | Change CI | workflow and script tests | Permissions, branch conditions, no-op behavior, operations docs |
 | Change deployment provider | workflow, scripts, configuration | Static and Function compatibility, secrets, DNS, rollback, all operations docs |
 
