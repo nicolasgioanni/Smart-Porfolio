@@ -222,7 +222,7 @@ Confirm `wrangler.jsonc` still declares `CONTACT_RATE_LIMIT_DB` and `preview_dat
 
 `NEXT_PUBLIC_TURNSTILE_SITE_KEY` must exist before the build. Rebuild after setting it because Next.js compiles public values into the browser bundle. A blank preview key intentionally leaves the preview form unavailable and does not fall back to production.
 
-### Turnstile never becomes ready
+### The upfront Turnstile gate does not become ready
 
 Confirm:
 
@@ -231,7 +231,7 @@ Confirm:
 - The Content Security Policy still permits the required script, frame, and connection origins.
 - A browser extension or network policy is not blocking the widget.
 
-The widget is prepared on the review step with `execution: "execute"` and `appearance: "interaction-only"`. It may remain visually hidden while ready. Confirm the final Send control reports that the security check is prepared rather than expecting an up-front checkbox.
+The widget renders before contact fields with `execution: "render"` and `appearance: "always"`. Confirm that the visible gate appears and server verification succeeds. Continue should become enabled, and the form should open automatically after 500 milliseconds unless Continue is activated sooner.
 
 ### `/api/contact/verify` returns HTTP 400
 
@@ -243,19 +243,23 @@ The browser origin must exactly match one entry in `CONTACT_ALLOWED_ORIGINS`, in
 
 ### `/api/contact/verify` returns HTTP 503
 
-Read the JSON error before diagnosing the result. `service_unavailable` means required local verification configuration is missing or malformed. Check `TURNSTILE_SECRET_KEY`, allowed hostnames, and allowed origins without printing values. No separate ticket-signing secret exists. `verification_unavailable` means a transient Siteverify failure remained after the one bounded same-operation retry, or Siteverify reported a provider integration fault such as an invalid secret or malformed request. Preserve the reviewed fields and retry the final Send action with a fresh token later; if the error persists, correct the provider configuration before retrying.
+Read the JSON error before diagnosing the result. `service_unavailable` means required local verification configuration is missing or malformed. Check `TURNSTILE_SECRET_KEY`, allowed hostnames, and allowed origins without printing values. No separate ticket-signing secret exists. `verification_unavailable` means a transient Siteverify failure remained after the one bounded same-operation retry, or Siteverify reported a provider integration fault such as an invalid secret or malformed request. Retry the visible gate with a fresh token; if the error persists, correct the provider configuration before retrying. A ticket refresh must preserve any locked reviewed fields.
 
-### Final Send verification succeeds but delivery does not begin
+### The gate succeeds but the form does not open
 
-Inspect the verification response and confirm the browser accepted the signed cookie. The cookie is `Secure`; use the documented Wrangler or preview setup and check browser cookie policy. Confirm the reviewed payload remained locked and the browser continued to `/api/contact` with the same submission UUID. Do not reset the original form-start time when verification succeeds.
+Inspect the verification response and confirm the browser accepted the signed cookie. The cookie is `Secure`; use the documented Wrangler or preview setup and check browser cookie policy. Successful verification enables Continue and schedules the form to open after 500 milliseconds. If the automatic transition does not complete, activate Continue. Confirm the first data-entry step opens and records a fresh form-start time.
 
 ### `/api/contact` returns `verification_required`
 
-The final request must include the signed cookie and exact submission ID used during verification. The ticket expires after 30 minutes, is bound to one ID, and the browser is instructed to clear it after successful delivery. Enforcement is stateless: run fresh final-submit verification when the ticket cookie is missing, cleared, expired, invalid, or mismatched with the submission ID. Preserve the original UUID, start time, and byte-equivalent body when refreshing a ticket for a locked ambiguous or partial delivery retry.
+The final request must include the signed cookie and exact submission ID used during verification. The ticket expires after 30 minutes, is bound to one ID, and the browser is instructed to clear it after successful delivery. Enforcement is stateless: return to the visible gate when the ticket cookie is missing, cleared, expired, invalid, or mismatched with the submission ID. Preserve the original UUID, start time, acknowledgments, and byte-equivalent body when refreshing a ticket for a locked ambiguous or partial delivery retry. Successful refresh must return to locked review and wait for an explicit retry; it must not auto-deliver.
 
 ### `/api/contact` returns HTTP 400
 
-Check the exact JSON schema, shared field limits, all acknowledgements, and `startedAt` value. Unknown fields and implausible or expired timestamps are rejected. Honeypot and implausibly fast requests intentionally receive a generic success response without delivery, so they do not explain an HTTP 400.
+Check the exact JSON schema, shared field limits, both acknowledgements, the 500-character message maximum, and `startedAt` value. Unknown fields and malformed or future-skewed timestamps produce `400 invalid_request`. Honeypot and implausibly fast requests intentionally receive a generic success response without delivery. A structurally valid draft older than two hours instead follows the distinct recovery response below.
+
+### `/api/contact` returns `request_expired`
+
+The draft has exceeded the two-hour form-age limit. Do not keep replaying its frozen body. Use the displayed <em>Start fresh secured request</em> action to preserve the reviewed values while generating a new UUID, completing a new visible gate, and recording a new start time. If the notice says an earlier attempt may have partially delivered, review the recipient mailboxes before intentionally creating another delivery.
 
 ### `/api/contact` returns `invalid_email`
 

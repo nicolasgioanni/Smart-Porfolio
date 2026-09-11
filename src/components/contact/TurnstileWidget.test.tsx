@@ -1,10 +1,7 @@
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
-import { createRef, useCallback, useState } from "react";
+import { useCallback, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from "vitest";
-import {
-  TurnstileWidget,
-  type TurnstileWidgetHandle
-} from "@/components/contact/TurnstileWidget";
+import { TurnstileWidget } from "@/components/contact/TurnstileWidget";
 
 vi.mock("next/script", () => ({
   default: ({ src }: { src: string }) => <span data-script-src={src} data-testid="turnstile-script" />
@@ -14,7 +11,6 @@ type WidgetOptions = Parameters<NonNullable<Window["turnstile"]>["render"]>[1];
 type TurnstileApi = NonNullable<Window["turnstile"]>;
 
 let options: WidgetOptions | undefined;
-let executeMock: Mock<TurnstileApi["execute"]>;
 let renderMock: Mock<TurnstileApi["render"]>;
 let removeMock: Mock<TurnstileApi["remove"]>;
 let resetMock: Mock<TurnstileApi["reset"]>;
@@ -27,12 +23,8 @@ function renderedOptions(): WidgetOptions {
 function StatefulVerificationHarness() {
   const [token, setToken] = useState("");
   const [status, setStatus] = useState("loading");
-  const handleTokenChange = useCallback((nextToken: string) => {
-    setToken(nextToken);
-  }, []);
-  const handleStatusChange = useCallback((nextStatus: string) => {
-    setStatus(nextStatus);
-  }, []);
+  const handleTokenChange = useCallback((nextToken: string) => setToken(nextToken), []);
+  const handleStatusChange = useCallback((nextStatus: string) => setStatus(nextStatus), []);
 
   return (
     <>
@@ -50,19 +42,13 @@ function StatefulVerificationHarness() {
 beforeEach(() => {
   options = undefined;
   document.documentElement.dataset.theme = "dark";
-  executeMock = vi.fn();
   renderMock = vi.fn((_container: HTMLElement, nextOptions: WidgetOptions) => {
     options = nextOptions;
     return "widget-id";
   });
   removeMock = vi.fn();
   resetMock = vi.fn();
-  window.turnstile = {
-    execute: executeMock,
-    render: renderMock,
-    remove: removeMock,
-    reset: resetMock
-  };
+  window.turnstile = { render: renderMock, remove: removeMock, reset: resetMock };
 });
 
 afterEach(() => {
@@ -73,7 +59,7 @@ afterEach(() => {
 });
 
 describe("TurnstileWidget", () => {
-  it("prepares an interaction-only challenge bound to the current submission", async () => {
+  it("runs a visible challenge on render and binds it to the current submission", async () => {
     const onStatusChange = vi.fn();
     const onTokenChange = vi.fn();
     render(
@@ -93,8 +79,8 @@ describe("TurnstileWidget", () => {
     expect(renderedOptions()).toMatchObject({
       sitekey: "public-site-key",
       action: "portfolio_contact",
-      appearance: "interaction-only",
-      execution: "execute",
+      appearance: "always",
+      execution: "render",
       cData: "submission-123",
       size: "flexible",
       theme: "dark",
@@ -103,50 +89,39 @@ describe("TurnstileWidget", () => {
       "refresh-expired": "manual",
       "refresh-timeout": "manual"
     });
-    expect(onStatusChange).toHaveBeenLastCalledWith("prepared");
-    expect(screen.getByRole("status")).toHaveTextContent(/will run when you send/i);
-  });
-
-  it("executes and resets the prepared widget through its imperative handle", async () => {
-    const widgetRef = createRef<TurnstileWidgetHandle>();
-    const onStatusChange = vi.fn();
-    const onTokenChange = vi.fn();
-    render(
-      <TurnstileWidget
-        cData="submission-123"
-        onStatusChange={onStatusChange}
-        onTokenChange={onTokenChange}
-        ref={widgetRef}
-        siteKey="public-site-key"
-      />
-    );
-    await waitFor(() => expect(renderMock).toHaveBeenCalledTimes(1));
-
-    let executed = false;
-    act(() => {
-      executed = widgetRef.current?.execute() ?? false;
-    });
-    expect(executed).toBe(true);
-    expect(executeMock).toHaveBeenCalledWith("widget-id");
-    expect(onTokenChange).toHaveBeenLastCalledWith("");
-    expect(onStatusChange).toHaveBeenLastCalledWith("executing");
+    expect(onStatusChange).toHaveBeenLastCalledWith("loading");
     expect(screen.getByRole("status")).toHaveTextContent(/Running secure verification/i);
 
     act(() => renderedOptions().callback("verified-token"));
     expect(onTokenChange).toHaveBeenLastCalledWith("verified-token");
     expect(onStatusChange).toHaveBeenLastCalledWith("ready");
-
-    let reset = false;
-    act(() => {
-      reset = widgetRef.current?.reset() ?? false;
-    });
-    expect(reset).toBe(true);
-    expect(resetMock).toHaveBeenCalledWith("widget-id");
-    expect(onTokenChange).toHaveBeenLastCalledWith("");
-    expect(onStatusChange).toHaveBeenLastCalledWith("prepared");
+    expect(screen.getByRole("status")).toHaveTextContent(/Confirming with the server/i);
   });
 
-  it("reports a controlled error when widget rendering throws", async () => {
+  it("does not overwrite a token received synchronously while rendering", async () => {
+    renderMock.mockImplementationOnce((_container: HTMLElement, nextOptions: WidgetOptions) => {
+      options = nextOptions;
+      nextOptions.callback("immediate-token");
+      return "widget-id";
+    });
+    const onStatusChange = vi.fn();
+    const onTokenChange = vi.fn();
+
+    render(
+      <TurnstileWidget
+        cData="submission-123"
+        onStatusChange={onStatusChange}
+        onTokenChange={onTokenChange}
+        siteKey="public-site-key"
+      />
+    );
+
+    await waitFor(() => expect(onTokenChange).toHaveBeenLastCalledWith("immediate-token"));
+    expect(onStatusChange).toHaveBeenLastCalledWith("ready");
+    expect(screen.getByRole("status")).toHaveTextContent(/Confirming with the server/i);
+  });
+
+  it("reports a controlled error when widget rendering throws and can retry rendering", async () => {
     renderMock.mockImplementationOnce(() => {
       throw new Error("Render failed.");
     });
@@ -164,43 +139,15 @@ describe("TurnstileWidget", () => {
 
     await waitFor(() => expect(onStatusChange).toHaveBeenLastCalledWith("error"));
     expect(onTokenChange).toHaveBeenLastCalledWith("");
-    expect(screen.getByRole("status")).toHaveTextContent(/could not be prepared/i);
+    expect(screen.getByRole("status")).toHaveTextContent(/could not run/i);
 
-    act(() => screen.getByRole("button", { name: "Prepare check again" }).click());
+    act(() => screen.getByRole("button", { name: "Run check again" }).click());
     await waitFor(() => expect(renderMock).toHaveBeenCalledTimes(2));
-    expect(onStatusChange).toHaveBeenLastCalledWith("prepared");
+    expect(onStatusChange).toHaveBeenLastCalledWith("loading");
+    await waitFor(() => expect(screen.getByRole("status")).toHaveFocus());
   });
 
-  it("fails closed when imperative execution throws", async () => {
-    executeMock.mockImplementationOnce(() => {
-      throw new Error("Execution failed.");
-    });
-    const widgetRef = createRef<TurnstileWidgetHandle>();
-    const onStatusChange = vi.fn();
-    const onTokenChange = vi.fn();
-    render(
-      <TurnstileWidget
-        cData="submission-123"
-        onStatusChange={onStatusChange}
-        onTokenChange={onTokenChange}
-        ref={widgetRef}
-        siteKey="public-site-key"
-      />
-    );
-    await waitFor(() => expect(renderMock).toHaveBeenCalledTimes(1));
-
-    let executed = true;
-    act(() => {
-      executed = widgetRef.current?.execute() ?? true;
-    });
-
-    expect(executed).toBe(false);
-    expect(onTokenChange).toHaveBeenLastCalledWith("");
-    expect(onStatusChange).toHaveBeenLastCalledWith("error");
-    expect(screen.getByRole("status")).toHaveTextContent(/could not be prepared/i);
-  });
-
-  it("clears tokens and reports expiry, timeout, error, and unsupported callbacks", async () => {
+  it("clears tokens and resets after expiry, timeout, error, and unsupported callbacks", async () => {
     const onStatusChange = vi.fn();
     const onTokenChange = vi.fn();
     render(
@@ -217,22 +164,22 @@ describe("TurnstileWidget", () => {
     expect(onStatusChange).toHaveBeenLastCalledWith("expired");
     expect(screen.getByRole("status")).toHaveTextContent(/Verification expired/i);
 
-    act(() => screen.getByRole("button", { name: "Prepare check again" }).click());
+    act(() => screen.getByRole("button", { name: "Run check again" }).click());
     expect(resetMock).toHaveBeenCalledWith("widget-id");
-    expect(onStatusChange).toHaveBeenLastCalledWith("prepared");
+    expect(onTokenChange).toHaveBeenLastCalledWith("");
+    expect(onStatusChange).toHaveBeenLastCalledWith("loading");
+    await waitFor(() => expect(screen.getByRole("status")).toHaveFocus());
 
     act(() => renderedOptions()["timeout-callback"]());
     expect(onStatusChange).toHaveBeenLastCalledWith("expired");
-
     act(() => renderedOptions()["error-callback"]());
     expect(onStatusChange).toHaveBeenLastCalledWith("error");
-
     act(() => renderedOptions()["unsupported-callback"]());
     expect(onStatusChange).toHaveBeenLastCalledWith("error");
     expect(onTokenChange).toHaveBeenLastCalledWith("");
   });
 
-  it("does not recreate the challenge when stable callbacks update parent verification state", async () => {
+  it("does not recreate the challenge when stable callbacks update parent state", async () => {
     const { unmount } = render(<StatefulVerificationHarness />);
     await waitFor(() => expect(renderMock).toHaveBeenCalledTimes(1));
 
@@ -246,7 +193,7 @@ describe("TurnstileWidget", () => {
     expect(removeMock).toHaveBeenCalledWith("widget-id");
   });
 
-  it("recreates the widget when a new submission identifier is supplied", async () => {
+  it("recreates the challenge for a new submission and ignores stale callbacks", async () => {
     const onStatusChange = vi.fn();
     const onTokenChange = vi.fn();
     const { rerender } = render(

@@ -37,20 +37,28 @@ describe("contact D1 configuration", () => {
     expect(production.database_id).not.toBe(preview.database_id);
   });
 
-  it("tracks the minimal reservation schema and its quota-cleanup indexes", async () => {
-    const migration = await readFile(
+  it("tracks the pseudonymous reservation schema, payload fingerprint, and cleanup indexes", async () => {
+    const initialMigration = await readFile(
       path.join(projectRoot, "migrations", "0001_contact_rate_reservations.sql"),
       "utf8"
     );
+    const fingerprintMigration = await readFile(
+      path.join(projectRoot, "migrations", "0002_contact_payload_fingerprint.sql"),
+      "utf8"
+    );
 
-    expect(migration).toMatch(/CREATE TABLE IF NOT EXISTS contact_rate_reservations/);
-    expect(migration).toMatch(/submission_id TEXT PRIMARY KEY NOT NULL/);
-    expect(migration).toMatch(/email_hash TEXT NOT NULL/);
-    expect(migration).toMatch(/reserved_at INTEGER NOT NULL/);
-    expect(migration).toMatch(/expires_at INTEGER NOT NULL/);
-    expect(migration).toMatch(/ON contact_rate_reservations \(email_hash, expires_at\)/);
-    expect(migration).toMatch(/ON contact_rate_reservations \(expires_at\)/);
-    expect(migration).not.toMatch(/first_name|last_name|phone|message|recipient/i);
+    expect(initialMigration).toMatch(/CREATE TABLE IF NOT EXISTS contact_rate_reservations/);
+    expect(initialMigration).toMatch(/submission_id TEXT PRIMARY KEY NOT NULL/);
+    expect(initialMigration).toMatch(/email_hash TEXT NOT NULL/);
+    expect(initialMigration).toMatch(/reserved_at INTEGER NOT NULL/);
+    expect(initialMigration).toMatch(/expires_at INTEGER NOT NULL/);
+    expect(initialMigration).toMatch(/ON contact_rate_reservations \(email_hash, expires_at\)/);
+    expect(initialMigration).toMatch(/ON contact_rate_reservations \(expires_at\)/);
+    expect(fingerprintMigration).toMatch(/ALTER TABLE contact_rate_reservations/);
+    expect(fingerprintMigration).toMatch(/ADD COLUMN payload_hash TEXT/);
+    expect(`${initialMigration}\n${fingerprintMigration}`).not.toMatch(
+      /first_name|last_name|phone|message|recipient/i
+    );
   });
 
   it("migrates an ignored local D1 database before Pages development", async () => {

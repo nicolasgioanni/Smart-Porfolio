@@ -31,8 +31,8 @@ Use this checklist with [Contact System](CONTACT_SYSTEM.md), [Security](SECURITY
 ## Turnstile verification
 
 - Prepare the widget with public `NEXT_PUBLIC_TURNSTILE_SITE_KEY`; never expose `TURNSTILE_SECRET_KEY` to the client.
-- Keep action `portfolio_contact`, `execution: "execute"`, `appearance: "interaction-only"`, explicit token handling, and final-submit execution after field and acknowledgment validation.
-- Create a fresh submission UUID and form-start time for each new draft, pass the UUID through Turnstile `cData`, and do not reset the start time after verification.
+- Keep action `portfolio_contact`, `execution: "render"`, `appearance: "always"`, explicit token handling, and a visible gate before contact fields.
+- Create a fresh submission UUID before each new-message gate and pass it through Turnstile `cData`. Record the form-start time only when the verified form opens automatically or through Continue. Preserve it during any later ticket refresh for the same locked delivery.
 - Accept a plain verification object with exactly `submissionId` and `turnstileToken`.
 - Require a valid bounded UUID and a non-empty token of at most 2,048 characters without unsafe controls.
 - Require a fresh single-use token for each new logical message.
@@ -55,10 +55,10 @@ Use this checklist with [Contact System](CONTACT_SYSTEM.md), [Security](SECURITY
 
 ## Delivery schema and ordering
 
-- Allow only `submissionId`, `firstName`, `lastName`, `email`, optional `phone`, `message`, `contactConsent`, `legalConsent`, `legitimateConsent`, `startedAt`, and `website`.
+- Allow only `submissionId`, `firstName`, `lastName`, `email`, optional `phone`, `message`, `contactConsent`, `legalConsent`, `startedAt`, and `website`.
 - Reject unknown keys, invalid types, unsafe control characters, excessive lengths, malformed email or phone values, and any acknowledgment other than boolean `true`.
-- Require trimmed first and last names, a valid email, a message, all three acknowledgments, a safe integer start time, and the required honeypot string.
-- Keep names at 80 characters each, email at 254, phone at 40 with 7 to 20 digits when non-empty, message at 3,000, and honeypot at 200.
+- Require trimmed first and last names, an email with a valid local part and letter-only or supported Punycode final domain label, a message, both acknowledgments, a safe integer start time, and the required honeypot string. Preserve valid two-letter suffixes such as `.co`.
+- Keep names at 80 characters each, email at 254, phone at 40 with 7 to 20 digits when non-empty, message at 500, and honeypot at 200.
 - Preserve line-feed normalization for the message and the documented timing bounds: 1,200-millisecond minimum, 30-second future allowance, and two-hour maximum age.
 - Preserve the actual handler order: honeypot and timing signals are evaluated while parsing the payload before ticket validation.
 - Return silent `200 {"ok":true}` for a non-empty honeypot or completion under 1,200 milliseconds, with no Resend call.
@@ -68,10 +68,11 @@ Use this checklist with [Contact System](CONTACT_SYSTEM.md), [Security](SECURITY
 
 - Send no contact fields to `/api/contact/verify` and do not send the Turnstile token to `/api/contact`.
 - Keep the contact draft in React memory and use same-origin credentials for both requests.
-- Lock the reviewed payload, navigation, acknowledgments, and repeated Send actions while verification or delivery is active.
+- Keep fields unavailable until server verification succeeds. Preserve the brief automatic success transition and Continue fallback. Lock the reviewed payload, navigation, acknowledgments, and repeated Send actions during delivery.
 - Require same-ticket retries to reuse the same UUID, start time, acknowledgment values, and byte-equivalent JSON body.
-- On `verification_required`, stay on review and require fresh final-submit verification. Preserve the original UUID and locked payload after an ambiguous or partial delivery attempt.
+- On `verification_required`, preserve the draft and return to the visible gate. Preserve the original UUID, start time, acknowledgments, and locked payload after an ambiguous or partial delivery attempt. A successful refresh must return to locked review without auto-delivery.
 - Allow a valid ticket to skip another Turnstile check only for a retry of the same locked delivery. Require a fresh token and draft identity for every new message.
+- Return a distinct `request_expired` result after the two-hour form-age limit. Stop replaying the stale frozen body and require an explicit fresh-request action, new UUID, new gate, and new start time before rebuilding it.
 - Validate the mail domain with bounded MX lookup, documented A/AAAA fallback, explicit null-MX rejection, and distinct invalid-versus-unavailable errors.
 - Reserve no more than two slots per normalized-address HMAC during a rolling 24-hour window before provider delivery.
 - Send the visitor confirmation first with `Idempotency-Key: portfolio-contact/visitor/<submissionId>`; only after acceptance send the owner notification with the corresponding `/owner/` key.
@@ -84,8 +85,8 @@ Use this checklist with [Contact System](CONTACT_SYSTEM.md), [Security](SECURITY
 
 - Keep the contact draft out of local storage and session storage.
 - Keep contact fields out of the ticket and the verification request.
-- Keep D1 limited to submission UUID, normalized-address HMAC, reservation epoch seconds, and expiry epoch seconds; store no raw contact fields or delivery content.
-- Confirm expired rows are removed during reservation cleanup, same-ID same-address retries are free, changed-address replay is rejected, and D1 failures fail closed.
+- Keep D1 limited to submission UUID, normalized-address HMAC, keyed normalized-payload fingerprint, reservation epoch seconds, and expiry epoch seconds; store no raw contact fields or delivery content.
+- Confirm expired rows are removed during reservation cleanup, same-ID retries require matching address and payload hashes, changed replay is rejected, and D1 failures fail closed.
 - Account for Cloudflare, Turnstile, Resend, receiving mailboxes, and the visitor's mailbox as processors or retention locations outside the repository.
 - Keep `TURNSTILE_SECRET_KEY`, `RESEND_API_KEY`, and `CONTACT_RECIPIENT_EMAIL` server-only.
 - Confirm the private recipient never appears in browser variables, generated content, build output, responses, analytics, or application logs.

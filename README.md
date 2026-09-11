@@ -28,7 +28,7 @@ The workbook is a lightweight content-authoring surface rather than a general-pu
 | Static-first delivery | Keeps portfolio data out of request-time APIs and serves the core experience from Cloudflare's edge. |
 | Exact tested artifact | Deploys the same export that passed the quality gate, with a SHA-256 manifest checked before upload. |
 | Focused interaction | Adds theme, navigation, skills, recommendation, and motion behavior without moving content rendering into the browser. |
-| Isolated contact flow | Uses final-submit Turnstile verification, a short-lived signed ticket, strict validation, a pseudonymous rolling quota, and sequential Resend delivery. |
+| Isolated contact flow | Uses an upfront Turnstile gate, a short-lived signed ticket, strict validation, a pseudonymous rolling quota, and sequential Resend delivery. |
 | Preview and production isolation | Keeps `develop` deployments, browser keys, origins, hostnames, and production aliases separate. |
 
 ## Architecture at a glance
@@ -148,7 +148,7 @@ Primary navigation is assembled by [navigationItems.ts](src/components/navigatio
 | Quality | ESLint, TypeScript, Vitest, Testing Library, jsdom, and Playwright Chromium | Verify code, types, content, components, Functions, scripts, CSS contracts, automation, responsive navigation, recommendation overlays, and footer lifecycle behavior in a real browser. |
 | Automation | GitHub Actions | Own candidate selection, verification, artifact transfer, deployment, and scheduled checks. |
 | Hosting | Cloudflare Pages and Wrangler | Serve the static export and compile the isolated Pages Functions through Direct Upload. |
-| Contact | Pages Functions, Turnstile, D1, DNS, and Resend HTTPS API | Assess final-submit abuse risk, validate mail routing, enforce a keyed rolling quota, and deliver two sequential messages. |
+| Contact | Pages Functions, Turnstile, D1, DNS, and Resend HTTPS API | Gate form access, validate mail routing, enforce a keyed rolling quota, and deliver two sequential messages. |
 
 ## Quick start
 
@@ -301,16 +301,17 @@ See [Deployment](docs/DEPLOYMENT.md) for setup and [Operations](docs/OPERATIONS.
 
 The contact page is static, but its submission path crosses a narrow server trust boundary:
 
-1. The visitor completes the three-step name, contact-details, and review wizard while the browser prepares an interaction-only Turnstile widget with a public site key.
-2. The final Send action locks the reviewed payload and executes the widget, which stays hidden unless Cloudflare requires interaction.
-3. `/api/contact/verify` accepts JSON POST from an exact allowed origin, verifies the fresh token's success, action, hostname, and submission-bound custom data, then sets a short-lived signed host-only ticket. A separate operation UUID scopes one bounded retry for transient Siteverify failures.
-4. `/api/contact` validates method, media type, origin, request size, strict fields, timing, honeypot, acknowledgements, ticket binding, and the submitted address's mail-domain routing.
-5. D1 reserves one of two slots for a keyed normalized address during a rolling 24-hour window, without storing raw contact fields.
-6. Resend accepts the visitor confirmation first and then the owner notification, each with a separate submission-scoped idempotency key.
+1. The visitor completes a visible Turnstile gate before any contact fields are shown.
+2. `/api/contact/verify` accepts JSON POST from an exact allowed origin, verifies the fresh token's success, action, hostname, and submission-bound custom data, then sets a short-lived signed host-only ticket. A separate operation UUID scopes one bounded retry for transient Siteverify failures.
+3. Successful verification shows a brief success state, enables Continue, and opens the form automatically after 500 milliseconds unless the visitor continues sooner. Form timing begins when the three-step name, contact-details, and review wizard opens.
+4. The review step requires two acknowledgements, and the message is limited to 500 characters in both browser and server validation.
+5. The final Send action locks the reviewed payload. `/api/contact` validates method, media type, origin, request size, strict fields, timing, honeypot, acknowledgements, ticket binding, and the submitted address's mail-domain routing.
+6. D1 reserves one of two slots for a keyed normalized address during a rolling 24-hour window and binds same-ID retries to an opaque keyed payload fingerprint, without storing raw contact fields.
+7. Resend accepts the visitor confirmation first and then the owner notification, each with a separate submission-scoped idempotency key.
 
-The Functions return specific safe error codes with generic provider details, set their own no-store and security headers, and keep the recipient and provider credentials server-side. Full submissions are not stored in D1; it contains only the submission UUID, address HMAC, and reservation timestamps. Request bodies and personal fields must not be logged.
+The Functions return specific safe error codes with generic provider details, set their own no-store and security headers, and keep the recipient and provider credentials server-side. Full submissions are not stored in D1; it contains only the submission UUID, address HMAC, opaque keyed full-payload fingerprint, and reservation timestamps. Request bodies and personal fields must not be logged.
 
-Every new logical message requires a fresh single-use Turnstile token. A valid 30-minute ticket can support only retries of the same locked delivery identity and payload; it cannot authorize another new message.
+Every new logical message requires a fresh single-use Turnstile token before its fields open. A valid 30-minute ticket can support only the same locked delivery and its retries; it cannot authorize another new message.
 
 The D1 quota limits a supplied address but cannot authenticate its owner or collapse every alias. Cloudflare WAF rate limiting for both JSON paths remains an operator-managed defense in depth. Repository code and tests cannot prove the live rule or the response customization available on the active Cloudflare plan.
 
