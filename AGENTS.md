@@ -23,6 +23,9 @@
 - Use `src/components/overlay/ModalDialog.tsx` for modal previews and evidence dialogs. Do not duplicate portal, focus-trap, Escape, backdrop, scroll-lock, reduced-motion, or focus-restoration logic.
 - Give every dialog an accessible name, a visible close control, an intentional initial-focus target, and its originating trigger reference.
 - Store published research media under `public/images/research/` and reference it with root-relative paths. Use intrinsic dimensions and `object-fit: contain` when the source aspect ratio must remain intact.
+- Sanitize contributed Research PNGs with `scripts/stripPngMetadata.mjs` before publication. Preserve retained chunks byte-for-byte; the shared parser and CLI enforce protected input, chunk, 64 MiB decoded-image, 16,384-pixel dimension, and 67,108,864-pixel canvas ceilings, while asset tests reject invalid IHDR, palette, critical-chunk, zlib, scanline, and image-data ordering semantics alongside embedded text, EXIF, or provenance chunks. Do not raise or bypass those ceilings without a documented security review.
+- Resolve Research graphical abstracts through `src/lib/content/researchGraphicalAbstracts.ts`. A complete canonical path-and-alt pair overrides the curated asset for a known project; when both canonical fields are absent, one of the three approved project IDs may use its curated asset. Incomplete pairs are invalid upstream and must not be masked. Never read or render the temporary legacy Research `image` field.
+- Render graphical abstracts through `ResearchGraphicalAbstractPreview` and the shared dialog primitive so thumbnail, keyboard, dismissal, focus-restoration, and full-size-preview behavior stay aligned.
 - Keep optional media absent rather than inventing a public asset. Disabled resources must use native disabled semantics and concise visible labels.
 
 ## Verification and documentation

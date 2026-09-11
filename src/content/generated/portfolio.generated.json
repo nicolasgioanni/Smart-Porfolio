@@ -1,7 +1,7 @@
 {
   "metadata": {
-    "generatedAt": "2026-09-09T23:18:19.045Z",
-    "contentHash": "cb5aec0c24ea44a13cfed73cf2acb7dd7c0817fd22585a03fe84cf43634d75f2",
+    "generatedAt": "2026-09-11T04:14:38.940Z",
+    "contentHash": "8d7c1eb828fd6e1ae7bf1e0228389effe040f060e845020fd724eb65ade67d62",
     "sourceMode": "templates",
     "sources": {
       "profile": "template",
@@ -140,6 +140,8 @@
       "pendingLinks": [
         "Manuscript"
       ],
+      "graphicalAbstract": "/images/research/cytocv-graphical-abstract.png",
+      "graphicalAbstractAlt": "Four-step CytoCV workflow from yeast microscopy channels through segmentation and fluorescence measurement to reviewable CSV/XLSX export.",
       "featured": true,
       "showOnHome": true,
       "homeOrder": 1,
@@ -190,6 +192,8 @@
         }
       ],
       "pendingLinks": [],
+      "graphicalAbstract": "/images/research/independent-study-graphical-abstract.png",
+      "graphicalAbstractAlt": "Four-step adversarial machine-learning study showing image-classification data and models, attack experiments, defense experiments, and evaluation outputs.",
       "featured": false,
       "showOnHome": true,
       "homeOrder": 2,
@@ -233,6 +237,8 @@
         }
       ],
       "pendingLinks": [],
+      "graphicalAbstract": "/images/research/guide-donor-scheduler-graphical-abstract.png",
+      "graphicalAbstractAlt": "Four-step GuideDonorScheduler workflow from FASTA input through guide selection and donor design to annotated XLS output.",
       "featured": false,
       "showOnHome": true,
       "homeOrder": 3,
