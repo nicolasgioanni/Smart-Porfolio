@@ -35,6 +35,8 @@ Smart Portfolio uses a layered quality gate for documentation, static content, R
 | `npm run test` | Complete Vitest suite | Uses mocks and jsdom, not a real browser or Cloudflare runtime |
 | `npm run build` | `prebuild`, Next.js static export, then content-version write | Regenerates content before building |
 | `npm run build:generated` | Next.js static export and content-version write | Consumes existing generated JSON without another content fetch |
+| `npm audit` | Locked full dependency graph audit | Covers development and deployment dependencies |
+| `npm audit --omit=dev` | Locked production dependency graph audit | Covers the deployed runtime dependency graph |
 | `npm run db:migrate:local` | Pending tracked migrations against Wrangler's local D1 state | Never targets preview or production |
 | `npm run verify` | Docs check, lint, typecheck, full tests, and normal build | Does not run focused scripts or install a browser separately |
 | `npm run verify:local` | Dependency preparation, explicit content generation, then `verify` | The final normal build invokes generation again |
@@ -70,7 +72,7 @@ The validator uses only Node.js standard-library APIs and does not check externa
 | --- | --- | --- |
 | CSV parsing and normalized content shape | `src/lib/content/content.test.ts` | Fields, IDs, URLs, research-media path and pairing rules, dates, ordering, selection, empty states, and profile helpers |
 | Workbook download boundary | `scripts/portfolioContentGeneration.test.ts` | Anonymous HTTPS URL, bounded retry and backoff, fresh attempt signals, stalled-body cancellation, byte cap, response validation, and strict failure behavior |
-| Workbook structure | `scripts/portfolioContentGeneration.test.ts` | Exact worksheets, normalized titles, visibility, headers, dimensions, cells, formulas, and schema errors |
+| Workbook structure | `scripts/portfolioContentGeneration.test.ts` | Exact worksheets, normalized titles, visibility, headers, dimensions, cells, formulas, schema errors, and an ExcelJS data-bar write/read round trip that exercises its UUID extension path |
 | Semantic hashing | `scripts/portfolioContentGeneration.test.ts` | Canonical normalized content subset, research-media fields, and `generatedAt` preservation |
 | Public asset references | `scripts/demoAssets.test.mjs`, `scripts/pngMetadata.test.mjs` | Referenced local assets and the three curated research abstracts exist and are non-empty; configured media stays under its allowlisted directory and extensions; Research PNG IHDR, palette, critical-chunk, zlib, Adam7 scanline, and nonempty image-data ordering semantics; stat-before-read size rejection; protected byte/chunk/decoded-data/dimension/canvas ceilings; restricted metadata absence; and dimensions, exact byte length, complete-file SHA-256, and IDAT-stream SHA-256 for every curated abstract |
 | Environment placeholders | `scripts/envConfiguration.test.mjs` | Supported variables, ignored local files, and removal of legacy variable families |
