@@ -1,8 +1,9 @@
-import { ProjectsPageSkeleton } from "@/components/loading/ProjectsPageSkeleton";
+import { RouteSkeleton } from "@/components/loading/RouteSkeleton";
 import { shouldRenderSkeletons } from "@/components/loading/shouldRenderSkeletons";
+import { siteRoutes } from "@/components/navigation/siteRoutes";
 
 export default function Loading() {
   if (!shouldRenderSkeletons()) return null;
 
-  return <ProjectsPageSkeleton />;
+  return <RouteSkeleton pathname={siteRoutes.projects} />;
 }

@@ -1,8 +1,9 @@
-import { RecommendationsPageSkeleton } from "@/components/loading/RecommendationsPageSkeleton";
+import { RouteSkeleton } from "@/components/loading/RouteSkeleton";
 import { shouldRenderSkeletons } from "@/components/loading/shouldRenderSkeletons";
+import { siteRoutes } from "@/components/navigation/siteRoutes";
 
 export default function Loading() {
   if (!shouldRenderSkeletons()) return null;
 
-  return <RecommendationsPageSkeleton />;
+  return <RouteSkeleton pathname={siteRoutes.recommendations} />;
 }

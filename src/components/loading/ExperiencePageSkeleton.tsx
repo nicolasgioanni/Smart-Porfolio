@@ -8,7 +8,12 @@ export function ExperiencePageSkeleton() {
       <div className="experience-skeleton" aria-hidden="true">
         <div className="experience-skeleton__intro">
           <div className="experience-skeleton__intro-copy">
-            <SkeletonBlock height={44} radius={14} width="min(100%, 260px)" />
+            <SkeletonBlock
+              className="skeleton-page__title"
+              height={28}
+              radius={14}
+              width="min(100%, 260px)"
+            />
             <SkeletonText rows={2} />
           </div>
           <div className="experience-skeleton__intro-control">
@@ -16,7 +21,7 @@ export function ExperiencePageSkeleton() {
             <SkeletonBlock height={40} radius="999px" width={196} />
           </div>
         </div>
-        {Array.from({ length: 4 }).map((_, index) => (
+        {Array.from({ length: 5 }).map((_, index) => (
           <article className="experience-skeleton__card" key={index}>
             <div className="experience-skeleton__header">
               <SkeletonBlock height={64} radius="999px" width={64} />

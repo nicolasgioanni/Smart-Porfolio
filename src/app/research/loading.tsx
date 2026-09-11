@@ -1,8 +1,9 @@
-import { ResearchPageSkeleton } from "@/components/loading/ResearchPageSkeleton";
+import { RouteSkeleton } from "@/components/loading/RouteSkeleton";
 import { shouldRenderSkeletons } from "@/components/loading/shouldRenderSkeletons";
+import { siteRoutes } from "@/components/navigation/siteRoutes";
 
 export default function Loading() {
   if (!shouldRenderSkeletons()) return null;
 
-  return <ResearchPageSkeleton />;
+  return <RouteSkeleton pathname={siteRoutes.research} />;
 }
