@@ -819,6 +819,22 @@ describe("portfolio normalization", () => {
     }
   });
 
+  it("normalizes legacy research image rows without inventing staged media", () => {
+    const legacyResearchRow: Record<string, string> = {
+      ...(createSheets().research[0] as Record<string, string>),
+      image: "/images/research/legacy-workflow.png"
+    };
+    delete legacyResearchRow.graphical_abstract;
+    delete legacyResearchRow.graphical_abstract_alt;
+    delete legacyResearchRow.video;
+
+    const content = normalizePortfolioContent(createSheets({ research: [legacyResearchRow] }), metadata);
+
+    expect(content.research[0]?.graphicalAbstract).toBeUndefined();
+    expect(content.research[0]?.graphicalAbstractAlt).toBeUndefined();
+    expect(content.research[0]?.video).toBeUndefined();
+  });
+
   it("requires complete popup copy when a skill provides any popup field", () => {
     expect(() =>
       normalizePortfolioContent(
