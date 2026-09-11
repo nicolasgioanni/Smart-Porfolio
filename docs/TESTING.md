@@ -67,7 +67,7 @@ The validator uses only Node.js standard-library APIs and does not check externa
 | Area | Authoritative tests | Coverage |
 | --- | --- | --- |
 | CSV parsing and normalized content shape | `src/lib/content/content.test.ts` | Fields, IDs, URLs, dates, ordering, selection, empty states, and profile helpers |
-| Workbook download boundary | `scripts/portfolioContentGeneration.test.ts` | Anonymous HTTPS URL, one fetch, timeout, byte cap, response validation, and strict failure behavior |
+| Workbook download boundary | `scripts/portfolioContentGeneration.test.ts` | Anonymous HTTPS URL, bounded retry and backoff, fresh attempt signals, stalled-body cancellation, byte cap, response validation, and strict failure behavior |
 | Workbook structure | `scripts/portfolioContentGeneration.test.ts` | Exact worksheets, normalized titles, visibility, headers, dimensions, cells, formulas, and schema errors |
 | Semantic hashing | `scripts/portfolioContentGeneration.test.ts` | Canonical normalized content subset and `generatedAt` preservation |
 | Public asset references | `scripts/demoAssets.test.mjs` | Referenced local assets exist and are non-empty |
@@ -158,7 +158,7 @@ Pull requests targeting `main` or `develop`:
 Latest pushes to `main` or `develop`:
 
 1. Validate the fixed Pages project and assigned domain.
-2. Download and generate one strict workbook snapshot.
+2. Download and generate one strict workbook snapshot with at most one bounded transient retry.
 3. Read and validate its SHA-256 content hash.
 4. Run the same quality gates as pull requests.
 5. Build with `build:generated` and the branch-specific public Turnstile key.

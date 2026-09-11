@@ -154,7 +154,7 @@ The WAF rule, active Cloudflare plan, runtime secret presence, branch protection
 
 ## Strict content input
 
-Non-PR candidates set `PORTFOLIO_REQUIRE_REMOTE_CONTENT=true` and perform one anonymous workbook download. The generator does not receive Google account access, OAuth tokens, a service account, a Drive connector, or a Sheets API client.
+Non-PR candidates set `PORTFOLIO_REQUIRE_REMOTE_CONTENT=true` and accept one complete anonymous workbook snapshot. The generator permits at most two independent 15-second attempts separated by one fixed second for retryable transport failures. It does not receive Google account access, OAuth tokens, a service account, a Drive connector, or a Sheets API client.
 
 The workbook must expose exactly the nine expected visible worksheets. The generator rejects missing, extra, duplicate-normalized, hidden, or very-hidden worksheets, malformed headers or rows, invalid file data, schema validation failures, timeouts, and responses above the configured size limit. Strict mode has no template fallback.
 
@@ -162,11 +162,11 @@ Pull requests do not receive the workbook source. They generate and validate con
 
 See [Content Pipeline](CONTENT_PIPELINE.md) and [Content Sheet Schema](CONTENT_SHEET_SCHEMA.md) for the complete workbook and normalization contract.
 
-## One-fetch, exact-artifact pipeline
+## Single-snapshot, exact-artifact pipeline
 
 ```mermaid
 flowchart TD
-    A[Resolve candidate SHA] --> B[Fetch workbook once]
+    A[Resolve candidate SHA] --> B[Fetch one workbook snapshot with bounded retry]
     B --> C[Validate and generate JSON]
     C --> D[Run quality gates]
     D --> E[Build from generated JSON]
@@ -181,7 +181,7 @@ flowchart TD
     M --> N[Smoke test stable Pages alias]
 ```
 
-`npm run build:generated` invokes Next.js and the content-version writer without running the `prebuild` content generator. This is what makes the CI path a one-fetch pipeline. The deploy job does not rebuild or download the workbook.
+`npm run build:generated` invokes Next.js and the content-version writer without running the `prebuild` content generator. This keeps generation at one accepted workbook snapshot even if its download needs the single bounded retry. The deploy job does not rebuild or download the workbook.
 
 The verify job runs these required checks against the candidate snapshot:
 

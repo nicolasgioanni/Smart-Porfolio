@@ -21,6 +21,8 @@ const outputPath = path.join(projectRoot, "src", "content", "generated", "portfo
 const localEnvPath = path.join(projectRoot, ".env");
 
 export const portfolioWorkbookDownloadTimeoutMs = 15_000;
+export const portfolioWorkbookDownloadMaxAttempts = 2;
+export const portfolioWorkbookDownloadRetryDelayMs = 1_000;
 export const portfolioWorkbookMaxBytes = 5 * 1024 * 1024;
 
 const sheetConfigs: Array<{ name: PortfolioSheetName; fileName: string }> = [
@@ -38,11 +40,60 @@ type GeneratePortfolioContentOptions = {
   outputFile?: string;
   templatesDirectory?: string;
   log?: (message: string) => void;
+  waitImplementation?: (delayMs: number) => Promise<void>;
 };
 
-class WorkbookDownloadError extends Error {}
+class WorkbookDownloadError extends Error {
+  constructor(message: string, readonly retryable = false) {
+    super(message);
+    this.name = "WorkbookDownloadError";
+  }
+}
 
-async function readLimitedWorkbookBody(response: WorkbookFetchResponse): Promise<Uint8Array> {
+function workbookDownloadTimeoutError(): WorkbookDownloadError {
+  return new WorkbookDownloadError("The workbook download timed out", true);
+}
+
+function isRetryableWorkbookStatus(status: number): boolean {
+  return status === 408 || status === 429 || (status >= 500 && status <= 599);
+}
+
+function wait(delayMs: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, delayMs));
+}
+
+async function rejectOnDownloadAbort<T>(
+  operation: Promise<T>,
+  signal: AbortSignal,
+  onAbort?: () => void
+): Promise<T> {
+  if (signal.aborted) {
+    onAbort?.();
+    throw workbookDownloadTimeoutError();
+  }
+
+  return new Promise<T>((resolve, reject) => {
+    let settled = false;
+    const finish = (callback: () => void) => {
+      if (settled) return;
+      settled = true;
+      signal.removeEventListener("abort", handleAbort);
+      callback();
+    };
+    const handleAbort = () => finish(() => {
+      reject(workbookDownloadTimeoutError());
+      onAbort?.();
+    });
+
+    signal.addEventListener("abort", handleAbort, { once: true });
+    operation.then(
+      (value) => finish(() => resolve(value)),
+      (error: unknown) => finish(() => reject(error))
+    );
+  });
+}
+
+async function readLimitedWorkbookBody(response: WorkbookFetchResponse, signal: AbortSignal): Promise<Uint8Array> {
   const contentLengthHeader = response.headers.get("content-length")?.trim();
 
   if (contentLengthHeader) {
@@ -56,7 +107,7 @@ async function readLimitedWorkbookBody(response: WorkbookFetchResponse): Promise
   }
 
   if (!response.body) {
-    const bytes = new Uint8Array(await response.arrayBuffer());
+    const bytes = new Uint8Array(await rejectOnDownloadAbort(response.arrayBuffer(), signal));
     if (bytes.byteLength > portfolioWorkbookMaxBytes) {
       throw new WorkbookDownloadError("The workbook download exceeds the allowed size limit");
     }
@@ -68,7 +119,9 @@ async function readLimitedWorkbookBody(response: WorkbookFetchResponse): Promise
   let totalBytes = 0;
 
   while (true) {
-    const { done, value } = await reader.read();
+    const { done, value } = await rejectOnDownloadAbort(reader.read(), signal, () => {
+      void reader.cancel().catch(() => undefined);
+    });
     if (done) break;
     if (!value) continue;
 
@@ -89,7 +142,7 @@ async function readLimitedWorkbookBody(response: WorkbookFetchResponse): Promise
   return bytes;
 }
 
-async function downloadPortfolioWorkbook(
+async function downloadPortfolioWorkbookAttempt(
   workbookUrl: string,
   fetchImplementation: WorkbookFetch
 ): Promise<{ bytes: Uint8Array; contentType: string | null }> {
@@ -104,36 +157,63 @@ async function downloadPortfolioWorkbook(
     let response: WorkbookFetchResponse;
 
     try {
-      response = await fetchImplementation(workbookUrl, {
-        credentials: "omit",
-        redirect: "follow",
-        signal: controller.signal,
-        headers: {
-          Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/octet-stream"
-        }
-      });
+      response = await rejectOnDownloadAbort(
+        fetchImplementation(workbookUrl, {
+          credentials: "omit",
+          redirect: "follow",
+          signal: controller.signal,
+          headers: {
+            Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/octet-stream"
+          }
+        }),
+        controller.signal
+      );
     } catch {
-      if (timedOut) throw new WorkbookDownloadError("The workbook download timed out");
-      throw new WorkbookDownloadError("Failed to download the public XLSX workbook");
+      if (timedOut) throw workbookDownloadTimeoutError();
+      throw new WorkbookDownloadError("Failed to download the public XLSX workbook", true);
     }
 
     if (!response.ok) {
-      throw new WorkbookDownloadError("Failed to download the public XLSX workbook");
+      throw new WorkbookDownloadError(
+        "Failed to download the public XLSX workbook",
+        isRetryableWorkbookStatus(response.status)
+      );
     }
 
     try {
       return {
-        bytes: await readLimitedWorkbookBody(response),
+        bytes: await readLimitedWorkbookBody(response, controller.signal),
         contentType: response.headers.get("content-type")
       };
     } catch (error: unknown) {
-      if (timedOut) throw new WorkbookDownloadError("The workbook download timed out");
+      if (timedOut) throw workbookDownloadTimeoutError();
       if (error instanceof WorkbookDownloadError) throw error;
-      throw new WorkbookDownloadError("Failed while reading the public XLSX workbook download");
+      throw new WorkbookDownloadError("Failed while reading the public XLSX workbook download", true);
     }
   } finally {
     clearTimeout(timeout);
   }
+}
+
+async function downloadPortfolioWorkbook(
+  workbookUrl: string,
+  fetchImplementation: WorkbookFetch,
+  waitImplementation: (delayMs: number) => Promise<void>
+): Promise<{ bytes: Uint8Array; contentType: string | null }> {
+  for (let attempt = 1; attempt <= portfolioWorkbookDownloadMaxAttempts; attempt += 1) {
+    try {
+      return await downloadPortfolioWorkbookAttempt(workbookUrl, fetchImplementation);
+    } catch (error: unknown) {
+      const canRetry =
+        error instanceof WorkbookDownloadError &&
+        error.retryable &&
+        attempt < portfolioWorkbookDownloadMaxAttempts;
+      if (!canRetry) throw error;
+      await waitImplementation(portfolioWorkbookDownloadRetryDelayMs);
+    }
+  }
+
+  throw new WorkbookDownloadError("Failed to download the public XLSX workbook");
 }
 
 async function readTemplateCsv(fileName: string, templatesDirectory: string): Promise<string> {
@@ -184,6 +264,7 @@ export async function generatePortfolioContent(options: GeneratePortfolioContent
   const outputFile = options.outputFile ?? outputPath;
   const templatesDirectory = options.templatesDirectory ?? templateDirectory;
   const log = options.log ?? console.log;
+  const waitImplementation = options.waitImplementation ?? wait;
   const requireRemoteContent = environment.PORTFOLIO_REQUIRE_REMOTE_CONTENT === "true";
   const workbookReference = environment.PORTFOLIO_WORKBOOK_URL?.trim();
 
@@ -196,7 +277,7 @@ export async function generatePortfolioContent(options: GeneratePortfolioContent
   const sources: Record<string, "template" | "remote"> = {};
 
   if (workbookUrl) {
-    const download = await downloadPortfolioWorkbook(workbookUrl, fetchImplementation);
+    const download = await downloadPortfolioWorkbook(workbookUrl, fetchImplementation, waitImplementation);
     validatePortfolioWorkbookPayload(download.bytes, download.contentType);
     const workbookSheets = await parsePortfolioWorkbook(download.bytes);
 
