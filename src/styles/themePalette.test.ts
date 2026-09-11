@@ -7,6 +7,23 @@ const tokenStyles = readFileSync(path.join(projectRoot, "src", "styles", "tokens
 const glassStyles = readFileSync(path.join(projectRoot, "src", "styles", "glass.css"), "utf8");
 const layoutStyles = readFileSync(path.join(projectRoot, "src", "styles", "layout.css"), "utf8");
 const contactStyles = readFileSync(path.join(projectRoot, "src", "styles", "contact.css"), "utf8");
+const styleSources = [
+  "base.css",
+  "contact.css",
+  "detail.css",
+  "dialog.css",
+  "experience.css",
+  "glass.css",
+  "interactions.css",
+  "layout.css",
+  "motion.css",
+  "navigation.css",
+  "portfolio.css",
+  "research.css",
+  "skeletons.css",
+  "tokens.css",
+  "utilities.css"
+].map((fileName) => readFileSync(path.join(projectRoot, "src", "styles", fileName), "utf8"));
 
 const themePatterns = {
   dark: /\[data-theme="dark"\]\s*\{([\s\S]*?)\r?\n\}/,
@@ -80,8 +97,8 @@ describe("theme palette contract", () => {
       "--color-header-surface",
       "--color-menu-surface",
       "--color-accent",
-      "--gradient-header-surface",
-      "--gradient-primary-button"
+      "--color-primary-button-surface",
+      "--color-brand-mark-surface"
     ];
 
     for (const token of coreTokens) {
@@ -94,6 +111,28 @@ describe("theme palette contract", () => {
     expect(palettes.navy.get("--color-accent")).toBe("#e1c58f");
     expect(palettes.dark.get("--color-background")).toBe("#0c0d10");
     expect(palettes.dark.get("--color-accent-warm")).toBe("#c3a6ff");
+  });
+
+  it("uses distinct solid surface tiers instead of a uniform canvas", () => {
+    const tierTokens = [
+      "--color-background",
+      "--color-background-elevated",
+      "--color-glass-surface",
+      "--color-glass-surface-strong",
+      "--color-card-surface",
+      "--color-card-surface-strong",
+      "--color-header-surface"
+    ];
+
+    for (const palette of Object.values(palettes)) {
+      const tiers = tierTokens.map((token) => palette.get(token)!);
+
+      expect(tiers.every((tier) => /^#[\da-f]{6}$/i.test(tier))).toBe(true);
+      expect(new Set(tiers).size).toBeGreaterThanOrEqual(5);
+    }
+
+    expect(palettes.light.get("--color-glass-surface")).not.toBe(palettes.light.get("--color-card-surface"));
+    expect(palettes.dark.get("--color-glass-surface")).not.toBe(palettes.dark.get("--color-card-surface"));
   });
 
   it("maintains readable text and primary actions on their solid palette layers", () => {
@@ -109,26 +148,34 @@ describe("theme palette contract", () => {
         )
       ).toBeGreaterThanOrEqual(3);
 
-      const buttonText = palette.get("--color-primary-button-text")!;
-      const buttonStops = palette.get("--gradient-primary-button")!.match(/#[\da-f]{6}/gi) ?? [];
-
-      expect(buttonStops.length).toBeGreaterThanOrEqual(2);
-      buttonStops.forEach((buttonStop) => {
-        expect(contrastRatio(buttonText, buttonStop)).toBeGreaterThanOrEqual(4.5);
-      });
+      expect(
+        contrastRatio(
+          palette.get("--color-primary-button-text")!,
+          palette.get("--color-primary-button-surface")!
+        )
+      ).toBeGreaterThanOrEqual(4.5);
     }
   });
 
-  it("uses high-visibility dual focus rings and tokenized component accents", () => {
+  it("uses high-visibility focus rings with solid component tiers", () => {
     for (const palette of Object.values(palettes)) {
       expect(palette.get("--focus-ring")).toMatch(/0 0 0 2px.+0 0 0 5px/);
       expect(palette.get("--contact-field-focus-ring")).toMatch(/0 0 0 2px.+0 0 0 5px/);
     }
 
     expect(glassStyles).toMatch(/\.glass-card\s*{[^}]*background:\s*var\(--color-card-surface\)/s);
-    expect(glassStyles).toMatch(/\.glass-blob--nav\s*{[^}]*background-image:\s*var\(--gradient-header-surface\)/s);
+    expect(glassStyles).toMatch(/\.glass-blob--nav\s*{[^}]*background:\s*var\(--color-header-surface\)/s);
     expect(glassStyles).toMatch(/\.site-shell\[data-glass-effects="false"\][\s\S]*background:\s*var\(--glass-fallback-surface\)/);
-    expect(layoutStyles).toMatch(/\.home-overview-grid::before\s*{[^}]*background:\s*var\(--gradient-home-accent\)/s);
-    expect(contactStyles).toMatch(/box-shadow:\s*inset 0 1px 0 var\(--color-field-inset-highlight\)/);
+    expect(layoutStyles).not.toMatch(/gradient|::before\s*{[^}]*background:/s);
+    expect(contactStyles).not.toMatch(/field-inset-highlight|inset 0 1px 0/);
+  });
+
+  it("keeps UI styles free of decorative gradients, glows, blur, and mask fades", () => {
+    for (const styleSource of styleSources) {
+      expect(styleSource).not.toMatch(/(?:linear|radial|conic)-gradient\(/);
+      expect(styleSource).not.toMatch(/backdrop-filter\s*:/);
+      expect(styleSource).not.toMatch(/mask-image\s*:/);
+      expect(styleSource).not.toMatch(/--shadow-glow/);
+    }
   });
 });

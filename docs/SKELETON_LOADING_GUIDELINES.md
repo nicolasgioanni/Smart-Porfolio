@@ -54,7 +54,7 @@ The page-level busy region is sufficient. Do not add a live region for every pla
 
 ## Reduced motion
 
-`prefers-reduced-motion: reduce` disables shimmer. Placeholder geometry remains visible so the loading state still reserves space.
+Skeletons use static solid `--color-skeleton-surface` fills in every motion setting. Placeholder geometry remains visible so the loading state still reserves space; do not add shimmer, gradients, blur, or glow.
 
 ## Use skeletons for
 

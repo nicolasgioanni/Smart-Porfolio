@@ -17,7 +17,7 @@
 
 - Prefer transform and opacity; keep documented layout transitions bounded.
 - Do not blur readable content during scroll.
-- Keep `backdrop-filter` on bounded surfaces, not full-screen layers.
+- Use solid semantic surfaces; do not add `backdrop-filter`, CSS gradients, glow shadows, overlays, or mask fades.
 - Keep `will-change` limited and purposeful.
 - Respect `prefers-reduced-motion`.
 

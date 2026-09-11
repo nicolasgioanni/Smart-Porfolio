@@ -28,7 +28,7 @@ Desktop and mobile navigation are separate presentations of the same generated i
 - The animated desktop indicator is decorative.
 - The mobile bottom dock exposes every route as a direct link with no disclosure or duplicated accessible copy.
 - The route rail uses native horizontal scrolling, so touch, pointer, wheel, and keyboard users can reach hidden links in canonical order.
-- Edge fades are visual overflow cues and do not change link names, order, focusability, or semantics.
+- Native hard clipping marks horizontal overflow without changing link names, order, focusability, or semantics.
 - GitHub, LinkedIn, Email, and theme controls remain outside the scrolling rail so they stay available at every rail position.
 - External HTTP destinations that open a new tab use `noopener noreferrer`.
 
@@ -90,7 +90,7 @@ The footer's `Details` and `Collapse` button exposes `aria-expanded` and `aria-c
 
 Motion is supplementary. Content remains present when motion is disabled.
 
-The `prefers-reduced-motion: reduce` rules and shared preference hook disable or simplify page entrance motion, scroll reveals, Home role rotation, route-indicator travel, mobile rail return and drift, Hover Base sheen and lift, recommendation transitions, dialog fades, header and footer transitions, skeleton shimmer, and smooth scrolling. Hydrated palette changes also bypass the optional View Transition fade and apply immediately. Manual mobile rail scrolling remains available.
+The `prefers-reduced-motion: reduce` rules and shared preference hook disable or simplify page entrance motion, scroll reveals, Home role rotation, route-indicator travel, mobile rail return and drift, Hover Base lift, recommendation transitions, dialog fades, header and footer transitions, and smooth scrolling. Skeletons are already static. Hydrated palette changes bypass the optional View Transition fade and apply immediately. Manual mobile rail scrolling remains available.
 
 The `enable_scroll_motion` content setting controls decorative scroll reveals. It does not replace the operating-system preference.
 
@@ -107,7 +107,7 @@ Do not publish filename-only alt text. If an image conveys no information beyond
 
 ## Loading states
 
-Skeleton primitives are `aria-hidden`. Page skeletons expose a labelled region with `aria-busy="true"`; they do not contain fake content or interactive controls. Shimmer stops under reduced motion. Skeletons are route-transition polish and never replace available static content.
+Skeleton primitives are `aria-hidden`. Page skeletons expose a labelled region with `aria-busy="true"`; they do not contain fake content or interactive controls. Static solid placeholders reserve geometry without decorative animation. Skeletons are route-transition polish and never replace available static content.
 
 See [Skeleton loading guidelines](SKELETON_LOADING_GUIDELINES.md) for the complete contract.
 

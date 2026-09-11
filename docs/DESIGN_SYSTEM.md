@@ -1,12 +1,13 @@
 # Design system
 
-Smart Portfolio uses a restrained glass-inspired visual language to organize evidence without reducing readability. Semantic tokens, focused CSS files, and reusable React primitives keep Light, My mode, and Dark behavior aligned while allowing each mode to have its own visual character.
+Smart Portfolio uses a restrained, solid-surface visual language to organize evidence without reducing readability. Semantic tokens, focused CSS files, and reusable React primitives keep Light, My mode, and Dark behavior aligned while allowing each mode to have its own visual character.
 
 ## Design goals
 
 - Keep professional evidence more prominent than decorative effects.
-- Use translucency, fine borders, and controlled highlights to define hierarchy.
-- Preserve readable static content when JavaScript, motion, or glass effects are unavailable.
+- Use semantic surface tiers, fine borders, and restrained neutral elevation to define hierarchy.
+- Preserve readable static content when JavaScript or motion is unavailable.
+- Do not use CSS gradients, glow, decorative overlays, backdrop blur, or mask fades for interface hierarchy.
 - Provide consistent keyboard focus, selected state, disabled state, and reduced-motion behavior.
 - Keep Home concise while making deeper context available on focused routes and in accessible dialogs.
 
@@ -50,11 +51,11 @@ Components must use semantic variables such as `--color-ink`, `--color-muted`, `
 
 - typography, line height, and font weight;
 - spacing, container widths, and header offsets;
-- radii and glass blur;
+- radii and solid surface tiers;
 - transition timing and easing;
-- semantic color, surface, shadow, gradient, and interaction values per theme.
+- semantic color, surface, border, shadow, and interaction values per theme.
 
-Aliases such as `--color-canvas`, `--color-ink`, `--color-surface`, and `--color-line` let layout and component styles remain theme-independent. Role-specific tokens distinguish card layers, header and menu surfaces, page accents, fields, focus rings, status colors, and interaction gradients without component-level theme selectors. Each glass primitive also supplies a role-aware `--glass-fallback-surface`, preserving that hierarchy when blur is disabled. New theme values must define the complete semantic set rather than depending on another theme's cascade accidentally.
+Aliases such as `--color-canvas`, `--color-ink`, `--color-surface`, and `--color-line` let layout and component styles remain theme-independent. Role-specific tokens distinguish card layers, header and menu surfaces, page accents, fields, focus rings, status colors, and solid interaction states without component-level theme selectors. Light must retain distinct off-white, light-gray, and blue-gray tiers; Dark must retain distinct charcoal and slate tiers. New theme values must define the complete semantic set rather than depending on another theme's cascade accidentally.
 
 ## Typography
 
@@ -111,7 +112,7 @@ The implemented Home order is:
 
 Do not reorder these sections through CSS. Change `HomeOverview.tsx`, skeleton composition, tests, content mapping, and documentation together.
 
-## Glass primitives
+## Surface primitives
 
 | Primitive | Use |
 | --- | --- |
@@ -125,15 +126,15 @@ Do not reorder these sections through CSS. Change `HomeOverview.tsx`, skeleton c
 | `GlassChip` | Short metadata, skills, roles, and facts. |
 | `GlassDivider` | Quiet separation within a surface. |
 
-Glass surfaces use one-pixel borders, bounded backdrop blur, semantic backgrounds, restrained highlights, and theme-owned shadows. When `enable_glass_effects` is false, surfaces use opaque elevated backgrounds and remove backdrop blur without changing structure.
+The existing `Glass*` component names are compatibility names for solid surface primitives. They use one-pixel borders, semantic opaque backgrounds, and restrained neutral shadows. `enable_glass_effects` remains a generated-setting compatibility switch; both paths preserve the same opaque hierarchy without backdrop blur.
 
-Keep nested Home cards quieter than their outer section. A nested card should not compete with the panel through stronger blur, highlight, or shadow.
+Keep nested Home cards quieter than their outer section. A nested card should not compete with the panel through stronger decoration or shadow.
 
 ## Header and navigation
 
 Above `980px`, the header is a sticky `GlassBlob` that server-renders expanded. Client behavior compacts it after downward scroll beyond the threshold, restores it on upward scroll or pointer proximity, and keeps it expanded while keyboard focus or the theme disclosure requires stable controls.
 
-Desktop navigation uses a persistent animated route indicator plus `aria-current="page"`. At `980px` and below, the glass island becomes a fixed bottom dock. The profile mark and name are hidden, while one native swipeable rail presents the route list followed by the configured GitHub, LinkedIn, Email, and theme controls. The rail uses scroll snapping, padded ends, hidden scrollbars, and dynamic edge fades across the complete control sequence.
+Desktop navigation uses a persistent animated route indicator plus `aria-current="page"`. At `980px` and below, the surface island becomes a fixed bottom dock. The profile mark and name are hidden, while one viewport-bounded native swipeable rail presents the route list followed by the configured GitHub, LinkedIn, Email, and theme controls. The rail, rather than the full route list, owns horizontal overflow; it uses scroll snapping, padded ends, hidden scrollbars, and native hard clipping so every route and action remains reachable without widening the dock or document.
 
 The desktop profile mark opens an image preview only when an image exists. The theme disclosure opens below the desktop trigger and above the mobile dock trigger. The shell reserves safe-area-aware bottom clearance so neither route content nor anchored targets end beneath the dock. Header motion uses centralized duration and easing tokens.
 
@@ -179,11 +180,11 @@ The shared `Overview` and `Technical` selector changes all research narratives a
 
 ### Experience showcase
 
-The dedicated Experience route combines its heading, spreadsheet-backed summary, and page-wide detail control in one strong glass introduction panel. The same compact `Overview` and `Technical` selector used by Research is inset at the panel's top-right edge on desktop, while the heading and summary retain the remaining width. The selector swaps the narrative depth for every logo-led role card while identity metadata remains stable.
+The dedicated Experience route combines its heading, spreadsheet-backed summary, and page-wide detail control in one strong introduction panel. The same compact `Overview` and `Technical` selector used by Research is inset at the panel's top-right edge on desktop, while the heading and summary retain the remaining width. The selector swaps the narrative depth for every logo-led role card while identity metadata remains stable.
 
-The segmented selector uses one translated glass lens, measures 12.25rem, and keeps each mode button at least 44 by 44 CSS pixels for every pointer capability. Below `760px`, the selector returns to document flow beneath the summary without expanding to the panel width. On small screens, evidence returns to the full card width and result signals move below their disclosure summaries. Each collapsed evidence row communicates its central fact; expansion adds context and tools tied to that row, and only one row per role remains open.
+The segmented selector uses one translated solid lens, measures 12.25rem, and keeps each mode button at least 44 by 44 CSS pixels for every pointer capability. Below `760px`, the selector returns to document flow beneath the summary without expanding to the panel width. On small screens, evidence returns to the full card width and result signals move below their disclosure summaries. Each collapsed evidence row communicates its central fact; expansion adds context and tools tied to that row, and only one row per role remains open.
 
-Experience and Research cards use the large surface shadow and two-pixel lift only during genuine fine-pointer hover. When a disclosure retains focus, the card keeps its resting geometry and shadow while the focused control supplies the keyboard-visible ring; `:focus-within` may strengthen only the card border. This prevents persistent card-wide elevation from reading as an extra translucent panel after scrolling.
+Experience and Research cards use a restrained neutral shadow and two-pixel lift only during genuine fine-pointer hover. When a disclosure retains focus, the card keeps its resting geometry and shadow while the focused control supplies the keyboard-visible ring; `:focus-within` may strengthen only the card border. This prevents persistent card-wide elevation from reading as an extra layer after scrolling.
 
 ## Skills
 
@@ -224,16 +225,15 @@ Footer state may animate width, padding, grid-row height, opacity, and small tra
 - `--compact` uses tighter geometry for utility controls;
 - `--inline` uses card-radius text-link geometry;
 - `--solid` layers interaction over a primary fill;
-- `--no-wave` suppresses only the decorative sheen;
 - `--route` supplies the server-rendered active-route fallback.
 
-Use `aria-current`, `aria-pressed`, `aria-expanded`, or native disabled state to express semantics. Decorative pseudo-elements use `pointer-events: none`. The sheen runs only for a fine pointer, and reduced motion disables sheen, lift, arrow travel, and route-indicator travel while preserving state colors.
+Use `aria-current`, `aria-pressed`, `aria-expanded`, or native disabled state to express semantics. The one state pseudo-element uses a solid role token and `pointer-events: none`; no sheen or traveling highlight is permitted. Reduced motion disables lift, arrow travel, and route-indicator travel while preserving state colors.
 
 ## Motion
 
 Motion supports state and orientation. Prefer opacity and transform. Shared detail disclosures, recommendation disclosure, and footer grid rows are documented exceptions where a bounded layout transition communicates state.
 
-The role rotation, route indicator, header state, mobile rail drift, theme disclosure, research and experience details, recommendation expansion, footer disclosure, scroll reveals, and skeleton shimmer have explicit reduced-motion behavior. See [Animation guidelines](ANIMATION_GUIDELINES.md) for exact timing and constraints.
+The role rotation, route indicator, header state, mobile rail drift, theme disclosure, research and experience details, recommendation expansion, footer disclosure, and scroll reveals have explicit reduced-motion behavior. Skeletons are static. See [Animation guidelines](ANIMATION_GUIDELINES.md) for exact timing and constraints.
 
 ## Loading states
 
@@ -252,7 +252,7 @@ The style system uses focused thresholds at 980, 860, 720, 620, 520, 480, and 38
 - Expanded footer columns become one column below 720px.
 - Buttons and labelled icon links may become full-width on narrow screens.
 - Long links, metadata, and resource labels wrap without horizontal overflow.
-- Glass blur is reduced on smaller viewports.
+- Solid tiers and border contrast remain distinct on smaller viewports.
 
 Use an existing threshold when possible and test the layout immediately above and below it.
 

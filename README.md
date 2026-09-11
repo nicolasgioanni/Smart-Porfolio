@@ -5,7 +5,7 @@
 [![Node.js 22.13+](https://img.shields.io/badge/Node.js-%3E%3D22.13-339933?logo=nodedotjs&logoColor=white)](package.json)
 [![Cloudflare Pages](https://img.shields.io/badge/Deploy-Cloudflare_Pages-F38020?logo=cloudflare&logoColor=white)](https://nicolasmgioanni.dev)
 
-A spreadsheet-authored, static-first portfolio with typed content validation, a restrained glass interface, and integrity-checked Cloudflare deployment.
+A spreadsheet-authored, static-first portfolio with typed content validation, a layered solid-surface interface, and integrity-checked Cloudflare deployment.
 
 **[View the live portfolio](https://nicolasmgioanni.dev)**
 
@@ -98,7 +98,7 @@ See [Content pipeline](docs/CONTENT_PIPELINE.md), [sheet schema](docs/CONTENT_SH
 
 ## User experience and visual system
 
-The interface uses glass-inspired surfaces as restrained hierarchy, not as a full-screen effect. Text sits on quiet backgrounds, large panels use bounded blur, and nested cards reduce visual weight.
+The interface uses solid semantic surface tiers as restrained hierarchy. Text sits on quiet backgrounds, Light layers off-white, light-gray, and blue-gray surfaces, Dark layers charcoal and slate, and nested cards reduce visual weight with borders and neutral elevation instead of blur, gradients, or glow.
 
 - Light, My mode, and Dark themes use separate warm, signature-navy, and graphite palettes through shared semantic color and interaction tokens. With no saved override, System follows the visitor's device light or dark preference and updates when that preference changes.
 - A floating desktop header provides profile preview, navigation, social links, and theme selection. At `980px` and below, a safe-area-aware bottom dock replaces it with one swipeable rail containing the routes, GitHub, LinkedIn, Email, and theme controls.
@@ -130,7 +130,7 @@ Page routes are statically exported. This table covers the visitor flows documen
 | `/terms` | Terms and accuracy notice | Static footer-only legal route. |
 | `/security` | Security and disclosure notice | Static footer-only legal route. |
 
-Primary navigation is assembled by [navigationItems.ts](src/components/navigation/navigationItems.ts) from the central route registry. Resume is always present, Recommendations is included only when configured, and Contact plus legal routes are intentionally available through the footer. Mobile preserves the canonical route order, then continues through the configured social and theme controls in one native horizontal rail. Edge fades expose hidden overflow, and direct interaction pauses drift until five seconds of inactivity have elapsed.
+Primary navigation is assembled by [navigationItems.ts](src/components/navigation/navigationItems.ts) from the central route registry. Resume is always present, Recommendations is included only when configured, and Contact plus legal routes are intentionally available through the footer. Mobile preserves the canonical route order, then continues through the configured social and theme controls in one native horizontal rail. Native hard clipping exposes scrollable overflow without a visual fade, and direct interaction pauses drift until five seconds of inactivity have elapsed.
 
 ## Technology and project role
 
@@ -142,7 +142,7 @@ Primary navigation is assembled by [navigationItems.ts](src/components/navigatio
 | Workbook parsing | ExcelJS | Parse the complete anonymous XLSX snapshot and inspect worksheet state and cells. |
 | Local source parsing | `csv-parse` | Read checked-in content templates through the same row model. |
 | Content safety | Custom normalizers and validators | Enforce required data, exact references, URL rules, grouped fields, and UI invariants. |
-| Interface | CSS custom properties and reusable glass primitives | Share semantic themes, geometry, surfaces, and interaction states without a UI framework. |
+| Interface | CSS custom properties and reusable surface primitives | Share semantic themes, geometry, solid surface tiers, and interaction states without a UI framework. |
 | Icons | `simple-icons` and local semantic icons | Render configured technology and destination marks. |
 | Browser behavior | IntersectionObserver and native browser APIs | Drive focused reveal, footer, responsive, and preference behavior. |
 | Quality | ESLint, TypeScript, Vitest, Testing Library, jsdom, and Playwright Chromium | Verify code, types, content, components, Functions, scripts, CSS contracts, automation, responsive navigation, recommendation overlays, and footer lifecycle behavior in a real browser. |

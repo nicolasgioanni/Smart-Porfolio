@@ -38,6 +38,14 @@ describe("research showcase styles", () => {
     );
   });
 
+  it("uses opaque per-project surfaces behind every research diagram", () => {
+    const visualSurfaces = [...researchStyles.matchAll(/--visual-surface:\s*([^;]+);/g)].map(([, surface]) => surface.trim());
+
+    expect(visualSurfaces).toHaveLength(6);
+    expect(visualSurfaces.every((surface) => /^#[\da-f]{6}$/i.test(surface))).toBe(true);
+    expect(researchStyles).toMatch(/\.research-visual\s*{[^}]*background:\s*var\(--visual-surface\)/s);
+  });
+
   it("keeps full-card elevation exclusive to pointer hover", () => {
     const sharedAttentionRule =
       researchStyles.match(/\.research-project:hover,\s*\.research-project:focus-within\s*\{[^}]*}/s)?.[0] ?? "";
@@ -45,9 +53,8 @@ describe("research showcase styles", () => {
 
     expect(sharedAttentionRule).toMatch(/border-color:\s*var\(--detail-accent-border\)/);
     expect(sharedAttentionRule).not.toMatch(/box-shadow|transform/);
-    expect(hoverElevationRule).toMatch(
-      /box-shadow:\s*var\(--shadow-soft\),\s*0 0 64px var\(--detail-accent-soft\)/
-    );
+    expect(hoverElevationRule).toMatch(/box-shadow:\s*var\(--shadow-soft\)/);
+    expect(hoverElevationRule).not.toMatch(/glow|gradient|0 0 64px/);
     expect(hoverElevationRule).toMatch(/transform:\s*translate3d\(0, -2px, 0\)/);
   });
 
