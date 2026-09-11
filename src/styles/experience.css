@@ -217,6 +217,9 @@
   .experience-card:hover,
   .experience-card:focus-within {
     border-color: var(--color-line-strong);
+  }
+
+  .experience-card:hover {
     box-shadow: var(--shadow-soft), var(--shadow-glow);
     transform: translate3d(0, -2px, 0);
   }

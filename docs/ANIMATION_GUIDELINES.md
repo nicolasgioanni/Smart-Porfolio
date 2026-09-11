@@ -78,9 +78,11 @@ Use `IntersectionObserver` as the baseline for reveal and compression behavior. 
 
 Scroll motion must not blur text. The `enable_scroll_motion` setting gates scroll reveals and section motion. When false, those elements render immediately. It does not disable role rotation; the operating-system reduced-motion preference does.
 
-## Experience disclosure
+## Experience and research disclosure
 
-The Experience audience lens translates over `260ms`; selected text changes immediately through `aria-pressed`. Switching views settles the new card copy with a short opacity and vertical-transform transition. Opening a chapter uses one bounded `300ms` grid-row transition, while its refraction line, copy, and chevron use opacity or transform. Only one chapter per role can be open, which bounds layout work. Fine-pointer card lift and logo-highlight movement are decorative and never required to find content.
+The shared audience lens translates over `260ms`; selected text changes immediately through `aria-pressed`. Switching views settles the new card copy with a short opacity and vertical-transform transition. Opening a chapter uses one bounded `300ms` grid-row transition, while its refraction line, copy, and chevron use opacity or transform. Only one chapter per card can be open, which bounds layout work. Fine-pointer card lift and highlight movement are decorative and never required to find content.
+
+Card-wide elevation belongs exclusively to active fine-pointer hover. A disclosure keeps focus after it opens, so `:focus-within` may strengthen the card border but must not apply the large surface shadow or translation. Keyboard focus remains visible on the focused control without leaving a tall elevated rectangle around expanded content while the page scrolls.
 
 Reduced motion removes audience, card, highlight, chapter, and chevron transitions while preserving selected and expanded state. The global scroll-motion setting controls only the optional staggered card entrance; user-triggered audience and disclosure behavior remains available regardless of that setting.
 
