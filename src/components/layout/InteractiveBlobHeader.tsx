@@ -43,6 +43,7 @@ export function InteractiveBlobHeader({ brand, initialTheme, navigationItems, pr
   const finePointerRef = useRef(true);
   const lastScrollYRef = useRef(0);
   const pointerNearHeaderRef = useRef(false);
+  const profilePreviewTriggerRef = useRef<HTMLButtonElement>(null);
   const scrollIntentRef = useRef<HeaderScrollIntent>("expanded");
   const themeMenuOpenRef = useRef(false);
   const headerVisualStateRef = useRef<HeaderScrollIntent>("expanded");
@@ -186,6 +187,7 @@ export function InteractiveBlobHeader({ brand, initialTheme, navigationItems, pr
                 aria-label={`View ${profileImageAlt}`}
                 className={`${markClassName} hover-base-1 hover-base-1--compact hover-base-1--solid hover-base-1--no-wave`}
                 onClick={openProfilePreview}
+                ref={profilePreviewTriggerRef}
                 type="button"
               >
                 <img alt="" className="site-brand__mark-image" src={brand.markImageSrc} />
@@ -217,7 +219,15 @@ export function InteractiveBlobHeader({ brand, initialTheme, navigationItems, pr
           />
         </div>
       </header>
-      {brand.markImageSrc ? <ProfileImagePreview alt={profileImageAlt} imageSrc={brand.markImageSrc} onClose={closeProfilePreview} open={profilePreviewOpen} /> : null}
+      {brand.markImageSrc ? (
+        <ProfileImagePreview
+          alt={profileImageAlt}
+          imageSrc={brand.markImageSrc}
+          onClose={closeProfilePreview}
+          open={profilePreviewOpen}
+          restoreFocusRef={profilePreviewTriggerRef}
+        />
+      ) : null}
     </>
   );
 }

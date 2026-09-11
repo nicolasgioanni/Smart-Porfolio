@@ -938,26 +938,9 @@
 }
 
 .project-skill-dialog {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-  display: grid;
-  place-items: center;
   padding: var(--space-5);
-  opacity: 0;
   background: var(--color-profile-preview-backdrop);
   backdrop-filter: blur(8px);
-  pointer-events: none;
-  transition: opacity 180ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.project-skill-dialog[data-state="open"] {
-  opacity: 1;
-}
-
-.project-skill-dialog[data-state="open"],
-.project-skill-dialog[data-state="closing"] {
-  pointer-events: auto;
 }
 
 .project-skill-dialog__frame {
@@ -972,16 +955,6 @@
   color: var(--color-ink);
   background: var(--color-menu-surface);
   box-shadow: var(--shadow-soft), var(--shadow-glow);
-  opacity: 0;
-  transform: translateY(8px) scale(0.985);
-  transition:
-    opacity 180ms cubic-bezier(0.22, 1, 0.36, 1),
-    transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.project-skill-dialog[data-state="open"] .project-skill-dialog__frame {
-  opacity: 1;
-  transform: translateY(0) scale(1);
 }
 
 .project-skill-dialog__icon {
@@ -1076,15 +1049,6 @@
 .project-skill-dialog__close:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
-}
-
-.project-skill-dialog[data-reduced-motion="true"],
-.project-skill-dialog[data-reduced-motion="true"] .project-skill-dialog__frame {
-  transition: none;
-}
-
-.project-skill-dialog[data-reduced-motion="true"] .project-skill-dialog__frame {
-  transform: none;
 }
 
 @media (min-width: 981px) {
@@ -2244,15 +2208,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .project-skill-dialog,
-  .project-skill-dialog__frame {
-    transition: none;
-  }
-
-  .project-skill-dialog__frame {
-    transform: none;
-  }
-
   .profile-role__prefix,
   .profile-role__engineer-line,
   .profile-role__alternate,

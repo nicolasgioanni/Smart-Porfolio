@@ -1,0 +1,66 @@
+.modal-dialog {
+  --modal-dialog-entry-scale: 0.985;
+  --modal-dialog-entry-y: 8px;
+  --modal-dialog-timing: 180ms cubic-bezier(0.22, 1, 0.36, 1);
+
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--modal-dialog-timing);
+}
+
+.modal-dialog[data-topmost="true"] {
+  z-index: 101;
+}
+
+.modal-dialog[data-state="open"] {
+  opacity: 1;
+}
+
+.modal-dialog[data-state="open"],
+.modal-dialog[data-state="closing"] {
+  pointer-events: auto;
+}
+
+.modal-dialog[aria-hidden="true"][data-topmost="false"] {
+  pointer-events: none;
+}
+
+.modal-dialog__frame {
+  max-width: 100%;
+  max-height: 100%;
+  opacity: 0;
+  transform: translateY(var(--modal-dialog-entry-y)) scale(var(--modal-dialog-entry-scale));
+  transition:
+    opacity var(--modal-dialog-timing),
+    transform var(--modal-dialog-timing);
+}
+
+.modal-dialog[data-state="open"] .modal-dialog__frame {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.modal-dialog[data-reduced-motion="true"],
+.modal-dialog[data-reduced-motion="true"] .modal-dialog__frame {
+  transition: none;
+}
+
+.modal-dialog[data-reduced-motion="true"] .modal-dialog__frame {
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-dialog,
+  .modal-dialog__frame {
+    transition: none;
+  }
+
+  .modal-dialog__frame {
+    transform: none;
+  }
+}

@@ -50,9 +50,9 @@ The desktop header expands when focus enters it so compact visual behavior does 
 
 ## Dialogs and disclosures
 
-### Skills dialogs
+### Shared dialogs
 
-Interactive portfolio and project skills use a shared dialog implementation that:
+Profile previews, interactive portfolio skills, project skills, and other modal media use the shared `ModalDialog` implementation. It:
 
 - exposes `role="dialog"`, `aria-modal`, a labelled title, and descriptive text;
 - moves focus to the close control after opening;
@@ -62,11 +62,11 @@ Interactive portfolio and project skills use a shared dialog implementation that
 - prevents background scrolling while open;
 - removes its fade delay when reduced motion is requested.
 
-Skills without the complete explanatory field set render as non-interactive badges.
+Each consumer supplies its own accessible name, description, initial-focus control, and trigger reference. The shared layer owns portal rendering, focus containment through the complete exit transition, Escape and backdrop dismissal, exact background-scroll restoration, reduced-motion timing, and trigger-focus restoration. When dialogs overlap, only the topmost dialog remains exposed and interactive until it exits. Skills without the complete explanatory field set render as non-interactive badges.
 
 ### Profile image preview
 
-The header profile image opens a labelled modal preview with a close button, Escape handling, and backdrop dismissal. The current preview does not implement the same focus trap and trigger-focus restoration used by skill dialogs. Treat that as a known manual-review limitation.
+The header profile image opens a labelled modal preview through the shared dialog layer. Its close button receives initial focus, keyboard focus remains inside the preview, and dismissal restores focus to the profile-image trigger.
 
 ### Research and Experience details
 

@@ -355,6 +355,7 @@ describe("static portfolio security contracts", () => {
 
   it("keeps project, skill, and recommendation Home cards structured and motion-safe", () => {
     const portfolioCss = readFileSync(path.join(projectRoot, "src", "styles", "portfolio.css"), "utf8");
+    const dialogCss = readFileSync(path.join(projectRoot, "src", "styles", "dialog.css"), "utf8");
     const projectSource = readFileSync(
       path.join(projectRoot, "src", "components", "portfolio", "HomeProjectCard.tsx"),
       "utf8"
@@ -365,6 +366,10 @@ describe("static portfolio security contracts", () => {
     );
     const interactiveSkillSource = readFileSync(
       path.join(projectRoot, "src", "components", "portfolio", "InteractiveSkillShowcase.tsx"),
+      "utf8"
+    );
+    const modalDialogSource = readFileSync(
+      path.join(projectRoot, "src", "components", "overlay", "ModalDialog.tsx"),
       "utf8"
     );
     const recommendationSource = readFileSync(
@@ -386,6 +391,8 @@ describe("static portfolio security contracts", () => {
     const projectSkillDialogRule = portfolioCss.match(/\.project-skill-dialog\s*{[^}]*}/s)?.[0] ?? "";
     const projectSkillDialogFrameRule =
       portfolioCss.match(/\.project-skill-dialog__frame\s*{[^}]*}/s)?.[0] ?? "";
+    const modalDialogRule = dialogCss.match(/\.modal-dialog\s*{[^}]*}/s)?.[0] ?? "";
+    const modalDialogFrameRule = dialogCss.match(/\.modal-dialog__frame\s*{[^}]*}/s)?.[0] ?? "";
     const recommendationViewportRule =
       portfolioCss.match(/\.recommendation-expandable__viewport\s*{[^}]*}/s)?.[0] ?? "";
     const recommendationGridRule = portfolioCss.match(/\.home-recommendations__grid\s*{[^}]*}/s)?.[0] ?? "";
@@ -436,21 +443,29 @@ describe("static portfolio security contracts", () => {
     expect(researchActionsRule).toMatch(/justify-content:\s*center/);
     expect(projectSubtitleRule).toMatch(/color:\s*var\(--color-muted\)/);
     expect(projectSubtitleRule).toMatch(/font-weight:\s*var\(--font-weight-medium\)/);
-    expect(interactiveSkillSource).toMatch(/createPortal\(dialog,\s*document\.body\)/);
+    expect(interactiveSkillSource).toMatch(/<ModalDialog/);
     expect(interactiveSkillSource).toMatch(/aria-haspopup="dialog"/);
-    expect(interactiveSkillSource).toMatch(/aria-modal="true"/);
-    expect(interactiveSkillSource).toMatch(/interactiveSkillDialogFadeMs\s*=\s*180/);
+    expect(interactiveSkillSource).toMatch(/interactiveSkillDialogFadeMs\s*=\s*modalDialogFadeMs/);
+    expect(modalDialogSource).toMatch(/createPortal\(dialog,\s*document\.body\)/);
+    expect(modalDialogSource).toMatch(/aria-modal=\{isTopmost \? "true" : undefined\}/);
+    expect(modalDialogSource).toMatch(/"video\[controls\]"/);
+    expect(modalDialogSource).toMatch(/"audio\[controls\]"/);
     expect(projectSkillSource).toMatch(/projectSkillDialogFadeMs\s*=\s*interactiveSkillDialogFadeMs/);
-    expect(projectSkillDialogRule).toMatch(/position:\s*fixed/);
-    expect(projectSkillDialogRule).toMatch(/inset:\s*0/);
-    expect(projectSkillDialogRule).toMatch(/transition:\s*opacity 180ms cubic-bezier\(0\.22,\s*1,\s*0\.36,\s*1\)/);
-    expect(portfolioCss).toMatch(
-      /\.project-skill-dialog\[data-state="open"\],\s*\.project-skill-dialog\[data-state="closing"\]\s*{[^}]*pointer-events:\s*auto/s
+    expect(modalDialogRule).toMatch(/position:\s*fixed/);
+    expect(modalDialogRule).toMatch(/inset:\s*0/);
+    expect(modalDialogRule).toMatch(/transition:\s*opacity var\(--modal-dialog-timing\)/);
+    expect(dialogCss).toMatch(
+      /\.modal-dialog\[data-state="open"\],\s*\.modal-dialog\[data-state="closing"\]\s*{[^}]*pointer-events:\s*auto/s
     );
+    expect(dialogCss).toMatch(
+      /\.modal-dialog\[aria-hidden="true"\]\[data-topmost="false"\]\s*{[^}]*pointer-events:\s*none/s
+    );
+    expect(projectSkillDialogRule).toMatch(/background:\s*var\(--color-profile-preview-backdrop\)/);
     expect(projectSkillDialogFrameRule).toMatch(/max-height:/);
     expect(projectSkillDialogFrameRule).toMatch(/overflow-y:\s*auto/);
-    expect(portfolioCss).toMatch(
-      /@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*?\.project-skill-dialog,[\s\S]*?\.project-skill-dialog__frame\s*{[^}]*transition:\s*none/s
+    expect(modalDialogFrameRule).toMatch(/transform:\s*translateY\(var\(--modal-dialog-entry-y\)\)/);
+    expect(dialogCss).toMatch(
+      /@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*?\.modal-dialog,[\s\S]*?\.modal-dialog__frame\s*{[^}]*transition:\s*none/s
     );
     expect(skillsGridRule).toMatch(/grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/);
     expect(skillsGridRule).toMatch(/align-items:\s*stretch/);
@@ -537,23 +552,26 @@ describe("static portfolio security contracts", () => {
 
   it("keeps the profile preview centered with a polished close button", () => {
     const navigationCss = readFileSync(path.join(projectRoot, "src", "styles", "navigation.css"), "utf8");
+    const dialogCss = readFileSync(path.join(projectRoot, "src", "styles", "dialog.css"), "utf8");
     const previewSource = readFileSync(
       path.join(projectRoot, "src", "components", "layout", "ProfileImagePreview.tsx"),
       "utf8"
     );
 
-    expect(navigationCss).toMatch(/\.profile-image-preview\s*{(?=[^}]*place-items:\s*center)(?=[^}]*opacity:\s*0)(?=[^}]*transition:\s*opacity 160ms ease)[^}]*}/s);
-    expect(navigationCss).toMatch(/\.profile-image-preview\[data-state="open"\]\s*{(?=[^}]*opacity:\s*1)(?=[^}]*pointer-events:\s*auto)[^}]*}/s);
-    expect(navigationCss).toMatch(/\.profile-image-preview__frame\s*{(?=[^}]*display:\s*grid)(?=[^}]*grid-template-rows:\s*auto auto)(?=[^}]*place-items:\s*center)(?=[^}]*opacity:\s*0)(?=[^}]*transform:\s*translateY\(-6px\)\s*scale\(0\.98\))(?=[^}]*transition:[^}]*opacity 160ms ease,[^}]*transform 160ms ease)[^}]*}/s);
-    expect(navigationCss).toMatch(/\.profile-image-preview\[data-state="open"\]\s+\.profile-image-preview__frame\s*{(?=[^}]*opacity:\s*1)(?=[^}]*transform:\s*translateY\(0\)\s*scale\(1\))[^}]*}/s);
+    expect(dialogCss).toMatch(/\.modal-dialog\s*{(?=[^}]*place-items:\s*center)(?=[^}]*opacity:\s*0)(?=[^}]*transition:\s*opacity var\(--modal-dialog-timing\))[^}]*}/s);
+    expect(dialogCss).toMatch(/\.modal-dialog\[data-state="open"\]\s*{[^}]*opacity:\s*1[^}]*}/s);
+    expect(navigationCss).toMatch(/\.profile-image-preview\s*{(?=[^}]*--modal-dialog-entry-scale:\s*0\.98)(?=[^}]*--modal-dialog-entry-y:\s*-6px)(?=[^}]*background:\s*var\(--color-profile-preview-backdrop\))[^}]*}/s);
+    expect(navigationCss).toMatch(/\.profile-image-preview__frame\s*{(?=[^}]*display:\s*grid)(?=[^}]*grid-template-rows:\s*auto auto)(?=[^}]*place-items:\s*center)[^}]*}/s);
     expect(navigationCss).toMatch(/\.profile-image-preview__actions\s*{(?=[^}]*display:\s*flex)(?=[^}]*justify-content:\s*flex-end)(?=[^}]*width:\s*100%)[^}]*}/s);
     expect(navigationCss).toMatch(/\.profile-image-preview__close\s*{(?=[^}]*display:\s*inline-flex)(?=[^}]*align-items:\s*center)(?=[^}]*justify-content:\s*center)(?=[^}]*min-width:\s*62px)(?=[^}]*line-height:\s*1)(?=[^}]*background:\s*var\(--color-control-surface\))(?=[^}]*box-shadow:\s*var\(--shadow-card\))[^}]*}/s);
     expect(navigationCss).not.toMatch(/\.profile-image-preview__close\s*{[^}]*(?:position:\s*absolute|top:|bottom:|right:)/s);
     expect(previewSource).toMatch(
       /className="profile-image-preview__close hover-base-1 hover-base-1--compact"/
     );
+    expect(previewSource).toMatch(/<ModalDialog[\s\S]*restoreFocusRef=\{restoreFocusRef\}/);
     expect(navigationCss).not.toMatch(/\.profile-image-preview__close:hover/);
-    expect(navigationCss).toMatch(/prefers-reduced-motion:\s*reduce[\s\S]*\.profile-image-preview,[\s\S]*\.profile-image-preview__close[\s\S]*transition:\s*none/);
+    expect(dialogCss).toMatch(/prefers-reduced-motion:\s*reduce[\s\S]*\.modal-dialog,[\s\S]*\.modal-dialog__frame[\s\S]*transition:\s*none/);
+    expect(navigationCss).toMatch(/prefers-reduced-motion:\s*reduce[\s\S]*\.profile-image-preview__close[\s\S]*transition:\s*none/);
     expect(navigationCss).not.toMatch(/@keyframes\s+profile-image-preview-in/);
   });
 });
