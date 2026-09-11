@@ -72,7 +72,7 @@ The header profile image opens a labelled modal preview with a close button, Esc
 
 The Research and Experience headings, summaries, and detail controls each share one page-introduction surface. The descriptive H1 and summary remain available when a collection is empty, while its detail control is omitted because there is no content to switch.
 
-The visible `Detail` text sits beside an `Overview` and `Technical` button group with a context-specific accessible name. Each button exposes the selected depth with `aria-pressed`. A concise visually hidden polite live region announces depth changes without adding explanatory copy to the layout or repeating every project or role.
+The visible `Detail` text sits beside an `Overview` and `Technical` button group with a context-specific accessible name. Each button exposes the selected depth with `aria-pressed` and keeps a minimum 44 by 44 CSS-pixel target for every pointer capability. A concise visually hidden polite live region announces depth changes without adding explanatory copy to the layout or repeating every project or role.
 
 Each expandable evidence row is a native button with `aria-expanded` and `aria-controls`; its panel is a labelled region and is `aria-hidden` while collapsed. Research keeps one row open per project, and Experience keeps one row open per role. Escape closes the focused row without moving focus. Research SVGs provide concise diagram labels. Organization logos remain decorative when the adjacent organization name supplies the same identity in text.
 

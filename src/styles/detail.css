@@ -70,8 +70,8 @@
 }
 
 .detail-mode-switch__button {
-  min-width: 0;
-  min-height: 34px;
+  min-width: 44px;
+  min-height: 44px;
   padding: 0 var(--space-3);
   border: 0;
   border-radius: var(--radius-pill);
@@ -313,12 +313,6 @@
 
   .detail-section__trigger:not(.detail-section__trigger--static):hover {
     background: var(--color-control-surface-soft);
-  }
-}
-
-@media (pointer: coarse) {
-  .detail-mode-switch__button {
-    min-height: 44px;
   }
 }
 
