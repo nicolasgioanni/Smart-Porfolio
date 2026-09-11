@@ -94,8 +94,8 @@ const expectedHeaders: Record<PortfolioSheetName, readonly string[]> = {
   research: [
     "id", "title", "home_title", "role", "organization", "organization_logo", "organization_logo_alt",
     "location", "start_date", "end_date", "home_summary", "profile_summary", "profile_byline", "profile_labs",
-    "detail_summary", "impact", "bullets", "skills", "links", "pending_links", "image", "featured",
-    "show_on_home", "home_order", "detail_order"
+    "detail_summary", "impact", "bullets", "skills", "links", "pending_links", "graphical_abstract",
+    "graphical_abstract_alt", "video", "featured", "show_on_home", "home_order", "detail_order"
   ],
   projects: [
     "id", "title", "subtitle", "home_summary", "home_skills", "home_skill_1_summary", "home_skill_1_details",
@@ -126,6 +126,27 @@ const expectedHeaders: Record<PortfolioSheetName, readonly string[]> = {
   resume: ["section", "key", "value", "order"],
   site_settings: ["key", "value"]
 };
+
+const legacyResearchHeaders = [
+  "id", "title", "home_title", "role", "organization", "organization_logo", "organization_logo_alt",
+  "location", "start_date", "end_date", "home_summary", "profile_summary", "profile_byline", "profile_labs",
+  "detail_summary", "impact", "bullets", "skills", "links", "pending_links", "image", "featured",
+  "show_on_home", "home_order", "detail_order"
+] as const;
+
+function acceptedHeaderSets(sheetName: PortfolioSheetName): readonly (readonly string[])[] {
+  return sheetName === "research"
+    ? [expectedHeaders.research, legacyResearchHeaders]
+    : [expectedHeaders[sheetName]];
+}
+
+function matchesExactHeaderSet(headers: readonly string[], expected: readonly string[]): boolean {
+  return (
+    headers.length === expected.length &&
+    new Set(headers).size === headers.length &&
+    expected.every((header) => headers.includes(header))
+  );
+}
 
 const requiredKeyRows: Partial<Record<PortfolioWorkbookSheetName, readonly string[]>> = {
   profile: ["full_name", "headline", "location", "email", "short_bio"],
@@ -176,19 +197,13 @@ export function validatePortfolioWorkbookPayload(bytes: Uint8Array, contentType:
 
 function validateHeaders(records: string[][], sheetName: PortfolioSheetName): void {
   const actualHeaders = records[0];
-  const requiredHeaders = expectedHeaders[sheetName];
 
   if (!actualHeaders) {
     throw new Error(`The ${sheetName} tab is empty or missing its header row`);
   }
 
   const normalizedHeaders = actualHeaders.map((header) => header.trim());
-  const hasExactHeaderSet =
-    normalizedHeaders.length === requiredHeaders.length &&
-    new Set(normalizedHeaders).size === normalizedHeaders.length &&
-    requiredHeaders.every((header) => normalizedHeaders.includes(header));
-
-  if (!hasExactHeaderSet) {
+  if (!acceptedHeaderSets(sheetName).some((headers) => matchesExactHeaderSet(normalizedHeaders, headers))) {
     throw new Error(`The ${sheetName} tab has an invalid header schema`);
   }
 }
@@ -307,7 +322,11 @@ function worksheetToRows(worksheet: Worksheet, sheetName: PortfolioWorkbookSheet
       const cell = worksheet.getCell(rowIndex, columnIndex);
       const text = normalizeDisplayedCellText(cell, `${sheetName}!${cell.address}`);
 
-      if (rowIndex > 1 && columnIndex > expectedHeaders[sheetName].length && text.trim()) {
+      if (
+        rowIndex > 1 &&
+        columnIndex > Math.max(...acceptedHeaderSets(sheetName).map((headers) => headers.length)) &&
+        text.trim()
+      ) {
         throw new Error(`The ${sheetName} tab has a malformed row structure`);
       }
 

@@ -19,6 +19,8 @@ const rootFaviconPath = path.join(projectRoot, "public", "favicon.ico");
 const expectedProfileFaviconSha256 = "24e6115767710a44e7a7d27947d1fb0c822b3a9b6c8892475c7d089c762054a1";
 const expectedRootFaviconSha256 = "e7a8e31c3c178392b8bc87f5b27c41520f507b71ea9212bf2b33e14e3d9fefc0";
 const expectedRootFaviconSizes = [16, 32, 48, 64, 128, 256];
+const supportedResearchAbstractExtensions = new Set([".avif", ".jpg", ".jpeg", ".png", ".webp"]);
+const supportedResearchVideoExtensions = new Set([".mp4", ".webm"]);
 const privateResumeAssets = [
   path.join(projectRoot, "public", "resume", "Nicolas-Gioanni-Resume.pdf"),
   path.join(projectRoot, "public", "resume", "demo-resume.pdf"),
@@ -85,6 +87,34 @@ describe("demo asset references", () => {
 
     for (const privateResumeAsset of privateResumeAssets) {
       expect(existsSync(privateResumeAsset), `${privateResumeAsset} should not be published`).toBe(false);
+    }
+  });
+
+  it("keeps configured research media inside its public asset boundary", () => {
+    const generated = JSON.parse(readFileSync(generatedContentPath, "utf8"));
+    const researchMediaDirectory = path.resolve(projectRoot, "public", "images", "research");
+
+    for (const item of generated.research ?? []) {
+      const configuredMedia = [
+        ["graphicalAbstract", item.graphicalAbstract, supportedResearchAbstractExtensions],
+        ["video", item.video, supportedResearchVideoExtensions]
+      ];
+
+      for (const [field, assetPath, extensions] of configuredMedia) {
+        if (!assetPath) continue;
+
+        const publicPath = path.resolve(projectRoot, "public", assetPath.slice(1));
+        expect(
+          publicPath.startsWith(`${researchMediaDirectory}${path.sep}`),
+          `${field} for ${item.id} should stay under public/images/research`
+        ).toBe(true);
+        expect(
+          extensions.has(path.extname(publicPath).toLowerCase()),
+          `${field} for ${item.id} should use a supported extension`
+        ).toBe(true);
+        expect(existsSync(publicPath), `${assetPath} should exist under public`).toBe(true);
+        expect(statSync(publicPath).size, `${assetPath} should not be empty`).toBeGreaterThan(0);
+      }
     }
   });
 

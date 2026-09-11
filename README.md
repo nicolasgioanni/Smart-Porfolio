@@ -80,7 +80,7 @@ The remote workbook has exactly nine visible sheets:
 | --- | --- |
 | `profile` | Identity, biography, role, image, and profile references. |
 | `links` | Header, Home, social, email, and repository destinations. |
-| `research` | Research summaries, evidence, skills, impact, and resources. |
+| `research` | Research summaries, evidence, skills, impact, resources, local graphical abstracts, and optional self-hosted video. |
 | `projects` | Project summaries, problem and solution context, skills, and links. |
 | `experience` | Work, research, teaching, and leadership history. |
 | `recommendations` | Recommendation text, attribution, source, and display order. |

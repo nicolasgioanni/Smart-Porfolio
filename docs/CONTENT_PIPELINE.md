@@ -123,6 +123,8 @@ Important normalization rules include:
 - Other date-like content fields remain strings. Their recommended formats are UI conventions, not generator-level calendar validation.
 - Project Home skills accept at most three ordered entries and require each optional summary/details pair together.
 - Skill popup copy requires `proficiency`, `summary`, and `where_used` together.
+- Research graphical abstracts and videos must use allowlisted, root-relative paths under `/images/research/`. Validation rejects traversal, backslashes, and null bytes even when repeated percent decoding reveals them. Abstract paths require meaningful alt text, and a video requires an abstract that can serve as its poster.
+- Until the public XLSX is migrated, remote generation also accepts only the exact legacy Research header set with `image` in place of all three media columns. Legacy image values are not converted into graphical abstracts; mixed schemas fail closed. Remove that compatibility after the anonymous public workbook uses the canonical headers and remote-generation CI verifies it.
 - Recommendation source, LinkedIn, and inline quote destinations require HTTPS.
 - Profile role rotation requires all three role fields together and at least one non-empty pipe-delimited prefix.
 
@@ -172,7 +174,7 @@ The implementation also excludes fields confirmed to have no current consumer ef
 | `siteSettings` | `maxHomeExperienceItems` |
 | Each `education` item | `homeSummary`, `detailSummary`, `detailOrder` |
 
-Every other normalized field is included, even if a current component does not consume it. Row order also remains part of the digest because arrays are not re-sorted for hashing. The precise description is a hash of the canonical normalized content subset, not a byte hash of the workbook.
+Every other normalized field is included, even if a current component does not consume it. This includes research graphical-abstract paths, alternative text, and video paths. Row order also remains part of the digest because arrays are not re-sorted for hashing. The precise description is a hash of the canonical normalized content subset, not a byte hash of the workbook.
 
 Workbook file metadata, worksheet order, title capitalization, header order, source metadata, download time, line-ending representation, and `generatedAt` do not affect the hash after normalization. A change that normalizes to the same included JSON has the same hash.
 

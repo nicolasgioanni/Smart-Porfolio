@@ -9,17 +9,66 @@
   ResearchItem
 } from "@/content/types";
 
+function decodePathToFixedPoint(value: string): string | undefined {
+  let decodedPath = value;
+
+  try {
+    while (true) {
+      const nextPath = decodeURIComponent(decodedPath);
+      if (nextPath === decodedPath) return decodedPath;
+      decodedPath = nextPath;
+    }
+  } catch {
+    return undefined;
+  }
+}
+
 function isSafeRootRelativePath(value: string): boolean {
   if (!value.startsWith("/") || value.startsWith("//") || value.includes("\\") || value.includes("\0")) {
     return false;
   }
 
-  try {
-    const decodedPath = decodeURIComponent(value.split(/[?#]/)[0] ?? value);
-    return !decodedPath.split("/").some((segment) => segment === "..");
-  } catch {
+  const decodedPath = decodePathToFixedPoint(value.split(/[?#]/)[0] ?? value);
+  return Boolean(
+    decodedPath &&
+      !decodedPath.includes("\\") &&
+      !decodedPath.includes("\0") &&
+      !decodedPath.split("/").some((segment) => segment === "..")
+  );
+}
+
+const supportedResearchAbstractExtensions = [".avif", ".jpg", ".jpeg", ".png", ".webp"] as const;
+const supportedResearchVideoExtensions = [".mp4", ".webm"] as const;
+
+function isSupportedResearchMediaPath(value: string, extensions: readonly string[]): boolean {
+  const trimmedValue = value.trim();
+
+  if (
+    !trimmedValue ||
+    trimmedValue !== value ||
+    /\s/.test(trimmedValue) ||
+    trimmedValue.includes("?") ||
+    trimmedValue.includes("#") ||
+    !isSafeRootRelativePath(trimmedValue)
+  ) {
     return false;
   }
+
+  const decodedPath = decodePathToFixedPoint(trimmedValue);
+  if (!decodedPath) return false;
+
+  const lowerPath = decodedPath.toLowerCase();
+  const researchMediaPrefix = "/images/research/";
+
+  if (/[\\\0\s?#]/.test(decodedPath)) return false;
+
+  return (
+    decodedPath.startsWith(researchMediaPrefix) &&
+    extensions.some(
+      (extension) =>
+        lowerPath.endsWith(extension) && decodedPath.length > researchMediaPrefix.length + extension.length
+    )
+  );
 }
 
 export function isSupportedUrl(value: string, options: { allowMailto?: boolean; allowRootRelative?: boolean } = {}): boolean {
@@ -161,8 +210,26 @@ function validateResearch(items: ResearchItem[], errors: string[]): void {
       errors.push(`research.${item.id} is missing title`);
     }
 
-    if (item.image && !isSupportedUrl(item.image)) {
-      errors.push(`research.${item.id} has an invalid image URL: ${item.image}`);
+    const hasGraphicalAbstract = Boolean(item.graphicalAbstract);
+    const hasGraphicalAbstractAlt = Boolean(item.graphicalAbstractAlt?.trim());
+
+    if (hasGraphicalAbstract !== hasGraphicalAbstractAlt) {
+      errors.push(`research.${item.id} must provide graphicalAbstract and graphicalAbstractAlt together`);
+    }
+
+    if (
+      item.graphicalAbstract &&
+      !isSupportedResearchMediaPath(item.graphicalAbstract, supportedResearchAbstractExtensions)
+    ) {
+      errors.push(`research.${item.id} has an invalid graphicalAbstract path: ${item.graphicalAbstract}`);
+    }
+
+    if (item.video && !isSupportedResearchMediaPath(item.video, supportedResearchVideoExtensions)) {
+      errors.push(`research.${item.id} has an invalid video path: ${item.video}`);
+    }
+
+    if (item.video && !hasGraphicalAbstract) {
+      errors.push(`research.${item.id} requires graphicalAbstract when video is provided`);
     }
 
     if (item.organizationLogo && !isSupportedUrl(item.organizationLogo, { allowMailto: false })) {

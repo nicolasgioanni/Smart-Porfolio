@@ -101,7 +101,9 @@ function createSheets(overrides: Partial<RawPortfolioSheets> = {}): RawPortfolio
         skills: "Security|Research",
         links: "Paper=https://example.com/paper",
         pending_links: "Manuscript",
-        image: "/images/research/a.png",
+        graphical_abstract: "/images/research/a.png",
+        graphical_abstract_alt: "Workflow from microscopy input to reviewed cell measurements.",
+        video: "/images/research/a.webm",
         featured: "true",
         show_on_home: "true",
         home_order: "2",
@@ -122,7 +124,9 @@ function createSheets(overrides: Partial<RawPortfolioSheets> = {}): RawPortfolio
         skills: "Writing",
         links: "https://example.com/simple",
         pending_links: "",
-        image: "",
+        graphical_abstract: "",
+        graphical_abstract_alt: "",
+        video: "",
         featured: "false",
         show_on_home: "true",
         home_order: "1",
@@ -351,6 +355,14 @@ describe("portfolio normalization", () => {
     expect(content.research[0]?.profileByline).toBeUndefined();
     expect(content.research[0]?.profileLabs).toEqual([]);
     expect(content.research[0]?.pendingLinks).toEqual(["Manuscript"]);
+    expect(content.research[0]).toMatchObject({
+      graphicalAbstract: "/images/research/a.png",
+      graphicalAbstractAlt: "Workflow from microscopy input to reviewed cell measurements.",
+      video: "/images/research/a.webm"
+    });
+    expect(content.research[1]?.graphicalAbstract).toBeUndefined();
+    expect(content.research[1]?.graphicalAbstractAlt).toBeUndefined();
+    expect(content.research[1]?.video).toBeUndefined();
     expect(content.projects[0]?.stack).toEqual(["TypeScript", "Next.js"]);
     expect(content.projects[0]?.homeSkills).toEqual([]);
     expect(content.experience[0]?.organizationLogo).toBe("/images/experience/company.svg");
@@ -706,6 +718,121 @@ describe("portfolio normalization", () => {
         metadata
       )
     ).toThrow(/institutionLogo URL/);
+  });
+
+  it("accepts paired, local research media and rejects unsafe or incomplete combinations", () => {
+    const baseResearchRow = createSheets().research[0]!;
+    const mixedCaseMedia = normalizePortfolioContent(
+      createSheets({
+        research: [
+          {
+            ...baseResearchRow,
+            graphical_abstract: "/images/research/workflow.PNG",
+            graphical_abstract_alt: "A labelled research workflow.",
+            video: "/images/research/workflow.WEBM"
+          }
+        ]
+      }),
+      metadata
+    );
+
+    expect(mixedCaseMedia.research[0]).toMatchObject({
+      graphicalAbstract: "/images/research/workflow.PNG",
+      graphicalAbstractAlt: "A labelled research workflow.",
+      video: "/images/research/workflow.WEBM"
+    });
+
+    const invalidScenarios: Array<{ overrides: Record<string, string>; error: RegExp }> = [
+      {
+        overrides: { graphical_abstract_alt: "" },
+        error: /must provide graphicalAbstract and graphicalAbstractAlt together/
+      },
+      {
+        overrides: { graphical_abstract: "", video: "" },
+        error: /must provide graphicalAbstract and graphicalAbstractAlt together/
+      },
+      {
+        overrides: { graphical_abstract: "/images/projects/workflow.png" },
+        error: /invalid graphicalAbstract path/
+      },
+      {
+        overrides: { graphical_abstract: "/images/research/%2e%2e/workflow.png" },
+        error: /invalid graphicalAbstract path/
+      },
+      {
+        overrides: { graphical_abstract: "/images/research/%252e%252e%252foutside.png" },
+        error: /invalid graphicalAbstract path/
+      },
+      {
+        overrides: { graphical_abstract: "/images/research/workflow.svg" },
+        error: /invalid graphicalAbstract path/
+      },
+      {
+        overrides: { graphical_abstract: "https://example.test/workflow.png" },
+        error: /invalid graphicalAbstract path/
+      },
+      {
+        overrides: { graphical_abstract: "/images/research/workflow.png?revision=1" },
+        error: /invalid graphicalAbstract path/
+      },
+      {
+        overrides: { graphical_abstract: "/images/research/workflow.png#figure" },
+        error: /invalid graphicalAbstract path/
+      },
+      {
+        overrides: { graphical_abstract: "/images/research/workflow%5cpreview.png" },
+        error: /invalid graphicalAbstract path/
+      },
+      {
+        overrides: { graphical_abstract: "/images/research/%255cfoo.png" },
+        error: /invalid graphicalAbstract path/
+      },
+      {
+        overrides: { graphical_abstract: "/images/research/%2500a.png" },
+        error: /invalid graphicalAbstract path/
+      },
+      {
+        overrides: { graphical_abstract: "/images/research/%00a.png" },
+        error: /invalid graphicalAbstract path/
+      },
+      {
+        overrides: { video: "/images/research/workflow.mov" },
+        error: /invalid video path/
+      },
+      {
+        overrides: { video: "https://example.test/workflow.webm" },
+        error: /invalid video path/
+      },
+      {
+        overrides: { graphical_abstract: "", graphical_abstract_alt: "" },
+        error: /requires graphicalAbstract when video is provided/
+      }
+    ];
+
+    for (const scenario of invalidScenarios) {
+      expect(() =>
+        normalizePortfolioContent(
+          createSheets({ research: [{ ...baseResearchRow, ...scenario.overrides }] }),
+          metadata
+        )
+      ).toThrow(scenario.error);
+    }
+  });
+
+  it("normalizes legacy research image rows without inventing staged media", () => {
+    const legacyResearchRow: Record<string, string> = {
+      ...(createSheets().research[0] as Record<string, string>),
+      image: "/images/research/legacy-workflow.png"
+    };
+    delete legacyResearchRow.graphical_abstract;
+    delete legacyResearchRow.graphical_abstract_alt;
+    delete legacyResearchRow.video;
+
+    const content = normalizePortfolioContent(createSheets({ research: [legacyResearchRow] }), metadata);
+
+    expect(content.research[0]?.graphicalAbstract).toBeUndefined();
+    expect(content.research[0]?.graphicalAbstractAlt).toBeUndefined();
+    expect(content.research[0]?.video).toBeUndefined();
   });
 
   it("requires complete popup copy when a skill provides any popup field", () => {
