@@ -53,6 +53,12 @@ describe("package and CI deployment automation", () => {
     expect(packageJson.scripts["test:e2e:recommendations"]).toBe(
       "playwright test recommendations.spec.ts --project=chromium"
     );
+    expect(packageJson.scripts["test:e2e:experience"]).toBe(
+      "playwright test experience.spec.ts --project=chromium"
+    );
+    expect(packageJson.scripts["test:e2e:research"]).toBe(
+      "playwright test research.spec.ts --project=chromium"
+    );
   });
 
   it("keeps a stable verify job across branch, daily, and forced-manual triggers", async () => {
@@ -65,9 +71,9 @@ describe("package and CI deployment automation", () => {
       /workflow_dispatch:\s+inputs:\s+force_deploy:[\s\S]*?type: boolean\s+default: true/
     );
     expect(workflow).toMatch(/jobs:\s+verify:\s+name: verify/);
-    expect(workflow.match(/node-version: 22/g)).toHaveLength(3);
+    expect(workflow.match(/node-version: 22/g)).toHaveLength(2);
     expect(workflow.match(/actions\/checkout@v6/g)).toHaveLength(3);
-    expect(workflow.match(/actions\/setup-node@v6/g)).toHaveLength(3);
+    expect(workflow.match(/actions\/setup-node@v6/g)).toHaveLength(2);
     expect(workflow.match(/actions\/upload-artifact@v7/g)).toHaveLength(1);
     expect(workflow.match(/actions\/download-artifact@v8/g)).toHaveLength(1);
     expect(workflow).not.toMatch(/actions\/(?:checkout|setup-node|upload-artifact|download-artifact)@v4/);
@@ -109,6 +115,8 @@ describe("package and CI deployment automation", () => {
     expect(verifyJob).toContain("run: npm run test:e2e:navigation");
     expect(verifyJob).toContain("run: npm run test:e2e:footer");
     expect(verifyJob).toContain("run: npm run test:e2e:recommendations");
+    expect(verifyJob).toContain("run: npm run test:e2e:experience");
+    expect(verifyJob).toContain("run: npm run test:e2e:research");
     expect(verifyJob).toContain("run: npm run test");
     expect(pullRequestBuild).toContain("run: npm run build:generated");
     expect(pullRequestGeneration).not.toContain("secrets.");
@@ -218,7 +226,9 @@ describe("package and CI deployment automation", () => {
       "Install Chromium for browser regressions",
       "Browser navigation regression tests",
       "Browser footer regression tests",
-      "Browser recommendation regression tests"
+      "Browser recommendation regression tests",
+      "Browser experience regression tests",
+      "Browser research regression tests"
     ]) {
       expect(verifyJob).toMatch(
         new RegExp(`- name: ${stepName}\\s+if: steps\\.decision\\.outputs\\.should_verify == 'true'`)
@@ -279,7 +289,7 @@ describe("package and CI deployment automation", () => {
     );
   });
 
-  it("allows repository writes only for the isolated heartbeat branch", async () => {
+  it("allows repository writes only for the guarded existing develop heartbeat", async () => {
     const workflow = await readFile(workflowPath, "utf8");
     const deployJob = section(workflow, "  deploy:", "\n  heartbeat:");
     const heartbeatJob = section(workflow, "  heartbeat:");
@@ -290,12 +300,41 @@ describe("package and CI deployment automation", () => {
     );
     expect(deployJob).toMatch(/permissions:\s+contents: read/);
     expect(heartbeatJob).toContain("if: github.event_name == 'schedule'");
-    expect(heartbeatJob).toContain('heartbeat_branch="automation-heartbeat"');
+    expect(heartbeatJob).toMatch(
+      /concurrency:\s+group: develop-schedule-heartbeat\s+cancel-in-progress: false/
+    );
+    expect(heartbeatJob).toContain("ref: develop");
     expect(heartbeatJob).toContain("refs/remotes/origin/main");
-    expect(heartbeatJob).toContain("refs/remotes/origin/$heartbeat_branch");
+    expect(heartbeatJob).toContain("refs/remotes/origin/develop");
+    expect(heartbeatJob).toContain("origin/develop must already exist");
     expect(heartbeatJob).toContain("30 * 24 * 60 * 60");
     expect(heartbeatJob).toContain('heartbeat_path=".github/schedule-heartbeat"');
-    expect(heartbeatJob).toContain('git push origin "HEAD:refs/heads/$heartbeat_branch"');
+    expect(heartbeatJob).toContain("git merge --ff-only refs/remotes/origin/develop");
+    expect(heartbeatJob).toContain("git switch --track --create develop refs/remotes/origin/develop");
+    expect(heartbeatJob).toContain('git merge-base --is-ancestor "$develop_sha" HEAD');
+    expect(heartbeatJob).toContain('remote_develop_sha="$(git ls-remote origin refs/heads/develop | awk \'{print $1}\')"');
+    expect(heartbeatJob).toContain('git push origin "HEAD:refs/heads/develop"');
+    expect(heartbeatJob).not.toContain("automation-heartbeat");
+    expect(heartbeatJob).not.toContain("git push --force");
+    const developRefCheck = heartbeatJob.indexOf(
+      "git ls-remote --exit-code --heads origin develop"
+    );
+    const developBaseline = heartbeatJob.indexOf(
+      'develop_sha="$(git rev-parse refs/remotes/origin/develop)"'
+    );
+    const fastForwardCheck = heartbeatJob.indexOf(
+      'git merge-base --is-ancestor "$develop_sha" HEAD'
+    );
+    const remoteShaReread = heartbeatJob.indexOf(
+      'remote_develop_sha="$(git ls-remote origin refs/heads/develop | awk \'{print $1}\')"'
+    );
+    const nonForcePush = heartbeatJob.indexOf('git push origin "HEAD:refs/heads/develop"');
+
+    expect(nonForcePush).toBeGreaterThan(-1);
+    for (const guard of [developRefCheck, developBaseline, fastForwardCheck, remoteShaReread]) {
+      expect(guard).toBeGreaterThan(-1);
+      expect(guard).toBeLessThan(nonForcePush);
+    }
     expect(workflow).not.toContain("git push origin HEAD:main");
     expect(workflow).not.toContain("git add -- \"$snapshot\"");
     expect(workflow).not.toContain("sync published Google Sheet");

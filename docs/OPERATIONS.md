@@ -193,9 +193,9 @@ Repository checks cannot prove these controls. The live WAF state is unverified 
 The schedule starts two independent jobs:
 
 - `verify`, which performs the content comparison and deploys only when required.
-- `automation-heartbeat`, which checks activity and may refresh its isolated branch.
+- `develop-schedule-heartbeat`, which checks activity and may refresh the existing `develop` branch.
 
-The heartbeat does not depend on the verify result and does not deploy. It writes only after 30 days without newer activity on `main` or `automation-heartbeat`. Its `contents: write` permission is intentionally isolated from the verification and deployment jobs.
+The heartbeat does not depend on the verify result and does not deploy. It writes only after 30 days without newer activity on `main` or `develop`, and only after confirming remote `develop` already exists. It accepts only the `.github/schedule-heartbeat` path, rechecks the remote `develop` SHA before a normal non-force push, and fails rather than overwriting a concurrent update. Its `contents: write` permission is intentionally isolated from the verification and deployment jobs. The checked-in workflow is coded and guarded to update only `develop`; that source-level constraint does not make other refs impossible for every possible token or future workflow change. Configure GitHub branch or ruleset protection for `main` and `develop` as defense in depth, and verify its live configuration separately.
 
 An exact-candidate check is a successful no-op, not a skipped or failed schedule. It requires matching production content and commit metadata. Investigate a missing scheduled run through GitHub Actions state rather than assuming the workbook or source has not changed.
 
