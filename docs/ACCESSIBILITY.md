@@ -111,7 +111,7 @@ Do not publish filename-only alt text. If an image conveys no information beyond
 
 ## Loading states
 
-Skeleton primitives are `aria-hidden`. Page skeletons expose a labelled region with `aria-busy="true"`; they do not contain fake content or interactive controls. Static solid placeholders reserve geometry without decorative animation. Skeletons are route-transition polish and never replace available static content.
+Skeleton primitives are `aria-hidden`. Page skeletons expose one labelled region with `aria-busy="true"`; body placeholders do not contain fake prose or interactive controls. `RouteHeaderSkeleton` places the exact canonical header strings inside an `aria-hidden` ancestor only to let the browser derive responsive line geometry. That ink is transparent, non-selectable, and noninteractive, so it does not add headings, readable copy, focus targets, or announcements to the accessibility tree. Static solid placeholders reserve geometry without decorative animation. Skeletons are route-transition polish and never replace available static content.
 
 See [Skeleton loading guidelines](SKELETON_LOADING_GUIDELINES.md) for the complete contract.
 
