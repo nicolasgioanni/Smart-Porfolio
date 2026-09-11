@@ -35,7 +35,9 @@ describe("skeleton style contracts", () => {
     expect(skeletonStyles).toMatch(/\.contact-skeleton\s*\{[^}]*width: min\(100%, 780px\)[^}]*min-height: 34rem/s);
     expect(skeletonStyles).toMatch(/\.contact-skeleton\s*\{[^}]*gap: var\(--space-5\)/s);
     expect(skeletonStyles).toMatch(/\.resume-skeleton\s*\{[^}]*grid-template-columns: minmax\(0, 1fr\) minmax\(15rem, auto\)/s);
-    expect(skeletonStyles).toMatch(/\.legal-skeleton__body\s*\{[^}]*max-width: 74ch/s);
+    expect(skeletonStyles).toMatch(
+      /\.legal-skeleton__body\s*\{[^}]*width: 100%;[^}]*max-width: 74ch;[^}]*margin: var\(--space-8\) auto 0;/s
+    );
     expect(skeletonStyles).toMatch(
       /@media \(max-width: 980px\)[\s\S]*?\.home-skeleton__hero\s*\{[^}]*grid-template-areas:\s*"profile"\s*"introduction"\s*"details"[^}]*grid-template-columns: minmax\(0, 1fr\)/s
     );
