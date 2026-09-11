@@ -323,3 +323,40 @@ export function getResearchResourceLabel(itemId: string, label: string): string 
 
   return label;
 }
+
+function getResearchResourceLabelKey(label: string): string {
+  return label.trim().toLowerCase();
+}
+
+/**
+ * Resolves the resource controls that a Research card can visibly render.
+ *
+ * Published links retain their generated ordering, while pending resources
+ * use their display label and are omitted when that label is already
+ * represented by a published link or an earlier pending resource. Keep this
+ * shared between the rendered card and its server skeleton so their resource
+ * footprints cannot drift.
+ */
+export function getResearchVisibleResources(item: ResearchItem): {
+  links: Array<ResearchItem["links"][number]>;
+  pendingLinks: string[];
+} {
+  const links = item.links.map((link) => ({
+    ...link,
+    label: getResearchResourceLabel(item.id, link.label)
+  }));
+  const publishedLabels = new Set(links.map((link) => getResearchResourceLabelKey(link.label)));
+  const pendingLabels = new Set<string>();
+  const pendingLinks = (item.pendingLinks ?? [])
+    .map((label) => getResearchResourceLabel(item.id, label))
+    .filter((label) => {
+      const key = getResearchResourceLabelKey(label);
+
+      if (publishedLabels.has(key) || pendingLabels.has(key)) return false;
+
+      pendingLabels.add(key);
+      return true;
+    });
+
+  return { links, pendingLinks };
+}

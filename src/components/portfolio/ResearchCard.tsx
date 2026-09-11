@@ -11,7 +11,7 @@ import {
   getResearchDisplayTitle,
   getResearchFormalTitle,
   getResearchModeContent,
-  getResearchResourceLabel
+  getResearchVisibleResources
 } from "@/lib/content/researchNarratives";
 
 type ResearchCardProps = {
@@ -33,14 +33,7 @@ export function ResearchCard({ item, mode, onToggle, openSectionId, order }: Res
   const modeContent = getResearchModeContent(item, mode);
   const displayTitle = getResearchDisplayTitle(item);
   const formalTitle = getResearchFormalTitle(item);
-  const displayLinks = item.links.map((link) => ({
-    ...link,
-    label: getResearchResourceLabel(item.id, link.label)
-  }));
-  const publishedLabels = new Set(displayLinks.map((link) => link.label.trim().toLowerCase()));
-  const pendingLinks = (item.pendingLinks ?? [])
-    .map((label) => getResearchResourceLabel(item.id, label))
-    .filter((label) => !publishedLabels.has(label.trim().toLowerCase()));
+  const { links: displayLinks, pendingLinks } = getResearchVisibleResources(item);
 
   return (
     <GlassSurface
@@ -89,7 +82,7 @@ export function ResearchCard({ item, mode, onToggle, openSectionId, order }: Res
           />
         </div>
 
-        {item.links.length > 0 || pendingLinks.length > 0 ? (
+        {displayLinks.length > 0 || pendingLinks.length > 0 ? (
           <div aria-label={`${displayTitle} resources`} className="research-project__resources" role="group">
             {displayLinks.map((link) => (
               <GlassIconLink

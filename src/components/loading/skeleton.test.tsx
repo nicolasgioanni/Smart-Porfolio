@@ -122,6 +122,11 @@ describe("skeleton components", () => {
     expect(container.querySelectorAll(".research-skeleton__video-actions > .skeleton-block")).toHaveLength(3);
     expect(container.querySelectorAll(".research-skeleton__media-stack")).toHaveLength(1);
     expect(container.querySelectorAll(".research-skeleton__abstract-frame")).toHaveLength(3);
+    expect(
+      Array.from(container.querySelectorAll(".research-skeleton__resources")).map(
+        (resources) => resources.querySelectorAll(":scope > .skeleton-block").length
+      )
+    ).toEqual([4, 3, 1]);
     expect(container.querySelectorAll("[role=dialog]")).toHaveLength(0);
   });
 
@@ -163,7 +168,6 @@ describe("skeleton components", () => {
       [59, 102, 100, 44, 54]
     ]);
     expect(projectSkeletonProfiles.map((profile) => profile.actionWidths)).toEqual([[112, 96], [112], [112]]);
-    expect(researchSkeletonProfiles.map((profile) => profile.resourceWidths.length)).toEqual([4, 3, 1]);
     expect(researchSkeletonProfiles.map((profile) => profile.formalTitle)).toEqual(
       selectResearchDetailContent(getPortfolioContent()).map((item) => Boolean(getResearchFormalTitle(item)))
     );

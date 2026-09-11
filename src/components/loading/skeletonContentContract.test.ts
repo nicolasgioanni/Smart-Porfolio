@@ -17,11 +17,20 @@ import {
 describe("skeleton source contracts", () => {
   const content = getPortfolioContent();
 
-  it("keeps canonical route header copy exhaustive and resolves the validated Experience summary override", () => {
+  it("keeps canonical route header copy exhaustive and resolves the validated Experience summary override or fallback", () => {
     expect(Object.keys(routeHeaderContent)).toEqual(siteRoutePaths);
     expect(routeHeaderContent[siteRoutes.home]).toBeNull();
-    expect(resolveRouteHeaderContent(siteRoutes.experience, content)?.description).toBe(content.profile.experienceSummary);
-    expect(resolveRouteHeaderContent(siteRoutes.experience)?.description).toBe(routeHeaderContent[siteRoutes.experience]?.description);
+    const experienceFallback = routeHeaderContent[siteRoutes.experience];
+
+    expect(experienceFallback).not.toBeNull();
+    expect(resolveRouteHeaderContent(siteRoutes.experience, content)?.description).toBe(
+      content.profile.experienceSummary ?? experienceFallback?.description
+    );
+    expect(resolveRouteHeaderContent(siteRoutes.experience)?.description).toBe(experienceFallback?.description);
+    expect(resolveRouteHeaderContent(siteRoutes.experience, { profile: { experienceSummary: undefined } })?.description).toBe(
+      experienceFallback?.description
+    );
+    expect(resolveRouteHeaderContent(siteRoutes.experience, { profile: { experienceSummary: "" } })?.description).toBe("");
     expect(
       resolveRouteHeaderContent(siteRoutes.experience, {
         profile: { experienceSummary: "A different valid summary from generated content." }
@@ -78,7 +87,7 @@ describe("skeleton source contracts", () => {
     expect(organizationCounts).toEqual([1, 2, 2]);
   });
 
-  it("matches research media, identity, overview, and resource footprints without loading dialog content", () => {
+  it("matches research media, identity, overview, and canonical visible resource footprints without loading dialog content", () => {
     const research = selectResearchDetailContent(content);
 
     expect(research.map((item) => item.id)).toEqual([
@@ -92,10 +101,10 @@ describe("skeleton source contracts", () => {
       research.map((item) => Boolean(getResearchFormalTitle(item)))
     );
     expect(researchSkeletonProfiles.map((profile) => profile.resourceWidths.length)).toEqual([4, 3, 1]);
+    expect(research.map((item) => item.links.length + (item.pendingLinks?.length ?? 0))).toEqual([4, 3, 1]);
     expect(researchSkeletonProfiles.every((profile) => profile.organizationLogo && profile.impact)).toBe(true);
     expect(researchSkeletonProfiles.map((profile) => profile.overviewRows)).toEqual(
       research.map((item) => getResearchModeContent(item, "overview").sections.length)
     );
-    expect(research.map((item) => item.links.length + (item.pendingLinks?.length ?? 0))).toEqual([4, 3, 1]);
   });
 });

@@ -94,7 +94,9 @@ export function resolveRouteHeaderContent(
   source?: RouteHeaderContentSource
 ): RouteHeaderContent | null {
   const fallback = routeHeaderContent[pathname];
-  if (!fallback || pathname !== siteRoutes.experience || !source?.profile.experienceSummary) return fallback;
+  if (!fallback || pathname !== siteRoutes.experience) return fallback;
 
-  return { ...fallback, description: source.profile.experienceSummary };
+  const description = source?.profile.experienceSummary ?? fallback.description;
+
+  return description === fallback.description ? fallback : { ...fallback, description };
 }

@@ -3,6 +3,10 @@ import { RouteHeaderSkeleton } from "@/components/loading/RouteHeaderSkeleton";
 import { SkeletonBlock } from "@/components/loading/SkeletonBlock";
 import { SkeletonText } from "@/components/loading/SkeletonText";
 import { siteRoutes } from "@/components/navigation/siteRoutes";
+import type { ResearchItem } from "@/content/types";
+import { getPortfolioContent } from "@/lib/content/getPortfolioContent";
+import { getResearchVisibleResources } from "@/lib/content/researchNarratives";
+import { selectResearchDetailContent } from "@/lib/content/selectHomeContent";
 
 type ResearchSkeletonMedia = "abstract" | "video-and-abstract";
 
@@ -19,7 +23,9 @@ export type ResearchSkeletonProfile = {
 
 /**
  * Deliberately literal display profiles in `selectResearchDetailContent` order.
- * Loading remains independent of generated content and of modal-only media.
+ * Their resource widths are trimmed or extended by the validated server
+ * content's visible resource controls; the remaining geometry is static and
+ * independent of modal-only media.
  */
 export const researchSkeletonProfiles = [
   {
@@ -53,6 +59,30 @@ export const researchSkeletonProfiles = [
     resourceWidths: [128]
   }
 ] as const satisfies readonly ResearchSkeletonProfile[];
+
+function resolveResourceWidths(profile: ResearchSkeletonProfile, resourceCount: number): readonly number[] {
+  const fallbackWidth = profile.resourceWidths.at(-1) ?? 112;
+
+  return Array.from({ length: resourceCount }, (_, index) => profile.resourceWidths[index] ?? fallbackWidth);
+}
+
+/** Resolves the data-dependent resource footprint while retaining literal card geometry. */
+function resolveResearchSkeletonProfiles(items: readonly ResearchItem[]): ResearchSkeletonProfile[] {
+  const resourcesByItemId = new Map(
+    items.map((item) => {
+      const resources = getResearchVisibleResources(item);
+      return [item.id, resources.links.length + resources.pendingLinks.length] as const;
+    })
+  );
+
+  return researchSkeletonProfiles.map((profile) => {
+    const resourceCount = resourcesByItemId.get(profile.id);
+
+    return resourceCount === undefined
+      ? profile
+      : { ...profile, resourceWidths: resolveResourceWidths(profile, resourceCount) };
+  });
+}
 
 function ResearchAbstractSkeleton({ inset = false }: { inset?: boolean }) {
   return (
@@ -128,17 +158,21 @@ function ResearchCardSkeleton({ index, profile }: { index: number; profile: Rese
             ))}
           </div>
         </div>
-        <div className="research-skeleton__resources">
-          {profile.resourceWidths.map((width, resourceIndex) => (
-            <SkeletonBlock height={44} key={resourceIndex} radius="999px" width={width} />
-          ))}
-        </div>
+        {profile.resourceWidths.length > 0 ? (
+          <div className="research-skeleton__resources">
+            {profile.resourceWidths.map((width, resourceIndex) => (
+              <SkeletonBlock height={44} key={resourceIndex} radius="999px" width={width} />
+            ))}
+          </div>
+        ) : null}
       </div>
     </article>
   );
 }
 
 export function ResearchPageSkeleton() {
+  const profiles = resolveResearchSkeletonProfiles(selectResearchDetailContent(getPortfolioContent()));
+
   return (
     <PageSkeleton pathname={siteRoutes.research}>
       <div aria-hidden="true" className="research-skeleton">
@@ -151,7 +185,7 @@ export function ResearchPageSkeleton() {
             <SkeletonBlock height={52} radius="999px" width={196} />
           </div>
         </div>
-        {researchSkeletonProfiles.map((profile, index) => <ResearchCardSkeleton index={index} key={profile.id} profile={profile} />)}
+        {profiles.map((profile, index) => <ResearchCardSkeleton index={index} key={profile.id} profile={profile} />)}
       </div>
     </PageSkeleton>
   );
