@@ -135,16 +135,15 @@
   min-width: 0;
 }
 
-.research-project__kicker-row {
+.research-project__identity {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-3);
   margin-bottom: var(--space-3);
 }
 
-.research-project__kicker,
-.research-project__role {
+.research-project__index {
+  min-width: 2.25rem;
   color: var(--detail-accent-text);
   font-size: var(--font-size-caption);
   font-weight: var(--font-weight-bold);
@@ -153,11 +152,11 @@
   text-transform: uppercase;
 }
 
-.research-project__role {
-  max-width: 62%;
-  color: var(--color-subtle);
-  overflow-wrap: anywhere;
-  text-align: right;
+.research-project__organization-logo {
+  display: block;
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
 }
 
 .research-project__title,
@@ -184,27 +183,6 @@
   font-weight: var(--font-weight-medium);
   line-height: var(--line-height-normal);
   overflow-wrap: anywhere;
-}
-
-.research-project__metadata {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2) var(--space-3);
-  margin-top: var(--space-4);
-  color: var(--color-subtle);
-  font-size: var(--font-size-small);
-  line-height: var(--line-height-heading);
-}
-
-.research-project__metadata > span {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.research-project__metadata > span + span::before {
-  margin-inline-end: var(--space-3);
-  color: var(--color-line-strong);
-  content: "·";
 }
 
 .research-project__body {
@@ -244,7 +222,7 @@
 }
 
 .research-project__resource {
-  min-height: 36px;
+  min-height: 44px;
   font-size: var(--font-size-caption);
   white-space: nowrap;
 }
@@ -255,13 +233,15 @@
   justify-content: center;
   gap: var(--space-2);
   max-width: 100%;
-  min-height: 36px;
+  min-height: 44px;
   padding: 0 var(--space-3);
+  appearance: none;
   border: 1px dashed var(--color-line);
   border-radius: var(--radius-pill);
   color: var(--color-subtle);
   background: var(--color-control-surface-soft);
   cursor: not-allowed;
+  font: inherit;
   font-size: var(--font-size-caption);
   font-weight: var(--font-weight-bold);
   line-height: var(--line-height-heading);
@@ -736,26 +716,6 @@
 
   .research-project__content {
     padding: var(--space-5);
-  }
-
-  .research-project__kicker-row {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: var(--space-2);
-  }
-
-  .research-project__role {
-    max-width: none;
-    text-align: left;
-  }
-
-  .research-project__metadata {
-    display: grid;
-    gap: var(--space-1);
-  }
-
-  .research-project__metadata > span + span::before {
-    content: none;
   }
 
   .research-project__resources {

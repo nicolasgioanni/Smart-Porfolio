@@ -75,6 +75,30 @@ async function getFirstProjectWithDisclosure(projects: Locator): Promise<Locator
   return undefined;
 }
 
+async function expectRenderedCardIdentity(project: Locator, index: number) {
+  const projectIndex = project.locator(".research-project__index");
+  const organizationLogo = project.locator("img.research-project__organization-logo");
+  const pendingResources = project.locator("button.research-project__resource--pending");
+
+  await expect(projectIndex).toHaveText(String(index + 1).padStart(2, "0"));
+
+  if (await organizationLogo.count()) {
+    await expect(organizationLogo).toHaveCount(1);
+    await expect(organizationLogo).toBeVisible();
+    expect(await organizationLogo.getAttribute("alt")).toBeTruthy();
+  }
+
+  for (let pendingIndex = 0; pendingIndex < (await pendingResources.count()); pendingIndex += 1) {
+    const pendingResource = pendingResources.nth(pendingIndex);
+    const visibleLabel = (await pendingResource.textContent())?.trim() ?? "";
+
+    await expect(pendingResource).toBeDisabled();
+    await expect(pendingResource).toHaveAttribute("aria-label", /— not yet published$/);
+    expect(visibleLabel).toBeTruthy();
+    expect(visibleLabel).not.toMatch(/forthcoming/i);
+  }
+}
+
 test.describe("Research showcase", () => {
   test("keeps alternating project rows and accessible technical disclosures", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
@@ -87,6 +111,10 @@ test.describe("Research showcase", () => {
       return;
     }
     await expectDetailModeSwitch(page);
+
+    for (let index = 0; index < (await projects.count()); index += 1) {
+      await expectRenderedCardIdentity(projects.nth(index), index);
+    }
 
     const desktopLayout = await projects.evaluateAll((cards) =>
       cards.map((card, index) => {
@@ -176,6 +204,11 @@ test.describe("Research showcase", () => {
     expect(switchBox!.width).toBeLessThanOrEqual(controlBox!.width);
     expect(visualBox!.y).toBeLessThan(contentBox!.y);
     expect(Math.abs(visualBox!.x - contentBox!.x)).toBeLessThanOrEqual(1);
+
+    const resourceTargets = await firstProject.locator(".research-project__resource").evaluateAll((resources) =>
+      resources.map((resource) => resource.getBoundingClientRect().height)
+    );
+    for (const height of resourceTargets) expect(height).toBeGreaterThanOrEqual(44);
   });
 
   test("removes research detail transitions when reduced motion is requested", async ({ page }) => {

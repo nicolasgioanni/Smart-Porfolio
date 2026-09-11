@@ -60,7 +60,7 @@ Use this checklist when replacing local sample content or preparing a public wor
 - [ ] Use descriptive `label=url` link entries and confirm link inference produces the intended Home actions.
 - [ ] Keep a pending resource label in `pending_links` only while it has no destination. Remove it when the matching published link is added.
 - [ ] Verify impact, bullets, skills, and all links on the Research route.
-- [ ] Treat `graphical_abstract`, `graphical_abstract_alt`, and `video` as validated schema-only inputs for now: the current Research route does not render them. Do not rely on those fields or the organization logo to appear on current Research cards.
+- [ ] Treat `graphical_abstract`, `graphical_abstract_alt`, and `video` as validated schema-only inputs for now: the current Research route does not render them. Do not rely on legacy research images to render; the authored organization logo is intentionally rendered in the simplified card header when supplied.
 
 ## Projects
 
