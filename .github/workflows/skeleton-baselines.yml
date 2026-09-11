@@ -1,0 +1,93 @@
+name: Capture skeleton visual baselines
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    name: capture-linux-skeleton-baselines
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Check out the exact selected candidate
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Record the checked out commit
+        id: candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Verify selected revision supports visual baseline capture
+        shell: bash
+        run: |
+          set -euo pipefail
+          visual_spec="tests/e2e/skeletons.visual.spec.ts"
+
+          if [[ ! -f "$visual_spec" ]]; then
+            echo "Selected revision is missing $visual_spec; rebase the visual baseline branch onto this workflow before dispatching it."
+            exit 1
+          fi
+
+          node --input-type=module <<'NODE'
+          import { readFile } from "node:fs/promises";
+
+          const packageJson = JSON.parse(await readFile("package.json", "utf8"));
+          const expectedCommand = "playwright test skeletons.visual.spec.ts --project=chromium";
+
+          if (packageJson.scripts?.["test:e2e:skeletons:visual"] !== expectedCommand) {
+            throw new Error(
+              "Selected revision is missing the required visual-only test:e2e:skeletons:visual script."
+            );
+          }
+          NODE
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Generate deterministic local template content
+        env:
+          PORTFOLIO_REQUIRE_REMOTE_CONTENT: "false"
+          PORTFOLIO_WORKBOOK_URL: ""
+        run: npm run generate:content
+
+      - name: Install Chromium for skeleton screenshots
+        run: npx --no-install playwright install --with-deps chromium
+
+      - name: Generate Linux skeleton visual baselines
+        run: npm run test:e2e:skeletons:visual -- --update-snapshots
+
+      - name: Validate the Linux baseline set
+        shell: bash
+        run: |
+          set -euo pipefail
+          baseline_root="tests/e2e/__screenshots__/linux"
+          png_count="$(find "$baseline_root" -type f -name '*.png' -print | wc -l)"
+
+          if [[ "$png_count" != "23" ]]; then
+            echo "Expected exactly 23 Linux skeleton baseline PNGs under $baseline_root; found $png_count."
+            exit 1
+          fi
+
+      - name: Upload Linux skeleton baselines for review
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: skeleton-baselines-linux-${{ github.run_id }}-${{ github.run_attempt }}-${{ steps.candidate.outputs.sha }}
+          path: tests/e2e/__screenshots__/linux/
+          if-no-files-found: error
+          retention-days: 7
