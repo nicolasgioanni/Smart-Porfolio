@@ -114,9 +114,9 @@ With no workbook URL and strict mode disabled, the generator uses checked-in tem
 
 ### The workbook download fails
 
-The generator fails closed for HTTP errors, timeouts, oversized responses, HTML or permission pages, invalid ZIP signatures, and malformed XLSX data.
+The generator automatically makes one bounded retry after a timeout, transport interruption, HTTP 408, HTTP 429, or HTTP 5xx response. Persistent transport failures and every invalid, oversized, unauthorized, HTML, non-ZIP, or malformed XLSX response fail closed.
 
-Confirm the source is an anonymously downloadable HTTPS workbook and returns the file without authentication. Do not replace strict mode with a template fallback to make production pass.
+Confirm the source is an anonymously downloadable HTTPS workbook and returns the complete file without authentication. A persistent timeout usually indicates source availability or response latency beyond the two 15-second attempt deadlines. Do not replace strict mode with a template fallback to make production pass.
 
 ### A worksheet is missing, unexpected, duplicated, or hidden
 

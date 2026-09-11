@@ -118,16 +118,16 @@ describe("package and CI deployment automation", () => {
     expect(verifyJob).not.toContain("CLOUDFLARE_ACCOUNT_ID");
   });
 
-  it("fetches one strict workbook snapshot for latest main and develop candidates", async () => {
+  it("generates one strict workbook snapshot for latest main and develop candidates", async () => {
     const workflow = await readFile(workflowPath, "utf8");
     const verifyJob = section(workflow, "  verify:", "\n  deploy:");
     const workbookStep = section(
       verifyJob,
-      "- name: Fetch and generate the strict public workbook snapshot once",
+      "- name: Fetch and generate the strict public workbook snapshot",
       "- name: Read the validated workbook content hash"
     );
 
-    expect(verifyJob).toContain("Fetch and generate the strict public workbook snapshot once");
+    expect(verifyJob).toContain("Fetch and generate the strict public workbook snapshot");
     expect(workbookStep).toContain(
       "if: github.event_name != 'pull_request' && steps.candidate.outputs.is_latest == 'true'"
     );
@@ -146,7 +146,7 @@ describe("package and CI deployment automation", () => {
       '[[ "$CLOUDFLARE_PAGES_DOMAIN" != "smart-portfolio-bds.pages.dev" ]]'
     );
     expect(verifyJob.indexOf("Validate the immutable Cloudflare Pages target")).toBeLessThan(
-      verifyJob.indexOf("Fetch and generate the strict public workbook snapshot once")
+      verifyJob.indexOf("Fetch and generate the strict public workbook snapshot")
     );
     expect(verifyJob).not.toContain("Mask the anonymous workbook URL");
     expect(verifyJob).not.toContain("::add-mask::");
