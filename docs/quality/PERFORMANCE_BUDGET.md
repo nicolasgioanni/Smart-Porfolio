@@ -84,4 +84,4 @@ After a major visual or dependency change:
 
 This repository does not enforce a numeric Lighthouse score or bundle threshold. Do not claim a measured performance result without recording the tool, route, environment, and date.
 
-See [Performance checklist](PERFORMANCE_CHECKLIST.md), [Design system](DESIGN_SYSTEM.md), and [Testing](TESTING.md).
+See [Performance checklist](PERFORMANCE_CHECKLIST.md), [Design system](../design/DESIGN_SYSTEM.md), and [Testing](TESTING.md).

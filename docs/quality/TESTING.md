@@ -213,7 +213,7 @@ It does not test:
 - WAF behavior.
 - Browser layout or interaction against the deployed URL. The pre-deployment Playwright suite runs against the exact source candidate through Next.js development mode.
 
-See [Deployment](DEPLOYMENT.md#exact-automated-smoke-scope) and [Operations](OPERATIONS.md#post-deployment-verification) for the automated and manual boundaries.
+See [Deployment](../operations/DEPLOYMENT.md#exact-automated-smoke-scope) and [Operations](../operations/OPERATIONS.md#post-deployment-verification) for the automated and manual boundaries.
 
 ## Running targeted tests
 
@@ -267,4 +267,4 @@ Avoid snapshot tests that hide semantic changes. Prefer explicit assertions for 
 - CI covers one Linux and Node-major configuration.
 - Remote D1 binding and migration state, external WAF, DNS, TLS, provider-secret, and branch-protection state are not testable from the repository.
 
-These are explicit boundaries, not implied guarantees. Use the manual checks in [Operations](OPERATIONS.md) when the release risk reaches beyond the automated suite.
+These are explicit boundaries, not implied guarantees. Use the manual checks in [Operations](../operations/OPERATIONS.md) when the release risk reaches beyond the automated suite.

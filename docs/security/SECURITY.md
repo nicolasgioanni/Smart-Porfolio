@@ -2,7 +2,7 @@
 
 The portfolio is a static-first site with a deliberately narrow dynamic boundary. Core pages are exported as static files. Cloudflare Pages invokes Functions only for the two contact endpoints listed in `public/_routes.json`.
 
-This document separates controls that the repository enforces from controls that an operator must configure in external services. For the exact contact request and response contract, use [Contact System](CONTACT_SYSTEM.md). For environment activation and deployment checks, use [Deployment](DEPLOYMENT.md). Use [Security Checklist](SECURITY_CHECKLIST.md) when reviewing a change or release.
+This document separates controls that the repository enforces from controls that an operator must configure in external services. For the exact contact request and response contract, use [Contact System](CONTACT_SYSTEM.md). For environment activation and deployment checks, use [Deployment](../operations/DEPLOYMENT.md). Use [Security Checklist](SECURITY_CHECKLIST.md) when reviewing a change or release.
 
 ## Control status
 
@@ -28,7 +28,7 @@ Documentation is not evidence that an external control is active. Treat the impl
 | Contact-rate reservation schema | `migrations/` |
 | Build-time public values and deployment flow | `.github/workflows/ci.yml` |
 | Research media paths and PNG sanitation | `src/lib/content/validatePortfolioContent.ts`, `src/lib/content/researchGraphicalAbstracts.ts`, `scripts/lib/pngMetadata.mjs` |
-| Contact behavior reference | `docs/CONTACT_SYSTEM.md` |
+| Contact behavior reference | `docs/security/CONTACT_SYSTEM.md` |
 
 ## CSV parsing boundary
 
@@ -38,7 +38,7 @@ CSV content is untrusted build input. `csv-parse` must resolve to `7.0.2` or lat
 
 Canonical graphical abstracts must pass the same strict, root-relative `/images/research/` path guard during generated-content validation and direct presentation resolution. The guard rejects remote and protocol-relative URLs, traversal, repeated percent-encoded traversal, backslashes, null bytes, whitespace, query strings, fragments, and unsupported extensions. Curated fallback lookup accepts only own keys in the three-project registry; invalid or incomplete canonical input fails closed instead of falling back.
 
-Self-hosted video, captions, and transcript paths use the same fixed-point decoded local-path guard with separate extension allowlists. `researchVideos.ts` accepts its curated fallback for the exact CytoCV project ID only when canonical content is absent, and it does not expose a video unless every companion accessibility resource passes that boundary. The video asset contract opens and stats before allocating, caps the MP4 at 16 MiB and each accessibility text asset at 64 KiB, detects growth or truncation during each bounded read, parses ISO MP4 box boundaries and expected track metadata in-process, and fails closed for malformed boundaries, excess boxes, or excessive required-box traversal—without a continuous-integration dependency on an externally installed media probe. Byte hashes, strict UTF-8 decoding, complete WebVTT consumption, and LF-only accessibility-file contracts make a silent replacement or line-ending rewrite visible in review. See [Research media](RESEARCH_MEDIA.md) for the approved source statement and explicitly non-asserted license state.
+Self-hosted video, captions, and transcript paths use the same fixed-point decoded local-path guard with separate extension allowlists. `researchVideos.ts` accepts its curated fallback for the exact CytoCV project ID only when canonical content is absent, and it does not expose a video unless every companion accessibility resource passes that boundary. The video asset contract opens and stats before allocating, caps the MP4 at 16 MiB and each accessibility text asset at 64 KiB, detects growth or truncation during each bounded read, parses ISO MP4 box boundaries and expected track metadata in-process, and fails closed for malformed boundaries, excess boxes, or excessive required-box traversal—without a continuous-integration dependency on an externally installed media probe. Byte hashes, strict UTF-8 decoding, complete WebVTT consumption, and LF-only accessibility-file contracts make a silent replacement or line-ending rewrite visible in review. See [Research media](../content/RESEARCH_MEDIA.md) for the approved source statement and explicitly non-asserted license state.
 
 Contributed PNG sanitation is a local publication tool, but its inputs remain untrusted. The CLI rejects files larger than 32 MiB from file metadata before reading. The parser independently caps input at 32 MiB, declared chunk data at 30 MiB, chunk count at 4,096, decoded image data at 64 MiB, each dimension at 16,384 pixels, and the canvas at 67,108,864 pixels. It requires nonzero dimensions, legal PNG color-type and bit-depth pairs, standard compression and filtering, supported noninterlaced or Adam7 scanlines, legal palette and critical-chunk ordering, a bounded valid zlib stream with exact filter-prefixed scanlines, consecutive nonempty image data, and a terminal `IEND`. Test-only limit overrides may lower protected ceilings but cannot raise or bypass them. Retained chunks remain byte-identical, and the sanitized output is parsed again before it can be written.
 ## Dependency maintenance
@@ -229,7 +229,7 @@ Reviewed non-secret Function values belong in the correct `wrangler.jsonc` envir
 
 The `CONTACT_RATE_LIMIT_DB` D1 binding is also environment-specific reviewed configuration. Production and preview use distinct pinned database IDs, and both must have the tracked migrations applied before their Pages deployment. Missing, all-zero, and shared IDs remain non-deployable invalid states.
 
-Production and preview use separate exact hostnames, origins, and appropriate credentials. The tracked local example contains placeholders only. The ignored local environment file does not cross into GitHub Actions or Cloudflare automatically. Follow [Local development](LOCAL_DEVELOPMENT.md#complete-contact-flow-development) and do not use production credentials locally.
+Production and preview use separate exact hostnames, origins, and appropriate credentials. The tracked local example contains placeholders only. The ignored local environment file does not cross into GitHub Actions or Cloudflare automatically. Follow [Local development](../development/LOCAL_DEVELOPMENT.md#complete-contact-flow-development) and do not use production credentials locally.
 
 Repository configuration can prove the intended non-secret values, but not the presence, correctness, or separation of live encrypted secrets. Verify those bindings in each Cloudflare environment without printing their values.
 
@@ -237,7 +237,7 @@ Repository configuration can prove the intended non-secret values, but not the p
 
 Every production artifact must contain the exact `_routes.json` and `_headers` files. Deployment smoke testing sends unauthenticated `GET` requests to both Function paths and requires `405` JSON responses. This establishes that both routes are deployed and reject the wrong method.
 
-The smoke test does not establish successful POST handling, exact-origin behavior, live Turnstile validation, ticket cookie acceptance, D1 migration state, DNS behavior, WAF state, Resend delivery, sender-domain verification, recipient correctness, or mailbox receipt. Those items require controlled deployed checks. See [Deployment](DEPLOYMENT.md) for the activation sequence.
+The smoke test does not establish successful POST handling, exact-origin behavior, live Turnstile validation, ticket cookie acceptance, D1 migration state, DNS behavior, WAF state, Resend delivery, sender-domain verification, recipient correctness, or mailbox receipt. Those items require controlled deployed checks. See [Deployment](../operations/DEPLOYMENT.md) for the activation sequence.
 
 Before publishing a build or changing repository visibility, scan tracked files, reachable Git objects, generated content, and exported artifacts for credentials, non-public contact data, unpublished assets, oversized artifacts, and unsafe configuration. Commit author and committer metadata is part of repository history. History rewriting and force-pushing are destructive operations that require separate authorization and review.
 
@@ -263,4 +263,4 @@ Before broadening the runtime surface:
 5. Define secret ownership and environment separation.
 6. Define repository-enforced and external rate-limit controls separately.
 7. Add unit, integration, deployment-smoke, and controlled live checks appropriate to the risk.
-8. Update [Contact System](CONTACT_SYSTEM.md), [Deployment](DEPLOYMENT.md), and [Security Checklist](SECURITY_CHECKLIST.md) where applicable.
+8. Update [Contact System](CONTACT_SYSTEM.md), [Deployment](../operations/DEPLOYMENT.md), and [Security Checklist](SECURITY_CHECKLIST.md) where applicable.

@@ -212,7 +212,7 @@ Pull requests generate from local templates without remote credentials. Current 
 
 Scheduled and non-forced manual checks compare both the candidate content hash and exact commit SHA with the active production manifest. Equality on both fields is a successful no-op before lint, tests, build, artifact upload, and deployment. If either field differs, the complete verified deployment path runs. A failure before Wrangler Direct Upload does not change the active target. Once Wrangler returns successfully, a later smoke failure can mean the new deployment is already active; the workflow does not roll it back automatically.
 
-See [Deployment](DEPLOYMENT.md) for branch, artifact, Cloudflare, and rollback behavior.
+See [Deployment](../operations/DEPLOYMENT.md) for branch, artifact, Cloudflare, and rollback behavior.
 
 ## Authoritative sources
 
