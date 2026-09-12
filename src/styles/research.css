@@ -380,6 +380,10 @@
     pointer-events: auto;
     transform: none;
   }
+
+  .research-video__toolbar-control::after {
+    content: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

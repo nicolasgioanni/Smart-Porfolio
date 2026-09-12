@@ -101,7 +101,15 @@ async function expectVideoHeaderContained(project: Locator) {
       toolbar: { clientWidth: toolbar.clientWidth, scrollWidth: toolbar.scrollWidth },
       controls: controls.map((control) => {
         const box = control.getBoundingClientRect();
-        return { height: box.height, left: box.left, right: box.right, width: box.width };
+        const iconBox = control.querySelector<SVGSVGElement>("svg")?.getBoundingClientRect();
+        return {
+          height: box.height,
+          iconHeight: iconBox?.height,
+          iconWidth: iconBox?.width,
+          left: box.left,
+          right: box.right,
+          width: box.width
+        };
       }),
       header: { clientWidth: header.clientWidth, scrollWidth: header.scrollWidth },
       visual: { left: visualBox.left, right: visualBox.right }
@@ -114,9 +122,30 @@ async function expectVideoHeaderContained(project: Locator) {
   for (const control of geometry.controls) {
     expect(control.width).toBeGreaterThanOrEqual(44);
     expect(control.height).toBeGreaterThanOrEqual(44);
+    expect(control.iconWidth).toBe(18);
+    expect(control.iconHeight).toBe(18);
     expect(control.left).toBeGreaterThanOrEqual(geometry.visual.left - 1);
     expect(control.right).toBeLessThanOrEqual(geometry.visual.right + 1);
   }
+}
+
+async function expectToolbarAboveNativeControls(toolbar: Locator, player: Locator) {
+  const [toolbarBox, playerBox] = await Promise.all([toolbar.boundingBox(), player.boundingBox()]);
+  expect(toolbarBox).not.toBeNull();
+  expect(playerBox).not.toBeNull();
+  expect(toolbarBox!.x).toBeGreaterThanOrEqual(playerBox!.x);
+  expect(toolbarBox!.y).toBeGreaterThanOrEqual(playerBox!.y);
+  expect(toolbarBox!.x + toolbarBox!.width).toBeLessThanOrEqual(playerBox!.x + playerBox!.width + 1);
+  expect(toolbarBox!.y + toolbarBox!.height).toBeLessThanOrEqual(playerBox!.y + playerBox!.height - 44 + 1);
+}
+
+async function focusWithKeyboard(page: Page, target: Locator, limit: number) {
+  for (let step = 0; step < limit; step += 1) {
+    if (await target.evaluate((element) => document.activeElement === element)) return;
+    await page.keyboard.press("Tab");
+  }
+
+  await expect(target).toBeFocused();
 }
 
 async function getFirstProjectWithDisclosure(projects: Locator): Promise<Locator | undefined> {
@@ -676,10 +705,20 @@ test.describe("Research showcase", () => {
         const videoViewport = project.locator(".research-video__viewport");
         const videoViewportBox = await videoViewport.boundingBox();
         expect(videoViewportBox).not.toBeNull();
+        await page.mouse.move(0, 0);
+        await expect.poll(() => toolbar.evaluate((element) => getComputedStyle(element).opacity)).toBe("0");
         await page.mouse.move(videoViewportBox!.x + 2, videoViewportBox!.y + 2);
         await expect.poll(() => toolbar.evaluate((element) => getComputedStyle(element).opacity)).toBe("1");
-        await openButton.focus();
-        await expect.poll(() => openButton.evaluate((control) => getComputedStyle(control, "::after").opacity)).toBe("1");
+        await expectToolbarAboveNativeControls(toolbar, player);
+
+        if (viewport.width === 1280 && theme === "navy") {
+          await page.mouse.move(0, 0);
+          await expect.poll(() => toolbar.evaluate((element) => getComputedStyle(element).opacity)).toBe("0");
+          await focusWithKeyboard(page, openButton, 60);
+          await expect(openButton).toBeFocused();
+          await expect.poll(() => toolbar.evaluate((element) => getComputedStyle(element).opacity)).toBe("1");
+          await expect.poll(() => openButton.evaluate((control) => getComputedStyle(control, "::after").opacity)).toBe("1");
+        }
 
         await openButton.scrollIntoViewIfNeeded();
         await openButton.click();
@@ -703,6 +742,22 @@ test.describe("Research showcase", () => {
         );
         await expect(dialogToolbar.getByRole("link", { name: "Download MP4" })).toHaveAttribute("download", "");
 
+        const dialogVideoViewport = dialog.locator(".research-video-dialog__viewport");
+        const dialogVideoViewportBox = await dialogVideoViewport.boundingBox();
+        expect(dialogVideoViewportBox).not.toBeNull();
+        await page.mouse.move(0, 0);
+        await expect.poll(() => dialogToolbar.evaluate((element) => getComputedStyle(element).opacity)).toBe("0");
+        await page.mouse.move(dialogVideoViewportBox!.x + 2, dialogVideoViewportBox!.y + 2);
+        await expect.poll(() => dialogToolbar.evaluate((element) => getComputedStyle(element).opacity)).toBe("1");
+        await expectToolbarAboveNativeControls(dialogToolbar, dialogPlayer);
+        await page.mouse.move(0, 0);
+        await expect.poll(() => dialogToolbar.evaluate((element) => getComputedStyle(element).opacity)).toBe("0");
+        const dialogTranscript = dialogToolbar.getByRole("link", { name: "Read transcript" });
+        await focusWithKeyboard(page, dialogTranscript, 8);
+        await expect(dialogTranscript).toBeFocused();
+        await expect.poll(() => dialogToolbar.evaluate((element) => getComputedStyle(element).opacity)).toBe("1");
+        await expect.poll(() => dialogTranscript.evaluate((control) => getComputedStyle(control, "::after").opacity)).toBe("1");
+
         const [dialogBox, viewportBox] = await Promise.all([
           dialog.boundingBox(),
           dialog.locator(".research-video-dialog__viewport").boundingBox()
@@ -721,6 +776,37 @@ test.describe("Research showcase", () => {
         await expect(openButton).toBeFocused();
         await expect(project.locator(".research-video__status")).toHaveCount(0);
       }
+    }
+  });
+
+  test("keeps Research video tools icon-only and visible on coarse no-hover input", async ({ browser, page }) => {
+    await page.goto("/research");
+    const mobileContext = await browser.newContext({
+      hasTouch: true,
+      isMobile: true,
+      viewport: { height: 568, width: 320 }
+    });
+
+    try {
+      const mobilePage = await mobileContext.newPage();
+      await mobilePage.goto(page.url());
+      await settleLayout(mobilePage);
+      await expect(mobilePage.locator('article.research-project[id="cytocv-miller-lab"]')).toHaveCount(1);
+      await expect
+        .poll(() => mobilePage.evaluate(() => matchMedia("(hover: none)").matches || matchMedia("(pointer: coarse)").matches))
+        .toBe(true);
+
+      const toolbar = mobilePage.getByRole("group", { name: "CytoCV video tools" });
+      await expect(toolbar).toHaveCount(1);
+      await expect.poll(() => toolbar.evaluate((element) => getComputedStyle(element).opacity)).toBe("1");
+      await expect.poll(() =>
+        toolbar.locator("a, button").evaluateAll((controls) =>
+          controls.every((control) => getComputedStyle(control, "::after").content === "none")
+        )
+      ).toBe(true);
+      await expectNoHorizontalOverflow(mobilePage);
+    } finally {
+      await mobileContext.close();
     }
   });
 });
