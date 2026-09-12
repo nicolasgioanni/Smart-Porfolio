@@ -82,6 +82,7 @@ jobs:
         if: github.event_name == 'pull_request'
         env:
           PORTFOLIO_REQUIRE_REMOTE_CONTENT: "false"
+          PORTFOLIO_WORKBOOK_URL: ""
         run: npm run generate:content
 
       - name: Validate the immutable Cloudflare Pages target
@@ -219,6 +220,10 @@ jobs:
       - name: Priority browser regression suite
         if: steps.decision.outputs.verification_tier == 'priority'
         run: npm run test:e2e:priority
+
+      - name: Linux skeleton visual regression
+        if: steps.decision.outputs.verification_tier == 'priority'
+        run: npm run test:e2e:skeletons:visual
 
       - name: Full browser regression suite
         if: steps.decision.outputs.verification_tier == 'full'
