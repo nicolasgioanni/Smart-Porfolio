@@ -68,6 +68,24 @@ export function LinkIcon({ kind = "external", ...props }: IconProps) {
     );
   }
 
+  if (normalizedKind === "download") {
+    return (
+      <BaseIcon {...props}>
+        <path d="M12 3.5v11m0 0 4-4m-4 4-4-4" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+        <path d="M5 16.5v3h14v-3" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+      </BaseIcon>
+    );
+  }
+
+  if (normalizedKind === "expand") {
+    return (
+      <BaseIcon {...props}>
+        <path d="M9 4.5H4.5V9M15 4.5h4.5V9M9 19.5H4.5V15M15 19.5h4.5V15" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+        <path d="m4.5 9 4-4m11 4-4-4m-11 10 4 4m11-4-4 4" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+      </BaseIcon>
+    );
+  }
+
   if (normalizedKind === "publication" || normalizedKind === "paper" || normalizedKind === "manuscript") {
     return (
       <BaseIcon {...props}>

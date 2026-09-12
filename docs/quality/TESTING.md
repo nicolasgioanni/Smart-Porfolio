@@ -25,11 +25,11 @@ Smart Portfolio uses a layered quality gate for documentation, static content, R
 | `npm run generate:content` | Content source download or template read, normalization, validation, and generated JSON write | Uses `.env` when run through the CLI |
 | `npm run lint` | ESLint over the repository with `--max-warnings=0` | Generated content and build directories are ignored; direct library/component import boundaries cover alias and relative specifiers |
 | `npm run typecheck` | `next typegen && tsc --noEmit` | Regenerates Next route types and the ignored managed `next-env.d.ts` before strict TypeScript checking |
-| `npm run test:priority` | High-risk documentation, deployment, contact, shared dialog, theme, Research media, navigation, and skeleton contracts | Pull-request unit and contract gate; it includes every Function test under `functions/` |
+| `npm run test:priority` | High-risk documentation, deployment, contact, shared dialog, theme palette, Research, Experience, Recommendations, navigation, and skeleton contracts | Pull-request unit and contract gate; feature directories admit future shared-detail tests and it includes every Function test under `functions/` |
 | `npm run test:footer` | Two focused footer regression files | Use while changing the footer; release CI covers them through `test` |
 | `npm run test:navigation` | Focused mobile rail, header, responsive-query, theme, and navigation style tests | Use while changing navigation; release CI covers them through `test` |
 | `npm run test:skeletons` | Focused skeleton component, content, style, and page-entry tests | Protects route fallback semantics, fixture geometry, and static no-motion placeholders |
-| `npm run test:e2e:priority` | Playwright skeleton alignment, navigation, footer, and mocked-contact flow | Pull-request browser gate; uses no provider credentials or delivery endpoint |
+| `npm run test:e2e:priority` | Playwright skeleton alignment and held-navigation transitions, navigation, footer, mocked-contact, Recommendations, Experience, and Research flows | Portable pull-request browser gate; uses no provider credentials or delivery endpoint and intentionally excludes Linux-only visual comparison |
 | `npm run test:e2e:full` | Every supported Playwright specification in one Chromium process | Release browser gate; includes every skeleton part and the mocked-contact flow |
 | `npm run test:e2e:contact` | Playwright contact flow specification in Chromium | Mocks Turnstile and both same-origin contact endpoints; never submits to a provider |
 | `npm run test:e2e:navigation` | Playwright navigation specification in Chromium | Uses port 3100 by default and starts its own local server |
@@ -47,7 +47,7 @@ Smart Portfolio uses a layered quality gate for documentation, static content, R
 | `npm audit --omit=dev` | Locked production dependency graph audit | Covers the deployed runtime dependency graph |
 | `npm run db:migrate:local` | Pending tracked migrations against Wrangler's local D1 state | Never targets preview or production |
 | `npm run verify` | Docs check, lint, typecheck, full Vitest suite, and normal build | Compatibility local gate; does not install Chromium |
-| `npm run verify:priority` | Docs check, lint, typecheck, priority Vitest and browser suites, and normal build | Portable pull-request-sized local gate; install Chromium first |
+| `npm run verify:priority` | Docs check, lint, typecheck, priority Vitest and browser suites, and normal build | Portable pull-request-sized local gate; install Chromium first. Linux CI runs the visual skeleton comparison as its separate priority-only step |
 | `npm run verify:full` | Docs check, lint, typecheck, complete Vitest and Playwright suites, and normal build | Release-candidate gate; its Linux-only visual comparison must run on Ubuntu 24.04 |
 | `npm run verify:local` | Dependency preparation, explicit content generation, then `verify` | The final normal build invokes generation again |
 
@@ -129,7 +129,7 @@ Many accessibility assertions verify semantic roles, names, focus behavior, keyb
 
 `tests/e2e/skeleton-alignment.spec.ts` measures resolved header Range fragments against the canonical loader ink at compact, phone, tablet, navigation-transition, and fluid desktop widths. It also covers representative wrap boundaries, the generated Experience summary override, Home overflow, Projects and Research detail footprints, Light and Dark, and reduced motion. Both alignment and screenshot suites use `tests/e2e/standaloneSkeletonDocument.ts` to render canonical server markup in a separate same-origin inert page with real shell attributes, compiled stylesheets, and the generated body font; they never replace React-owned DOM.
 
-`tests/e2e/skeletons.visual.spec.ts` compares 23 reviewed Ubuntu 24.04 images with zero pixel difference. `tests/e2e/skeletons.transition.spec.ts` holds each non-Home route's first non-prefetch RSC request and asserts that the source body remains in place. Static export does not stream `loading.tsx`; the transition suite must not claim otherwise. The required `npm run test:e2e:skeletons` aggregate runs alignment, transitions, and Linux visual comparison together.
+`tests/e2e/skeletons.visual.spec.ts` compares 23 reviewed Ubuntu 24.04 images with zero pixel difference. `tests/e2e/skeletons.transition.spec.ts` holds each non-Home route's first non-prefetch RSC request and asserts that the source body remains in place. Static export does not stream `loading.tsx`; the transition suite must not claim otherwise. The portable `test:e2e:priority` command runs alignment and transition semantics, while the priority CI job adds the visual suite as a separate Ubuntu-only step. The `npm run test:e2e:skeletons` aggregate remains the canonical three-part command; the full tier discovers all three specifications through `npm run test:e2e:full`.
 
 ## Browser navigation coverage
 
@@ -177,7 +177,8 @@ Pull requests targeting `main` or `develop`:
 3. Run lint.
 4. Run typecheck.
 5. Run the priority Vitest contracts once.
-6. Install Chromium once and run the priority browser suite: skeleton alignment, navigation, footer, and a locally mocked contact flow.
+6. Install Chromium once and run the portable priority browser suite: skeleton alignment and held-navigation transitions, navigation, footer, locally mocked contact, Recommendations, Experience, and Research flows.
+7. Run the separate Linux-only skeleton visual comparison against the explicit template-content generated for the pull request.
 8. Build with `build:generated`.
 9. Stop without creating a deployment artifact.
 
@@ -201,7 +202,7 @@ Scheduled runs and non-forced manual runs perform the strict content work before
 
 ### Tier boundaries and diagnostics
 
-The stable `verify` job selects `priority` for pull requests and `full` for every candidate that can produce a deployment artifact. Each tier runs its unit and browser selections once; CI does not run focused subsets before repeating them inside the complete suites. Stale, unchanged scheduled, and non-forced manual candidates select no tier. `main` branch protection was independently verified on 2026-09-11 to require the current `verify` status check on pull requests; the workflow name and job name must remain stable. If a verify step fails, the job uploads any available `playwright-report/` and `test-results/` files as a seven-day `playwright-diagnostics-<run-id>-<attempt>` artifact. That failure-only artifact is distinct from, and never used as, the one-day `cloudflare-pages-build` deployment artifact.
+The stable `verify` job selects `priority` for pull requests and `full` for every candidate that can produce a deployment artifact. The priority tier runs its portable browser selection once, then adds its Linux-only visual skeleton comparison as a separate step; the full tier runs `test:e2e:full` once and does not duplicate individual suites. Stale, unchanged scheduled, and non-forced manual candidates select no tier. `main` branch protection was independently verified on 2026-09-11 to require the current `verify` status check on pull requests; the workflow name and job name must remain stable. If a verify step fails, the job uploads any available `playwright-report/` and `test-results/` files as a seven-day `playwright-diagnostics-<run-id>-<attempt>` artifact. That failure-only artifact is distinct from, and never used as, the one-day `cloudflare-pages-build` deployment artifact.
 
 ## Post-deployment smoke tests
 

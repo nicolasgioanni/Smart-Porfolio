@@ -6,6 +6,16 @@ import { fileURLToPath } from "node:url";
 const projectRoot = path.resolve(import.meta.dirname, "..");
 const vitestEntryPoint = path.join(projectRoot, "node_modules", "vitest", "vitest.mjs");
 
+export const priorityTestDirectories = [
+  "src/components/overlay",
+  "src/components/portfolio/experience",
+  "src/components/portfolio/recommendations",
+  "src/components/portfolio/research",
+  "src/components/portfolio/shared",
+  "src/components/theme",
+  "src/lib/theme"
+];
+
 export const priorityTestTargets = [
   "scripts/validateDocumentation.test.mjs",
   "scripts/packageScripts.test.mjs",
@@ -22,11 +32,7 @@ export const priorityTestTargets = [
   "src/components/loading/skeletonContentContract.test.ts",
   "src/components/navigation/MobileNavigation.test.tsx",
   "src/components/navigation/navigation.test.tsx",
-  "src/components/overlay/ModalDialog.test.tsx",
-  "src/components/portfolio/research/ResearchGraphicalAbstractPreview.test.tsx",
-  "src/components/portfolio/research/ResearchVideoPreview.test.tsx",
-  "src/components/theme/ThemePreferenceScript.test.tsx",
-  "src/components/theme/ThemeSwitcher.test.tsx",
+  ...priorityTestDirectories,
   "src/lib/architecture/importBoundaries.test.ts",
   "src/lib/content/content.test.ts",
   "src/lib/content/researchGraphicalAbstracts.test.ts",
@@ -35,16 +41,31 @@ export const priorityTestTargets = [
   "src/lib/media/researchVideoAssets.test.ts",
   "src/lib/media/researchVideoPlayback.test.ts",
   "src/lib/routing/siteRoutes.test.ts",
-  "src/lib/theme/resolveThemeName.test.ts",
-  "src/lib/theme/themeOptions.test.ts",
-  "src/lib/theme/themePreference.test.ts",
-  "src/lib/theme/themeTransition.test.ts"
+  "src/styles/themePalette.test.ts"
 ];
 
 export const requiredPriorityFiles = [...new Set([
   ...priorityTestTargets.filter((target) => /\.test\.(?:[cm]?[jt]sx?)$/.test(target)),
   "functions/api/contact.test.ts",
-  "functions/api/contact/verify.test.ts"
+  "functions/api/contact/verify.test.ts",
+  "src/components/overlay/ModalDialog.test.tsx",
+  "src/components/portfolio/experience/ExperienceShowcase.test.tsx",
+  "src/components/portfolio/experience/experienceStyles.test.ts",
+  "src/components/portfolio/recommendations/ExpandableRecommendationText.test.tsx",
+  "src/components/portfolio/recommendations/RecommendationVerificationLink.test.tsx",
+  "src/components/portfolio/recommendations/RecommendationsList.test.tsx",
+  "src/components/portfolio/recommendations/recommendationLayout.test.ts",
+  "src/components/portfolio/recommendations/recommendationStyles.test.ts",
+  "src/components/portfolio/research/ResearchGraphicalAbstractPreview.test.tsx",
+  "src/components/portfolio/research/ResearchShowcase.test.tsx",
+  "src/components/portfolio/research/ResearchVideoPreview.test.tsx",
+  "src/components/portfolio/research/researchStyles.test.ts",
+  "src/components/theme/ThemePreferenceScript.test.tsx",
+  "src/components/theme/ThemeSwitcher.test.tsx",
+  "src/lib/theme/resolveThemeName.test.ts",
+  "src/lib/theme/themeOptions.test.ts",
+  "src/lib/theme/themePreference.test.ts",
+  "src/lib/theme/themeTransition.test.ts"
 ])];
 
 function runVitest(command, targets, captureOutput = false) {
