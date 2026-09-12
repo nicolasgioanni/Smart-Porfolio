@@ -169,17 +169,13 @@ npm run verify
 
 `verify` runs documentation integrity, lint, typecheck, the full Vitest suite, and a production build. The build regenerates content through `prebuild`.
 
-Run focused interaction regressions separately:
+Run the portable priority gate:
 
 ```bash
-npm run test:navigation
-npx playwright install chromium
-npm run test:e2e:navigation
-npm run test:e2e:footer
-npm run test:e2e:recommendations
+npm run verify:priority
 ```
 
-Each Playwright command starts Next.js on port `3100` by default. Set `PLAYWRIGHT_PORT` to choose another port. Browser artifacts are written to ignored `test-results/` and `playwright-report/` directories. The normal `verify` command does not install Chromium or run Playwright.
+Install Chromium and use `npm run verify:full` for a release candidate. Its screenshot comparison is Linux-only, so run that gate on Ubuntu 24.04 before deployment. Each Playwright command starts an owned Next.js server on port `3100` by default. It does not reuse a running server, so set `PLAYWRIGHT_PORT` to an unused port when another worktree is active. Browser artifacts are written to ignored `test-results/` and `playwright-report/` directories. The compatibility `verify` command does not install Chromium or run Playwright.
 
 The smart local wrapper prepares dependencies when needed, explicitly regenerates content, and then runs the same gate:
 

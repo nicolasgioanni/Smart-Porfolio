@@ -8,10 +8,10 @@ export default defineConfig({
   testDir: "./tests/e2e",
   outputDir: "test-results/playwright",
   snapshotPathTemplate: linuxSkeletonSnapshotPath,
-  fullyParallel: true,
+  fullyParallel: false,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: 1,
   reporter: process.env.CI
     ? [
         ["line"],
@@ -26,9 +26,10 @@ export default defineConfig({
   webServer: {
     command: `npm run dev -- --hostname 127.0.0.1 --port ${port}`,
     env: {
+      NEXT_PUBLIC_TURNSTILE_SITE_KEY: "playwright-test-site-key",
       NEXT_TELEMETRY_DISABLED: "1"
     },
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     timeout: 120_000,
     url: baseURL
   },
