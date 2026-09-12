@@ -9,7 +9,7 @@ import {
   validateEmailDomain,
   type ContactEnv
 } from "../_shared/contact";
-import { readContactApiRequest } from "../_shared/contactRequest";
+import { readContactApiRequest } from "../_shared/contact";
 
 interface PagesContext<Env> {
   request: Request;

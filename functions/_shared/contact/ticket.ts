@@ -1,4 +1,4 @@
-import type { ContactEnv } from "../contact";
+import type { ContactEnv } from "./contracts";
 import { decodeBase64Url, encodeBase64Url } from "./base64url";
 
 export const CONTACT_TICKET_COOKIE_NAME = "__Host-portfolio_contact_ticket";
