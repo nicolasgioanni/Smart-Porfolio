@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { siteRoutes } from "@/components/navigation/siteRoutes";
+import { siteRoutes } from "@/lib/routing/siteRoutes";
 import { createPageMetadata } from "@/lib/content/createPageMetadata";
 import { getPortfolioContent } from "@/lib/content/getPortfolioContent";
 

@@ -60,7 +60,7 @@ describe("static portfolio security contracts", () => {
 
   it("renders structured recommendation quote links without parsing spreadsheet markup", () => {
     const recommendationTextSource = readFileSync(
-      path.join(projectRoot, "src", "components", "portfolio", "ExpandableRecommendationText.tsx"),
+      path.join(projectRoot, "src", "components", "portfolio", "recommendations", "ExpandableRecommendationText.tsx"),
       "utf8"
     );
 
@@ -141,11 +141,11 @@ describe("static portfolio security contracts", () => {
   it("keeps the profile overview hierarchy compact, responsive, and free of resume timelines", () => {
     const portfolioCss = readFileSync(path.join(projectRoot, "src", "styles", "portfolio.css"), "utf8");
     const profileOverviewSource = readFileSync(
-      path.join(projectRoot, "src", "components", "portfolio", "ProfileOverviewDetails.tsx"),
+      path.join(projectRoot, "src", "components", "portfolio", "profile", "ProfileOverviewDetails.tsx"),
       "utf8"
     );
     const disabledResourceButtonSource = readFileSync(
-      path.join(projectRoot, "src", "components", "portfolio", "DisabledResourceButton.tsx"),
+      path.join(projectRoot, "src", "components", "portfolio", "shared", "DisabledResourceButton.tsx"),
       "utf8"
     );
     const detailsRule = portfolioCss.match(/\.profile-overview__details\s*{[^}]*}/s)?.[0] ?? "";
@@ -293,7 +293,7 @@ describe("static portfolio security contracts", () => {
     expect(profileOverviewSource).toMatch(
       /profile-overview__metadata profile-overview__academic-footer[\s\S]*profile-overview__research-links profile-overview__academic-footer/
     );
-    expect(profileOverviewSource).toContain('import { DisabledResourceButton } from "@/components/portfolio/DisabledResourceButton";');
+    expect(profileOverviewSource).toContain('import { DisabledResourceButton } from "@/components/portfolio/shared/DisabledResourceButton";');
     expect(disabledResourceButtonSource).toMatch(/<button[\s\S]*disabled[\s\S]*type="button"/);
     expect(disabledResourceButtonSource).toMatch(/aria-label=\{`\$\{label\} — not yet published`\}/);
     expect(panelActionRule).toMatch(/text-decoration:\s*none/);
@@ -338,7 +338,7 @@ describe("static portfolio security contracts", () => {
 
   it("keeps personal profile values out of the reusable overview component", () => {
     const profileOverviewSource = readFileSync(
-      path.join(projectRoot, "src", "components", "portfolio", "ProfileOverviewDetails.tsx"),
+      path.join(projectRoot, "src", "components", "portfolio", "profile", "ProfileOverviewDetails.tsx"),
       "utf8"
     );
 
@@ -358,15 +358,15 @@ describe("static portfolio security contracts", () => {
     const portfolioCss = readFileSync(path.join(projectRoot, "src", "styles", "portfolio.css"), "utf8");
     const dialogCss = readFileSync(path.join(projectRoot, "src", "styles", "dialog.css"), "utf8");
     const projectSource = readFileSync(
-      path.join(projectRoot, "src", "components", "portfolio", "HomeProjectCard.tsx"),
+      path.join(projectRoot, "src", "components", "portfolio", "home", "HomeProjectCard.tsx"),
       "utf8"
     );
     const projectSkillSource = readFileSync(
-      path.join(projectRoot, "src", "components", "portfolio", "ProjectSkillShowcase.tsx"),
+      path.join(projectRoot, "src", "components", "portfolio", "projects", "ProjectSkillShowcase.tsx"),
       "utf8"
     );
     const interactiveSkillSource = readFileSync(
-      path.join(projectRoot, "src", "components", "portfolio", "InteractiveSkillShowcase.tsx"),
+      path.join(projectRoot, "src", "components", "portfolio", "skills", "InteractiveSkillShowcase.tsx"),
       "utf8"
     );
     const modalDialogSource = readFileSync(
@@ -374,7 +374,7 @@ describe("static portfolio security contracts", () => {
       "utf8"
     );
     const recommendationSource = readFileSync(
-      path.join(projectRoot, "src", "components", "portfolio", "RecommendationCard.tsx"),
+      path.join(projectRoot, "src", "components", "portfolio", "recommendations", "RecommendationCard.tsx"),
       "utf8"
     );
     const skillsGridRule = portfolioCss.match(/\.skills-cloud--compact\s*{[^}]*}/s)?.[0] ?? "";

@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { siteRoutePaths } from "../../src/components/navigation/siteRoutes";
+import { siteRoutePaths } from "../../src/lib/routing/siteRoutes";
 import { captureBrowserConsole, expectNoBrowserConsoleIssues } from "./browserConsole";
 import { reloadWithStoredTheme } from "./themePreference";
 
