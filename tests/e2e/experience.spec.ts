@@ -272,6 +272,54 @@ test.describe("Experience showcase", () => {
     await expect(trigger).toBeFocused();
   });
 
+  test("defers large-viewport touch focus dismissal until the outside button activates", async ({ browser }) => {
+    const touchContext = await browser.newContext({ hasTouch: true, viewport: { height: 900, width: 1280 } });
+    const touchPage = await touchContext.newPage();
+    captureBrowserConsole(touchPage);
+
+    try {
+      await touchPage.goto("/experience");
+      await settleLayout(touchPage);
+
+      const cards = await expectExperienceCardsOrEmptyState(touchPage);
+      if (!cards) return;
+
+      const expandableIndexes = await getExpandableExperienceCardIndexes(cards);
+      const activeIndex = expandableIndexes[0];
+      const switchIndex = expandableIndexes.find((index) => index !== activeIndex);
+      test.skip(activeIndex === undefined || switchIndex === undefined, "Touch ordering needs two expandable Experience cards.");
+      if (activeIndex === undefined || switchIndex === undefined) return;
+
+      const activeTrigger = cards.nth(activeIndex).locator("button.detail-section__trigger").last();
+      const switchTrigger = cards.nth(switchIndex).locator("button.detail-section__trigger").first();
+      const switchTriggerId = await switchTrigger.getAttribute("id");
+      if (!switchTriggerId) throw new Error("The touched Experience disclosure needs an id.");
+
+      await switchTrigger.scrollIntoViewIfNeeded();
+      await switchTrigger.tap();
+      await expect(switchTrigger).toHaveAttribute("aria-expanded", "true");
+      await activeTrigger.evaluate((button, openTriggerId) => {
+        document.documentElement.removeAttribute("data-detail-expanded-at-outside-touch-activation");
+        button.addEventListener(
+          "click",
+          () => {
+            document.documentElement.dataset.detailExpandedAtOutsideTouchActivation =
+              document.getElementById(openTriggerId)?.getAttribute("aria-expanded") ?? "missing";
+          },
+          { once: true }
+        );
+      }, switchTriggerId);
+
+      await activeTrigger.tap();
+      await expect(touchPage.locator("html")).toHaveAttribute("data-detail-expanded-at-outside-touch-activation", "true");
+      await expect(switchTrigger).toHaveAttribute("aria-expanded", "false");
+      await expect(activeTrigger).toHaveAttribute("aria-expanded", "true");
+    } finally {
+      expectNoBrowserConsoleIssues(touchPage);
+      await touchContext.close();
+    }
+  });
+
   test("keeps desktop evidence overlays out of route flow through real keyboard and pointer interactions", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto("/experience");

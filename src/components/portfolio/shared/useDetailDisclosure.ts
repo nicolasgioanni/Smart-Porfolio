@@ -59,14 +59,21 @@ export function useDetailDisclosure(rootRef: RefObject<HTMLElement | null>) {
     const clearPointerFocus = () => {
       pointerFocusPendingRef.current = false;
     };
+    const clearPointerFocusAfterClick = () => {
+      queueMicrotask(clearPointerFocus);
+    };
 
     document.addEventListener("pointerdown", markPointerFocus, true);
-    document.addEventListener("pointerup", clearPointerFocus, true);
+    document.addEventListener("click", clearPointerFocusAfterClick, true);
     document.addEventListener("pointercancel", clearPointerFocus, true);
+    document.addEventListener("keydown", clearPointerFocus, true);
+    window.addEventListener("blur", clearPointerFocus);
     return () => {
       document.removeEventListener("pointerdown", markPointerFocus, true);
-      document.removeEventListener("pointerup", clearPointerFocus, true);
+      document.removeEventListener("click", clearPointerFocusAfterClick, true);
       document.removeEventListener("pointercancel", clearPointerFocus, true);
+      document.removeEventListener("keydown", clearPointerFocus, true);
+      window.removeEventListener("blur", clearPointerFocus);
     };
   }, []);
 
