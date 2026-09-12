@@ -40,7 +40,7 @@ Smart Portfolio uses a layered quality gate for documentation, static content, R
 | `npm run test:e2e:recommendations` | Playwright recommendation specification in Chromium | Samples desktop geometry through expansion and dismissal, then checks responsive and reduced-motion behavior |
 | `npm run test:e2e:experience` | Playwright experience specification in Chromium | Protects detail-level switching, disclosure semantics, responsive controls, and reduced-motion behavior |
 | `npm run test:e2e:research` | Playwright research specification in Chromium | Protects research-card alternation, accessible detail disclosures, responsive stacking, reduced-motion behavior, graphical abstracts, and the CytoCV video modal |
-| `npm run test` | Complete Vitest suite, including local D1 integration coverage | Uses mocks, jsdom, and isolated local D1; not a real browser or Cloudflare runtime |
+| `npm run test` | Complete Vitest suite, including local D1 and Workers transport integration coverage | Uses mocks, jsdom, isolated local D1, and local workerd; no live provider credentials |
 | `npm run build` | `prebuild`, Next.js static export, segment-cache normalization, then content-version write | Regenerates content before building |
 | `npm run build:generated` | Next.js static export, segment-cache normalization, and content-version write | Consumes existing generated JSON without another content fetch |
 | `npm audit` | Locked full dependency graph audit | Covers development and deployment dependencies |
@@ -95,6 +95,9 @@ These are unit and integration-style tests with temporary files and injected fet
 | Layer | Authoritative tests | Coverage |
 | --- | --- | --- |
 | Client field validation | `src/components/contact/contactFormValidation.test.ts` | Required fields, trimming, email suffix and Punycode rules, phone, 500-character message boundary, and shared limits |
+| Workers transport | `scripts/contactTransport.integration.test.ts` | Actual local workerd plain/JSON success and every 3xx rejection, with zero destination requests or credential forwarding |
+| IANA snapshot | `scripts/updateContactTlds.test.mjs` | Complete attributed offline suffix set, bounded explicit updater, malformed/oversized input, and no build-time download |
+| Contact notifications | `src/components/contact/ContactNotifications.test.tsx` | Body portal, three-card capacity, duplicates, independent expiry, pause/resume, announcements, focus recovery, dismissal, and reduced motion |
 | Turnstile widget | `src/components/contact/TurnstileWidget.test.tsx` | Visible upfront rendering, submission custom data, success, expiry, reset, theme, and missing-key failure |
 | Contact route | `src/app/contact/contact.test.tsx` | Hard-gate isolation, 500-millisecond transition and Continue fallback, three data-entry steps, two acknowledgments, challenge and two-hour draft recovery, retry focus, repeated-click blocking, exact payload, standalone success, subsequent-message gates, and locked retries |
 | Verification Function | `functions/api/contact/verify.test.ts` | Method, origin, media type, body contract, Siteverify action, hostname and custom-data binding, operation-scoped bounded retry, transient failure mapping, remote IP, and signed cookie |
@@ -103,6 +106,10 @@ These are unit and integration-style tests with temporary files and injected fet
 | Legal disclosures | `src/components/legal/legal.test.tsx` | Contact processing, pseudonymous reservation storage, DNS validation, retention, and published notices |
 
 The Function tests call exported handlers with web-standard `Request` and `Response` objects while mocking Turnstile, DNS, D1, and Resend. They do not execute in a real Workers runtime, cross a WAF rule, use live provider credentials, mutate remote D1, or send production email.
+
+The separate transport integration test executes the actual shared transport in local workerd through the Miniflare version pinned alongside Wrangler. Its local provider fixture accepts credential-bearing requests and advertises redirects to an instrumented destination. Both helpers must accept successful exchanges and reject every status from 300 through 399 without a destination request. This catches Workers API incompatibilities that Node mocks miss. It runs in the priority PR gate and full suite; it does not prove live Turnstile, WAF, DNS, or Resend configuration.
+
+The contact browser specification also checks unchanged gate geometry across loading, expiry, widget shrink/removal, failure, retry, pending server confirmation, and success at desktop/mobile widths, in all themes and reduced motion. It covers stacked notification peeks, touch/keyboard expansion and dismissal, focus recovery, viewport scrolling, email suffix typos, and retained completion/recovery. Unit tests separately control independent 30-second clocks, duplicate refresh, capacity eviction, and announcements. Existing skeleton baselines and all three skeleton regression gates remain unchanged.
 
 ## Interface and accessibility coverage
 

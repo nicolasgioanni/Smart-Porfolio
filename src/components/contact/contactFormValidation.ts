@@ -1,4 +1,4 @@
-import { contactFieldLimits, isValidEmail, isValidPhone } from "@/lib/contact/validation";
+import { contactFieldLimits, getEmailValidationIssue, isValidPhone } from "@/lib/contact/validation";
 
 export { contactFieldLimits, isValidEmail } from "@/lib/contact/validation";
 
@@ -54,7 +54,9 @@ export function validateDetailsStep(draft: ContactDraft): ContactFieldErrors {
 export function validateEmailField(value: string): string | undefined {
   const email = value.trim();
   if (!email) return "Enter your email address";
-  return isValidEmail(email) ? undefined : "Enter a valid email address";
+  const issue = getEmailValidationIssue(email);
+  if (issue === "domain-ending") return "Check the email domain ending for a typo.";
+  return issue ? "Enter a valid email address" : undefined;
 }
 
 export function hasFieldErrors(errors: ContactFieldErrors): boolean {

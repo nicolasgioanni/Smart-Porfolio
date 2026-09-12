@@ -293,8 +293,8 @@ describe("Cloudflare contact verification function", () => {
     expect(await response.json()).toEqual({ ok: false, error: "verification_unavailable" });
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(cancellationCount).toBe(2);
-    expect((fetchMock.mock.calls[0]?.[1] as RequestInit).redirect).toBe("error");
-    expect((fetchMock.mock.calls[1]?.[1] as RequestInit).redirect).toBe("error");
+    expect((fetchMock.mock.calls[0]?.[1] as RequestInit).redirect).toBe("manual");
+    expect((fetchMock.mock.calls[1]?.[1] as RequestInit).redirect).toBe("manual");
   });
 
   it("rejects oversized Siteverify JSON bodies without waiting for stream cancellation", async () => {

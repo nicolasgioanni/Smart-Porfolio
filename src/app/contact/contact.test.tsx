@@ -254,7 +254,7 @@ describe("contact route", () => {
 
     expect(await currentGateWidget()).toHaveAttribute("data-site-key", "");
     expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
-    expect(screen.getByText(/Secure verification is temporarily unavailable/i)).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent(/Secure verification is temporarily unavailable/i);
     expect(screen.queryByLabelText(/First name/i)).not.toBeInTheDocument();
     expect(callsFor(fetchMock, "/api/contact/verify")).toHaveLength(0);
     expect(callsFor(fetchMock, "/api/contact")).toHaveLength(0);
@@ -474,9 +474,9 @@ describe("contact route", () => {
     expect(setItemMock).not.toHaveBeenCalled();
 
     const successNotice = await screen.findByRole("status");
-    expect(successNotice).toHaveAttribute("data-tone", "success");
+    expect(document.querySelector('.contact-notice[data-tone="success"]')).toBeInTheDocument();
     expect(successNotice).toHaveTextContent(/confirmation email is on its way to avery@example\.com/i);
-    expect(successNotice).toHaveFocus();
+    expect(screen.getByRole("heading", { name: "Thanks for reaching out" })).toHaveFocus();
     expect(screen.getByRole("heading", { level: 2, name: "Thanks for reaching out" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Send another message" })).toBeEnabled();
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
@@ -671,7 +671,7 @@ describe("contact route", () => {
           : Response.json({ ok: true })
     });
     render(<ContactPage />);
-    await reachReview({ email: "recruiter@invalid.example", message: "Email validation inquiry" });
+    await reachReview({ email: "recruiter@unroutable.example.com", message: "Email validation inquiry" });
     acceptAcknowledgments();
 
     fireEvent.click(screen.getByRole("button", { name: "Send request" }));

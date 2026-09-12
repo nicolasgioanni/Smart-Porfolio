@@ -230,6 +230,10 @@ Footer state may animate width, padding, grid-row height, opacity, and small tra
 
 Use `aria-current`, `aria-pressed`, `aria-expanded`, or native disabled state to express semantics. The one state pseudo-element uses a solid role token and `pointer-events: none`; no sheen or traveling highlight is permitted. Reduced motion disables lift, arrow travel, and route-indicator travel while preserving state colors.
 
+## Contact feedback
+
+The verification well reserves flexible (minimum 300 by 65 pixels) or compact (150 by 140 pixels) widget space, plus status and recovery rows, throughout security states. Later form steps fit their content. Contact outcome banners render through a body portal, centered at the viewport top with safe-area spacing and a 680-pixel maximum width. The three-card stack sits above navigation and below dialogs, exposes 10-pixel peeks, and expands into scrollable readable cards. Errors use danger tokens and successes use success tokens in every theme. The shared icon-button primitive supplies a 44-pixel X with transparent resting surface/border and visible Hover Base 1 treatment. Field feedback remains beside inputs. See [Contact System](../security/CONTACT_SYSTEM.md#contact-notifications) for timing and recovery.
+
 ## Motion
 
 Motion supports state and orientation. Prefer opacity and transform. Shared detail disclosures, recommendation disclosure, and footer grid rows are documented exceptions where a bounded layout transition communicates state.

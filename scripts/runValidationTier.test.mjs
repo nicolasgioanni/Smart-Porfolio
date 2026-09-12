@@ -12,6 +12,12 @@ const projectRoot = path.resolve(import.meta.dirname, "..");
 describe("priority validation tier", () => {
   it("selects the required trust-boundary contracts before running Vitest", () => {
     expect(priorityTestTargets).toContain("functions");
+    expect(priorityTestTargets).toEqual(expect.arrayContaining([
+      "scripts/contactTransport.integration.test.ts",
+      "scripts/updateContactTlds.test.mjs",
+      "src/components/contact/ContactNotifications.test.tsx",
+      "src/styles/contactStyles.test.ts"
+    ]));
 
     for (const directory of priorityTestDirectories) {
       expect(existsSync(path.join(projectRoot, directory))).toBe(true);

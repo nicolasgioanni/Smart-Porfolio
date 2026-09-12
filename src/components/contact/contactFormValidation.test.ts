@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { contactTopLevelDomains } from "@/lib/contact/ianaTlds";
 import {
   contactFieldLimits,
   hasFieldErrors,
@@ -14,6 +15,11 @@ function draft(overrides: Partial<ContactDraft> = {}): ContactDraft {
 }
 
 describe("contact form validation", () => {
+  it("supports every registered ending in the offline snapshot, including Punycode", () => {
+    for (const tld of contactTopLevelDomains) {
+      expect(validateEmailField(`person@example.${tld}`), tld).toBeUndefined();
+    }
+  });
   it("requires both names and accepts trimmed names", () => {
     const missing = validateNameStep(draft());
     expect(missing).toEqual({ firstName: "Enter your first name", lastName: "Enter your last name" });
@@ -47,8 +53,14 @@ describe("contact form validation", () => {
   });
 
   it("accepts common, multi-label, and valid internationalized email domains", () => {
-    for (const email of ["person@example.co", "person@dept.example.com", "person@example.xn--p1ai"]) {
+    for (const email of ["person@example.co", "person@dept.example.com", "person@example.xn--p1ai", "person@example.gov", "person@example.org", "person@example.edu", "person@example.dev", "person@example.museum", "Person@EXAMPLE.COM"]) {
       expect(validateEmailField(email)).toBeUndefined();
+    }
+  });
+
+  it("gives specific feedback for plausible but unregistered domain endings", () => {
+    for (const email of ["nicolasmgioanni@gmail.con", "person@test.gomm", "person@example.invalid", "person@example.xn--bcher-kva"]) {
+      expect(validateEmailField(email)).toBe("Check the email domain ending for a typo.");
     }
   });
 
