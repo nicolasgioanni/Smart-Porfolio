@@ -47,6 +47,8 @@ describe("research showcase styles", () => {
     expect(researchStyles).toMatch(/\.research-visual\s*{[^}]*background:\s*var\(--visual-surface\)/s);
     expect(abstractRule).toMatch(/background:\s*var\(--visual-surface\)/);
     expect(abstractRule).toMatch(/place-items:\s*center/);
+    expect(abstractRule).toMatch(/align-content:\s*center/);
+    expect(abstractRule).toMatch(/gap:\s*var\(--space-3\)/);
     expect(abstractRule).not.toMatch(/gradient|rgba|transparent/);
   });
 
@@ -92,6 +94,9 @@ describe("research showcase styles", () => {
     expect(thumbnailRule).toMatch(/width:\s*100%/);
     expect(thumbnailRule).toMatch(/height:\s*100%/);
     expect(thumbnailRule).toMatch(/object-fit:\s*contain/);
+    expect(researchStyles).toMatch(
+      /\.research-abstract__title\s*\{[^}]*width:\s*100%[^}]*max-width:\s*44rem[^}]*justify-self:\s*start[^}]*overflow-wrap:\s*anywhere/s
+    );
     expect(triggerRule).toMatch(
       /transition:\s*box-shadow 180ms ease,\s*transform 180ms cubic-bezier\(0\.16, 1, 0\.3, 1\)/
     );

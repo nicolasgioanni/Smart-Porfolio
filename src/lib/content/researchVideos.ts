@@ -8,6 +8,7 @@ import {
 export type ResearchVideo = {
   captionsSrc: string;
   description: string;
+  displayTitle: string;
   durationLabel: string;
   height: number;
   mimeType: "video/mp4" | "video/webm";
@@ -24,6 +25,7 @@ const curatedResearchVideos: Readonly<Record<string, CuratedResearchVideo>> = {
     captionsSrc: "/images/research/cytocv-supplementary-video-s1.en.vtt",
     description:
       "A narrated CytoCV workflow demonstration showing nuclear-to-cytoplasmic intensity-ratio analysis for wild-type and mutant yeast cells.",
+    displayTitle: "CytoCV Demo",
     durationLabel: "5 min 28 sec",
     height: 1108,
     mimeType: "video/mp4",
