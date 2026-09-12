@@ -121,7 +121,7 @@ describe("static portfolio security contracts", () => {
     expect(tokensCss).toMatch(/--hover-base-1-route-easing:\s*cubic-bezier\(0\.65,\s*0,\s*0\.35,\s*1\)/);
     expect(tokensCss.match(/--hover-base-1-hover-surface:/g)).toHaveLength(3);
     expect(tokensCss.match(/--hover-base-1-selected-surface:/g)).toHaveLength(3);
-    expect(tokensCss).toMatch(/:root,\s*\[data-theme="navy"\][\s\S]*--hover-base-1-hover-surface:\s*#dfbd83/);
+    expect(tokensCss).toMatch(/:root,\s*\[data-theme="navy"\][\s\S]*--hover-base-1-hover-surface:\s*#f4f1ea/);
     expect(tokensCss).toMatch(/\[data-theme="light"\][\s\S]*--hover-base-1-hover-surface:\s*#174968/);
     expect(tokensCss).toMatch(/\[data-theme="dark"\][\s\S]*--hover-base-1-hover-surface:\s*#5266bd/);
     expect(interactionsCss).toMatch(/\.hover-base-1::before\s*{[^}]*pointer-events:\s*none/s);
