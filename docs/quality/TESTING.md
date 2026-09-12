@@ -261,7 +261,7 @@ When behavior changes:
 3. Add or update a Playwright case when responsive geometry, native browser scrolling, fixed positioning, or cross-component interaction is the contract under test.
 4. Update workflow contract tests when a CI trigger, condition, permission, action, command, artifact, or environment variable changes.
 5. Update documentation and its cross-links in the same change.
-6. Run the targeted tests first, then `npm run verify`.
+6. Run the targeted tests first, then `npm run verify:priority`; run `npm run verify:full` on Ubuntu 24.04 before deployment.
 
 Avoid snapshot tests that hide semantic changes. Prefer explicit assertions for user-visible text, accessibility state, response contracts, validation errors, and integrity metadata.
 
