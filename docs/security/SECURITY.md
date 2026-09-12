@@ -114,7 +114,7 @@ Both handlers:
 
 `POST /api/contact` allows only its documented fields, rejects unknown keys and unsafe values, requires both acknowledgments to be boolean `true`, limits the message to 500 characters, and validates the names, email, optional phone, timing fields, and submission UUID. The hidden honeypot and minimum-completion check are evaluated during payload parsing, before ticket validation. A non-empty honeypot or completion under 1,200 milliseconds returns a silent generic success without calling DNS, D1, or Resend. This order avoids making the low-cost bot signals an oracle. The browser records the form-start time when the verified form opens, so time at the gate does not satisfy the completion threshold. Normal provider delivery cannot begin until the signed ticket and its submission binding, the mail-domain route, and a D1 quota reservation have been validated.
 
-The application code does not implement a request-body timeout, whole-request timeout, or client fetch timeout. Its bounded outbound work covers Siteverify, mail-domain DNS queries, and each Resend request. Platform limits still apply.
+The application code applies a 15-second request-body read deadline, but does not implement a whole-request timeout or client fetch timeout. A 16 KiB inbound-body rejection or read deadline starts cancellation without waiting for cleanup to settle. Its bounded outbound work covers Siteverify, mail-domain DNS queries, and each Resend request. Fixed provider requests reject redirects; the 5-second Siteverify and 3-second DNS deadlines include their capped JSON-body reads (16 KiB and 64 KiB respectively). Platform limits still apply.
 
 ## Verification ticket
 
@@ -128,7 +128,7 @@ There is no server-side ticket database, consumed-ticket record, or revocation l
 
 ## Mail-domain and quota controls
 
-After payload and ticket validation, bounded DNS MX lookup checks the submitted email domain. A domain with no MX result may use the documented A/AAAA fallback, while an explicit null MX is rejected. DNS failure is separated from an unroutable result so a resolver outage produces a retryable service error rather than incorrectly labeling the address invalid. This is domain-route validation, not proof that a mailbox exists or is controlled by the submitter.
+After payload and ticket validation, bounded DNS MX lookup checks the submitted email domain. A domain with no MX result may use the documented A/AAAA fallback, while an explicit null MX is rejected. DNS failure, a deadline, or an oversized response is separated from an unroutable result so a resolver outage produces a retryable service error rather than incorrectly labeling the address invalid. This is domain-route validation, not proof that a mailbox exists or is controlled by the submitter.
 
 The delivery handler then reserves one of two slots for the normalized email address in a rolling 24-hour window. It computes HMAC-SHA-256 over `email.trim().toLowerCase()` and a separate HMAC-SHA-256 fingerprint over the normalized full delivery payload, using keys derived from `TURNSTILE_SECRET_KEY` with distinct HKDF contexts. The `CONTACT_RATE_LIMIT_DB` row contains only the opaque submission UUID, keyed address hash, opaque keyed payload fingerprint, reservation epoch seconds, and expiry epoch seconds. It contains no raw address, name, phone number, or message. No provider-specific alias normalization occurs.
 

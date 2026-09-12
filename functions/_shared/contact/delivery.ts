@@ -1,7 +1,7 @@
 import { isValidEmail } from "../../../src/lib/contact/validation";
 import { isValidFromMailbox } from "./config";
 import type { ContactEnv, ContactPayload, EmailMessage } from "./contracts";
-import { fetchWithTimeout } from "./transport";
+import { discardResponseBody, fetchWithTimeout } from "./transport";
 
 const RESEND_EMAIL_URL = "https://api.resend.com/emails";
 const CANONICAL_SITE_URL = "https://nicolasmgioanni.dev";
@@ -173,7 +173,9 @@ async function sendResendEmail(message: EmailMessage, apiKey: string, idempotenc
     },
     RESEND_TIMEOUT_MS
   );
-  return response?.ok === true;
+  const accepted = response?.ok === true;
+  discardResponseBody(response);
+  return accepted;
 }
 
 function detailTable(title: string, rows: Array<[string, string]>, escapedMessage: string): string {
