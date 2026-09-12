@@ -16,6 +16,7 @@ describe("priority validation tier", () => {
       "scripts/contactTransport.integration.test.ts",
       "scripts/updateContactTlds.test.mjs",
       "src/components/contact/ContactNotifications.test.tsx",
+      "src/components/contact/useContactStepTransition.test.tsx",
       "src/styles/contactStyles.test.ts"
     ]));
 

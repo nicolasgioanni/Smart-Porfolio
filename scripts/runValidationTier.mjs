@@ -29,6 +29,7 @@ export const priorityTestTargets = [
   "scripts/pngMetadata.test.mjs",
   "functions",
   "src/app/contact/contact.test.tsx",
+  "src/components/contact/useContactStepTransition.test.tsx",
   "src/components/contact/contactFormValidation.test.ts",
   "src/components/contact/TurnstileWidget.test.tsx",
   "src/components/contact/ContactNotifications.test.tsx",
