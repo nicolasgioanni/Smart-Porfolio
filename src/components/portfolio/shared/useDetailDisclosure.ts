@@ -42,6 +42,7 @@ export function useDetailDisclosure(rootRef: RefObject<HTMLElement | null>) {
   const usesNaturalFlow = useMediaQuery(MOBILE_UI_QUERY);
   const [openDetail, setOpenDetail] = useState<OpenDetailDisclosure | null>(null);
   const openDetailRef = useRef(openDetail);
+  const pointerFocusPendingRef = useRef(false);
 
   useEffect(() => {
     openDetailRef.current = openDetail;
@@ -50,6 +51,24 @@ export function useDetailDisclosure(rootRef: RefObject<HTMLElement | null>) {
   useLayoutEffect(() => {
     setOpenDetail(null);
   }, [usesNaturalFlow]);
+
+  useEffect(() => {
+    const markPointerFocus = () => {
+      pointerFocusPendingRef.current = true;
+    };
+    const clearPointerFocus = () => {
+      pointerFocusPendingRef.current = false;
+    };
+
+    document.addEventListener("pointerdown", markPointerFocus, true);
+    document.addEventListener("pointerup", clearPointerFocus, true);
+    document.addEventListener("pointercancel", clearPointerFocus, true);
+    return () => {
+      document.removeEventListener("pointerdown", markPointerFocus, true);
+      document.removeEventListener("pointerup", clearPointerFocus, true);
+      document.removeEventListener("pointercancel", clearPointerFocus, true);
+    };
+  }, []);
 
   const toggle = useCallback((itemId: string, sectionId: string) => {
     const nextDetail = { itemId, sectionId };
@@ -80,7 +99,7 @@ export function useDetailDisclosure(rootRef: RefObject<HTMLElement | null>) {
     };
 
     const handleDocumentFocusIn = (event: globalThis.FocusEvent) => {
-      if (usesNaturalFlow) return;
+      if (usesNaturalFlow || pointerFocusPendingRef.current) return;
 
       const target = getTargetElement(event.target);
       const activeSection = rootRef.current?.querySelector<HTMLElement>('.detail-section[data-open="true"]');
@@ -114,7 +133,7 @@ export function useDetailDisclosure(rootRef: RefObject<HTMLElement | null>) {
   const onFocusCapture = useCallback(
     (event: FocusEvent<HTMLElement>) => {
       const activeDetail = openDetailRef.current;
-      if (usesNaturalFlow || !activeDetail) return;
+      if (usesNaturalFlow || pointerFocusPendingRef.current || !activeDetail) return;
 
       const target = getTargetElement(event.target);
       const activeSection = rootRef.current?.querySelector<HTMLElement>('.detail-section[data-open="true"]');

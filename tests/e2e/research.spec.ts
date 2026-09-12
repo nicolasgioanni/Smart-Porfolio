@@ -845,7 +845,22 @@ test.describe("Research showcase", () => {
       await expect(switchTrigger).toHaveAttribute("aria-expanded", "true");
       expectStableDetailOverlay(await switchingSamples, collapsedLayout);
 
+      const switchTriggerId = await switchTrigger.getAttribute("id");
+      expect(switchTriggerId).toBeTruthy();
+      if (!switchTriggerId) throw new Error("The switched Research disclosure needs an id.");
+      await activeTrigger.evaluate((button, openTriggerId) => {
+        document.documentElement.removeAttribute("data-detail-expanded-at-outside-activation");
+        button.addEventListener(
+          "click",
+          () => {
+            document.documentElement.dataset.detailExpandedAtOutsideActivation =
+              document.getElementById(openTriggerId)?.getAttribute("aria-expanded") ?? "missing";
+          },
+          { once: true }
+        );
+      }, switchTriggerId);
       await activeTrigger.click();
+      await expect(page.locator("html")).toHaveAttribute("data-detail-expanded-at-outside-activation", "true");
       await expect(switchTrigger).toHaveAttribute("aria-expanded", "false");
       await expect(activeTrigger).toHaveAttribute("aria-expanded", "true");
     }
