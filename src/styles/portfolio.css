@@ -1758,7 +1758,7 @@
   position: relative;
   overflow: hidden;
   max-height: var(--recommendation-collapsed-height);
-  transition: max-height 520ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: max-height var(--disclosure-height-duration) var(--disclosure-easing);
 }
 
 .recommendation-expandable[data-expanded="true"] .recommendation-expandable__viewport {
@@ -1770,7 +1770,7 @@
   font-size: var(--font-size-body);
   line-height: var(--line-height-normal);
   opacity: 0.94;
-  transition: opacity 320ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: opacity var(--disclosure-opacity-duration) var(--disclosure-easing);
 }
 
 .recommendation-expandable__inline-link {

@@ -65,6 +65,9 @@
   --header-motion-duration: 460ms;
   --header-motion-easing: cubic-bezier(0.22, 1, 0.36, 1);
   --transition-header: var(--header-motion-duration) var(--header-motion-easing);
+  --disclosure-height-duration: 520ms;
+  --disclosure-opacity-duration: 320ms;
+  --disclosure-easing: cubic-bezier(0.22, 1, 0.36, 1);
   --header-nav-link-height: 34px;
   --header-nav-link-padding-inline: 14px;
   --header-nav-link-compact-height: 32px;

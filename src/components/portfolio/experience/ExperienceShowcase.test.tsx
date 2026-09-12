@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { ExperienceItem } from "@/content/types";
 import { ExperienceShowcase } from "@/components/portfolio/experience/ExperienceShowcase";
@@ -97,21 +97,57 @@ describe("ExperienceShowcase", () => {
     expect(within(architecturePanel!).getByText("PostgreSQL")).toBeInTheDocument();
   });
 
-  it("keeps one chapter open per role and closes the active chapter with Escape", () => {
-    render(<ExperienceShowcase items={[cytocvExperience]} motionEnabled={false} summary={experienceSummary} />);
+  it("keeps one selected chapter across roles and closes it with Escape or a noninteractive card click", async () => {
+    const secondRole = {
+      ...cytocvExperience,
+      id: "second-research-role",
+      organization: "Second research organization",
+      title: "Second Research Assistant"
+    };
+    render(<ExperienceShowcase items={[cytocvExperience, secondRole]} motionEnabled={false} summary={experienceSummary} />);
 
-    const workflowButton = screen.getByRole("button", { name: /Scientific workflow/i });
-    const analysisButton = screen.getByRole("button", { name: /Image analysis/i });
+    const cards = screen.getAllByRole("article");
+    const workflowButton = within(cards[0]!).getByRole("button", { name: /Scientific workflow/i });
+    const analysisButton = cards[1]!.querySelector<HTMLButtonElement>(".detail-section__trigger");
+
+    expect(analysisButton).not.toBeNull();
 
     fireEvent.click(workflowButton);
     expect(workflowButton).toHaveAttribute("aria-expanded", "true");
 
-    fireEvent.click(analysisButton);
+    fireEvent.click(analysisButton!);
     expect(workflowButton).toHaveAttribute("aria-expanded", "false");
-    expect(analysisButton).toHaveAttribute("aria-expanded", "true");
+    expect(analysisButton!).toHaveAttribute("aria-expanded", "true");
 
-    fireEvent.keyDown(analysisButton, { key: "Escape" });
-    expect(analysisButton).toHaveAttribute("aria-expanded", "false");
+    fireEvent.keyDown(analysisButton!, { key: "Escape" });
+    await waitFor(() => expect(analysisButton!).toHaveAttribute("aria-expanded", "false"));
+
+    fireEvent.click(analysisButton!);
+    expect(analysisButton!).toHaveAttribute("aria-expanded", "true");
+    fireEvent.click(within(cards[1]!).getByText("Second research organization"));
+    expect(analysisButton!).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("closes through document Escape and restores focus without consuming a handled Escape", async () => {
+    render(<ExperienceShowcase items={[cytocvExperience]} motionEnabled={false} summary={experienceSummary} />);
+
+    const trigger = screen.getByRole("button", { name: /Scientific workflow/i });
+    fireEvent.click(trigger);
+    const panel = document.getElementById(trigger.getAttribute("aria-controls")!);
+    const clip = panel?.querySelector<HTMLElement>(".detail-section__panel-clip");
+    expect(clip).not.toBeNull();
+    clip!.focus();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() => expect(trigger).toHaveAttribute("aria-expanded", "false"));
+    expect(trigger).toHaveFocus();
+
+    fireEvent.click(trigger);
+    const handledEscape = new KeyboardEvent("keydown", { bubbles: true, cancelable: true, key: "Escape" });
+    handledEscape.preventDefault();
+    document.dispatchEvent(handledEscape);
+    await Promise.resolve();
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
   });
 
   it("shows verified identity only when a role has no published details", () => {
