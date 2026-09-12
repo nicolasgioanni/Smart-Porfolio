@@ -299,7 +299,7 @@ test("uses solid, layered semantic surfaces in every palette", async ({ page }) 
   }
 });
 
-test("moves the whole rail, pauses after touch, and resumes in place after five seconds", async ({ page }) => {
+test("moves the whole rail immediately, pauses after touch, and resumes in place after five seconds", async ({ page }) => {
   await page.clock.install();
   await page.setViewportSize({ width: 390, height: viewportHeight });
   await openHome(page);
@@ -315,7 +315,7 @@ test("moves the whole rail, pauses after touch, and resumes in place after five 
       scrollLeft: element.scrollLeft
     };
   });
-  await page.clock.runFor(3_500);
+  await page.clock.runFor(500);
   const driftedRail = await rail.evaluate((element) => {
     const actionsElement = element.querySelector<HTMLElement>(".blob-header__actions");
     if (!actionsElement) throw new Error("The mobile rail is missing its action cluster.");
@@ -353,6 +353,98 @@ test("moves the whole rail, pauses after touch, and resumes in place after five 
   const resumedPosition = await rail.evaluate((element) => element.scrollLeft);
   expect(Math.abs(resumedPosition - pausedPosition)).toBeGreaterThan(3);
   expect(resumedPosition).toBeGreaterThan(30);
+});
+
+for (const width of [320, 390, 720]) {
+  test(`keeps Home concise with one skill row per group at ${width}px`, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.setViewportSize({ width, height: viewportHeight });
+    await openHome(page);
+
+    for (const card of await page.locator(".home-research-card, .home-project-card").all()) {
+      await expect(card.locator(".home-card-summary__full")).toBeHidden();
+      const summary = card.locator(".home-card-summary__mobile");
+      if (await summary.count()) {
+        await expect(summary).toBeVisible();
+        const text = (await summary.innerText()).trim();
+        expect(Array.from(new Intl.Segmenter("en", { granularity: "sentence" }).segment(text))).toHaveLength(1);
+        expect(await summary.evaluate((element) => {
+          const bounds = element.closest("article")!.getBoundingClientRect();
+          const range = document.createRange();
+          range.selectNodeContents(element);
+          return Array.from(range.getClientRects()).every((rect) => rect.left >= bounds.left && rect.right <= bounds.right);
+        })).toBe(true);
+      }
+      await expect(card.locator(".home-project-card__skills")).toBeHidden();
+    }
+    await expect(page.locator(".home-research-card__date, .home-research-card__location")).toHaveCount(0);
+
+    for (const group of await page.locator(".skills-group--compact").all()) {
+      const geometry = await group.evaluate((element) => {
+        const bounds = element.getBoundingClientRect();
+        return Array.from(element.querySelectorAll<HTMLElement>(".portfolio-skill-showcase__item")).map((item) => {
+          const rect = item.getBoundingClientRect();
+          return { top: rect.top, left: rect.left - bounds.left, right: bounds.right - rect.right,
+            fits: item.scrollWidth <= item.clientWidth + 1 };
+        });
+      });
+      expect(geometry.length).toBeGreaterThan(0);
+      expect(new Set(geometry.map(({ top }) => Math.round(top))).size).toBe(1);
+      for (const item of geometry) {
+        expect(item.left).toBeGreaterThanOrEqual(0);
+        expect(item.right).toBeGreaterThanOrEqual(0);
+        expect(item.fits).toBe(true);
+      }
+    }
+    const skill = page.locator(".skills-group--compact button").first();
+    if (await skill.count()) {
+      await skill.click();
+      await expect(page.getByRole("dialog")).toBeVisible();
+      await page.keyboard.press("Escape");
+      await expect(skill).toBeFocused();
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  });
+}
+
+test("preserves desktop Home summaries and project skills above the phone breakpoint", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  for (const width of [721, 1280]) {
+    await page.setViewportSize({ width, height: viewportHeight });
+    await page.goto("/");
+    await expect(page.locator(".page-container--home")).toBeVisible();
+    for (const summary of await page.locator(".home-card-summary__full").all()) await expect(summary).toBeVisible();
+    for (const summary of await page.locator(".home-card-summary__mobile").all()) await expect(summary).toBeHidden();
+    for (const skills of await page.locator(".home-project-card__skills").all()) await expect(skills).toBeVisible();
+    await expect(page.locator(".home-research-card__date, .home-research-card__location")).toHaveCount(0);
+  }
+});
+
+test("reveals mobile recommendations after exactly the first sentence on Home and Recommendations", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(Intl, "Segmenter", { configurable: true, value: undefined });
+  });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.setViewportSize({ width: 390, height: viewportHeight });
+  for (const route of ["/", "/recommendations"]) {
+    await page.goto(route);
+    const quotes = page.locator('.recommendation-expandable[data-has-more-sentences="true"]');
+    for (const root of await quotes.all()) {
+      const quote = root.locator("blockquote");
+      const full = (await quote.textContent())!;
+      const first = new Intl.Segmenter("en", { granularity: "sentence" }).segment(full)[Symbol.iterator]().next().value!.segment.trim();
+      await expect(quote).toHaveText(full);
+      expect((await quote.innerText()).trim()).toBe(first);
+      await expect(root.locator(".recommendation-expandable__remainder")).toBeHidden();
+      const toggle = root.locator(".recommendation-expandable__toggle");
+      await toggle.click();
+      await expect(toggle).toHaveAttribute("aria-expanded", "true");
+      expect((await quote.innerText()).trim()).toBe(full.trim());
+      await page.keyboard.press("Escape");
+      await expect(toggle).toBeFocused();
+      expect((await quote.innerText()).trim()).toBe(first);
+    }
+  }
 });
 
 test("keeps manual overflow but disables automatic drift for reduced motion", async ({ page }) => {

@@ -8,6 +8,7 @@ export const interactiveSkillDialogFadeMs = modalDialogFadeMs;
 
 export type InteractiveSkillShowcaseItem = {
   name: string;
+  compactName?: string;
   icon?: string;
   summary?: string;
   details?: string;
@@ -150,12 +151,12 @@ export function InteractiveSkillShowcase<TItem extends InteractiveSkillShowcaseI
                   type="button"
                 >
                   {item.icon ? <SkillIcon icon={item.icon} /> : null}
-                  <span className="skill-badge__label">{item.name}</span>
+                  <SkillLabel item={item} />
                 </button>
               ) : (
                 <span className={`${outerClassName}__badge skill-badge`}>
                   {item.icon ? <SkillIcon icon={item.icon} /> : null}
-                  <span className="skill-badge__label">{item.name}</span>
+                  <SkillLabel item={item} />
                 </span>
               )}
             </span>
@@ -166,4 +167,13 @@ export function InteractiveSkillShowcase<TItem extends InteractiveSkillShowcaseI
       {dialog}
     </>
   );
+}
+
+function SkillLabel({ item }: { item: InteractiveSkillShowcaseItem }) {
+  return item.compactName ? (
+    <span className="skill-badge__label">
+      <span className="skill-badge__full-name">{item.name}</span>
+      <span className="skill-badge__compact-name" aria-label={item.name}>{item.compactName}</span>
+    </span>
+  ) : <span className="skill-badge__label">{item.name}</span>;
 }

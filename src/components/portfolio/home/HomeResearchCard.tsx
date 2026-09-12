@@ -2,7 +2,7 @@ import type { PortfolioContentLink, ResearchItem } from "@/content/types";
 import { GlassButton } from "@/components/glass/GlassButton";
 import { PortfolioCard } from "@/components/portfolio/shared/PortfolioCard";
 import { getLinkKind, getSummary } from "@/lib/content/displayHelpers";
-import { formatProfileOverviewDateRange } from "@/lib/content/profileOverview";
+import { HomeCardSummary } from "@/components/portfolio/home/HomeCardSummary";
 
 type HomeResearchCardProps = {
   item: ResearchItem;
@@ -24,7 +24,6 @@ function getResearchActions(links: PortfolioContentLink[]): ResearchAction[] {
 
 export function HomeResearchCard({ item }: HomeResearchCardProps) {
   const displayTitle = item.homeTitle?.trim() || item.title;
-  const dateLabel = formatProfileOverviewDateRange(item.startDate, item.endDate);
   const summary = getSummary(item.homeSummary, item.detailSummary);
   const actions = getResearchActions(item.links);
 
@@ -33,11 +32,9 @@ export function HomeResearchCard({ item }: HomeResearchCardProps) {
       <header className="home-research-card__header">
         <h3 className="home-research-card__title">{displayTitle}</h3>
         {item.organization ? <p className="home-research-card__organization">{item.organization}</p> : null}
-        {dateLabel ? <p className="home-research-card__date">{dateLabel}</p> : null}
-        {item.location ? <p className="home-research-card__location">{item.location}</p> : null}
       </header>
 
-      {summary ? <p className="home-research-card__summary">{summary}</p> : null}
+      {summary ? <HomeCardSummary className="home-research-card__summary" id={item.id} kind="research" summary={summary} /> : null}
 
       {actions.length > 0 ? (
         <div className="home-research-card__actions">

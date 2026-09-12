@@ -141,6 +141,8 @@ The suite verifies the fixed bottom dock at 320, 390, and 768 CSS pixels; a view
 
 `tests/e2e/footer.spec.ts` records semantic footer mutations and painted animation frames. It verifies that every registered page and the not-found route remain compact through hydration and layout settlement, and that expanded state never carries into a client-side route transition. It also covers restored deep scroll positions and confirms that expansion occurs only after real downward wheel input reaches the reserved runway.
 
+Phone Home cases in `tests/e2e/navigation.spec.ts` verify immediate rail startup with the five-second interaction pause, concise summaries, hidden Project skills, single-row skill geometry and dialog operation at 320/390/720px, desktop preservation at 721/1280px, and first-sentence recommendation disclosure on both Home and Recommendations. These cases run in the existing priority browser gate.
+
 ## Browser recommendation coverage
 
 `tests/e2e/recommendations.spec.ts` samples every desktop recommendation slot across the full expand and collapse transition. It protects compact-height caching and each row's offset within the recommendation list during explicit collapse, outside-pointer dismissal, cross-card focus, and direct card switching, so unrelated shell movement cannot be mistaken for a grid regression. Responsive cases preserve natural document flow, while keyboard and reduced-motion cases protect accessible dismissal and transition fallbacks.
