@@ -118,6 +118,12 @@ describe("skeleton style contracts", () => {
     );
     expect(researchStyles).toMatch(/\.research-skeleton__abstract-frame\s*\{[^}]*aspect-ratio: 16 \/ 9/s);
     expect(researchStyles).toMatch(
+      /\.research-skeleton__abstract\s*\{[^}]*align-content: start[^}]*padding: var\(--space-4\)[^}]*overflow: hidden[^}]*border-radius: var\(--radius-card\)/s
+    );
+    expect(researchStyles).toMatch(
+      /\.research-skeleton__abstract-frame\s*\{[^}]*width: 100%[^}]*max-width: none[^}]*aspect-ratio: 16 \/ 9/s
+    );
+    expect(researchStyles).toMatch(
       /\.research-skeleton__video-actions\s*\{[^}]*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/s
     );
     expect(researchStyles).toMatch(

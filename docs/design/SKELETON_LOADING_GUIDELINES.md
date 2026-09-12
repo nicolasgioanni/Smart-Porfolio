@@ -59,6 +59,8 @@ Experience is the only generated page-header override. Both its resolved route a
 
 Research card footprint counts come from validated selected detail items and the same `getResearchVisibleResources()` resolver used by resolved cards. Only the isolated visual renderer may inject controlled canonical local-template Research items; normal loading boundaries and direct alignment remain generated-workbook driven.
 
+Research graphical-abstract frames preserve the resolved route's local 16px top-aligned inset, full available visual-column width, rounded clipping, and 16:9 containment geometry. Keep the placeholders noninteractive while updating this frame.
+
 ## Accessibility
 
 Primitive blocks use `aria-hidden="true"`. `PageSkeleton` exposes a labelled region with `aria-busy="true"`. The canonical header strings exist only inside an `aria-hidden` ancestor and are transparent, non-selectable, and noninteractive, so they do not become headings, copy, focus targets, or announcements in the accessibility tree. Body skeletons contain no fake text, links, buttons, or form controls.
