@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { ResearchItem } from "@/content/types";
 import { ResearchShowcase } from "@/components/portfolio/research/ResearchShowcase";
@@ -172,7 +172,7 @@ describe("ResearchShowcase", () => {
     expect(within(resources!).getByRole("button", { name: "Manuscript — not yet published" })).toBeDisabled();
   });
 
-  it("switches every project to technical copy and keeps one disclosure open per project", () => {
+  it("switches every project to technical copy and keeps one disclosure open across the route", async () => {
     render(<ResearchShowcase items={researchItems} motionEnabled={false} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Technical" }));
@@ -193,6 +193,18 @@ describe("ResearchShowcase", () => {
     expect(screen.getByRole("list", { name: "Vision pipeline tools" })).toBeInTheDocument();
 
     fireEvent.keyDown(segmentation, { key: "Escape" });
-    expect(segmentation).toHaveAttribute("aria-expanded", "false");
+    await waitFor(() => expect(segmentation).toHaveAttribute("aria-expanded", "false"));
+
+    const projectCards = screen.getAllByRole("article");
+    const firstProjectDisclosure = within(projectCards[0]!).getByRole("button", { name: /Microscopy ingestion/i });
+    const secondProjectDisclosure = projectCards[1]!.querySelector<HTMLButtonElement>(".detail-section__trigger");
+
+    expect(secondProjectDisclosure).not.toBeNull();
+
+    fireEvent.click(firstProjectDisclosure);
+    expect(firstProjectDisclosure).toHaveAttribute("aria-expanded", "true");
+    fireEvent.click(secondProjectDisclosure!);
+    expect(firstProjectDisclosure).toHaveAttribute("aria-expanded", "false");
+    expect(secondProjectDisclosure!).toHaveAttribute("aria-expanded", "true");
   });
 });

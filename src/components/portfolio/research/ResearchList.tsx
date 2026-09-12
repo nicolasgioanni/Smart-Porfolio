@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import type { ResearchItem } from "@/content/types";
 import { EmptyState } from "@/components/portfolio/shared/EmptyState";
 import { ResearchCard } from "@/components/portfolio/research/ResearchCard";
+import type { OpenDetailDisclosure } from "@/components/portfolio/shared/useDetailDisclosure";
 import type { DetailMode } from "@/lib/content/detailNarratives";
 
 type ResearchListProps = {
@@ -9,7 +10,8 @@ type ResearchListProps = {
   mode: DetailMode;
   motionEnabled?: boolean;
   onToggle: (itemId: string, sectionId: string) => void;
-  openByProject: Record<string, string | undefined>;
+  openDetail: OpenDetailDisclosure | null;
+  overlayEnabled: boolean;
 };
 
 export function ResearchList({
@@ -17,7 +19,8 @@ export function ResearchList({
   mode,
   motionEnabled = true,
   onToggle,
-  openByProject
+  openDetail,
+  overlayEnabled
 }: ResearchListProps) {
   if (items.length === 0) {
     return <EmptyState message="Research entries will appear here when content is available." />;
@@ -34,8 +37,9 @@ export function ResearchList({
               item={item}
               mode={mode}
               onToggle={(sectionId) => onToggle(item.id, sectionId)}
-              openSectionId={openByProject[item.id]}
+              openSectionId={openDetail?.itemId === item.id ? openDetail.sectionId : undefined}
               order={index}
+              overlayEnabled={overlayEnabled}
             />
           </div>
         );
