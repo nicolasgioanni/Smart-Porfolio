@@ -65,7 +65,8 @@ describe("static portfolio security contracts", () => {
     );
 
     expect(recommendationTextSource).toMatch(/<SmartLink[^>]*href=\{link\.url\}/s);
-    expect(recommendationTextSource).toMatch(/\{link\.label\}/);
+    expect(recommendationTextSource).toContain("quote.indexOf(link.label)");
+    expect(recommendationTextSource).toContain("quote.slice(visibleLinkStart, visibleLinkEnd)");
     expect(recommendationTextSource).not.toMatch(/dangerouslySetInnerHTML|\.innerHTML\s*=/);
     expect(recommendationTextSource).not.toContain("github.com/BrentLagesse/CytoCV");
   });

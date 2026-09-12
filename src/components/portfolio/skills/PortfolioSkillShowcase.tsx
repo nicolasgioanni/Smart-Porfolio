@@ -5,6 +5,13 @@ import type { SkillItem } from "@/content/types";
 
 type PortfolioDialogSkill = SkillItem & {
   details?: string;
+  compactName?: string;
+};
+
+const compactSkillNames: Record<string, string> = {
+  "TypeScript / JavaScript": "TS / JS",
+  "TensorFlow / Keras": "TF / Keras",
+  "LLM APIs & RAG": "LLM / RAG"
 };
 
 type PortfolioSkillShowcaseProps = {
@@ -15,6 +22,7 @@ type PortfolioSkillShowcaseProps = {
 export function PortfolioSkillShowcase({ category, skills }: PortfolioSkillShowcaseProps) {
   const dialogSkills: PortfolioDialogSkill[] = skills.map((skill) => ({
     ...skill,
+    compactName: Object.hasOwn(compactSkillNames, skill.name) ? compactSkillNames[skill.name] : undefined,
     details:
       skill.proficiency?.trim() && skill.summary?.trim() && skill.whereUsed?.trim()
         ? skill.whereUsed

@@ -349,6 +349,19 @@
 }
 
 @media (max-width: 720px) {
+  .page-container--home .home-overview-grid {
+    gap: var(--space-5);
+    margin-top: var(--space-6);
+  }
+
+  .home-section__surface {
+    padding: var(--space-4);
+  }
+
+  .home-section__header {
+    margin-bottom: var(--space-4);
+  }
+
   .site-shell {
     --footer-compact-footprint: 74px;
     --footer-stage-height: 44rem;

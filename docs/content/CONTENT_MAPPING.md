@@ -128,7 +128,7 @@ Home displays every selected education row. It uses institution, logo or generat
 Home Research cards display:
 
 - `home_title` with `title` fallback;
-- organization, date range, and location;
+- organization; dates and locations are omitted at every viewport size;
 - `home_summary` with `detail_summary` fallback;
 - at most one inferred GitHub action using its authored label;
 - at most one inferred publication action using its authored label;
@@ -142,9 +142,11 @@ Published links keep their authored labels and order. A pending label that match
 
 Research graphical-abstract fields are validated and rendered inputs. The path and alternative text are paired, and the optional video depends on that abstract as its poster. A narrated video must resolve to reviewed local captions and a readable transcript through the registered media record; it does not add any remote provider or tracker. Existing `links` and `pending_links` continue to own live-site, source, DOI, manuscript, and later publication destinations.
 
+At `720px` and below, Home Research and Project cards use the short presentation sentences in `src/lib/content/homeMobileSummaries.ts`. Unknown IDs use the first sentence of the selected authored summary. Desktop copy and the workbook schema remain unchanged.
+
 ## Projects
 
-Home Project cards display `title`, optional `subtitle`, `home_summary` with detail fallback, up to three ordered `home_skills`, and at most one action each for inferred GitHub and website links. The fixed action labels and order are `Source code`, then `Live demo`.
+Home Project cards display `title`, optional `subtitle`, `home_summary` with detail fallback, up to three ordered `home_skills` above `720px`, and at most one action each for inferred GitHub and website links. The fixed action labels and order are `Source code`, then `Live demo`.
 
 A Home skill with complete summary and details opens its evidence dialog. A skill without those optional fields remains a static badge. Generation guarantees at most three skills and validates numbered explanation pairs against their positions.
 

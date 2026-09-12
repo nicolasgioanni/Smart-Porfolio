@@ -741,8 +741,6 @@
 
 .home-research-card__title,
 .home-research-card__organization,
-.home-research-card__date,
-.home-research-card__location,
 .home-research-card__summary {
   margin: 0;
   overflow-wrap: anywhere;
@@ -759,12 +757,6 @@
 .home-research-card__organization {
   color: var(--color-ink-strong);
   font-weight: var(--font-weight-bold);
-}
-
-.home-research-card__date,
-.home-research-card__location {
-  color: var(--color-subtle);
-  font-size: var(--font-size-small);
 }
 
 .home-research-card__summary {
@@ -828,6 +820,11 @@
 .home-project-card__summary {
   color: var(--color-muted);
   font-size: var(--font-size-body);
+}
+
+.home-card-summary__mobile,
+.skill-badge__compact-name {
+  display: none;
 }
 
 .home-research-card__summary,
@@ -1822,6 +1819,10 @@
   background: var(--color-control-surface);
 }
 
+.recommendation-expandable[data-can-expand="false"] .recommendation-expandable__toggle {
+  display: none;
+}
+
 .recommendation-card__links {
   align-self: end;
 }
@@ -1952,6 +1953,98 @@
 }
 
 @media (max-width: 720px) {
+  .home-card-summary__full,
+  .home-project-card__skills,
+  .skills-group--compact .skill-icon,
+  .skills-group--compact .skill-badge__full-name {
+    display: none;
+  }
+
+  .home-card-summary__mobile,
+  .skills-group--compact .skill-badge__compact-name {
+    display: inline;
+  }
+
+  .home-project-card {
+    grid-template-rows: auto 1fr auto;
+  }
+
+  .home-project-card__actions {
+    grid-row: 3;
+  }
+
+  .home-research-card,
+  .home-project-card,
+  .skills-group--compact,
+  .home-recommendations__item .recommendation-card {
+    gap: var(--space-3);
+    padding: var(--space-4);
+  }
+
+  .home-research-card__title,
+  .home-project-card__title,
+  .skills-group--compact .skills-group__title {
+    font-size: var(--font-size-lead);
+  }
+
+  .home-research-card__summary,
+  .home-project-card__summary,
+  .home-research-card__organization,
+  .recommendation-expandable__quote {
+    font-size: var(--font-size-small);
+  }
+
+  .skills-cloud--compact {
+    gap: var(--space-3);
+  }
+
+  .skills-group--compact {
+    padding: var(--space-3);
+  }
+
+  .skills-group--compact .portfolio-skill-showcase {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: var(--space-1);
+  }
+
+  .skills-group--compact .portfolio-skill-showcase__item {
+    flex: 1 1 auto;
+    min-width: min-content;
+  }
+
+  .skills-group--compact .skill-badge {
+    justify-content: center;
+    min-height: 44px;
+    padding: var(--space-1);
+    text-align: center;
+  }
+
+  .skills-group--compact .skill-badge__label {
+    font-size: var(--font-size-caption);
+    overflow-wrap: normal;
+  }
+
+  .recommendation-expandable__viewport {
+    max-height: none;
+    transition: none;
+  }
+
+  .recommendation-expandable[data-expanded="true"] .recommendation-expandable__viewport {
+    max-height: none;
+  }
+
+  .recommendation-expandable[data-expanded="false"] .recommendation-expandable__remainder,
+  .recommendation-expandable[data-has-more-sentences="false"] .recommendation-expandable__toggle {
+    display: none;
+  }
+
+  .recommendation-expandable[data-has-more-sentences="true"] .recommendation-expandable__toggle {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
   .profile-overview__shell {
     grid-template-areas:
       "introduction"
