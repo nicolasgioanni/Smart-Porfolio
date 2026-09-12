@@ -53,11 +53,11 @@ The remote path accepts exactly one complete workbook snapshot. It can make at m
 - The request advertises XLSX and generic binary responses through `Accept`.
 - Each attempt has a 15-second deadline covering response headers and the complete capped body.
 - A retryable failure waits one fixed second before one final attempt, for a maximum 31-second download window. Each attempt uses a fresh request and never combines bytes from different responses.
-- The maximum response size is 5 MiB. A non-empty `Content-Length` must parse as a non-negative safe integer or generation fails. The declared size and the streamed or fallback body size are each enforced.
+- The maximum compressed response size is 5 MiB. A non-empty `Content-Length` must parse as a non-negative safe integer or generation fails. The declared size and the streamed or fallback body size are each enforced.
 - Deadlines, network or stream interruptions, HTTP 408, HTTP 429, and HTTP 5xx responses are retryable. Other HTTP 4xx responses and invalid length or size boundaries fail immediately.
 - Download failures use generic errors that do not include the configured URL. A timed-out stream is cancelled and partial bytes are discarded.
 
-Payload validation rejects a `text/html` response type, common HTML or login content at the start of the body, and data without a ZIP signature. ExcelJS must then parse the bytes as a valid, non-empty XLSX workbook. The response MIME type is not an allowlist by itself. A non-HTML MIME type can proceed only when the ZIP and XLSX checks also succeed.
+Payload validation rejects a `text/html` response type, common HTML or login content at the start of the body, and data without a ZIP signature. Before ExcelJS receives any workbook bytes, JSZip reads the ZIP central directory and streams every non-directory resolved archive entry to measure decoded output. The archive permits at most 128 resolved entries, 16 MiB decoded per entry, and 32 MiB decoded across all entries; the measurement does not trust ZIP-advertised uncompressed sizes. ExcelJS must then parse the bounded bytes as a valid, non-empty XLSX workbook. The response MIME type is not an allowlist by itself. A non-HTML MIME type can proceed only when the ZIP and XLSX checks also succeed.
 
 The workbook is intentionally anonymous public input. Secret storage in GitHub Actions is used for runner-log redaction, not authentication.
 
