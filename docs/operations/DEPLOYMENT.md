@@ -6,6 +6,8 @@ This guide defines the deployment architecture and initial configuration. Use [O
 
 ## Current deployment targets
 
+These are the reviewed targets for this deployed portfolio. They are not generic defaults for a fork or a different Cloudflare account; see [Set up or restore a deployment](#set-up-or-restore-a-deployment) before changing them.
+
 | Purpose | Address | Repository use |
 | --- | --- | --- |
 | Public custom domain | `https://nicolasmgioanni.dev` | Primary visitor address |
@@ -119,20 +121,17 @@ The top-level values cover production. `env.preview.vars` narrows the preview en
 - top-level `smart-portfolio-contact-rate-limit-production` for production;
 - `env.preview` `smart-portfolio-contact-rate-limit-preview` for every Pages preview deployment.
 
-The tracked `database_id` values identify the reviewed live resources. Initial setup or a deliberate database replacement uses these commands, after which the matching UUID must be reviewed and committed before deployment:
+The tracked `database_id` values identify the reviewed live resources. Do not recreate those existing databases during an audit. A deliberate database replacement must use new, separate production and preview databases. Review the resulting UUIDs, update the matching names and IDs in `wrangler.jsonc`, and commit that configuration change before deployment. If a database name changes, update the corresponding hard-coded migration targets in `.github/workflows/ci.yml` and their configuration/workflow contract tests in the same reviewed change.
 
-```powershell
-npx --no-install wrangler d1 create smart-portfolio-contact-rate-limit-production --location wnam
-npx --no-install wrangler d1 create smart-portfolio-contact-rate-limit-preview --location wnam
-```
+Do not reuse or copy the current live IDs for a different account, and do not commit a shared ID for both environments. `preview_database_id: contact-rate-limit-local` is a local-emulation identifier, not a remote database. The deploy job rejects missing, all-zero, or shared remote IDs, then applies tracked migrations to the selected database before uploading Pages.
 
-Do not commit a shared ID for both environments. `preview_database_id: contact-rate-limit-local` is a local-emulation identifier, not a remote database. The deploy job rejects missing, all-zero, or shared remote IDs, then applies tracked migrations to the selected database before uploading Pages.
+## Set up or restore a deployment
 
-## Initial environment setup
+The tracked workflow uses Cloudflare Pages Direct Upload. The current Cloudflare dashboard state is external and unverified by the repository. Choose the path that matches the target before changing provider settings.
 
-The tracked workflow is configured to use Cloudflare Pages Direct Upload. The current Cloudflare dashboard state is external and unverified by the repository. These steps define the required state when rebuilding the configuration in a new account or auditing the existing one.
+### Restore or audit the existing Smart Portfolio service
 
-1. Use a Pages Direct Upload project named `smart-portfolio` with production branch `main`. Do not create a second project to match the assigned `smart-portfolio-bds.pages.dev` hostname.
+1. Confirm that the Pages Direct Upload project is named `smart-portfolio`, uses `main` as its production branch, and retains its assigned `smart-portfolio-bds.pages.dev` hostname. Do not create a second project to imitate that hostname.
 2. Keep Cloudflare Git integration disconnected. GitHub Actions owns the content fetch, quality gate, build, and upload.
 3. Add the four repository variables and three Actions secrets listed above. Restrict the Cloudflare token to the target account with Pages edit and D1 edit; do not grant unrelated zone or account authority.
 4. Confirm the tracked production and preview D1 UUIDs resolve to the intended distinct databases. If provisioning replacements, update and commit the reviewed configuration. Keep the binding name exactly `CONTACT_RATE_LIMIT_DB` in both environments.
@@ -151,6 +150,33 @@ The tracked workflow is configured to use Cloudflare Pages Direct Upload. The cu
 11. Merge the verified change to `main` only after the preview and pull-request checks pass. Confirm the same migration is applied to the production database before Pages upload, then perform the automated and manual no-delivery checks described below.
 
 The WAF rule, active Cloudflare plan, runtime secret presence, branch or ruleset protection, and provider integration state are external prerequisites. Their desired values are documented here, but their current live state is unverified by the tracked files.
+
+### Adapt a fork or a different Cloudflare account
+
+The current workflow intentionally rejects a Pages project or assigned domain other than `smart-portfolio` and `smart-portfolio-bds.pages.dev`. `wrangler.jsonc` also contains this portfolio's project name, D1 IDs, allowed hostnames and origins, sender identity, and reply-to address. A new account cannot deploy safely by only changing dashboard variables or copying these live resource IDs.
+
+1. Create a [Pages Direct Upload project](https://developers.cloudflare.com/pages/get-started/direct-upload/) in the new account with `main` as its production branch. Record its Cloudflare-assigned hostname; dashboard drag-and-drop uploads do not compile Pages Functions, so deployment must continue through Wrangler from the repository root.
+2. Create a dedicated configuration change and update the reviewed source together: the immutable project and assigned-domain checks in `.github/workflows/ci.yml`; the Pages project; separate D1 database names and IDs; fixed migration target names and workflow-contract tests; hostname and origin allowlists; sender identity; reply-to address; and any application public-domain, canonical URL, or branding assumptions.
+3. Create two new D1 databases in the new account, one for production and one for preview. Run the following command once for each distinct reviewed database name, then record only its reviewed ID in the matching `wrangler.jsonc` entry:
+
+   ```bash
+   npx --no-install wrangler d1 create <database-name> --location wnam
+   ```
+
+   Keep `CONTACT_RATE_LIMIT_DB` as the binding name and retain the local emulator ID for local Pages development.
+4. Configure the new repository's project and assigned-domain variables to match the updated workflow source. Add its workbook locator, Cloudflare account ID, and restricted deployment token as GitHub Actions secrets. Configure the production and preview browser keys as repository variables.
+5. Create separate production and preview Turnstile widgets, runtime secrets, recipient settings, sender identity, domain/DNS/TLS configuration, and a provider-compatible JSON-preserving rate limit for both contact endpoints. Review those external controls independently.
+6. Run the local and pull-request checks for the configuration change. Push the reviewed source to `develop` to establish and verify the new preview, then merge it into `main` for production. A pull request itself never deploys; it uses checked-in templates and only verifies the change.
+
+Do not change the deployment account or public identity as an unreviewed dashboard-only action. The repository source, CI target checks, Pages configuration, and external provider state are one release boundary.
+
+## First deployment and manual release
+
+1. Complete the matching setup path above and confirm the configuration change passes a pull-request check. Pull requests are verification-only and never deploy.
+2. Push the reviewed change to `develop` to run full verification and deploy the stable preview. Complete the preview checks in [Operations](OPERATIONS.md#preview-a-branch-change).
+3. Merge the approved change into `main` to run full verification and deploy production. The workflow checks the latest `main` candidate again immediately before Wrangler uploads.
+4. Optional, after a reviewed commit is already on `main`: for a first deployment, an intentional rebuild, or a retry after correcting external configuration, use **Actions → CI → Run workflow** with `force_deploy=true`. The dispatch interface may display a branch selector, but the workflow always checks out current `main`; forced dispatch still runs the full verification, exact-artifact, migration, deployment, and smoke-test path.
+5. Use `force_deploy=false` only when a content-hash and commit-SHA no-op is acceptable. Follow [Operations](OPERATIONS.md) for the ongoing manual release, verification, monitoring, and rollback procedures.
 
 ## Strict content input
 
@@ -183,14 +209,14 @@ flowchart TD
 
 `npm run build:generated` invokes Next.js, whose local build-completion adapter normalizes any Windows-emitted nested segment-cache filenames to Next's flat static-export URL layout, and then writes the content version without running the `prebuild` content generator. The normalization is a no-op on the already-flat Linux output and fails on malformed trees or collisions. This keeps generation at one accepted workbook snapshot even if its download needs the single bounded retry. The deploy job does not rebuild or download the workbook.
 
-The verify job runs these required checks against the candidate snapshot:
+The verify job always runs documentation integrity, ESLint with zero warnings, and TypeScript type checking for a candidate selected for verification. Its remaining checks depend on the selected tier:
 
-1. Documentation integrity.
-2. ESLint with zero warnings.
-3. TypeScript typecheck.
-4. Focused footer regression tests.
-5. The full Vitest suite.
-6. The static build.
+| Candidate | Unit and contract checks | Browser checks | Build |
+| --- | --- | --- | --- |
+| Pull request to `main` or `develop` | `npm run test:priority` | Install Chromium, then `npm run test:e2e:priority` and the Linux skeleton visual regression | `npm run build:generated` from local-template content |
+| Latest `develop` or `main` push, or a manual or scheduled deployment that is not a no-op | `npm run test` | Install Chromium, then `npm run test:e2e:full` | `npm run build:generated` from the accepted strict workbook snapshot |
+
+Pull-request verification is deliberately deployment-free. A full candidate creates an artifact integrity manifest only after the full checks and exact build succeed; the deploy job revalidates that downloaded artifact before running Wrangler.
 
 For production and preview builds, `DEPLOYMENT_COMMIT_SHA` binds deployment metadata to the candidate. Production receives only the production Turnstile site key. Preview receives only the optional preview key.
 
