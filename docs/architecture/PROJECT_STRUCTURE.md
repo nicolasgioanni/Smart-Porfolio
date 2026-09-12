@@ -12,7 +12,13 @@ Smart-Porfolio/
 |   `-- workflows/ci.yml
 |-- docs/
 |-- functions/
-|   |-- _shared/contact.ts
+|   |-- _shared/
+|   |   |-- contact.ts
+|   |   |-- contact/
+|   |   |   |-- base64url.ts
+|   |   |   |-- ticket.ts
+|   |   |   `-- values.ts
+|   |   `-- contactRequest.ts
 |   `-- api/
 |       |-- contact.ts
 |       `-- contact/verify.ts
@@ -43,6 +49,7 @@ Smart-Porfolio/
 |   |   |-- generated/
 |   |   `-- templates/
 |   |-- lib/
+|   |   `-- contact/validation.ts
 |   `-- styles/
 |-- next.config.mjs
 |-- package.json
@@ -58,7 +65,7 @@ Smart-Porfolio/
 | `.github/workflows/ci.yml` | Candidate selection, content generation, verification, artifact transfer, Cloudflare Direct Upload, smoke tests, and schedule heartbeat. |
 | `.agents/skills/portfolio-skeleton-regression/` | Repository-scoped guidance for deterministic skeleton alignment, visual, and transition regression work. |
 | `docs/` | Guides, references, checklists, and README assets. |
-| `functions/` | Cloudflare Pages Functions for contact verification and delivery. These are not Next.js route handlers. |
+| `functions/` | Cloudflare Pages Functions for contact verification and delivery. `functions/_shared/contact.ts` exposes the server contact contract; `contactRequest.ts`, `contact/ticket.ts`, and small value helpers own the common request, signed-ticket, and encoding concerns. These are not Next.js route handlers. |
 | `migrations/` | Append-only Cloudflare D1 schema changes applied before the corresponding Pages deployment. |
 | `public/` | Public images, favicons, Pages security headers, and the exact Function route allowlist copied into the static export. |
 | `scripts/` | Content ingestion, local automation, deployment manifests, artifact integrity, deployment smoke checks, and script-level tests. |
@@ -110,6 +117,8 @@ Focused client behavior includes the configured role rotation, modal media and s
 `src/components/glass/` owns reusable solid surfaces, cards, controls, links, chips, dividers, and blobs. `src/components/loading/` owns route-level skeleton composition, including `RouteSkeleton` delegation and `RouteHeaderSkeleton` intrinsic header ink. Components consume semantic values from `src/styles/` rather than defining theme colors locally.
 
 Shared dialog lifecycle and transition state live in `src/components/overlay/ModalDialog.tsx` and `src/styles/dialog.css`. Consumer style sheets define only domain-specific backdrop color, frame size, and internal presentation.
+
+`src/lib/contact/validation.ts` owns environment-independent contact field limits and grammar. The browser uses it for immediate feedback, while the Pages Functions import the same rules and still enforce them independently at the delivery boundary.
 
 `tests/e2e/standaloneSkeletonDocument.ts` owns the inert same-origin HTML shell and stylesheet/font readiness used by direct skeleton alignment and Linux screenshot comparison. Browser tests must use that helper instead of replacing nodes inside the hydrated application tree.
 

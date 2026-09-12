@@ -1,7 +1,24 @@
+import {
+  contactFieldLimits,
+  hasUnsafeControlCharacters,
+  isValidEmail,
+  isValidHumanText,
+  isValidPhone
+} from "../../src/lib/contact/validation";
+import { encodeBase64Url } from "./contact/base64url";
+import { isPlainObject } from "./contact/values";
+
+export {
+  CONTACT_TICKET_COOKIE_NAME,
+  CONTACT_TICKET_MAX_AGE_SECONDS,
+  createContactTicket,
+  hasValidContactTicket,
+  serializeClearedContactTicketCookie,
+  serializeContactTicketCookie
+} from "./contact/ticket";
+
 export const CONTACT_ACTION = "portfolio_contact";
 export const MAX_REQUEST_BYTES = 16_384;
-export const CONTACT_TICKET_COOKIE_NAME = "__Host-portfolio_contact_ticket";
-export const CONTACT_TICKET_MAX_AGE_SECONDS = 30 * 60;
 
 const TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 const RESEND_EMAIL_URL = "https://api.resend.com/emails";
@@ -34,11 +51,6 @@ export const CONTACT_RESERVATION_INSERT_SQL = `INSERT INTO contact_rate_reservat
     ) < ${CONTACT_RATE_LIMIT_MAX_SUBMISSIONS}
   )
   ON CONFLICT(submission_id) DO NOTHING`;
-const CONTACT_TICKET_VERSION = 1;
-const CONTACT_TICKET_MAX_LENGTH = 768;
-const CONTACT_TICKET_SIGNATURE_BYTES = 32;
-const TICKET_HKDF_SALT = "portfolio-contact-ticket:v1:hkdf-salt";
-const TICKET_HKDF_INFO = "portfolio-contact-ticket:v1:hmac-key";
 const RATE_LIMIT_HKDF_SALT = "portfolio-contact-rate-limit:v1:hkdf-salt";
 const RATE_LIMIT_HKDF_INFO = "portfolio-contact-rate-limit:v1:email-hmac-key";
 const PAYLOAD_FINGERPRINT_HKDF_SALT = "portfolio-contact-payload-fingerprint:v1:hkdf-salt";
@@ -59,10 +71,6 @@ const CONTACT_KEYS = new Set([
 const TURNSTILE_VERIFICATION_KEYS = new Set(["submissionId", "turnstileToken"]);
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const EMAIL_LOCAL_PATTERN = /^[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+$/i;
-const EMAIL_ASCII_TLD_PATTERN = /^[a-z]{2,63}$/;
-const EMAIL_PUNYCODE_TLD_PATTERN = /^xn--[a-z0-9](?:[a-z0-9-]{0,57}[a-z0-9])$/;
-const PHONE_CHARACTER_PATTERN = /^[0-9A-Za-z+().,\-\s/#*]+$/;
 
 export interface ContactEnv {
   CONTACT_ALLOWED_ORIGINS?: string;
@@ -138,13 +146,6 @@ export type TurnstileVerificationResult =
   | { kind: "unavailable" };
 
 type TurnstileAttemptResult = TurnstileVerificationResult | { kind: "transient" };
-
-interface ContactTicketPayload {
-  v: 1;
-  submissionId: string;
-  iat: number;
-  exp: number;
-}
 
 interface EmailMessage {
   from: string;
@@ -282,10 +283,14 @@ export function parseContactPayload(value: unknown, now = Date.now()): PayloadRe
   const message = normalizedMultilineString(value.message);
 
   if (!submissionId || !UUID_PATTERN.test(submissionId)) return { kind: "invalid" };
-  if (!isValidHumanText(firstName, 80) || !isValidHumanText(lastName, 80)) return { kind: "invalid" };
+  if (!isValidHumanText(firstName, contactFieldLimits.firstName) || !isValidHumanText(lastName, contactFieldLimits.lastName)) {
+    return { kind: "invalid" };
+  }
   if (!email || !isValidEmail(email)) return { kind: "invalid" };
   if (!isValidPhone(phone)) return { kind: "invalid" };
-  if (!message || message.length > 500 || hasUnsafeControlCharacters(message)) return { kind: "invalid" };
+  if (!message || message.length > contactFieldLimits.message || hasUnsafeControlCharacters(message)) {
+    return { kind: "invalid" };
+  }
   if (value.contactConsent !== true || value.legalConsent !== true) {
     return { kind: "invalid" };
   }
@@ -409,81 +414,6 @@ async function classifyTurnstileAttempt(
     return { kind: "rejected" };
   }
   return { kind: "unavailable" };
-}
-
-export async function createContactTicket(
-  submissionId: string,
-  env: ContactEnv,
-  now = Date.now()
-): Promise<string | undefined> {
-  const secret = env.TURNSTILE_SECRET_KEY?.trim();
-  if (!secret || !UUID_PATTERN.test(submissionId)) return undefined;
-
-  const issuedAt = Math.floor(now / 1_000);
-  if (!Number.isSafeInteger(issuedAt) || issuedAt < 0) return undefined;
-
-  const payload: ContactTicketPayload = {
-    v: CONTACT_TICKET_VERSION,
-    submissionId,
-    iat: issuedAt,
-    exp: issuedAt + CONTACT_TICKET_MAX_AGE_SECONDS
-  };
-  const payloadBytes = new TextEncoder().encode(JSON.stringify(payload));
-
-  try {
-    const key = await deriveContactTicketKey(secret, ["sign"]);
-    const signature = new Uint8Array(await crypto.subtle.sign("HMAC", key, payloadBytes));
-    return `${encodeBase64Url(payloadBytes)}.${encodeBase64Url(signature)}`;
-  } catch {
-    return undefined;
-  }
-}
-
-export async function hasValidContactTicket(
-  request: Request,
-  submissionId: string,
-  env: ContactEnv,
-  now = Date.now()
-): Promise<boolean> {
-  const secret = env.TURNSTILE_SECRET_KEY?.trim();
-  if (!secret || !UUID_PATTERN.test(submissionId)) return false;
-
-  const ticket = readCookie(request, CONTACT_TICKET_COOKIE_NAME);
-  if (!ticket || ticket.length > CONTACT_TICKET_MAX_LENGTH) return false;
-
-  const segments = ticket.split(".");
-  if (segments.length !== 2) return false;
-
-  const payloadBytes = decodeBase64Url(segments[0] ?? "");
-  const signatureBytes = decodeBase64Url(segments[1] ?? "");
-  if (!payloadBytes || !signatureBytes || signatureBytes.byteLength !== CONTACT_TICKET_SIGNATURE_BYTES) return false;
-
-  try {
-    const key = await deriveContactTicketKey(secret, ["verify"]);
-    if (!(await crypto.subtle.verify("HMAC", key, signatureBytes, payloadBytes))) return false;
-
-    const decoded = new TextDecoder("utf-8", { fatal: true }).decode(payloadBytes);
-    const parsed = JSON.parse(decoded) as unknown;
-    if (!isContactTicketPayload(parsed)) return false;
-
-    const nowSeconds = Math.floor(now / 1_000);
-    return (
-      parsed.submissionId === submissionId &&
-      parsed.iat <= nowSeconds + Math.floor(MAX_CLOCK_SKEW_MS / 1_000) &&
-      parsed.exp === parsed.iat + CONTACT_TICKET_MAX_AGE_SECONDS &&
-      parsed.exp > nowSeconds
-    );
-  } catch {
-    return false;
-  }
-}
-
-export function serializeContactTicketCookie(ticket: string): string {
-  return `${CONTACT_TICKET_COOKIE_NAME}=${ticket}; Path=/; Max-Age=${CONTACT_TICKET_MAX_AGE_SECONDS}; Secure; HttpOnly; SameSite=Strict`;
-}
-
-export function serializeClearedContactTicketCookie(): string {
-  return `${CONTACT_TICKET_COOKIE_NAME}=; Path=/; Max-Age=0; Secure; HttpOnly; SameSite=Strict`;
 }
 
 export async function validateEmailDomain(email: string): Promise<EmailDomainValidationResult> {
@@ -735,50 +665,6 @@ export function escapeHtml(value: string): string {
   });
 }
 
-function isContactTicketPayload(value: unknown): value is ContactTicketPayload {
-  if (!isPlainObject(value)) return false;
-  const keys = Object.keys(value);
-  if (
-    keys.length !== 4 ||
-    !keys.includes("v") ||
-    !keys.includes("submissionId") ||
-    !keys.includes("iat") ||
-    !keys.includes("exp")
-  ) {
-    return false;
-  }
-
-  return Boolean(
-    value.v === CONTACT_TICKET_VERSION &&
-      typeof value.submissionId === "string" &&
-      UUID_PATTERN.test(value.submissionId) &&
-      typeof value.iat === "number" &&
-      Number.isSafeInteger(value.iat) &&
-      value.iat >= 0 &&
-      typeof value.exp === "number" &&
-      Number.isSafeInteger(value.exp) &&
-      value.exp > value.iat
-  );
-}
-
-async function deriveContactTicketKey(secret: string, keyUsages: KeyUsage[]): Promise<CryptoKey> {
-  const encoder = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey("raw", encoder.encode(secret), "HKDF", false, ["deriveKey"]);
-
-  return crypto.subtle.deriveKey(
-    {
-      name: "HKDF",
-      hash: "SHA-256",
-      salt: encoder.encode(TICKET_HKDF_SALT),
-      info: encoder.encode(TICKET_HKDF_INFO)
-    },
-    keyMaterial,
-    { name: "HMAC", hash: "SHA-256", length: 256 },
-    false,
-    keyUsages
-  );
-}
-
 async function createRateLimitEmailHash(email: string, secret: string): Promise<string> {
   const key = await deriveRateLimitKey(secret);
   const normalizedEmail = email.trim().toLowerCase();
@@ -843,50 +729,6 @@ async function derivePayloadFingerprintKey(secret: string): Promise<CryptoKey> {
   );
 }
 
-function readCookie(request: Request, name: string): string | undefined {
-  const cookieHeader = request.headers.get("Cookie");
-  if (!cookieHeader) return undefined;
-
-  let found = false;
-  let value: string | undefined;
-  for (const segment of cookieHeader.split(";")) {
-    const separatorIndex = segment.indexOf("=");
-    if (separatorIndex < 0) continue;
-    const cookieName = segment.slice(0, separatorIndex).trim();
-    if (cookieName !== name) continue;
-    if (found) return undefined;
-    found = true;
-    value = segment.slice(separatorIndex + 1).trim();
-  }
-
-  return value;
-}
-
-function encodeBase64Url(bytes: Uint8Array): string {
-  let binary = "";
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
-}
-
-function decodeBase64Url(value: string): Uint8Array<ArrayBuffer> | undefined {
-  if (!value || !/^[A-Za-z0-9_-]+$/.test(value) || value.length % 4 === 1) return undefined;
-  const standard = value.replace(/-/g, "+").replace(/_/g, "/");
-  const padded = standard.padEnd(Math.ceil(standard.length / 4) * 4, "=");
-
-  try {
-    const binary = atob(padded);
-    const bytes = new Uint8Array(binary.length);
-    for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
-    return encodeBase64Url(bytes) === value ? bytes : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 function isContactRateLimitDatabase(value: unknown): value is ContactRateLimitDatabase {
   if (!isPlainObject(value)) return false;
   return typeof value.prepare === "function" && typeof value.batch === "function";
@@ -915,51 +757,6 @@ function normalizedMultilineString(value: unknown): string | undefined {
   return stringValue(value)?.replace(/\r\n?/g, "\n").trim();
 }
 
-function isValidHumanText(value: string | undefined, maxLength: number): value is string {
-  return Boolean(value && value.length <= maxLength && !/[\r\n\t]/.test(value) && !hasUnsafeControlCharacters(value));
-}
-
-function isValidEmail(value: string): boolean {
-  if (!value || value.length > 254 || hasUnsafeControlCharacters(value) || /\s/.test(value)) return false;
-  const atIndex = value.lastIndexOf("@");
-  if (atIndex <= 0 || atIndex !== value.indexOf("@")) return false;
-
-  const local = value.slice(0, atIndex);
-  const domain = value.slice(atIndex + 1).toLowerCase();
-  if (local.length > 64 || !EMAIL_LOCAL_PATTERN.test(local) || local.startsWith(".") || local.endsWith(".") || local.includes("..")) {
-    return false;
-  }
-  if (domain.length > 253 || !domain.includes(".")) return false;
-
-  const labels = domain.split(".");
-  if (
-    !labels.every((label) => {
-      return Boolean(
-        label &&
-          label.length <= 63 &&
-          /^[a-z0-9-]+$/.test(label) &&
-          !label.startsWith("-") &&
-          !label.endsWith("-")
-      );
-    })
-  ) {
-    return false;
-  }
-
-  const finalLabel = labels.at(-1) ?? "";
-  return EMAIL_ASCII_TLD_PATTERN.test(finalLabel) || isValidPunycodeEmailTld(finalLabel);
-}
-
-function isValidPunycodeEmailTld(value: string): boolean {
-  if (!EMAIL_PUNYCODE_TLD_PATTERN.test(value)) return false;
-
-  try {
-    return new URL(`https://${value}`).hostname === value;
-  } catch {
-    return false;
-  }
-}
-
 function isValidFromMailbox(value: string): boolean {
   if (!value || value.length > 320 || /[\r\n\t]/.test(value) || hasUnsafeControlCharacters(value)) return false;
   if (isValidEmail(value)) return true;
@@ -970,23 +767,6 @@ function isValidFromMailbox(value: string): boolean {
   const displayName = mailboxMatch[1]?.trim() ?? "";
   const address = mailboxMatch[2]?.trim() ?? "";
   return Boolean(displayName && !/[\r\n\t]/.test(displayName) && !hasUnsafeControlCharacters(displayName) && isValidEmail(address));
-}
-
-function isValidPhone(value: string): boolean {
-  if (!value) return true;
-  if (value.length > 40 || hasUnsafeControlCharacters(value) || !PHONE_CHARACTER_PATTERN.test(value)) return false;
-  const digitCount = value.replace(/\D/g, "").length;
-  return digitCount >= 7 && digitCount <= 20;
-}
-
-function hasUnsafeControlCharacters(value: string): boolean {
-  for (const character of value) {
-    const code = character.charCodeAt(0);
-    if (code <= 8 || (code >= 11 && code <= 12) || (code >= 14 && code <= 31) || code === 127) {
-      return true;
-    }
-  }
-  return false;
 }
 
 function parseHostnames(value?: string): string[] {
