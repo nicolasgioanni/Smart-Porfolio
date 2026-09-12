@@ -168,9 +168,9 @@ npx playwright install chromium
 npm run verify:priority
 ```
 
-`verify:priority` runs documentation integrity, lint, typecheck, selected Vitest and browser regressions, and a production build. The build regenerates content through `prebuild`.
+`verify:priority` runs documentation integrity, lint, typecheck, selected Vitest and browser regressions, and a production build. Its browser selection includes skeleton alignment and held-navigation transitions, Recommendations, Experience, and Research, but omits the Linux-only skeleton visual comparison. The build regenerates content through `prebuild`.
 
-Install Chromium and run `npm run verify:full` on Ubuntu 24.04 for a release candidate. Its screenshot comparison is Linux-only. Each Playwright command starts an owned Next.js server on port `3100` by default. It does not reuse a running server, so set `PLAYWRIGHT_PORT` to an unused port when another worktree is active. Browser artifacts are written to ignored `test-results/` and `playwright-report/` directories.
+Install Chromium and run `npm run verify:full` on Ubuntu 24.04 for a release candidate. Its screenshot comparison is Linux-only. Pull-request CI runs that same visual check separately after the portable priority browser suite; keep it out of local Windows priority runs. Each Playwright command starts an owned Next.js server on port `3100` by default. It does not reuse a running server, so set `PLAYWRIGHT_PORT` to an unused port when another worktree is active. Browser artifacts are written to ignored `test-results/` and `playwright-report/` directories.
 
 The compatibility local gate remains available:
 
