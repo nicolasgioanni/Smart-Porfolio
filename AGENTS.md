@@ -1,52 +1,28 @@
 # Repository agent guidance
 
-## Reuse before extension
+## Route the work
 
-- Search for an existing component, selector, validator, style primitive, and test helper before adding another implementation.
-- Keep domain content in its owning feature while moving repeated behavior into a narrowly scoped shared module.
-- Preserve static rendering and progressive enhancement; client code should add interaction rather than fetch portfolio content.
+- Start with the scoped map in [`.agents/README.md`](.agents/README.md). Read [system decisions](.agents/knowledge/SYSTEM_DECISIONS.md) for compact durable context, then only the linked product documentation needed for the task.
+- Use the architecture skill for module, route, and documentation ownership; content pipeline for source data and assets; interface contracts for components, themes, motion, dialogs, and accessibility; validation for tests and CI; release security for endpoints and deployment.
+- Use Astra for coordination, review, decomposition, and evidence synthesis. Use GPT-5.6 Terra at High or Extra High for implementation.
 
-## Theme transitions
+## Shared invariants
 
-- Route every hydrated `data-theme` write through `src/lib/theme/themeTransition.ts`; do not add component-local color transitions or wildcard per-element transition rules.
-- `ThemePreferenceScript` and the first hydrated preference reconciliation must remain immediate so the selected palette is in place before paint. Later eligible changes use only the shared native View Transition opacity fade.
-- Keep the transition at `160ms`, opacity-only, and progressive. Reduced-motion, hidden-document, unsupported, failed, and unchanged-palette cases must update immediately without timers, transforms, blur, gradients, or layout animation.
+- Search for an existing component, selector, validator, style primitive, and test helper before adding one. Keep domain content with its feature and extract only clearly repeated behavior.
+- Preserve static rendering and progressive enhancement. Client code adds interaction; it does not fetch portfolio content.
+- Read the relevant installed Next.js guide in `node_modules/next/dist/docs/` before a framework-sensitive code change.
+- Update the guide that owns a changed contract and its links. Documentation, AGENTS.md, and `.agents` guidance are validated by `npm run docs:check`.
 
-## Surface language
+## Required specialist rules
 
-- Build hierarchy from semantic, solid surface tiers. Light needs distinct off-white, light-gray, and blue-gray layers; Dark needs distinct charcoal and slate layers; preserve the existing navy palette as its own tiered mode.
-- Do not add CSS gradients, glow shadows, decorative highlights or overlays, backdrop blur, or CSS mask fades or soft clipping. Use restrained neutral shadows and one-pixel borders only when they clarify elevation or separation.
-- Accent colors belong to meaningful controls and states, never to ambient page decoration. Preserve focus and validation rings. Purposeful hard `overflow` clipping may contain content without a fade; SVG `clipPath` is reserved only for intentional diagram or media geometry.
+- Route every hydrated `data-theme` write through `src/lib/theme/themeTransition.ts`. Use `src/components/overlay/ModalDialog.tsx` for modal previews and evidence dialogs. Read the interface skill before changing either.
+- For published Research media, use the existing content resolvers and previews. Read the interface and content skills before changing graphical or video assets.
+- Before changing skeleton geometry, route coverage, visual baselines, transition coverage, or the browser gate, read `.agents/skills/portfolio-skeleton-regression/SKILL.md`. Preserve Linux-only zero-difference baselines and every part of `npm run test:e2e:skeletons`.
 
-## Dialogs and media
+## Evidence
 
-- Use `src/components/overlay/ModalDialog.tsx` for modal previews and evidence dialogs. Do not duplicate portal, focus-trap, Escape, backdrop, scroll-lock, reduced-motion, or focus-restoration logic.
-- Give every dialog an accessible name, a visible close control, an intentional initial-focus target, and its originating trigger reference.
-- Store published research media under `public/images/research/` and reference it with root-relative paths. Use intrinsic dimensions and `object-fit: contain` when the source aspect ratio must remain intact.
-- Sanitize contributed Research PNGs with `scripts/stripPngMetadata.mjs` before publication. Preserve retained chunks byte-for-byte; the shared parser and CLI enforce protected input, chunk, 64 MiB decoded-image, 16,384-pixel dimension, and 67,108,864-pixel canvas ceilings, while asset tests reject invalid IHDR, palette, critical-chunk, zlib, scanline, and image-data ordering semantics alongside embedded text, EXIF, or provenance chunks. Do not raise or bypass those ceilings without a documented security review.
-- Resolve Research graphical abstracts through `src/lib/content/researchGraphicalAbstracts.ts`. A complete canonical path-and-alt pair overrides the curated asset for a known project; when both canonical fields are absent, one of the three approved project IDs may use its curated asset. Incomplete pairs are invalid upstream and must not be masked. Never read or render the temporary legacy Research `image` field.
-- Render graphical abstracts through `ResearchGraphicalAbstractPreview` and the shared dialog primitive so thumbnail, keyboard, dismissal, focus-restoration, and full-size-preview behavior stay aligned.
-- Resolve self-hosted Research video only through `src/lib/content/researchVideos.ts` and `ResearchVideoPreview`. Narrated video requires a reviewed synchronized WebVTT track and readable transcript with timestamped visual descriptions when meaningful visuals are not narrated, plus a same-origin download fallback; keep native captions, fullscreen, and picture-in-picture available. Pause and transfer the safe current timeline between inline and modal views without programmatic playback.
-- Keep the CytoCV supplementary-video MP4, captions, and transcript byte-locked by `src/lib/media/researchVideoAssets.test.ts`; preserve its 16 MiB video and 64 KiB-per-text-asset read ceilings, and document any authorized replacement in `docs/RESEARCH_MEDIA.md` without inferring a media license from source code.
-- Keep optional media absent rather than inventing a public asset. Disabled resources must use native disabled semantics and concise visible labels.
-
-## Skeleton regression workflow
-
-- Reuse `RouteSkeleton`, route compositions, `RouteHeaderSkeleton`, and `skeletons.css` for loading geometry. Keep blocks static and solid, permitting only intentional control-shaped geometry; do not add shimmer, gradients, blur, glow, fake prose, or real interactive controls.
-- Resolve page-header geometry through the exhaustive `src/lib/content/routeHeaderContent.ts` registry. Its transparent, `aria-hidden` canonical header ink is the only copy-shaped exception; preserve the generated Experience summary override through `resolveRouteHeaderContent()` instead of adding viewport JavaScript or route-specific width tables.
-- Read `.agents/skills/portfolio-skeleton-regression/SKILL.md` before changing skeleton geometry, route coverage, visual baselines, transition coverage, or the browser gate.
-- Keep visual baselines Linux-only on Ubuntu 24.04 with zero-difference screenshots. The live shell may supply resolved attributes, the body font class, and compiled stylesheet URLs, but alignment and screenshot fixtures must remain same-origin and inert through the shared standalone-document helper: no application scripts, development portal, or mutation of React-owned DOM.
-- Standalone Research visual snapshots may inject controlled canonical local-template detail items only through the isolated renderer. Normal loading boundaries and component or alignment coverage must remain generated-workbook driven.
-- Preserve the static export transition contract: a held non-prefetch RSC response keeps the source body in place; do not claim that `loading.tsx` streams in the published export. Review every baseline artifact before committing it.
-- Preserve all three parts of `npm run test:e2e:skeletons`: direct resolved-versus-loader alignment, held-navigation semantics, and the Linux visual matrix.
-
-## Verification and documentation
-
-- Add focused component tests for interaction state and Playwright coverage when behavior depends on scrolling, focus, responsive layout, or browser painting.
-- Verify keyboard dismissal, focus containment and restoration, backdrop isolation, reduced motion, and all supported themes for new modal consumers.
-- Run `npm run docs:check`, `npm run lint`, `npm run typecheck`, focused tests, the applicable browser suite, and `npm run build` before handoff.
-- Keep the local `next.config.mjs` build adapter and `scripts/normalizeNextStaticExport.mjs` together. The adapter repairs Next 16 segment-cache filenames emitted as nested paths by Windows builds and must fail on malformed trees or collisions rather than overwrite export data.
-- Update architecture, accessibility, design-system, testing, and content-pipeline documentation when their contracts change.
+- Run documentation validation, lint, type checking, focused tests, the relevant browser coverage, and a build before handoff. Expand to the release suite when the change crosses a release boundary.
+- Keep `next.config.mjs` and `scripts/normalizeNextStaticExport.mjs` together. The adapter must fail on malformed exports or collisions rather than overwrite output.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

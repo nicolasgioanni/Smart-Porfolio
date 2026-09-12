@@ -49,7 +49,7 @@ flowchart TB
     Submit --> Resend
 ```
 
-The build-time content path, static delivery path, and runtime contact path remain separate. See [Content pipeline](CONTENT_PIPELINE.md), [Deployment](DEPLOYMENT.md), and [Contact system](CONTACT_SYSTEM.md) for their detailed contracts.
+The build-time content path, static delivery path, and runtime contact path remain separate. See [Content pipeline](../content/CONTENT_PIPELINE.md), [Deployment](../operations/DEPLOYMENT.md), and [Contact system](../security/CONTACT_SYSTEM.md) for their detailed contracts.
 
 ## Boundaries
 
@@ -75,7 +75,7 @@ Core pages do not require a runtime Next.js server, database, authentication ser
 | Theme and interaction | `src/components/theme/`, `src/components/motion/`, `src/lib/theme/` | System preference resolution, manual theme persistence, role and scroll motion, reduced-motion behavior, and hydrated state. |
 | Content contracts | `src/content/types.ts` | Generated and UI-facing TypeScript shapes. |
 | Content transformation | `src/lib/content/`, `src/lib/csv/`, `scripts/lib/portfolioContentGeneration.ts` | Parsing, normalization, validation, selection, sorting, hashing, workbook structure, and canonical route-header ownership. |
-| Styling | `src/styles/` | Semantic tokens, themes, layout, glass primitives, portfolio surfaces, navigation, motion, loading, and contact UI. |
+| Styling | `src/styles/` | Semantic tokens, themes, layout, solid surface primitives, portfolio surfaces, navigation, motion, loading, and contact UI. |
 | Runtime contact | `functions/`, `migrations/` | Origin enforcement, Turnstile verification, signed tickets, schema and DNS validation, pseudonymous quota storage, and email delivery. |
 | Operations | `.github/workflows/ci.yml`, `scripts/`, `wrangler.jsonc` | Candidate selection, quality gates, artifact integrity, Direct Upload, smoke tests, and environment configuration. |
 
@@ -109,7 +109,7 @@ Portfolio data is already present in the generated page output. Hydration adds i
 
 The generator converts either checked-in templates or one complete workbook download into `src/content/generated/portfolio.generated.json`. Application code imports that file only through `getPortfolioContent()`, which validates the generated shape again before selectors and components consume it.
 
-Research graphical abstracts and video cross one additional presentation boundary. `getResearchGraphicalAbstract()` selects a complete canonical path-and-alt pair when authored, otherwise supplies the checked-in abstract for one of the three established project IDs only when both canonical fields are absent. `getResearchVideo()` supplies the curated, captioned CytoCV media only for its exact ID when its canonical video field is absent; an authored value must pass the strict local video-path guard and match the registered self-hosted asset, while its captions and transcript must also pass their local allowlists. Both resolvers accept own registry keys only, and invalid or incomplete canonical input is never masked by a fallback. The temporary legacy workbook `image` field is discarded during normalization and is never a presentation input. `ResearchGraphicalAbstractPreview` and `ResearchVideoPreview` progressively enhance static media with the shared `ModalDialog`; neither fetches portfolio content or duplicates modal lifecycle behavior. The video asset contract is in [Research media](RESEARCH_MEDIA.md).
+Research graphical abstracts and video cross one additional presentation boundary. `getResearchGraphicalAbstract()` selects a complete canonical path-and-alt pair when authored, otherwise supplies the checked-in abstract for one of the three established project IDs only when both canonical fields are absent. `getResearchVideo()` supplies the curated, captioned CytoCV media only for its exact ID when its canonical video field is absent; an authored value must pass the strict local video-path guard and match the registered self-hosted asset, while its captions and transcript must also pass their local allowlists. Both resolvers accept own registry keys only, and invalid or incomplete canonical input is never masked by a fallback. The temporary legacy workbook `image` field is discarded during normalization and is never a presentation input. `ResearchGraphicalAbstractPreview` and `ResearchVideoPreview` progressively enhance static media with the shared `ModalDialog`; neither fetches portfolio content or duplicates modal lifecycle behavior. The video asset contract is in [Research media](../content/RESEARCH_MEDIA.md).
 
 The boundary has four responsibilities:
 
@@ -131,7 +131,7 @@ The generated snapshot contains the full public content model. Selectors decide 
 
 Home is the summary layer. Its implemented order is profile overview, experience, education, research, projects, skills, and recommendations when enabled. Focused routes provide deeper evidence.
 
-See [Content mapping](CONTENT_MAPPING.md) for field-to-component ownership and [Project structure](PROJECT_STRUCTURE.md) for route locations.
+See [Content mapping](../content/CONTENT_MAPPING.md) for field-to-component ownership and [Project structure](PROJECT_STRUCTURE.md) for route locations.
 
 ## Theme and visual composition
 
@@ -145,7 +145,7 @@ Semantic values in `tokens.css` isolate components from theme-specific colors. S
 
 Above `980px`, the sticky header owns profile identity, desktop routes, social links, theme selection, and compact-on-scroll behavior. At `980px` and below, the identity and desktop route list are hidden and the same surface island becomes a fixed bottom dock. One native horizontal rail contains the canonical route navigation followed by the configured GitHub, LinkedIn, Email, and theme controls. The route links retain their own navigation landmark, while the action controls remain outside that landmark. The theme popover is positioned above its moving trigger without being clipped by the rail. Safe-area insets and shell bottom clearance prevent the dock from covering route content.
 
-See [Design system](DESIGN_SYSTEM.md), [Accessibility](ACCESSIBILITY.md), and [Animation guidelines](ANIMATION_GUIDELINES.md).
+See [Design system](../design/DESIGN_SYSTEM.md), [Accessibility](../design/ACCESSIBILITY.md), and [Animation guidelines](../design/ANIMATION_GUIDELINES.md).
 
 ## Contact boundary
 
@@ -165,7 +165,7 @@ The browser submits contact fields, acknowledgements, timing metadata, honeypot 
 
 Successful delivery clears the ticket. Delivery failure retains an otherwise valid ticket and the original quota reservation for retry. The D1 row stores only the submission UUID, keyed normalized-email hash, opaque keyed full-payload fingerprint, and reservation and expiry epoch seconds; it stores no raw contact fields or message. The fingerprint rejects same-ID retries whose normalized payload differs. Request bodies or personal fields must not be written to logs.
 
-The repository-enforced address quota does not authenticate mailbox ownership and can be bypassed with aliases, so Cloudflare WAF rate limiting remains an operator-managed defense in depth. Source code can document and test the expected endpoint behavior, but it cannot prove the live zone rule, plan capability, or response customization. See [Contact system](CONTACT_SYSTEM.md) and [Security](SECURITY.md).
+The repository-enforced address quota does not authenticate mailbox ownership and can be bypassed with aliases, so Cloudflare WAF rate limiting remains an operator-managed defense in depth. Source code can document and test the expected endpoint behavior, but it cannot prove the live zone rule, plan capability, or response customization. See [Contact system](../security/CONTACT_SYSTEM.md) and [Security](../security/SECURITY.md).
 
 ## Deployment boundary
 
@@ -185,7 +185,7 @@ A deployable candidate follows this sequence:
 10. Deploy the static export and Functions from repository root with pinned Wrangler.
 11. Smoke-test static content, both manifests, and GET rejection from both contact Functions.
 
-The active `/content-version.json` remains the deployed source of truth. A failure before Wrangler upload leaves it unchanged. A post-upload smoke failure can occur after the new manifest is already active, so operators must inspect the deployed result and choose retry or rollback deliberately. See [Operations](OPERATIONS.md) for event behavior, retry, and rollback considerations.
+The active `/content-version.json` remains the deployed source of truth. A failure before Wrangler upload leaves it unchanged. A post-upload smoke failure can occur after the new manifest is already active, so operators must inspect the deployed result and choose retry or rollback deliberately. See [Operations](../operations/OPERATIONS.md) for event behavior, retry, and rollback considerations.
 
 ## Public and private data
 
@@ -263,4 +263,4 @@ The two-step ticket flow avoids sending a consumed Turnstile token twice and kee
 - Treat WAF rules, custom domains, provider keys, and encrypted secrets as external state that repository tests cannot prove.
 - Preserve keyboard, focus, reduced-motion, and static-content fallbacks when adding interaction.
 
-Safe change patterns are detailed in [Maintenance](MAINTENANCE.md).
+Safe change patterns are detailed in [Maintenance](../development/MAINTENANCE.md).

@@ -44,4 +44,4 @@ Update the deep guide and concise checklist that own changed behavior. Add new d
 
 Do not add production dependencies casually. A dependency must solve a concrete problem, preserve static export and supported Node.js behavior, and have a clear performance and maintenance justification.
 
-See [Architecture](ARCHITECTURE.md), [Project structure](PROJECT_STRUCTURE.md), and [Maintenance](MAINTENANCE.md).
+See [Architecture](../architecture/ARCHITECTURE.md), [Project structure](../architecture/PROJECT_STRUCTURE.md), and [Maintenance](MAINTENANCE.md).

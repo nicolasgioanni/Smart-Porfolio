@@ -2,7 +2,7 @@
 
 Smart Portfolio is deployed to Cloudflare Pages by GitHub Actions. The repository produces a Next.js static export and supplies two Cloudflare Pages Functions at `/api/contact/verify` and `/api/contact`.
 
-This guide defines the deployment architecture and initial configuration. Use [Operations](OPERATIONS.md) for recurring releases, monitoring, rollback, and incident response. Use [Troubleshooting](TROUBLESHOOTING.md) when a local or hosted check fails.
+This guide defines the deployment architecture and initial configuration. Use [Operations](OPERATIONS.md) for recurring releases, monitoring, rollback, and incident response. Use [Troubleshooting](../development/TROUBLESHOOTING.md) when a local or hosted check fails.
 
 ## Current deployment targets
 
@@ -160,7 +160,7 @@ The workbook must expose exactly the nine expected visible worksheets. The gener
 
 Pull requests do not receive the workbook source. They generate and validate content from the checked-in templates.
 
-See [Content Pipeline](CONTENT_PIPELINE.md) and [Content Sheet Schema](CONTENT_SHEET_SCHEMA.md) for the complete workbook and normalization contract.
+See [Content Pipeline](../content/CONTENT_PIPELINE.md) and [Content Sheet Schema](../content/CONTENT_SHEET_SCHEMA.md) for the complete workbook and normalization contract.
 
 ## Single-snapshot, exact-artifact pipeline
 
@@ -287,7 +287,7 @@ See [Operations](OPERATIONS.md) for the release, incident, and rollback runbooks
 
 ## Branch protection and heartbeat
 
-The intended `main` protection policy is:
+No branch protection or ruleset was configured in the repository at the latest verified audit. Configure and verify the following intended `main` policy in GitHub settings:
 
 1. Pull-request-based changes with the `verify` status required.
 2. The branch must be current before merge.
@@ -301,8 +301,8 @@ The daily schedule also starts `develop-schedule-heartbeat`. It compares the new
 ## Related guides
 
 - [Operations](OPERATIONS.md)
-- [Testing](TESTING.md)
-- [Troubleshooting](TROUBLESHOOTING.md)
-- [Security](SECURITY.md)
-- [Architecture](ARCHITECTURE.md)
-- [Local Development](LOCAL_DEVELOPMENT.md)
+- [Testing](../quality/TESTING.md)
+- [Troubleshooting](../development/TROUBLESHOOTING.md)
+- [Security](../security/SECURITY.md)
+- [Architecture](../architecture/ARCHITECTURE.md)
+- [Local Development](../development/LOCAL_DEVELOPMENT.md)

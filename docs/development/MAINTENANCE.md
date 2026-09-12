@@ -45,7 +45,7 @@ Profile source data is a key-value sheet, but generated content uses explicit ty
 6. Add selection or display fallback logic in a content helper when the raw field should not reach a component directly.
 7. Render it with semantic structure and existing primitives.
 8. Test blank, valid, and invalid cases, strict remote unknown-key and duplicate-key rejection, and the intended UI fallback.
-9. Update [Content sheet schema](CONTENT_SHEET_SCHEMA.md), [Content mapping](CONTENT_MAPPING.md), and [Local content editing](LOCAL_CONTENT_EDITING.md).
+9. Update [Content sheet schema](../content/CONTENT_SHEET_SCHEMA.md), [Content mapping](../content/CONTENT_MAPPING.md), and [Local content editing](../content/LOCAL_CONTENT_EDITING.md).
 10. Align the public workbook key set before the next production or stable preview candidate.
 
 If a profile value refers to a collection row, validate the exact ID. Do not silently choose an unrelated row when an explicit reference is invalid.
@@ -108,7 +108,7 @@ Do not make strict mode accept arbitrary extra sheets. Every accepted sheet beco
 6. Add component and navigation tests.
 7. Confirm static export creates the expected directory and HTML file.
 8. Add the route to local smoke verification and deployment smoke coverage when operationally important.
-9. Update the route map in the root README and [Project structure](PROJECT_STRUCTURE.md).
+9. Update the route map in the root README and [Project structure](../architecture/PROJECT_STRUCTURE.md).
 
 A route that needs request-time server behavior does not belong under a Next.js route handler while `output: "export"` remains active. Review the runtime-endpoint pattern instead.
 
@@ -138,7 +138,7 @@ When adding one:
 4. Confirm nested Home cards remain quieter than their outer panel.
 5. Add focus, hover, selected, disabled, and reduced-motion rules where interactive.
 6. Test long text, missing optional data, narrow widths, and all themes.
-7. Document the variant in [Design system](DESIGN_SYSTEM.md).
+7. Document the variant in [Design system](../design/DESIGN_SYSTEM.md).
 
 ## Add or change a theme token
 
@@ -150,7 +150,7 @@ Supported visitor-facing palettes are Light, My mode, and Dark. Their stable ide
 4. Check the dual focus rings, selection, disabled state, text contrast, and legacy glass-setting fallback behavior.
 5. Test the affected component in each palette and at responsive breakpoints.
 6. Verify that System follows both device schemes, manual choices remain stable, and returning to System removes the stored override.
-7. Update [Design system](DESIGN_SYSTEM.md) if the token becomes part of the reusable contract.
+7. Update [Design system](../design/DESIGN_SYSTEM.md) if the token becomes part of the reusable contract.
 
 Do not add a component rule that switches directly on `[data-theme]` unless the component genuinely needs behavior beyond token substitution.
 
@@ -181,7 +181,7 @@ Review together:
 - exact origin and hostname configuration;
 - privacy, terms, and public security route copy;
 - Function, contact component, legal, and static-security tests;
-- [Contact system](CONTACT_SYSTEM.md), [Security](SECURITY.md), and the checklist;
+- [Contact system](../security/CONTACT_SYSTEM.md), [Security](../security/SECURITY.md), and the checklist;
 - Cloudflare WAF coverage and provider configuration.
 
 Never move an encrypted value into `NEXT_PUBLIC_` configuration. Never return provider, recipient, or validation internals to the visitor.
@@ -249,7 +249,7 @@ Replace provider-specific workflow, scripts, configuration, headers, Functions, 
 - Remove unused assets only after checking source references and documentation; use a recoverable, explicitly scoped operation.
 - Check image dimensions and file size before adding a large raster asset.
 
-See [Local content editing](LOCAL_CONTENT_EDITING.md) and [Performance budget](PERFORMANCE_BUDGET.md).
+See [Local content editing](../content/LOCAL_CONTENT_EDITING.md) and [Performance budget](../quality/PERFORMANCE_BUDGET.md).
 
 ## Maintain documentation
 
