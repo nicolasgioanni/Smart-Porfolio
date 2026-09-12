@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef, useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import { GlassSurface } from "@/components/glass/GlassSurface";
 import { SmartLink } from "@/components/navigation/SmartLink";
 import {
@@ -14,14 +14,15 @@ import {
   type ContactField,
   type ContactFieldErrors
 } from "@/components/contact/contactFormValidation";
-import { TurnstileWidget } from "@/components/contact/TurnstileWidget";
+import { ContactNotifications } from "./ContactNotifications";
+import { useContactNotifications } from "./useContactNotifications";
+import { TurnstileWidget, type TurnstileStatus } from "@/components/contact/TurnstileWidget";
 
 type ContactStep = 1 | 2 | 3;
 type ContactView = "verification" | "form";
 type ConsentField = "contact" | "legal";
 type SubmissionStatus = "idle" | "submitting";
 type VerificationGateStatus = "waiting" | "verifying" | "verified" | "failed";
-type ContactNoticeTone = "error" | "success";
 
 const initialConsents: Record<ConsentField, boolean> = {
   contact: false,
@@ -49,33 +50,6 @@ function retryAfterCopy(value: string | null): string {
   const days = Math.ceil(seconds / 86400);
   return `Try again in about ${days} day${days === 1 ? "" : "s"}.`;
 }
-
-const ContactNotice = forwardRef<HTMLDivElement, { children: ReactNode; tone: ContactNoticeTone }>(function ContactNotice(
-  { children, tone },
-  ref
-) {
-  const isError = tone === "error";
-
-  return (
-    <div
-      aria-atomic="true"
-      aria-live={isError ? "assertive" : "polite"}
-      className="contact-notice"
-      data-tone={tone}
-      ref={ref}
-      role={isError ? "alert" : "status"}
-      tabIndex={-1}
-    >
-      <span aria-hidden="true" className="contact-notice__icon">
-        {isError ? "!" : "✓"}
-      </span>
-      <div className="contact-notice__content">
-        <strong className="contact-notice__label">{isError ? "Submission error" : "Submission successful"}</strong>
-        <p>{children}</p>
-      </div>
-    </div>
-  );
-});
 
 function createSubmissionId(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -235,7 +209,7 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
   const [submissionStatus, setSubmissionStatus] = useState<SubmissionStatus>("idle");
   const [reviewLocked, setReviewLocked] = useState(false);
   const [restartRequired, setRestartRequired] = useState(false);
-  const [formAlert, setFormAlert] = useState("");
+  const { notifications, announcement, notify, dismiss } = useContactNotifications();
   const [submittedEmail, setSubmittedEmail] = useState("");
   const [submissionId, setSubmissionId] = useState("");
   const formStartedAtRef = useRef(0);
@@ -249,8 +223,7 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
   const verificationRequestRef = useRef(0);
   const autoAdvanceTimeoutRef = useRef<number | undefined>(undefined);
   const verifiedDestinationStepRef = useRef<ContactStep>(1);
-  const successNoticeRef = useRef<HTMLDivElement>(null);
-  const errorNoticeRef = useRef<HTMLDivElement>(null);
+  const successHeadingRef = useRef<HTMLHeadingElement>(null);
   const stepHeadingRef = useRef<HTMLDivElement>(null);
   const previousLocationRef = useRef(`${view}:${step}`);
   const mailtoHref = `mailto:${contactEmail}?subject=Portfolio%20Contact`;
@@ -265,7 +238,7 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
       submissionIdRef.current = nextSubmissionId;
       setSubmissionId(nextSubmissionId);
     } catch {
-      setFormAlert("Secure verification is unavailable in this browser. Please use the email link below.");
+      notify("Secure verification is unavailable in this browser. Please use the email link below.");
     }
 
     return () => {
@@ -274,7 +247,7 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
         window.clearTimeout(autoAdvanceTimeoutRef.current);
       }
     };
-  }, []);
+  }, [notify]);
 
   useEffect(() => {
     const location = `${view}:${step}`;
@@ -284,12 +257,8 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
   }, [step, view]);
 
   useEffect(() => {
-    if (submittedEmail) successNoticeRef.current?.focus();
+    if (submittedEmail) successHeadingRef.current?.focus();
   }, [submittedEmail]);
-
-  useEffect(() => {
-    if (formAlert) errorNoticeRef.current?.focus();
-  }, [formAlert, step]);
 
   function setSubmissionPhase(status: SubmissionStatus) {
     submissionStatusRef.current = status;
@@ -333,7 +302,7 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
     verificationRequestRef.current += 1;
     clearAutoAdvance();
     setVerificationPhase("failed");
-    setFormAlert(message);
+    notify(message);
   }
 
   function retryVerification() {
@@ -341,8 +310,14 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
     clearAutoAdvance();
     setVerificationPhase("waiting");
     setTurnstileWidgetAttempt((current) => current + 1);
-    setFormAlert("");
     focusGateHeading();
+  }
+
+  function handleTurnstileStatusChange(status: TurnstileStatus) {
+    if (verificationGateStatusRef.current !== "waiting") return;
+    if (status === "expired") notify("The security check expired. Run a fresh check to continue.");
+    if (status === "error") notify("The security check could not run. Try it again or email me directly.");
+    if (status === "unavailable") notify("Secure verification is temporarily unavailable. Refresh the page or email me directly.");
   }
 
   async function handleTurnstileTokenChange(token: string) {
@@ -351,7 +326,6 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
     const requestId = verificationRequestRef.current + 1;
     verificationRequestRef.current = requestId;
     setVerificationPhase("verifying");
-    setFormAlert("");
 
     try {
       const response = await fetch("/api/contact/verify", {
@@ -379,7 +353,6 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
       }
 
       setVerificationPhase("verified");
-      setFormAlert("");
       clearAutoAdvance();
       autoAdvanceTimeoutRef.current = window.setTimeout(() => {
         autoAdvanceTimeoutRef.current = undefined;
@@ -395,7 +368,6 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
     if (reviewLockedRef.current) return;
     const nextDraft = { ...draft, [field]: value };
     setDraft(nextDraft);
-    setFormAlert("");
 
     if (!(field in errors)) return;
     const nextErrors =
@@ -420,7 +392,6 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
     if (formStartedAtRef.current === 0) {
       formStartedAtRef.current = Date.now();
     }
-    setFormAlert("");
     setStep(reviewLockedRef.current ? 3 : verifiedDestinationStepRef.current);
     setView("form");
   }
@@ -434,7 +405,6 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
       return;
     }
 
-    setFormAlert("");
     setStep(2);
   }
 
@@ -447,14 +417,12 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
       return;
     }
 
-    setFormAlert("");
     setStep(3);
   }
 
   function updateConsent(field: ConsentField, checked: boolean) {
     if (reviewLockedRef.current) return;
     setConsents((current) => ({ ...current, [field]: checked }));
-    setFormAlert("");
   }
 
   function toggleConsentFromCard(field: ConsentField, target: EventTarget) {
@@ -472,7 +440,7 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
     setReviewLock(true);
     setRestartRequired(false);
     verifiedDestinationStepRef.current = 3;
-    setFormAlert(message);
+    notify(message);
     setView("verification");
   }
 
@@ -481,7 +449,7 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
     try {
       nextSubmissionId = createSubmissionId();
     } catch {
-      setFormAlert("Secure verification is unavailable in this browser. Please use the email link below.");
+      notify("Secure verification is unavailable in this browser. Please use the email link below.");
       return;
     }
 
@@ -499,7 +467,6 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
     setRestartRequired(false);
     setVerificationPhase("waiting");
     setTurnstileWidgetAttempt((current) => current + 1);
-    setFormAlert("");
     setView("verification");
     focusGateHeading();
   }
@@ -513,12 +480,12 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
     setSubmissionPhase("idle");
     if (wasPayloadPreviouslyAttempted) {
       setReviewLock(true);
-      setFormAlert(lockedMessage);
+      notify(lockedMessage);
       return;
     }
 
     unlockReviewedPayload();
-    setFormAlert(message);
+    notify(message);
     if (returnToEmail) setStep(2);
   }
 
@@ -527,7 +494,7 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
     try {
       nextSubmissionId = createSubmissionId();
     } catch {
-      setFormAlert("Secure verification is unavailable in this browser. Please use the email link below.");
+      notify("Secure verification is unavailable in this browser. Please use the email link below.");
       return;
     }
 
@@ -535,7 +502,6 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
     setSubmissionId(nextSubmissionId);
     formStartedAtRef.current = 0;
     setSubmittedEmail("");
-    setFormAlert("");
     setVerificationPhase("waiting");
     setTurnstileWidgetAttempt((current) => current + 1);
     setRestartRequired(false);
@@ -549,6 +515,10 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
     verificationRequestRef.current += 1;
     clearAutoAdvance();
     setSubmittedEmail(email);
+    notify(
+      `Form submitted successfully. I’ll get back to you as soon as I can. A confirmation email is on its way to ${email}.`,
+      "success"
+    );
     setDraft(initialContactDraft);
     setConsents(initialConsents);
     setErrors({});
@@ -562,7 +532,6 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
     setSubmissionPhase("idle");
     setReviewLock(false);
     setRestartRequired(false);
-    setFormAlert("");
     formStartedAtRef.current = 0;
     verifiedDestinationStepRef.current = 1;
     setView("verification");
@@ -572,7 +541,7 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
   function freezeReviewedPayload(): boolean {
     if (frozenRequestBodyRef.current) return true;
     if (!submissionIdRef.current) {
-      setFormAlert("Secure verification is not ready. Please wait a moment or use the email link below.");
+      notify("Secure verification is not ready. Please wait a moment or use the email link below.");
       return false;
     }
 
@@ -597,7 +566,7 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
     const requestBody = frozenRequestBodyRef.current;
     if (!requestBody) {
       setSubmissionPhase("idle");
-      setFormAlert("Your reviewed request is unavailable. Review the form and try again.");
+      notify("Your reviewed request is unavailable. Review the form and try again.");
       unlockReviewedPayload();
       return;
     }
@@ -631,7 +600,7 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
           setSubmissionPhase("idle");
           setReviewLock(true);
           setRestartRequired(true);
-          setFormAlert(
+          notify(
             wasPayloadPreviouslyAttempted
               ? "This locked request has expired and can no longer be safely retried. It may already have been partially delivered. Start a fresh secured request only if needed, or email me directly."
               : "This request expired before delivery. Start a fresh secured request to keep your reviewed details and try again."
@@ -678,7 +647,7 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
         }
 
         setSubmissionPhase("idle");
-        setFormAlert(
+        notify(
           "Your request could not be delivered right now. Your verification remains complete, and your reviewed details are locked for a safe retry. Try again, or email me directly."
         );
         return;
@@ -687,7 +656,7 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
       resetAfterSuccess(frozenEmailRef.current);
     } catch {
       setSubmissionPhase("idle");
-      setFormAlert(
+      notify(
         "Your request could not reach the delivery service. Your verification remains complete, and your reviewed details are locked for a safe retry. Check your connection and try again, or email me directly."
       );
     }
@@ -706,7 +675,6 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
     }
 
     if (!freezeReviewedPayload()) return;
-    setFormAlert("");
 
     if (!isHumanVerified) {
       returnToVerification(
@@ -720,22 +688,19 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
 
   return (
     <GlassSurface as="section" className="contact-wizard" variant="strong">
+      <ContactNotifications
+        notifications={notifications}
+        announcement={announcement}
+        onDismiss={dismiss}
+        onRestoreFocus={() => (successHeadingRef.current ?? stepHeadingRef.current?.querySelector<HTMLElement>("h2"))?.focus({ preventScroll: true })}
+      />
       {submittedEmail ? (
         <div className="contact-success">
           <header className="contact-step__heading">
             <p className="contact-step__counter">Request complete</p>
-            <h2>Thanks for reaching out</h2>
-            <p>Your message has been securely delivered. You can start a separate request whenever you are ready.</p>
+            <h2 ref={successHeadingRef} tabIndex={-1}>Thanks for reaching out</h2>
+            <p>Your request has been submitted. You can start a separate request whenever you are ready.</p>
           </header>
-          {formAlert ? (
-            <ContactNotice ref={errorNoticeRef} tone="error">
-              {formAlert}
-            </ContactNotice>
-          ) : null}
-          <ContactNotice ref={successNoticeRef} tone="success">
-            Form submitted successfully. I’ll get back to you as soon as I can. A confirmation email is on its way to{" "}
-            <strong>{submittedEmail}</strong>.
-          </ContactNotice>
           <div className="contact-step__actions contact-step__actions--end">
             <button
               className="contact-action contact-action--primary glass-button glass-button--primary hover-base-1 hover-base-1--solid"
@@ -766,11 +731,6 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
             if (step === 3) void submitRequest();
           }}
         >
-        {formAlert ? (
-          <ContactNotice ref={errorNoticeRef} tone="error">
-            {formAlert}
-          </ContactNotice>
-        ) : null}
         <div ref={stepHeadingRef}>
           {view === "verification" ? (
             <div className="contact-step contact-verification-gate" data-step="verification">
@@ -780,15 +740,26 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
                 <p>Complete the security check to open the contact form.</p>
               </header>
 
-              {submissionId &&
-              (verificationGateStatus === "waiting" || verificationGateStatus === "verifying") ? (
-                <TurnstileWidget
-                  cData={submissionId}
-                  key={turnstileWidgetAttempt}
-                  onTokenChange={handleTurnstileTokenChange}
-                  siteKey={turnstileSiteKey}
-                />
-              ) : null}
+              <div className="contact-verification-well">
+                <div className="contact-verification-slot">
+                  {submissionId &&
+                  (verificationGateStatus === "waiting" || verificationGateStatus === "verifying") ? (
+                    <TurnstileWidget
+                      cData={submissionId}
+                      key={turnstileWidgetAttempt}
+                      onStatusChange={handleTurnstileStatusChange}
+                      onTokenChange={handleTurnstileTokenChange}
+                      siteKey={turnstileSiteKey}
+                    />
+                  ) : (
+                    <p className="contact-verification-placeholder" aria-hidden="true">
+                      {verificationGateStatus === "verified"
+                        ? "Security check complete"
+                        : verificationGateStatus === "failed" ? "Ready for a fresh security check" : "Preparing security check"}
+                    </p>
+                  )}
+                </div>
+              </div>
 
               <p
                 aria-atomic="true"
@@ -817,7 +788,7 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
                     Try security check again
                   </button>
                 ) : (
-                  <span aria-hidden="true" />
+                  <span className="contact-verification-action-reserve" aria-hidden="true" />
                 )}
                 <button
                   aria-describedby="contact-verification-result"

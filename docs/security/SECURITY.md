@@ -116,6 +116,12 @@ Both handlers:
 
 The application code applies a 15-second request-body read deadline, but does not implement a whole-request timeout or client fetch timeout. A 16 KiB inbound-body rejection or read deadline starts cancellation without waiting for cleanup to settle. Its bounded outbound work covers Siteverify, mail-domain DNS queries, and each Resend request. Fixed provider requests reject redirects; the 5-second Siteverify and 3-second DNS deadlines include their capped JSON-body reads (16 KiB and 64 KiB respectively). Platform limits still apply.
 
+## Shared provider transport and registered email endings
+
+Shared provider transport uses Workers-supported manual redirect handling and rejects every 3xx response without following its destination or forwarding secrets, authorization headers, or contact bodies. Timeouts, response-size limits, cancellation, and bounded retries remain in force. The PR gate executes this contract in local workerd with provider fixtures; Node fetch mocks alone cannot validate Workers request-option support.
+
+Both browser and server email validation use the reviewed, checked-in complete IANA suffix snapshot, including supported Punycode endings. The explicit bounded updater and dataset version are documented in [Contact System](CONTACT_SYSTEM.md#registered-email-endings). Builds and browser validation do not depend on live IANA availability. Registered endings do not establish mailbox ownership or classify spam; DNS routing, Turnstile, tickets, quotas, and delivery checks remain authoritative.
+
 ## Verification ticket
 
 A successful verification sets `__Host-portfolio_contact_ticket` with `Path=/`, `Max-Age=1800`, `Secure`, `HttpOnly`, `SameSite=Strict`, and no `Domain` attribute. The ticket is host-only and available to the Functions through the browser's same-origin credentials mode.

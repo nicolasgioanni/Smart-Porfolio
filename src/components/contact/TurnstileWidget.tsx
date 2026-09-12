@@ -1,7 +1,7 @@
 "use client";
 
 import Script from "next/script";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 export type TurnstileStatus = "loading" | "ready" | "expired" | "error" | "unavailable";
 
@@ -13,7 +13,7 @@ type TurnstileRenderOptions = {
   appearance: "always";
   execution: "render";
   cData: string;
-  size: "flexible";
+  size: "flexible" | "compact";
   theme: TurnstileTheme;
   callback: (token: string) => void;
   "expired-callback": () => void;
@@ -59,6 +59,21 @@ export function TurnstileWidget({ cData, onStatusChange, onTokenChange, siteKey 
   const [status, setStatus] = useState<TurnstileStatus>(siteKey ? "loading" : "unavailable");
   const [theme, setTheme] = useState<TurnstileTheme>("dark");
   const [renderAttempt, setRenderAttempt] = useState(0);
+  const [size, setSize] = useState<TurnstileRenderOptions["size"]>();
+
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const measure = () => {
+      const width = container.getBoundingClientRect().width;
+      setSize(width > 0 && width < 300 ? "compact" : "flexible");
+    };
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     onStatusChangeRef.current = onStatusChange;
@@ -133,7 +148,7 @@ export function TurnstileWidget({ cData, onStatusChange, onTokenChange, siteKey 
       return;
     }
 
-    if (!scriptReady || !containerRef.current || !window.turnstile) return;
+    if (!scriptReady || !size || !containerRef.current || !window.turnstile) return;
 
     let active = true;
 
@@ -153,7 +168,7 @@ export function TurnstileWidget({ cData, onStatusChange, onTokenChange, siteKey 
         appearance: "always",
         execution: "render",
         cData,
-        size: "flexible",
+        size,
         theme,
         callback: (token) => {
           if (!active) return;
@@ -199,14 +214,14 @@ export function TurnstileWidget({ cData, onStatusChange, onTokenChange, siteKey 
         widgetIdRef.current = undefined;
       }
     };
-  }, [cData, clearToken, renderAttempt, scriptReady, siteKey, theme, updateStatus]);
+  }, [cData, clearToken, renderAttempt, scriptReady, siteKey, size, theme, updateStatus]);
 
   const statusMessage: Record<TurnstileStatus, string> = {
     loading: "Running secure verification...",
-    ready: "Security check complete. Confirming with the server...",
-    expired: "Verification expired. Run a fresh security check to continue.",
-    error: "Verification could not run. Try the security check again or use the email link below.",
-    unavailable: "Secure verification is temporarily unavailable. Please refresh the page or use the email link below."
+    ready: "Confirming with the server...",
+    expired: "Verification expired. Run a fresh check.",
+    error: "Verification could not run. Try again.",
+    unavailable: "Verification is temporarily unavailable."
   };
 
   return (
@@ -228,7 +243,7 @@ export function TurnstileWidget({ cData, onStatusChange, onTokenChange, siteKey 
           <button className="contact-text-button" onClick={resetWidget} type="button">
             Run check again
           </button>
-        ) : null}
+        ) : <span aria-hidden="true" />}
       </div>
     </div>
   );

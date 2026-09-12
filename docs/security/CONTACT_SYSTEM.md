@@ -12,6 +12,8 @@ Use this guide for the complete request contract and trust boundary. See [Securi
 | Wizard state, requests, retries, and acknowledgments | `src/components/contact/ContactForm.tsx` |
 | Browser field validation | `src/components/contact/contactFormValidation.ts` |
 | Turnstile widget options | `src/components/contact/TurnstileWidget.tsx` |
+| Notification portal and independent lifetimes | `src/components/contact/ContactNotifications.tsx`, `src/components/contact/useContactNotifications.ts` |
+| Shared email validator and registered suffix snapshot | `src/lib/contact/validation.ts`, `src/lib/contact/ianaTlds.ts` |
 | Shared public contact contract | `functions/_shared/contact.ts` |
 | Request, provider, persistence, ticket, and delivery modules | `functions/_shared/contact/` |
 | Verification handler | `functions/api/contact/verify.ts` |
@@ -82,7 +84,7 @@ The explicit Turnstile widget uses:
 - appearance `always`;
 - execution `render`;
 - the current submission UUID as `cData`;
-- flexible sizing;
+- flexible sizing (minimum 300 pixels wide, 65 pixels high), or compact sizing (150 by 140 pixels) below 300 pixels of available width;
 - light widget styling only for the Light site theme, and dark styling for My mode and Dark;
 - manual token refresh and retry behavior so the client controls recovery;
 - no hidden Turnstile response field because the token is sent in explicit JSON.
@@ -90,6 +92,8 @@ The explicit Turnstile widget uses:
 The widget script loads from Cloudflare after hydration and renders a visible gate before contact fields. Expiry, timeout, widget, script, and unsupported-browser callbacks clear the token and fail closed. A valid client token does not open the form by itself: `/api/contact/verify` must accept it and set the signed ticket. Success enables Continue and starts a 500-millisecond transition to the form; the visitor can activate Continue sooner. Failed or expired challenges remain at the gate for an explicit retry.
 
 Each new logical draft receives a cryptographically random submission UUID before the gate. The UUID binds Turnstile custom data, the signed ticket, the reviewed payload, the D1 retry identity, and Resend idempotency keys. When the widget supplies a fresh token, the browser posts only that UUID and token to `/api/contact/verify`. The browser records the form-start time when the form opens automatically or through Continue, so time spent at the gate is not counted as form completion. A later ticket refresh for the same locked delivery preserves the original UUID and form-start time, then returns to locked review without starting delivery.
+
+The verification well persists through loading, token confirmation, success, failure, expiry, and retry. A CSS container query reserves the documented widget height plus status and recovery rows. Provider removal or shrinking never moves the heading, gate actions, email alternative, or card boundary at a given viewport. Theme and width changes recreate only the widget as needed. Later form steps may fit their content. See [Cloudflare widget sizing](https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/widget-configurations/).
 
 ### Three wizard steps
 
@@ -126,7 +130,21 @@ Client behavior depends on the response:
 | DNS validation is temporarily unavailable | Keep the form editable and show a red retry notice. No quota slot or email is created. |
 | Configuration or quota storage is unavailable | Show a red service failure notice and fail closed without email delivery. |
 | Provider or delivery network failure | Stay on the locked review step and allow a same-payload retry with the current ticket and UUID. |
-| Delivery succeeds | Clear the draft and verification state, then show the standalone green completion view including the submitted email address. Create a fresh identity and gate only after the visitor selects <em>Send another message</em>. |
+| Delivery succeeds | Clear the draft and verification state, then show the standalone completion view and a green notification including the submitted email address. Create a fresh identity and gate only after the visitor selects <em>Send another message</em>. |
+
+### Contact notifications
+
+Contact outcome notifications render through a body portal at the viewport top center, above navigation and below modal dialogs (z-index 90). Safe-area spacing, responsive side margins, a 680-pixel maximum width, and viewport-bounded scrolling keep the stack independent of page layout and scrolling.
+
+At most three cards remain active, newest foremost with 10-pixel peeks beneath it. A fourth replaces the oldest. Repeating an active message moves it foremost and refreshes its existing 30-second lifetime. Each card has its own remaining time; all clocks pause during hover, keyboard focus, touch-expanded reading, and document hiding, then resume the remaining time. Hover, focus, or tapping a peek expands the cards into readable rows. Pointer/focus departure, outside tapping, Escape, and the explicit collapse control close the expansion. Every card uses an accessible GlassIconButton X with transparent resting surface/border and shared hover/focus treatment.
+
+Verification errors and unavailability, ticket and request expiry, server email-domain rejection, rate limits, DNS/service problems, delivery/network failures, and submission success use this stack. Errors stay red and successes green in every theme. New errors announce assertively; successes politely. Arrival never steals focus. Hidden cards are inert, and dismissing or evicting a focused card restores useful focus. Completion focuses its heading. Field errors stay beside inputs and progress stays inside the form. Dismissal or expiry changes only notification state: recovery controls, locked retries, and the completion screen remain available. See [Accessibility](../design/ACCESSIBILITY.md#contact-form) and [Animation](../design/ANIMATION_GUIDELINES.md#contact-notifications).
+
+### Registered email endings
+
+The shared boolean validator delegates to a reason-bearing validator for field feedback. On blur and Review, unregistered endings such as .con and .gomm show “Check the email domain ending for a typo.” beside the email field, with red treatment, repeatable shake, and first-invalid-field focus. The server enforces the same rule before provider calls. Registered endings include .com, .gov, .org, .edu, .co, .dev, and supported Punycode endings. This checks suffix registration, not mailbox ownership or spam classification. Send still performs the existing DNS mail-routing check.
+
+The complete checked-in snapshot contains 1,438 entries from [IANA](https://data.iana.org/TLD/tlds-alpha-by-domain.txt), version 2026091200. Update explicitly with `npm run update:contact-tlds`, review the generated source/version diff, and run the contact validation tests. The updater accepts only the fixed HTTPS source, rejects redirects, limits the download to 128 KiB and ten seconds, and rejects malformed, incomplete, duplicated, or unsorted entries before replacing the snapshot. Builds, tests, and browsers never fetch IANA; no new endpoint or browser DNS lookup exists.
 
 ## Endpoint contract
 
@@ -143,6 +161,8 @@ Both handlers use the same request envelope rules:
 The handlers apply a 15-second request-body read deadline, but do not implement a whole-request timeout or client-side fetch timeout. Cloudflare platform limits still apply. A body that crosses the 16 KiB input limit or its read deadline begins stream cancellation without waiting for that cleanup to settle. Bounded timeouts apply to Siteverify, mail-domain DNS validation, and each Resend request.
 
 ### `POST /api/contact/verify`
+
+All contact providers share `transport.ts`. It uses `redirect: "manual"` and rejects every 300–399 response, cancelling its body without following Location. Workers rejects `redirect: "error"` before sending the request; that mode previously made a passed widget appear to lose verification when the server attempted Siteverify. Manual mode preserves credentials at the original fixed destination while retaining response-size limits, deadlines, late-response cleanup, and provider-specific bounded retries. See [Cloudflare Request guidance](https://developers.cloudflare.com/workers/runtime-apis/request/).
 
 The body must be a plain object with exactly these two keys:
 
@@ -173,7 +193,7 @@ The delivery handler allows only the following keys. Unknown keys are rejected. 
 | `submissionId` | Required trimmed UUID matching the signed ticket. |
 | `firstName` | Required trimmed text, at most 80 characters. |
 | `lastName` | Required trimmed text, at most 80 characters. |
-| `email` | Required trimmed address, at most 254 characters. It must have one `@`, a valid local part of at most 64 characters, a dot-bearing DNS-style domain, and a final label containing 2 to 63 ASCII letters or valid supported Punycode. Two-letter suffixes such as `.co` remain valid. After ticket validation, the domain must also advertise a usable mail route through MX or the documented A/AAAA fallback. |
+| `email` | Required trimmed address, at most 254 characters. It must have one `@`, a valid local part of at most 64 characters, a dot-bearing DNS-style domain, and a registered IANA final label containing 2 to 63 ASCII letters or valid supported Punycode. Two-letter suffixes such as `.co` remain valid. After ticket validation, the domain must also advertise a usable mail route through MX or the documented A/AAAA fallback. |
 | `phone` | Optional string, trimmed, at most 40 characters. A non-empty value may use the supported international-friendly character set and must contain 7 to 20 digits. |
 | `message` | Required text, normalized to line-feed newlines, trimmed, and at most 500 characters. |
 | `contactConsent` | Must be boolean `true`. |
@@ -357,10 +377,13 @@ The automated tests cover the visible upfront gate, three data-entry steps, two 
 
 Deployment smoke testing performs unauthenticated `GET` requests to both Function paths and requires `405` JSON responses. This proves that both routes are deployed and reject the wrong method. It does not prove live Turnstile validation, cookie acceptance, D1 migration state, DNS behavior, WAF state, Resend delivery, sender-domain verification, recipient correctness, or mailbox receipt.
 
+The PR gate also runs actual local workerd with isolated provider fixtures: successful plain/JSON exchanges work, and all 100 statuses in the 3xx range leave redirect destinations untouched. This proves runtime transport behavior without live provider credentials; it does not establish post-deployment verification or mail receipt. Browser coverage exercises fixed verification geometry, theme and motion changes, stacked notifications, domain typos, and preserved completion/recovery.
+
 Useful focused verification:
 
 ```powershell
 npx --no-install vitest run functions/api/contact/verify.test.ts functions/api/contact.test.ts src/app/contact/contact.test.tsx src/components/contact/TurnstileWidget.test.tsx src/components/contact/contactFormValidation.test.ts
+npx --no-install vitest run scripts/contactTransport.integration.test.ts scripts/updateContactTlds.test.mjs src/components/contact/ContactNotifications.test.tsx
 npm run docs:check
 ```
 

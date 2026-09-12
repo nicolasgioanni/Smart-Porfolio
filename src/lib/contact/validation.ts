@@ -1,3 +1,5 @@
+import { contactTopLevelDomains } from "./ianaTlds";
+
 /**
  * Environment-independent validation shared by the progressively enhanced
  * contact form and its server-side delivery boundary. Client validation is
@@ -27,6 +29,16 @@ export function hasUnsafeControlCharacters(value: string): boolean {
 }
 
 export function isValidEmail(value: string): boolean {
+  return getEmailValidationIssue(value) === undefined;
+}
+
+export function getEmailValidationIssue(value: string): "format" | "domain-ending" | undefined {
+  if (!hasValidEmailSyntax(value)) return "format";
+  const topLevelDomain = value.slice(value.lastIndexOf(".") + 1).toLowerCase();
+  return contactTopLevelDomains.has(topLevelDomain) ? undefined : "domain-ending";
+}
+
+function hasValidEmailSyntax(value: string): boolean {
   if (!value || value.length > contactFieldLimits.email || hasUnsafeControlCharacters(value) || /\s/.test(value)) {
     return false;
   }
