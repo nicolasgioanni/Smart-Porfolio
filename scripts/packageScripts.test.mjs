@@ -4,6 +4,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { createArtifactManifest, verifyArtifactManifest } from "./artifactIntegrity.mjs";
 import { resolvePagesDeploymentUrl } from "./checkDeployedContent.mjs";
+import { priorityTestTargets, requiredPriorityFiles } from "./runValidationTier.mjs";
 import { readContentVersion, writeContentVersion } from "./writeContentVersion.mjs";
 
 const projectRoot = path.resolve(import.meta.dirname, "..");
@@ -37,6 +38,9 @@ describe("package and CI deployment automation", () => {
     expect(packageJson.scripts["docs:check"]).toBe("node scripts/validateDocumentation.mjs");
     expect(packageJson.scripts.verify).toBe(
       "npm run docs:check && npm run lint && npm run typecheck && npm run test && npm run build"
+    );
+    expect(packageJson.scripts["test:priority"]).toBe(
+      "node scripts/runValidationTier.mjs priority"
     );
     expect(packageJson.devDependencies.wrangler).toBe("4.131.0");
     expect(packageJson.devDependencies.vitest).toBe("4.1.11");
@@ -77,6 +81,40 @@ describe("package and CI deployment automation", () => {
     expect(packageJson.scripts["test:e2e:research"]).toBe(
       "playwright test research.spec.ts --project=chromium"
     );
+    expect(packageJson.scripts["test:e2e:contact"]).toBe(
+      "playwright test contact.spec.ts --project=chromium"
+    );
+    expect(packageJson.scripts["test:e2e:priority"]).toBe(
+      "playwright test skeleton-alignment.spec.ts navigation.spec.ts footer.spec.ts contact.spec.ts --project=chromium"
+    );
+    expect(packageJson.scripts["test:e2e:full"]).toBe(
+      "playwright test --project=chromium"
+    );
+    expect(packageJson.scripts["verify:priority"]).toBe(
+      "npm run docs:check && npm run lint && npm run typecheck && npm run test:priority && npm run test:e2e:priority && npm run build"
+    );
+    expect(packageJson.scripts["verify:full"]).toBe(
+      "npm run docs:check && npm run lint && npm run typecheck && npm run test && npm run test:e2e:full && npm run build"
+    );
+  });
+
+  it("keeps priority coverage on trust boundaries and lets the full browser suite discover every specification", async () => {
+    const packageJson = JSON.parse(await readFile(path.join(projectRoot, "package.json"), "utf8"));
+    expect(packageJson.scripts["test:priority"]).toBe("node scripts/runValidationTier.mjs priority");
+    expect(priorityTestTargets).toContain("functions");
+    expect(requiredPriorityFiles).toEqual(
+      expect.arrayContaining([
+        "functions/api/contact.test.ts",
+        "functions/api/contact/verify.test.ts",
+        "scripts/portfolioContentGeneration.test.ts",
+        "src/lib/content/content.test.ts",
+        "src/lib/content/security.test.ts",
+        "src/lib/media/researchVideoAssets.test.ts",
+        "src/lib/theme/themeTransition.test.ts"
+      ])
+    );
+
+    expect(packageJson.scripts["test:e2e:full"]).toBe("playwright test --project=chromium");
   });
 
   it("keeps a stable verify job across branch, daily, and forced-manual triggers", async () => {
@@ -113,7 +151,7 @@ describe("package and CI deployment automation", () => {
     expect(workflow).not.toMatch(/SKIP_(?:TESTS|BUILD|VERIFY|DEPLOY)/);
   });
 
-  it("runs full template verification for pull requests without deployment credentials", async () => {
+  it("runs priority template verification for pull requests without deployment credentials", async () => {
     const workflow = await readFile(workflowPath, "utf8");
     const verifyJob = section(workflow, "  verify:", "\n  deploy:");
     const pullRequestGeneration = section(
@@ -132,16 +170,17 @@ describe("package and CI deployment automation", () => {
     expect(verifyJob).toContain('PORTFOLIO_REQUIRE_REMOTE_CONTENT: "false"');
     expect(verifyJob).toContain("run: npm run lint");
     expect(verifyJob).toContain("run: npm run typecheck");
-    expect(verifyJob).toContain("run: npm run test:footer");
-    expect(verifyJob).toContain("run: npm run test:navigation");
+    expect(verifyJob).toContain("run: npm run test:priority");
     expect(verifyJob).toContain("run: npx --no-install playwright install --with-deps chromium");
-    expect(verifyJob).toContain("run: npm run test:e2e:navigation");
-    expect(verifyJob).toContain("run: npm run test:e2e:skeletons");
-    expect(verifyJob).toContain("run: npm run test:e2e:footer");
-    expect(verifyJob).toContain("run: npm run test:e2e:recommendations");
-    expect(verifyJob).toContain("run: npm run test:e2e:experience");
-    expect(verifyJob).toContain("run: npm run test:e2e:research");
-    expect(verifyJob).toContain("run: npm run test");
+    expect(verifyJob).toContain("run: npm run test:e2e:priority");
+    expect(verifyJob).not.toContain("run: npm run test:footer");
+    expect(verifyJob).not.toContain("run: npm run test:navigation");
+    expect(verifyJob).toMatch(
+      /- name: Priority unit and contract tests\s+if: steps\.decision\.outputs\.verification_tier == 'priority'\s+run: npm run test:priority/
+    );
+    expect(verifyJob).toMatch(
+      /- name: Priority browser regression suite\s+if: steps\.decision\.outputs\.verification_tier == 'priority'\s+run: npm run test:e2e:priority/
+    );
     expect(pullRequestBuild).toContain("run: npm run build:generated");
     expect(pullRequestGeneration).not.toContain("secrets.");
     expect(pullRequestBuild).not.toContain("NEXT_PUBLIC_TURNSTILE");
@@ -218,7 +257,7 @@ describe("package and CI deployment automation", () => {
     const comparisonStep = section(
       verifyJob,
       "- name: Compare the validated snapshot with production",
-      "- name: Decide whether full verification and deployment are required"
+      "- name: Decide verification tier and deployment"
     );
 
     expect(verifyJob).toContain("Compare the validated snapshot with production");
@@ -240,25 +279,24 @@ describe("package and CI deployment automation", () => {
     expect(comparisonStep).toContain('"$CONTENT_HASH" \\');
     expect(comparisonStep).toContain('"$CANDIDATE_SHA" \\');
 
-    for (const stepName of [
-      "Documentation integrity",
-      "Lint",
-      "Typecheck",
-      "Footer regression tests",
-      "Navigation regression tests",
-      "Full test suite",
-      "Install Chromium for browser regressions",
-      "Browser skeleton regression tests",
-      "Browser navigation regression tests",
-      "Browser footer regression tests",
-      "Browser recommendation regression tests",
-      "Browser experience regression tests",
-      "Browser research regression tests"
-    ]) {
+    for (const stepName of ["Documentation integrity", "Lint", "Typecheck", "Install Chromium for browser regressions"]) {
       expect(verifyJob).toMatch(
         new RegExp(`- name: ${stepName}\\s+if: steps\\.decision\\.outputs\\.should_verify == 'true'`)
       );
     }
+    for (const [stepName, tier] of [
+      ["Priority unit and contract tests", "priority"],
+      ["Priority browser regression suite", "priority"],
+      ["Full unit and integration suite", "full"],
+      ["Full browser regression suite", "full"]
+    ]) {
+      expect(verifyJob).toMatch(
+        new RegExp(`- name: ${stepName}\\s+if: steps\\.decision\\.outputs\\.verification_tier == '${tier}'`)
+      );
+    }
+    expect(verifyJob).toContain('verification_tier="priority"');
+    expect(verifyJob).toContain('verification_tier="full"');
+    expect(verifyJob).toContain('echo "verification_tier=$verification_tier" >> "$GITHUB_OUTPUT"');
     expect(verifyJob).toMatch(
       /- name: Upload the exact verified static export\s+if: steps\.decision\.outputs\.should_deploy == 'true'/
     );
@@ -266,7 +304,7 @@ describe("package and CI deployment automation", () => {
     expect(verifyJob).toContain("runs-on: ubuntu-24.04");
     expect(verifyJob.match(/playwright install --with-deps chromium/g)).toHaveLength(1);
     expect(verifyJob.indexOf("Install Chromium for browser regressions")).toBeLessThan(
-      verifyJob.indexOf("Browser skeleton regression tests")
+      verifyJob.indexOf("Priority browser regression suite")
     );
 
     const diagnosticsUpload = section(

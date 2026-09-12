@@ -206,7 +206,7 @@ See [Local development](docs/development/LOCAL_DEVELOPMENT.md) for command flags
 2. Place approved public assets under `public/` and use safe root-relative paths.
 3. Run `npm run generate:content`.
 4. Run the development server and inspect Home plus the affected detail route.
-5. Run focused tests and `npm run verify`.
+5. Run focused tests and `npm run verify:priority`.
 
 Do not edit `src/content/generated/portfolio.generated.json` as the authoring source. Regeneration replaces it.
 
@@ -268,14 +268,19 @@ Deployment credentials and immutable Cloudflare target variables are documented 
 | `npm run test:e2e:navigation` | Chromium coverage for page entrance, the mobile bottom dock, and the unchanged desktop header. |
 | `npm run test:e2e:footer` | Chromium coverage for compact first render, route transitions, restored scroll, and user-scroll expansion. |
 | `npm run test:e2e:recommendations` | Chromium coverage for stable desktop card overlays, responsive natural flow, dismissal, and reduced motion. |
+| `npm run test:priority` | Focused documentation, trust-boundary, content, shared-interface, routing, and architecture contracts selected for pull requests. |
+| `npm run test:e2e:priority` | Chromium skeleton alignment, navigation, footer, and mocked contact-flow regression coverage. |
 | `npm run test` | Complete Vitest suite, including components, content, Functions, scripts, and automation contracts. |
+| `npm run test:e2e:full` | Every Playwright specification, including the full three-part skeleton regression suite. |
 | `npm run build` | Regenerate content, create the static export, and write deployment version metadata. |
 | `npm run build:generated` | Build the existing generated snapshot without fetching content again. |
-| `npm run verify` | Documentation check, lint, typecheck, full tests, and normal build in sequence. |
+| `npm run verify:priority` | Documentation check, lint, typecheck, priority unit and browser suites, and normal build. |
+| `npm run verify:full` | Documentation check, lint, typecheck, complete unit and browser suites, and normal build. Run on Ubuntu 24.04 before deployment. |
+| `npm run verify` | Compatibility local gate: documentation check, lint, typecheck, full Vitest suite, and normal build. |
 
-`verify` does not call the focused Vitest scripts separately because the full suite already includes those files. CI keeps named footer and navigation gates, then installs Chromium and runs the navigation, footer, and recommendation Playwright suites. Run the three `test:e2e:*` commands separately during local verification because `verify` does not install or launch a browser.
+Use `verify:priority` for routine pull-request work after installing Chromium. Use `verify:full` for a release candidate on Ubuntu 24.04; it includes the complete Playwright suite and Linux-only zero-difference skeleton visual comparison. The compatibility `verify` command does not install or launch a browser.
 
-Pull requests generate from checked-in templates without deployment credentials, then run the complete verification path and static build. Deployable branch candidates use one strict remote snapshot. Artifact checks and live smoke tests run as deployment-specific stages.
+Pull requests generate from checked-in templates without deployment credentials, then run the priority verification path and static build. Deployable branch candidates use one strict remote snapshot and the full verification path. Artifact checks and live smoke tests run as deployment-specific stages.
 
 See [Testing](docs/quality/TESTING.md), [Quality checklist](docs/quality/QUALITY_CHECKLIST.md), and [Performance checklist](docs/quality/PERFORMANCE_CHECKLIST.md).
 
