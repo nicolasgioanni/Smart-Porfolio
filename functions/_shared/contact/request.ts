@@ -1,5 +1,6 @@
 import { isAllowedOrigin } from "./config";
 import { MAX_REQUEST_BYTES, type ContactEnv, type ReadBodyResult } from "./contracts";
+import { cancelBodyReader } from "./transport";
 
 export type ContactApiRequest =
   | { kind: "valid"; body: unknown }
@@ -36,7 +37,7 @@ export async function readJsonBody(request: Request): Promise<ReadBodyResult> {
 
       byteLength += value.byteLength;
       if (byteLength > MAX_REQUEST_BYTES) {
-        await reader.cancel();
+        cancelBodyReader(reader);
         return { kind: "too-large" };
       }
       chunks.push(value);

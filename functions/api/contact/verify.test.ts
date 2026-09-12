@@ -5,6 +5,7 @@ import {
   CONTACT_TICKET_MAX_AGE_SECONDS,
   MAX_REQUEST_BYTES,
   hasValidContactTicket,
+  readJsonBody,
   type ContactEnv
 } from "../../_shared/contact";
 import { onRequest } from "./verify";
@@ -50,6 +51,29 @@ function successfulTurnstile(
   cdata = submissionId
 ): Response {
   return Response.json({ success: true, hostname, action, cdata });
+}
+
+function stalledResponse(onCancel: () => void): Response {
+  return new Response(
+    new ReadableStream<Uint8Array>({
+      pull: () => new Promise<void>(() => undefined),
+      cancel: () => {
+        onCancel();
+        return new Promise<void>(() => undefined);
+      }
+    }),
+    { headers: { "Content-Type": "application/json" } }
+  );
+}
+
+function oversizedResponse(onCancel: () => void): Response {
+  return new Response(
+    new ReadableStream<Uint8Array>({
+      start: (controller) => controller.enqueue(new Uint8Array(128 * 1_024)),
+      cancel: onCancel
+    }),
+    { headers: { "Content-Type": "application/json" } }
+  );
 }
 
 function decodeTicketPayload(setCookie: string): Record<string, unknown> {
@@ -242,6 +266,71 @@ describe("Cloudflare contact verification function", () => {
     expect(response.status).toBe(503);
     expect(await response.json()).toEqual({ ok: false, error: "verification_unavailable" });
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("bounds each stalled Siteverify JSON body and preserves the retry budget", async () => {
+    vi.useFakeTimers();
+    let cancellationCount = 0;
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(stalledResponse(() => {
+        cancellationCount += 1;
+      }))
+      .mockResolvedValueOnce(stalledResponse(() => {
+        cancellationCount += 1;
+      }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const responsePromise = invoke(requestFor(validPayload()));
+    await vi.advanceTimersByTimeAsync(10_000);
+    const response = await responsePromise;
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ ok: false, error: "verification_unavailable" });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(cancellationCount).toBe(2);
+    expect((fetchMock.mock.calls[0]?.[1] as RequestInit).redirect).toBe("error");
+    expect((fetchMock.mock.calls[1]?.[1] as RequestInit).redirect).toBe("error");
+  });
+
+  it("rejects oversized Siteverify JSON bodies without waiting for stream cancellation", async () => {
+    let cancellationCount = 0;
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(oversizedResponse(() => {
+        cancellationCount += 1;
+      }))
+      .mockResolvedValueOnce(oversizedResponse(() => {
+        cancellationCount += 1;
+      }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await invoke(requestFor(validPayload()));
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ ok: false, error: "verification_unavailable" });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(cancellationCount).toBe(2);
+  });
+
+  it("returns from an oversized inbound body without awaiting a stalled cancellation", async () => {
+    let cancellationCount = 0;
+    const body = new ReadableStream<Uint8Array>({
+      start: (controller) => controller.enqueue(new Uint8Array(MAX_REQUEST_BYTES + 1)),
+      cancel: () => {
+        cancellationCount += 1;
+        return new Promise<void>(() => undefined);
+      }
+    });
+    const request = new Request("https://nicolasmgioanni.dev/api/contact/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "https://nicolasmgioanni.dev" },
+      body,
+      duplex: "half"
+    } as RequestInit);
+
+    await expect(readJsonBody(request)).resolves.toEqual({ kind: "too-large" });
+    expect(cancellationCount).toBe(1);
   });
 
   it("does not retry a non-transient Siteverify HTTP failure", async () => {

@@ -211,6 +211,29 @@ function resendAccepted(id: string): Response {
   return Response.json({ id });
 }
 
+function stalledResponse(onCancel: () => void, status = 200): Response {
+  return new Response(
+    new ReadableStream<Uint8Array>({
+      pull: () => new Promise<void>(() => undefined),
+      cancel: () => {
+        onCancel();
+        return new Promise<void>(() => undefined);
+      }
+    }),
+    { status, headers: { "Content-Type": "application/json" } }
+  );
+}
+
+function oversizedResponse(onCancel: () => void): Response {
+  return new Response(
+    new ReadableStream<Uint8Array>({
+      start: (controller) => controller.enqueue(new Uint8Array(128 * 1_024)),
+      cancel: onCancel
+    }),
+    { headers: { "Content-Type": "application/json" } }
+  );
+}
+
 describe("contact payload validation", () => {
   it("accepts exactly 500 message characters and rejects 501", () => {
     const now = validStartedAt + 5_000;
@@ -436,6 +459,36 @@ describe("email-domain validation", () => {
     await expect(validateEmailDomain("Avery@Example.co")).resolves.toEqual({ kind: "valid" });
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock.mock.calls[0]?.[0]).toContain("name=example.co&type=MX");
+    expect((fetchMock.mock.calls[0]?.[1] as RequestInit).redirect).toBe("error");
+  });
+
+  it("does not wait for cancellation when a DNS JSON body exceeds its cap", async () => {
+    let cancellationCount = 0;
+    const fetchMock = vi.fn().mockResolvedValueOnce(oversizedResponse(() => {
+      cancellationCount += 1;
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(validateEmailDomain("avery@example.com")).resolves.toEqual({ kind: "unavailable" });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(cancellationCount).toBe(1);
+  });
+
+  it("bounds a stalled DNS JSON body by the same resolver deadline", async () => {
+    vi.useFakeTimers();
+    let cancellationCount = 0;
+    const fetchMock = vi.fn().mockResolvedValueOnce(stalledResponse(() => {
+      cancellationCount += 1;
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const validation = validateEmailDomain("avery@example.com");
+    await vi.advanceTimersByTimeAsync(3_000);
+
+    await expect(validation).resolves.toEqual({ kind: "unavailable" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(cancellationCount).toBe(1);
   });
 
   it("rejects null MX and NXDOMAIN results", async () => {
@@ -670,6 +723,29 @@ describe("sequential contact delivery", () => {
       subject: "New contact request from Avery <script> Nguyen & Co."
     });
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes("siteverify"))).toBe(false);
+  });
+
+  it("uses only Resend status and cancels unread provider bodies", async () => {
+    let cancellationCount = 0;
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(mxResponse())
+      .mockResolvedValueOnce(stalledResponse(() => {
+        cancellationCount += 1;
+      }, 202))
+      .mockResolvedValueOnce(stalledResponse(() => {
+        cancellationCount += 1;
+      }, 202));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await invoke(requestFor(validPayload(), { cookie: await ticketCookie() }));
+
+    expect(response.status).toBe(200);
+    expect(cancellationCount).toBe(2);
+    const resendCalls = fetchMock.mock.calls.filter(([url]) => url === "https://api.resend.com/emails");
+    expect(resendCalls).toHaveLength(2);
+    expect((resendCalls[0]?.[1] as RequestInit).redirect).toBe("error");
+    expect((resendCalls[1]?.[1] as RequestInit).redirect).toBe("error");
   });
 
   it("does not contact the owner when visitor delivery is rejected", async () => {
