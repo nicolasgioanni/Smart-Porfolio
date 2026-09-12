@@ -404,17 +404,6 @@ export function getEducationDisplayLabel(education: ProfileEducationDisplay): st
   return displayParts.length > 0 ? displayParts.join(" / ") : undefined;
 }
 
-export function getEducationLogo(education: ProfileEducationDisplay | undefined): { alt: string; src: string } | undefined {
-  const src = clean(education?.institutionLogo);
-
-  if (!src) return undefined;
-
-  return {
-    src,
-    alt: clean(education?.institutionLogoAlt) ?? (education?.institution ? `${education.institution} logo` : "")
-  };
-}
-
 export function getProfileContactLinks(links: PortfolioLink[], profile: ProfileContent): PortfolioLink[] {
   const selectedLinks: PortfolioLink[] = [];
   const usedUrls = new Set<string>();

@@ -1057,43 +1057,6 @@
   color: var(--color-muted);
 }
 
-.experience-timeline {
-  position: relative;
-  display: grid;
-  gap: var(--space-5);
-}
-
-.experience-timeline::before {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 13px;
-  width: 1px;
-  content: "";
-  background: var(--color-line-strong);
-}
-
-.timeline-item {
-  position: relative;
-  display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
-  gap: var(--space-4);
-}
-
-.timeline-item__marker {
-  width: 14px;
-  height: 14px;
-  margin: 10px 0 0 7px;
-  border: 2px solid var(--color-accent);
-  border-radius: var(--radius-pill);
-  background: var(--color-canvas);
-  box-shadow: var(--shadow-timeline-marker);
-}
-
-.timeline-item__card {
-  min-width: 0;
-}
-
 .home-experience-list {
   display: grid;
 }

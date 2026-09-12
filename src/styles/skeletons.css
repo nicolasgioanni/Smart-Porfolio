@@ -12,37 +12,12 @@
   gap: 10px;
 }
 
-.skeleton-avatar {
-  width: 84px;
-  height: 84px;
-  border-radius: var(--radius-pill);
-}
-
 .skeleton-button {
   width: 136px;
   height: 42px;
   border-radius: var(--radius-pill);
 }
 
-.skeleton-card {
-  display: grid;
-  gap: var(--space-4);
-  min-height: 192px;
-  padding: var(--space-6);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-card);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-card);
-}
-
-.skeleton-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1.12fr) minmax(280px, 0.88fr);
-  gap: var(--space-5);
-}
-
-.skeleton-hero__main,
-.skeleton-hero__aside,
 .skeleton-page__section {
   border: 1px solid var(--color-line);
   border-radius: var(--radius-panel);
@@ -50,40 +25,10 @@
   box-shadow: var(--shadow-card);
 }
 
-.skeleton-hero__main {
-  min-height: 520px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: var(--space-10);
-}
-
-.skeleton-hero__aside {
-  min-height: 520px;
-  display: grid;
-  align-content: space-between;
-  padding: var(--space-5);
-}
-
-.skeleton-actions,
 .skeleton-page__actions {
   display: flex;
   gap: var(--space-3);
   flex-wrap: wrap;
-}
-
-.skeleton-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-5);
-}
-
-.skeleton-grid--three {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.skeleton-grid--one {
-  grid-template-columns: minmax(0, 1fr);
 }
 
 .skeleton-page {
@@ -524,9 +469,6 @@
 }
 
 :where(html[data-glass-effects="false"], .site-shell[data-glass-effects="false"]) :is(
-  .skeleton-card,
-  .skeleton-hero__main,
-  .skeleton-hero__aside,
   .skeleton-page__section,
   .home-skeleton__section,
   .experience-skeleton__card,
@@ -558,21 +500,6 @@
 }
 
 @media (max-width: 980px) {
-  .skeleton-hero,
-  .skeleton-grid,
-  .skeleton-grid--three {
-    grid-template-columns: 1fr;
-  }
-
-  .skeleton-hero__main,
-  .skeleton-hero__aside {
-    min-height: 320px;
-  }
-
-  .skeleton-hero__main {
-    padding: var(--space-6);
-  }
-
   .home-skeleton__hero {
     grid-template-areas:
       "profile"
