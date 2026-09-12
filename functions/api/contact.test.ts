@@ -16,6 +16,7 @@ import {
   type ContactRateLimitPreparedStatement,
   type ContactRateLimitResult
 } from "../_shared/contact";
+import { oversizedJsonResponse, stalledJsonResponse } from "../testSupport/streams";
 import { onRequest } from "./contact";
 
 const privateRecipient = "private-owner@example.net";
@@ -209,29 +210,6 @@ function mxResponse(exchange = "10 mx.example.com."): Response {
 
 function resendAccepted(id: string): Response {
   return Response.json({ id });
-}
-
-function stalledResponse(onCancel: () => void, status = 200): Response {
-  return new Response(
-    new ReadableStream<Uint8Array>({
-      pull: () => new Promise<void>(() => undefined),
-      cancel: () => {
-        onCancel();
-        return new Promise<void>(() => undefined);
-      }
-    }),
-    { status, headers: { "Content-Type": "application/json" } }
-  );
-}
-
-function oversizedResponse(onCancel: () => void): Response {
-  return new Response(
-    new ReadableStream<Uint8Array>({
-      start: (controller) => controller.enqueue(new Uint8Array(128 * 1_024)),
-      cancel: onCancel
-    }),
-    { headers: { "Content-Type": "application/json" } }
-  );
 }
 
 describe("contact payload validation", () => {
@@ -464,7 +442,7 @@ describe("email-domain validation", () => {
 
   it("does not wait for cancellation when a DNS JSON body exceeds its cap", async () => {
     let cancellationCount = 0;
-    const fetchMock = vi.fn().mockResolvedValueOnce(oversizedResponse(() => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(oversizedJsonResponse(() => {
       cancellationCount += 1;
     }));
     vi.stubGlobal("fetch", fetchMock);
@@ -478,7 +456,7 @@ describe("email-domain validation", () => {
   it("bounds a stalled DNS JSON body by the same resolver deadline", async () => {
     vi.useFakeTimers();
     let cancellationCount = 0;
-    const fetchMock = vi.fn().mockResolvedValueOnce(stalledResponse(() => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(stalledJsonResponse(() => {
       cancellationCount += 1;
     }));
     vi.stubGlobal("fetch", fetchMock);
@@ -730,10 +708,10 @@ describe("sequential contact delivery", () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(mxResponse())
-      .mockResolvedValueOnce(stalledResponse(() => {
+      .mockResolvedValueOnce(stalledJsonResponse(() => {
         cancellationCount += 1;
       }, 202))
-      .mockResolvedValueOnce(stalledResponse(() => {
+      .mockResolvedValueOnce(stalledJsonResponse(() => {
         cancellationCount += 1;
       }, 202));
     vi.stubGlobal("fetch", fetchMock);

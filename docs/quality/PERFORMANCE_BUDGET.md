@@ -62,7 +62,7 @@ Skeletons support route transitions and deferred UI. They do not replace static 
 
 ## Contact runtime
 
-Keep Function requests narrow and time-bounded. Preserve body limits, no-store responses, bounded Turnstile, DNS, and Resend work, one fresh Turnstile token per new logical message, at most one same-operation Siteverify retry for transient failure, and at most two sequential Resend requests per accepted submission. Render the visible gate before contact fields and do not load a second widget during Send.
+Keep Function requests narrow and time-bounded. Preserve the 15-second request-body read deadline, body limits, no-store responses, bounded Turnstile, DNS, and Resend work, one fresh Turnstile token per new logical message, at most one same-operation Siteverify retry for transient failure, and at most two sequential Resend requests per accepted submission. Turnstile and DNS deadlines must include capped response-body reads (16 KiB and 64 KiB); status-only provider bodies must be canceled without delaying the Function response. Render the visible gate before contact fields and do not load a second widget during Send.
 
 Edge rate limiting is an operator control. It does not justify heavier application processing or replace server validation.
 

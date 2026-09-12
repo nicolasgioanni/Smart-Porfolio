@@ -1,6 +1,8 @@
 import { isAllowedOrigin } from "./config";
 import { MAX_REQUEST_BYTES, type ContactEnv, type ReadBodyResult } from "./contracts";
-import { cancelBodyReader } from "./transport";
+import { awaitWithDeadline, cancelBodyReader, createDeadline } from "./transport";
+
+const REQUEST_BODY_READ_TIMEOUT_MS = 15_000;
 
 export type ContactApiRequest =
   | { kind: "valid"; body: unknown }
@@ -29,21 +31,28 @@ export async function readJsonBody(request: Request): Promise<ReadBodyResult> {
   const reader = request.body.getReader();
   const chunks: Uint8Array[] = [];
   let byteLength = 0;
+  let completed = false;
+  const deadline = createDeadline(REQUEST_BODY_READ_TIMEOUT_MS);
 
   try {
     while (true) {
-      const { done, value } = await reader.read();
+      const chunk = await awaitWithDeadline(reader.read(), deadline);
+      if (!chunk || deadline.isExpired()) return { kind: "invalid" };
+      const { done, value } = chunk;
       if (done) break;
 
       byteLength += value.byteLength;
       if (byteLength > MAX_REQUEST_BYTES) {
-        cancelBodyReader(reader);
         return { kind: "too-large" };
       }
       chunks.push(value);
     }
+    completed = true;
   } catch {
     return { kind: "invalid" };
+  } finally {
+    deadline.clear();
+    if (!completed) cancelBodyReader(reader);
   }
 
   const bytes = new Uint8Array(byteLength);

@@ -2,10 +2,10 @@ export type ReadJsonResponse = () => Promise<unknown | undefined>;
 
 export async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number): Promise<Response | undefined> {
   const controller = new AbortController();
-  const deadline = createDeadline(controller, timeoutMs);
+  const deadline = createDeadline(timeoutMs, () => controller.abort());
 
   try {
-    return await fetchResponse(url, init, controller.signal, deadline.expired);
+    return await fetchResponse(url, init, controller.signal, deadline);
   } finally {
     deadline.clear();
   }
@@ -24,17 +24,17 @@ export async function fetchWithJsonTimeout<T>(
   handleResponse: (response: Response, readJson: ReadJsonResponse) => Promise<T>
 ): Promise<T | undefined> {
   const controller = new AbortController();
-  const deadline = createDeadline(controller, timeoutMs);
+  const deadline = createDeadline(timeoutMs, () => controller.abort());
 
   try {
-    const response = await fetchResponse(url, init, controller.signal, deadline.expired);
+    const response = await fetchResponse(url, init, controller.signal, deadline);
     if (!response) return undefined;
 
     let bodyRead = false;
     const readJson: ReadJsonResponse = async () => {
       if (bodyRead) return undefined;
       bodyRead = true;
-      return readJsonResponse(response, maxResponseBytes, deadline.expired);
+      return readJsonResponse(response, maxResponseBytes, deadline);
     };
 
     try {
@@ -69,38 +69,64 @@ export function cancelBodyReader(reader: ReadableStreamDefaultReader<Uint8Array>
   }
 }
 
-function createDeadline(controller: AbortController, timeoutMs: number): { expired: Promise<void>; clear: () => void } {
+export interface Deadline {
+  expired: Promise<void>;
+  clear: () => void;
+  isExpired: () => boolean;
+}
+
+export function createDeadline(timeoutMs: number, onExpire?: () => void): Deadline {
+  let deadlineExpired = false;
   let expire: () => void = () => undefined;
   const expired = new Promise<void>((resolve) => {
     expire = resolve;
   });
   const timeout = setTimeout(() => {
-    controller.abort();
-    expire();
+    deadlineExpired = true;
+    try {
+      onExpire?.();
+    } finally {
+      expire();
+    }
   }, timeoutMs);
 
-  return { expired, clear: () => clearTimeout(timeout) };
+  return { expired, clear: () => clearTimeout(timeout), isExpired: () => deadlineExpired };
+}
+
+export async function awaitWithDeadline<T>(operation: Promise<T>, deadline: Deadline): Promise<T | undefined> {
+  return Promise.race([operation.catch(() => undefined), deadline.expired.then(() => undefined)]);
 }
 
 async function fetchResponse(
   url: string,
   init: RequestInit,
   signal: AbortSignal,
-  expired: Promise<void>
+  deadline: Deadline
 ): Promise<Response | undefined> {
-  const response = await Promise.race([
-    Promise.resolve()
-      .then(() => fetch(url, { ...init, redirect: "error", signal }))
-      .catch(() => undefined),
-    expired.then(() => undefined)
-  ]);
+  const responsePromise = Promise.resolve()
+    .then(() => fetch(url, { ...init, redirect: "error", signal }))
+    .then(
+      (response) => {
+        if (deadline.isExpired()) {
+          discardResponseBody(response);
+          return undefined;
+        }
+        return response;
+      },
+      () => undefined
+    );
+  const response = await Promise.race([responsePromise, deadline.expired.then(() => undefined)]);
+  if (!response || deadline.isExpired()) {
+    if (response) discardResponseBody(response);
+    return undefined;
+  }
   return response;
 }
 
 async function readJsonResponse(
   response: Response,
   maxResponseBytes: number,
-  expired: Promise<void>
+  deadline: Deadline
 ): Promise<unknown | undefined> {
   if (!Number.isSafeInteger(maxResponseBytes) || maxResponseBytes < 1) {
     discardResponseBody(response);
@@ -125,11 +151,8 @@ async function readJsonResponse(
 
   try {
     while (true) {
-      const chunk = await Promise.race([
-        reader.read().catch(() => undefined),
-        expired.then(() => undefined)
-      ]);
-      if (!chunk) return undefined;
+      const chunk = await awaitWithDeadline(reader.read(), deadline);
+      if (!chunk || deadline.isExpired()) return undefined;
       if (chunk.done) {
         completed = true;
         break;
@@ -147,8 +170,10 @@ async function readJsonResponse(
       offset += chunk.byteLength;
     }
 
+    if (deadline.isExpired()) return undefined;
     const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
-    return JSON.parse(text) as unknown;
+    const value = JSON.parse(text) as unknown;
+    return deadline.isExpired() ? undefined : value;
   } catch {
     return undefined;
   } finally {
