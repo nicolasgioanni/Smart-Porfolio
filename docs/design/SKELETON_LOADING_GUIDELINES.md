@@ -14,11 +14,7 @@ Reusable primitives and compositions include:
 
 - `SkeletonBlock`
 - `SkeletonText`
-- `SkeletonAvatar`
 - `SkeletonButton`
-- `SkeletonCard`
-- `SkeletonHero`
-- `SkeletonGrid`
 - `RouteHeaderSkeleton`
 - `RouteSkeleton`
 - `PageSkeleton`
