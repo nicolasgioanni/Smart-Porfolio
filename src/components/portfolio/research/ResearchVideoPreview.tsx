@@ -1,6 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useId, useRef, useState, type MutableRefObject } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type MutableRefObject, type RefObject } from "react";
+import { GlassIconButton } from "@/components/glass/GlassIconButton";
+import { GlassIconLink } from "@/components/glass/GlassIconLink";
+import { LinkIcon } from "@/components/icons/LinkIcon";
 import { ModalDialog } from "@/components/overlay/ModalDialog";
 import type { ResearchGraphicalAbstract } from "@/lib/content/researchGraphicalAbstracts";
 import type { ResearchVideo } from "@/lib/content/researchVideos";
@@ -88,6 +91,65 @@ function VideoStatusMessage({ status }: { status: VideoStatus }) {
   );
 }
 
+type VideoToolbarProps = {
+  dialogId?: string;
+  expandButtonRef?: RefObject<HTMLButtonElement | null>;
+  expanded?: boolean;
+  onExpand?: () => void;
+  title: string;
+  video: ResearchVideo;
+};
+
+function VideoToolbar({ dialogId, expandButtonRef, expanded, onExpand, title, video }: VideoToolbarProps) {
+  const controls = [
+    {
+      download: false,
+      icon: "file",
+      label: "Read transcript",
+      url: video.transcriptSrc
+    },
+    {
+      download: true,
+      icon: "download",
+      label: "Download MP4",
+      url: video.src
+    }
+  ] as const;
+
+  return (
+    <div aria-label={`${title} video tools`} className="research-video__toolbar" role="group">
+      {controls.map(({ download, icon, label, url }) => (
+        <GlassIconLink
+          className="research-video__toolbar-control"
+          data-tooltip={label}
+          download={download}
+          key={label}
+          kind={icon}
+          label={label}
+          showLabel={false}
+          title={label}
+          url={url}
+        />
+      ))}
+      {onExpand ? (
+        <GlassIconButton
+          aria-controls={dialogId}
+          aria-expanded={expanded}
+          aria-haspopup="dialog"
+          className="research-video__toolbar-control"
+          data-tooltip="Open enlarged player"
+          label={`Expand video for ${title}`}
+          onClick={onExpand}
+          ref={expandButtonRef}
+          title="Open enlarged player"
+        >
+          <LinkIcon kind="expand" />
+        </GlassIconButton>
+      ) : null}
+    </div>
+  );
+}
+
 function applyPendingPlaybackTime(videoElement: HTMLVideoElement | null, pendingTimeRef: { current: number | null }) {
   if (pendingTimeRef.current === null) return;
   if (setPlaybackTime(videoElement, pendingTimeRef.current)) pendingTimeRef.current = null;
@@ -161,26 +223,6 @@ export function ResearchVideoPreview({ poster, title, video }: ResearchVideoPrev
             <p className="research-media-title research-video__title">{video.displayTitle}</p>
             <span className="research-video__duration">{video.durationLabel}</span>
           </div>
-          <div className="research-video__actions">
-            <a className="research-video__transcript hover-base-1 hover-base-1--compact" href={video.transcriptSrc}>
-              Read transcript
-            </a>
-            <a className="research-video__download hover-base-1 hover-base-1--compact" download href={video.src}>
-              Download MP4
-            </a>
-            <button
-              aria-controls={dialogId}
-              aria-expanded={open}
-              aria-haspopup="dialog"
-              aria-label={`Expand video for ${title}`}
-              className="research-video__expand hover-base-1 hover-base-1--compact"
-              onClick={openDialog}
-              ref={expandButtonRef}
-              type="button"
-            >
-              Open enlarged player
-            </button>
-          </div>
         </div>
         <div className="research-video__viewport">
           <ScientificVideoPlayer
@@ -201,6 +243,14 @@ export function ResearchVideoPreview({ poster, title, video }: ResearchVideoPrev
             poster={poster}
             video={video}
             videoRef={inlineVideoRef}
+          />
+          <VideoToolbar
+            dialogId={dialogId}
+            expandButtonRef={expandButtonRef}
+            expanded={open}
+            onExpand={openDialog}
+            title={title}
+            video={video}
           />
         </div>
         <VideoStatusMessage status={inlineVideoStatus} />
@@ -250,14 +300,7 @@ export function ResearchVideoPreview({ poster, title, video }: ResearchVideoPrev
             onVideoElementAvailable={applyModalPlaybackTime}
             videoRef={modalVideoRef}
           />
-        </div>
-        <div className="research-video-dialog__resources">
-          <a className="research-video__transcript hover-base-1 hover-base-1--compact" href={video.transcriptSrc}>
-            Read transcript
-          </a>
-          <a className="research-video__download hover-base-1 hover-base-1--compact" download href={video.src}>
-            Download MP4
-          </a>
+          <VideoToolbar title={title} video={video} />
         </div>
         <VideoStatusMessage status={modalVideoStatus} />
       </ModalDialog>

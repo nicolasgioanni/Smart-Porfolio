@@ -52,6 +52,13 @@ The persistent desktop route indicator moves after pathname commit. Its `420ms` 
 
 Reduced motion disables lift, arrow travel, and route-indicator travel while preserving hover, focus, pressed, expanded, and selected surfaces.
 
+## Research video toolbar
+
+On fine pointers, the in-player research-video toolbar reveals with a short opacity and upward-transform transition
+on viewport hover or keyboard focus within. It remains available on touch and no-hover devices, and reduced motion
+applies the visible state without a transition. Tooltips use the same restrained transition and never replace the
+accessible icon labels.
+
 ## Header and theme disclosure
 
 Above `980px`, header expansion and compaction are state-driven, not continuously scroll-linked. Scroll input changes state only after the implemented direction and distance thresholds. Header pieces share the centralized `460ms` transition token. Keep the property list explicit and confined to the header island. At `max-width: 980px`, the header becomes a fixed bottom dock, remains expanded, and disables scroll and pointer geometry transitions.

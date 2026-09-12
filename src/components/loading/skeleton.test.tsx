@@ -149,7 +149,7 @@ describe("skeleton components", () => {
           (project) => project.querySelectorAll(".research-skeleton__details > .skeleton-block").length
         )
       ).toEqual([4, 3, 3]);
-      expect(container.querySelectorAll(".research-skeleton__video-actions > .skeleton-block")).toHaveLength(3);
+      expect(container.querySelectorAll(".research-skeleton__video-toolbar > .skeleton-block")).toHaveLength(3);
       expect(container.querySelectorAll(".research-skeleton__media-stack")).toHaveLength(1);
       expect(container.querySelectorAll(".research-skeleton__abstract-frame")).toHaveLength(3);
       expect(resolvedResourceCounts).toEqual(resourceCounts);
