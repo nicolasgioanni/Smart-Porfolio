@@ -2,7 +2,7 @@ import { PageSkeleton } from "@/components/loading/PageSkeleton";
 import { SkeletonBlock } from "@/components/loading/SkeletonBlock";
 import { SkeletonButton } from "@/components/loading/SkeletonButton";
 import { SkeletonText } from "@/components/loading/SkeletonText";
-import { siteRoutes } from "@/components/navigation/siteRoutes";
+import { siteRoutes } from "@/lib/routing/siteRoutes";
 
 export function ResumePageSkeleton() {
   return (

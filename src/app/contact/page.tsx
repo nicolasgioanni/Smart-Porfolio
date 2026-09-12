@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { ContactForm } from "@/components/contact/ContactForm";
 import { PageContainer } from "@/components/layout/PageContainer";
-import { siteRoutes } from "@/components/navigation/siteRoutes";
+import { siteRoutes } from "@/lib/routing/siteRoutes";
 import { createPageMetadata } from "@/lib/content/createPageMetadata";
 import { getPortfolioContent } from "@/lib/content/getPortfolioContent";
 import { routeHeaderContent } from "@/lib/content/routeHeaderContent";

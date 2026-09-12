@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page, type Route } from "@playwright/test";
-import { siteRoutePaths, siteRoutes, type SiteRoutePath } from "../../src/components/navigation/siteRoutes";
+import { siteRoutePaths, siteRoutes, type SiteRoutePath } from "../../src/lib/routing/siteRoutes";
 import { prepareDarkPage, settleDocumentLayout, suppressViewportPrefetch } from "./skeletonTestHelpers";
 
 type Deferred = {

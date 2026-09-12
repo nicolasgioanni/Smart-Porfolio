@@ -124,8 +124,8 @@ Production candidates use strict remote mode. The workflow generates once, runs 
 
 The generated snapshot contains the full public content model. Selectors decide what each surface receives:
 
-- `selectHomeContent()` applies Home visibility, ordering, limits, group construction, and recommendation settings.
-- detail selectors sort complete research, project, experience, and recommendation collections.
+- `selectHomeContent()` applies Home ordering, limits, group construction, and recommendation settings; `selectVisibleContent.ts` supplies its shared explicit-visibility, featured, then all-items fallback.
+- `selectDetailContent.ts` sorts complete research, project, experience, and education collections; `selectRecommendationContent.ts` owns recommendation selection and excerpt fallback.
 - `createProfileOverviewContent()` chooses current work, primary education, and profile research from explicit references and deterministic fallbacks.
 - display helpers format links, lists, dates, and summary fallback values. The shared `DisabledResourceButton` keeps unpublished resources semantically native across profile and Research surfaces.
 
@@ -232,7 +232,7 @@ The two-step ticket flow avoids sending a consumed Turnstile token twice and kee
 | --- | --- |
 | Dependencies and scripts | `package.json` and `package-lock.json` |
 | Runtime and static export | `next.config.mjs` and `src/app/` |
-| Route registry and navigation | `src/components/navigation/siteRoutes.ts` and `navigationItems.ts` |
+| Route registry and navigation | `src/lib/routing/siteRoutes.ts` and `src/components/navigation/navigationItems.ts` |
 | Browser navigation regression | `playwright.config.ts` and `tests/e2e/navigation.spec.ts` |
 | Skeleton alignment, visual, and transition regressions | `tests/e2e/skeleton-alignment.spec.ts`, `tests/e2e/skeletons.visual.spec.ts`, `tests/e2e/skeletons.transition.spec.ts`, `tests/e2e/standaloneSkeletonDocument.ts`, and `.github/workflows/skeleton-baselines.yml` |
 | Canonical route-header content | `src/lib/content/routeHeaderContent.ts` and `src/components/loading/RouteHeaderSkeleton.tsx` |
@@ -240,7 +240,7 @@ The two-step ticket flow avoids sending a consumed Turnstile token twice and kee
 | Workbook contract | `scripts/lib/portfolioContentGeneration.ts` |
 | Source-mode orchestration | `scripts/fetchPortfolioContent.ts` |
 | Normalization and validation | `src/lib/content/normalizePortfolioContent.ts` and `validatePortfolioContent.ts` |
-| Home order and selection | `HomeOverview.tsx`, `selectHomeContent.ts`, and `profileOverview.ts` |
+| Home order and selection | `src/components/portfolio/home/HomeOverview.tsx`, `selectHomeContent.ts`, and `profileOverview.ts` |
 | Theme behavior | `src/components/theme/`, `src/lib/theme/`, and `tokens.css` |
 | Glass and interaction primitives | `src/components/glass/`, `glass.css`, and `interactions.css` |
 | Contact verification and delivery | `functions/api/`, the stable `functions/_shared/contact.ts` facade, and its focused `functions/_shared/contact/` modules |

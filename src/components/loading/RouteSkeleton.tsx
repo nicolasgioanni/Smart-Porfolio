@@ -8,7 +8,7 @@ import { ProjectsPageSkeleton } from "@/components/loading/ProjectsPageSkeleton"
 import { RecommendationsPageSkeleton } from "@/components/loading/RecommendationsPageSkeleton";
 import { ResearchPageSkeleton } from "@/components/loading/ResearchPageSkeleton";
 import { ResumePageSkeleton } from "@/components/loading/ResumePageSkeleton";
-import { siteRoutes, type SiteRoutePath } from "@/components/navigation/siteRoutes";
+import { siteRoutes, type SiteRoutePath } from "@/lib/routing/siteRoutes";
 
 type RouteSkeletonComponent = ComponentType;
 

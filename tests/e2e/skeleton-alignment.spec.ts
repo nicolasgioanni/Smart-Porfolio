@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { siteRoutes, type SiteRoutePath } from "../../src/components/navigation/siteRoutes";
+import { siteRoutes, type SiteRoutePath } from "../../src/lib/routing/siteRoutes";
 import { experienceOverrideSkeletonMarkup, experienceOverrideSummary } from "./experienceOverrideSkeletonMarkup";
 import { skeletonAlignmentMarkupByRoute } from "./skeletonAlignmentMarkup";
 import {

@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import { PageContainer } from "@/components/layout/PageContainer";
-import { siteRoutes } from "@/components/navigation/siteRoutes";
-import { RecommendationsList } from "@/components/portfolio/RecommendationsList";
+import { siteRoutes } from "@/lib/routing/siteRoutes";
+import { RecommendationsList } from "@/components/portfolio/recommendations/RecommendationsList";
 import { createPageMetadata } from "@/lib/content/createPageMetadata";
 import { getPortfolioContent } from "@/lib/content/getPortfolioContent";
 import { routeHeaderContent } from "@/lib/content/routeHeaderContent";
-import { selectRecommendationDetailContent } from "@/lib/content/selectHomeContent";
+import { selectRecommendationDetailContent } from "@/lib/content/selectRecommendationContent";
 
 const recommendationsHeader = routeHeaderContent[siteRoutes.recommendations];
 

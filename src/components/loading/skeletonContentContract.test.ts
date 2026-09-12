@@ -7,12 +7,12 @@ import { getExperienceModeContent } from "@/lib/content/experienceNarratives";
 import { getResearchFormalTitle, getResearchModeContent, getResearchVisibleResources } from "@/lib/content/researchNarratives";
 import { getProfileIdentityItems } from "@/lib/content/profileOverview";
 import { resolveRouteHeaderContent, routeHeaderContent } from "@/lib/content/routeHeaderContent";
-import { siteRoutePaths, siteRoutes } from "@/components/navigation/siteRoutes";
+import { siteRoutePaths, siteRoutes } from "@/lib/routing/siteRoutes";
 import {
   selectExperienceDetailContent,
   selectProjectDetailContent,
   selectResearchDetailContent
-} from "@/lib/content/selectHomeContent";
+} from "@/lib/content/selectDetailContent";
 import { researchSkeletonFixtures } from "../../../tests/fixtures/researchSkeletonContent";
 
 const projectContentFixture: ProjectItem[] = [

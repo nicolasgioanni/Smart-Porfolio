@@ -3,7 +3,7 @@ import { hydrateRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 import { InteractiveBlobFooter } from "@/components/layout/InteractiveBlobFooter";
-import { siteRoutePaths } from "@/components/navigation/siteRoutes";
+import { siteRoutePaths } from "@/lib/routing/siteRoutes";
 
 const navigationMock = vi.hoisted(() => ({ pathname: "/" }));
 vi.mock("next/navigation", () => ({

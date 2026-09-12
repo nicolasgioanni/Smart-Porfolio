@@ -1,6 +1,6 @@
 import React, { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { siteRoutePaths, siteRoutes, type SiteRoutePath } from "../../src/components/navigation/siteRoutes";
+import { siteRoutePaths, siteRoutes, type SiteRoutePath } from "../../src/lib/routing/siteRoutes";
 import { canonicalResearchSkeletonItems } from "../fixtures/researchSkeletonContent";
 
 // This isolated server renderer uses tsx, which needs the classic JSX runtime

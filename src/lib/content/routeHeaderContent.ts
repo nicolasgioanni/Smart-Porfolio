@@ -1,4 +1,4 @@
-import { siteRoutes, type SiteRoutePath } from "@/components/navigation/siteRoutes";
+import { siteRoutes, type SiteRoutePath } from "@/lib/routing/siteRoutes";
 import type { ProfileContent } from "@/content/types";
 
 export type RouteHeaderContent = {

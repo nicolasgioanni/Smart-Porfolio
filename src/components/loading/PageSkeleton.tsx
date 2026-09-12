@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { RouteHeaderSkeleton } from "@/components/loading/RouteHeaderSkeleton";
-import type { SiteRoutePath } from "@/components/navigation/siteRoutes";
+import type { SiteRoutePath } from "@/lib/routing/siteRoutes";
 import { getRouteHeaderContent } from "@/lib/content/routeHeaderContent";
 
 type PageSkeletonProps = {
