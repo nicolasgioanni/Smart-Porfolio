@@ -20,7 +20,8 @@ Documentation is not evidence that an external control is active. Treat the impl
 | --- | --- |
 | Function route boundary | `public/_routes.json` |
 | Static response headers | `public/_headers` |
-| Contact request validation, tickets, provider calls, and Function headers | `functions/_shared/contact.ts` |
+| Contact public contract | `functions/_shared/contact.ts` |
+| Contact request validation, tickets, provider calls, and Function headers | `functions/_shared/contact/` |
 | Contact endpoint order and responses | `functions/api/contact/verify.ts`, `functions/api/contact.ts` |
 | Browser request and retry behavior | `src/components/contact/ContactForm.tsx` |
 | Turnstile widget configuration | `src/components/contact/TurnstileWidget.tsx` |
