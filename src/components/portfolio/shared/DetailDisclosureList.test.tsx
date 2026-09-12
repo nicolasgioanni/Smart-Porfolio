@@ -1,6 +1,8 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { useRef } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { DetailDisclosureList } from "@/components/portfolio/shared/DetailDisclosureList";
+import { useDetailDisclosure } from "@/components/portfolio/shared/useDetailDisclosure";
 
 const sections = [
   {
@@ -9,6 +11,16 @@ const sections = [
     lead: "A concise lead stays in the normal-flow summary row.",
     title: "Evidence",
     tools: ["TypeScript"]
+  }
+];
+
+const sectionsWithStaticSummary = [
+  ...sections,
+  {
+    details: [],
+    id: "static-evidence",
+    lead: "This authored summary has no supporting detail.",
+    title: "Static evidence"
   }
 ];
 
@@ -23,6 +35,25 @@ function renderList(openSectionId?: string) {
       overlayEnabled
       sections={sections}
     />
+  );
+}
+
+function ControlledListWithStaticSummary() {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const { openDetail, toggle, usesNaturalFlow } = useDetailDisclosure(rootRef);
+
+  return (
+    <div ref={rootRef}>
+      <DetailDisclosureList
+        idPrefix="test"
+        itemId="item"
+        mode="overview"
+        onToggle={(sectionId) => toggle("item", sectionId)}
+        openSectionId={openDetail?.itemId === "item" ? openDetail.sectionId : undefined}
+        overlayEnabled={!usesNaturalFlow}
+        sections={sectionsWithStaticSummary}
+      />
+    </div>
   );
 }
 
@@ -88,5 +119,16 @@ describe("DetailDisclosureList", () => {
     expect(trigger).toHaveAttribute("aria-expanded", "true");
     expect(panel).toHaveAttribute("aria-hidden", "false");
     expect(panel.closest(".detail-section")).toHaveAttribute("data-visual-state", "open");
+  });
+
+  it("dismisses an active disclosure after a separate static summary is clicked", async () => {
+    render(<ControlledListWithStaticSummary />);
+    const trigger = screen.getByRole("button", { name: /Evidence/i });
+
+    fireEvent.click(trigger);
+    await waitFor(() => expect(trigger).toHaveAttribute("aria-expanded", "true"));
+
+    fireEvent.click(screen.getByText("Static evidence"));
+    await waitFor(() => expect(trigger).toHaveAttribute("aria-expanded", "false"));
   });
 });
