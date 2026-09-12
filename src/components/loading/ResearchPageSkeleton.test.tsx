@@ -50,6 +50,17 @@ describe("ResearchPageSkeleton", () => {
     expect(getResourceCounts(isolatedRender.container)).toEqual(researchSkeletonFixtures[0].resourceCounts);
   });
 
+  it("keeps canonical graphical abstract frames noninteractive", () => {
+    const { container } = render(<ResearchPageSkeleton detailItems={canonicalResearchSkeletonItems} />);
+    const frames = Array.from(container.querySelectorAll<HTMLElement>(".research-skeleton__abstract-frame"));
+
+    expect(frames).toHaveLength(3);
+    for (const frame of frames) {
+      expect(frame.closest(".research-skeleton__abstract")).not.toBeNull();
+      expect(frame.querySelectorAll("a, button, input, select, textarea")).toHaveLength(0);
+    }
+  });
+
   it("uses noninteractive title placeholders for every resolved research medium", () => {
     const { container } = render(<ResearchPageSkeleton detailItems={canonicalResearchSkeletonItems} />);
 

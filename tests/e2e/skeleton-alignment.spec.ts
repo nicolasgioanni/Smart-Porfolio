@@ -427,7 +427,33 @@ test("matches real Project and Research detail footprints at compact, phone, tab
         await expect(card.locator(".research-skeleton__abstract-frame")).toHaveCount(footprint.abstracts);
         await expect(card.locator(".research-skeleton__video-toolbar > .skeleton-block")).toHaveCount(footprint.videoActions);
         await expect(card.locator(".research-skeleton__media-title")).toHaveCount(footprint.mediaTitles);
-        await expect(card.locator(".research-skeleton__video-toolbar > .skeleton-block")).toHaveCount(footprint.videoActions);
+        const abstractFrames = await card.locator(".research-skeleton__abstract-frame").evaluateAll((frames) =>
+          frames.map((frame) => {
+            const abstract = frame.closest<HTMLElement>(".research-skeleton__abstract");
+            const title = abstract?.querySelector<HTMLElement>(".research-skeleton__abstract-title");
+            if (!abstract || !title) throw new Error("Research skeleton abstract frame is missing its local title container.");
+            const abstractBox = abstract.getBoundingClientRect();
+            const frameBox = frame.getBoundingClientRect();
+            const titleBox = title.getBoundingClientRect();
+            const rowGap = Number.parseFloat(getComputedStyle(abstract).rowGap);
+            return {
+              clientWidth: abstract.clientWidth,
+              gap: rowGap,
+              left: frameBox.left - abstractBox.left,
+              right: abstractBox.right - frameBox.right,
+              titleTop: titleBox.top - abstractBox.top - abstract.clientTop,
+              triggerTopAfterTitle: frameBox.top - titleBox.bottom,
+              width: frameBox.width
+            };
+          })
+        );
+        for (const frame of abstractFrames) {
+          expect(frame.titleTop).toBeCloseTo(16, 0);
+          expect(frame.triggerTopAfterTitle).toBeCloseTo(frame.gap, 0);
+          expect(frame.left).toBeCloseTo(16, 0);
+          expect(frame.right).toBeCloseTo(16, 0);
+          expect(frame.width).toBeCloseTo(frame.clientWidth - 32, 0);
+        }
       }
       await assertViewportHasNoOverflow(researchFixturePage, `Research skeleton does not overflow at ${viewport.name}`);
     } finally {
