@@ -357,6 +357,7 @@ describe("static portfolio security contracts", () => {
   it("keeps project, skill, and recommendation Home cards structured and motion-safe", () => {
     const portfolioCss = readFileSync(path.join(projectRoot, "src", "styles", "portfolio.css"), "utf8");
     const dialogCss = readFileSync(path.join(projectRoot, "src", "styles", "dialog.css"), "utf8");
+    const tokensCss = readFileSync(path.join(projectRoot, "src", "styles", "tokens.css"), "utf8");
     const projectSource = readFileSync(
       path.join(projectRoot, "src", "components", "portfolio", "home", "HomeProjectCard.tsx"),
       "utf8"
@@ -483,16 +484,16 @@ describe("static portfolio security contracts", () => {
     expect(recommendationDividerRule).toMatch(/background:\s*var\(--color-line-strong\)/);
     expect(recommendationViewportRule).toMatch(/overflow:\s*hidden/);
     expect(recommendationViewportRule).toMatch(
-      /transition:\s*max-height 520ms cubic-bezier\(0\.22,\s*1,\s*0\.36,\s*1\)/
+      /transition:\s*max-height var\(--disclosure-height-duration\) var\(--disclosure-easing\)/
     );
+    expect(tokensCss).toMatch(/--disclosure-height-duration:\s*520ms/);
+    expect(tokensCss).toMatch(/--disclosure-opacity-duration:\s*320ms/);
+    expect(tokensCss).toMatch(/--disclosure-easing:\s*cubic-bezier\(0\.22,\s*1,\s*0\.36,\s*1\)/);
     expect(portfolioCss).not.toMatch(/mask-image|gradient/);
     expect(portfolioCss).not.toMatch(/\.recommendation-expandable__viewport::after/);
     expect(recommendationQuoteRule).toMatch(/font-size:\s*var\(--font-size-body\)/);
     expect(recommendationQuoteRule).toMatch(
-      /transition:\s*opacity 320ms cubic-bezier\(0\.22,\s*1,\s*0\.36,\s*1\)/
-    );
-    expect(recommendationQuoteRule).toMatch(
-      /transition:\s*opacity 320ms cubic-bezier\(0\.22,\s*1,\s*0\.36,\s*1\)/
+      /transition:\s*opacity var\(--disclosure-opacity-duration\) var\(--disclosure-easing\)/
     );
     expect(researchSummaryRule).toMatch(/font-size:\s*var\(--font-size-body\)/);
     expect(projectSummaryRule).toMatch(/font-size:\s*var\(--font-size-body\)/);
