@@ -50,6 +50,7 @@ describe("research showcase styles", () => {
     expect(abstractRule).toMatch(/padding:\s*var\(--space-4\)/);
     expect(abstractRule).toMatch(/overflow:\s*hidden/);
     expect(abstractRule).toMatch(/border-radius:\s*var\(--radius-card\)/);
+    expect(abstractRule).toMatch(/gap:\s*var\(--space-3\)/);
     expect(abstractRule).not.toMatch(/gradient|rgba|transparent/);
   });
 
@@ -97,6 +98,9 @@ describe("research showcase styles", () => {
     expect(thumbnailRule).toMatch(/object-fit:\s*contain/);
     expect(triggerRule).toMatch(/width:\s*100%/);
     expect(triggerRule).toMatch(/max-width:\s*none/);
+    expect(researchStyles).toMatch(
+      /\.research-abstract__title\s*\{[^}]*width:\s*100%[^}]*max-width:\s*44rem[^}]*justify-self:\s*start[^}]*overflow-wrap:\s*anywhere/s
+    );
     expect(triggerRule).toMatch(
       /transition:\s*box-shadow 180ms ease,\s*transform 180ms cubic-bezier\(0\.16, 1, 0\.3, 1\)/
     );
@@ -133,7 +137,8 @@ describe("research showcase styles", () => {
     );
     const videoViewportRule = researchStyles.match(/\.research-video__viewport\s*\{[^}]*}/s)?.[0] ?? "";
     const videoHeaderRule = researchStyles.match(/\.research-video__header\s*\{[^}]*}/s)?.[0] ?? "";
-    const videoActionsRule = researchStyles.match(/\.research-video__actions\s*\{[^}]*}/s)?.[0] ?? "";
+    const videoToolbarRule = researchStyles.match(/\.research-video__toolbar\s*\{[^}]*}/s)?.[0] ?? "";
+    const videoToolbarControlRule = researchStyles.match(/\.research-video__toolbar-control\s*\{[^}]*}/s)?.[0] ?? "";
     const playerRule = researchStyles.match(/\.research-video__player\s*\{[^}]*}/s)?.[0] ?? "";
     const dialogFrameRule = researchStyles.match(/\.research-video-dialog__frame\s*\{[^}]*}/s)?.[0] ?? "";
     const dialogViewportRule = researchStyles.match(/\.research-video-dialog__viewport\s*\{[^}]*}/s)?.[0] ?? "";
@@ -142,18 +147,28 @@ describe("research showcase styles", () => {
     expect(videoFeatureBlock).toMatch(/background:\s*var\(--visual-surface\)/);
     expect(videoFeatureBlock).not.toMatch(/gradient|backdrop-filter|blur|shadow-glow/i);
     expect(videoHeaderRule).toMatch(/grid-template-columns:\s*minmax\(0, 1fr\)/);
-    expect(videoActionsRule).toMatch(/grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/);
-    expect(videoActionsRule).toMatch(/min-width:\s*0/);
+    expect(videoToolbarRule).toMatch(/position:\s*absolute/);
+    expect(videoToolbarRule).toMatch(/top:\s*var\(--space-3\)/);
+    expect(videoToolbarRule).toMatch(/right:\s*var\(--space-3\)/);
+    expect(videoToolbarRule).toMatch(/border:\s*1px solid var\(--color-line-strong\)/);
+    expect(videoToolbarRule).toMatch(/background:\s*var\(--color-surface-strong\)/);
+    expect(videoToolbarControlRule).toMatch(/width:\s*44px !important/);
+    expect(videoToolbarControlRule).toMatch(/min-height:\s*44px/);
+    expect(videoToolbarControlRule).toMatch(/color:\s*var\(--color-ink-strong\)/);
     expect(videoViewportRule).toMatch(/aspect-ratio:\s*1710\s*\/\s*1108/);
+    expect(videoViewportRule).toMatch(/border:\s*1px solid var\(--color-line-strong\)/);
     expect(videoViewportRule).toMatch(/overflow:\s*hidden/);
     expect(playerRule).toMatch(/object-fit:\s*contain/);
-    expect(dialogFrameRule).toMatch(/grid-template-rows:\s*minmax\(0, 1fr\) auto auto/);
+    expect(dialogFrameRule).toMatch(/grid-template-rows:\s*minmax\(0, 1fr\) auto/);
     expect(dialogFrameRule).toMatch(/overflow:\s*hidden/);
     expect(dialogFrameRule).not.toMatch(/gradient|backdrop-filter|blur/i);
     expect(dialogViewportRule).toMatch(/background:\s*#000/);
     expect(dialogPlayerRule).toMatch(/object-fit:\s*contain/);
     expect(researchStyles).toMatch(
-      /@media \(max-width: 390px\)[\s\S]*?\.research-video__actions,[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\)/
+      /@media \(hover: hover\) and \(pointer: fine\)[\s\S]*?\.research-video__viewport:hover \.research-video__toolbar,[\s\S]*?\.research-video-dialog__viewport:focus-within \.research-video__toolbar[\s\S]*?opacity:\s*1/
+    );
+    expect(researchStyles).toMatch(
+      /@media \(hover: none\), \(pointer: coarse\)[\s\S]*?\.research-video__toolbar\s*\{[^}]*opacity:\s*1[^}]*pointer-events:\s*auto[\s\S]*?\.research-video__toolbar-control::after\s*\{[^}]*content:\s*none/s
     );
   });
 });

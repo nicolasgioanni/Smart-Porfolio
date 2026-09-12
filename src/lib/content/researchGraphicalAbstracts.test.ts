@@ -3,11 +3,12 @@ import { getResearchGraphicalAbstract } from "@/lib/content/researchGraphicalAbs
 
 describe("getResearchGraphicalAbstract", () => {
   it.each([
-    ["cytocv-miller-lab", "/images/research/cytocv-graphical-abstract.png", 1672, 941],
-    ["adversarial-machine-learning", "/images/research/independent-study-graphical-abstract.png", 3840, 2160],
-    ["yeast-dna-target-selection", "/images/research/guide-donor-scheduler-graphical-abstract.png", 3840, 2160]
-  ])("resolves the curated %s abstract", (id, src, width, height) => {
+    ["cytocv-miller-lab", "/images/research/cytocv-graphical-abstract.png", "CytoCV Graphical Abstract", 1672, 941],
+    ["adversarial-machine-learning", "/images/research/independent-study-graphical-abstract.png", "AML Graphical Abstract", 3840, 2160],
+    ["yeast-dna-target-selection", "/images/research/guide-donor-scheduler-graphical-abstract.png", "GuideDonorScheduler Graphical Abstract", 3840, 2160]
+  ])("resolves the curated %s abstract", (id, src, displayTitle, width, height) => {
     expect(getResearchGraphicalAbstract({ id })).toMatchObject({
+      displayTitle,
       height,
       source: "curated",
       src,
@@ -24,6 +25,7 @@ describe("getResearchGraphicalAbstract", () => {
       })
     ).toEqual({
       alt: "Revised CytoCV workflow.",
+      displayTitle: "CytoCV Graphical Abstract",
       source: "canonical",
       src: "/images/research/revised-cytocv.webp"
     });
@@ -38,10 +40,26 @@ describe("getResearchGraphicalAbstract", () => {
       })
     ).toEqual({
       alt: "Canonical CytoCV workflow.",
+      displayTitle: "CytoCV Graphical Abstract",
       height: 941,
       source: "canonical",
       src: "/images/research/cytocv-graphical-abstract.png",
       width: 1672
+    });
+  });
+
+  it("uses a neutral display title for an unfamiliar valid canonical abstract", () => {
+    expect(
+      getResearchGraphicalAbstract({
+        graphicalAbstract: "/images/research/future-system.png",
+        graphicalAbstractAlt: "A future research workflow.",
+        id: "future-research-system"
+      })
+    ).toEqual({
+      alt: "A future research workflow.",
+      displayTitle: "Graphical Abstract",
+      source: "canonical",
+      src: "/images/research/future-system.png"
     });
   });
 

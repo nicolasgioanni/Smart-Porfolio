@@ -105,6 +105,13 @@ describe("ResearchShowcase", () => {
       "src",
       "/images/research/cytocv-graphical-abstract.png"
     );
+    expect(
+      projects.map((project) => Array.from(project.querySelectorAll(".research-media-title"), (title) => title.textContent))
+    ).toEqual([
+      ["CytoCV Demo", "CytoCV Graphical Abstract"],
+      ["AML Graphical Abstract"],
+      ["GuideDonorScheduler Graphical Abstract"]
+    ]);
     expect(screen.queryByRole("img", { name: /segmentation diagram|attack and defense matrix|sequence design diagram/i })).not.toBeInTheDocument();
     expect(screen.queryByText("Graduate Research Assistant")).not.toBeInTheDocument();
     expect(screen.queryByText("Bothell, Washington, United States")).not.toBeInTheDocument();
