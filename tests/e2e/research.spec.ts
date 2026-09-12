@@ -49,6 +49,42 @@ async function expectAuthoredAbstractTriggers(page: Page): Promise<Locator[]> {
   return triggers;
 }
 
+async function expectResolverOwnedMediaTitles(projects: Locator) {
+  const media = projects.locator(".research-video, .research-abstract");
+  const mediaCount = await media.count();
+
+  if (mediaCount === 0) return;
+
+  await expect(media.locator(".research-media-title")).toHaveCount(mediaCount);
+  for (let index = 0; index < mediaCount; index += 1) {
+    const currentMedia = media.nth(index);
+    const title = currentMedia.locator(".research-media-title");
+    const geometry = await title.evaluate((titleElement) => {
+      const mediaElement = titleElement.closest<HTMLElement>(".research-video, .research-abstract");
+      const mediumSelector = mediaElement?.classList.contains("research-video")
+        ? ".research-video__viewport"
+        : ".research-abstract__trigger";
+      const renderedMedium = mediaElement?.querySelector<HTMLElement>(mediumSelector);
+      const titleBox = titleElement.getBoundingClientRect();
+      const mediumBox = renderedMedium?.getBoundingClientRect();
+
+      return {
+        clientWidth: titleElement.clientWidth,
+        mediumTop: mediumBox?.top,
+        scrollWidth: titleElement.scrollWidth,
+        text: titleElement.textContent?.trim() ?? "",
+        titleBottom: titleBox.bottom
+      };
+    });
+
+    expect(geometry.text.split(/\s+/).filter(Boolean).length).toBeGreaterThanOrEqual(1);
+    expect(geometry.text.split(/\s+/).filter(Boolean).length).toBeLessThanOrEqual(3);
+    expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.clientWidth + 1);
+    expect(geometry.mediumTop).toBeDefined();
+    expect(geometry.titleBottom).toBeLessThanOrEqual(geometry.mediumTop! + 1);
+  }
+}
+
 async function expectDetailModeSwitch(page: Page) {
   const modeControl = page.locator(".detail-mode-control");
   const modeSwitch = modeControl.locator(".detail-mode-switch");
@@ -253,6 +289,7 @@ test.describe("Research showcase", () => {
       await expect(page.locator(".detail-mode-control")).toHaveCount(0);
       return;
     }
+    await expectResolverOwnedMediaTitles(projects);
     await expectDetailModeSwitch(page);
 
     for (let index = 0; index < (await projects.count()); index += 1) {
@@ -430,6 +467,7 @@ test.describe("Research showcase", () => {
       await expect(page.locator(".detail-mode-control")).toHaveCount(0);
       return;
     }
+    await expectResolverOwnedMediaTitles(projects);
 
     const modeControl = page.locator(".detail-mode-control");
     const modeSwitch = modeControl.locator(".detail-mode-switch");

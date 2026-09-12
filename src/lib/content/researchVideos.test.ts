@@ -5,6 +5,7 @@ const curatedVideo = {
   captionsSrc: "/images/research/cytocv-supplementary-video-s1.en.vtt",
   description:
     "A narrated CytoCV workflow demonstration showing nuclear-to-cytoplasmic intensity-ratio analysis for wild-type and mutant yeast cells.",
+  displayTitle: "CytoCV Demo",
   durationLabel: "5 min 28 sec",
   height: 1108,
   mimeType: "video/mp4",
