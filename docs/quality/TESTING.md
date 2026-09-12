@@ -15,7 +15,7 @@ Smart Portfolio uses a layered quality gate for documentation, static content, R
 | TypeScript mode | Strict, no emit |
 | CI runner | Verify: `ubuntu-24.04`; deploy and scheduled heartbeat: `ubuntu-latest` |
 
-`vitest.config.ts` enables globals, loads `vitest.setup.ts`, maps `@` to `src`, and excludes `tests/e2e/` so Playwright specifications run only in their browser runner. The verification path has one explicit Ubuntu 24.04 and Node 22 configuration, not a multi-platform test matrix.
+`vitest.config.ts` enables globals, loads `vitest.setup.ts`, maps `@` to `src`, excludes `tests/e2e/`, and uses one fork worker so local D1 and jsdom contracts do not compete for host resources. Playwright likewise runs one worker and starts an owned Next.js server; select a unique `PLAYWRIGHT_PORT` when another worktree is active. The verification path has one explicit Ubuntu 24.04 and Node 22 configuration, not a multi-platform test matrix.
 
 ## Command matrix
 
@@ -25,10 +25,14 @@ Smart Portfolio uses a layered quality gate for documentation, static content, R
 | `npm run generate:content` | Content source download or template read, normalization, validation, and generated JSON write | Uses `.env` when run through the CLI |
 | `npm run lint` | ESLint over the repository with `--max-warnings=0` | Generated content and build directories are ignored; direct library/component import boundaries cover alias and relative specifiers |
 | `npm run typecheck` | `next typegen && tsc --noEmit` | Regenerates Next route types and the ignored managed `next-env.d.ts` before strict TypeScript checking |
-| `npm run test:footer` | Two focused footer regression files | Also runs again inside the full suite |
-| `npm run test:navigation` | Focused mobile rail, header, responsive-query, theme, and navigation style tests | Also runs again inside the full suite |
+| `npm run test:priority` | High-risk documentation, deployment, contact, shared dialog, theme, Research media, navigation, and skeleton contracts | Pull-request unit and contract gate; it includes every Function test under `functions/` |
+| `npm run test:footer` | Two focused footer regression files | Use while changing the footer; release CI covers them through `test` |
+| `npm run test:navigation` | Focused mobile rail, header, responsive-query, theme, and navigation style tests | Use while changing navigation; release CI covers them through `test` |
 | `npm run test:skeletons` | Focused skeleton component, content, style, and page-entry tests | Protects route fallback semantics, fixture geometry, and static no-motion placeholders |
-| `npm run test:e2e:navigation` | Playwright navigation specification in Chromium | Uses port 3100 by default and reuses a compatible running local server outside CI |
+| `npm run test:e2e:priority` | Playwright skeleton alignment, navigation, footer, and mocked-contact flow | Pull-request browser gate; uses no provider credentials or delivery endpoint |
+| `npm run test:e2e:full` | Every supported Playwright specification in one Chromium process | Release browser gate; includes every skeleton part and the mocked-contact flow |
+| `npm run test:e2e:contact` | Playwright contact flow specification in Chromium | Mocks Turnstile and both same-origin contact endpoints; never submits to a provider |
+| `npm run test:e2e:navigation` | Playwright navigation specification in Chromium | Uses port 3100 by default and starts its own local server |
 | `npm run test:e2e:skeletons:alignment` | Playwright resolved-page versus canonical-loader geometry specification | Covers direct header line boxes, wrap boundaries, generated Experience copy, detail footprints, overflow, themes, and reduced motion in inert same-origin fixtures |
 | `npm run test:e2e:skeletons:visual` | Linux-only Playwright screenshot specification | Captures or compares 23 reviewed skeleton geometry baselines on Ubuntu 24.04 only, rejecting browser diagnostics before any screenshot |
 | `npm run test:e2e:skeletons` | Playwright alignment, route-transition, and visual skeleton specifications | Runs the direct geometry matrix, holds non-prefetch RSC navigation for each non-Home route, and includes the Linux visual matrix; it does not claim static-export streaming |
@@ -36,13 +40,15 @@ Smart Portfolio uses a layered quality gate for documentation, static content, R
 | `npm run test:e2e:recommendations` | Playwright recommendation specification in Chromium | Samples desktop geometry through expansion and dismissal, then checks responsive and reduced-motion behavior |
 | `npm run test:e2e:experience` | Playwright experience specification in Chromium | Protects detail-level switching, disclosure semantics, responsive controls, and reduced-motion behavior |
 | `npm run test:e2e:research` | Playwright research specification in Chromium | Protects research-card alternation, accessible detail disclosures, responsive stacking, reduced-motion behavior, graphical abstracts, and the CytoCV video modal |
-| `npm run test` | Complete Vitest suite | Uses mocks and jsdom, not a real browser or Cloudflare runtime |
+| `npm run test` | Complete Vitest suite, including local D1 integration coverage | Uses mocks, jsdom, and isolated local D1; not a real browser or Cloudflare runtime |
 | `npm run build` | `prebuild`, Next.js static export, segment-cache normalization, then content-version write | Regenerates content before building |
 | `npm run build:generated` | Next.js static export, segment-cache normalization, and content-version write | Consumes existing generated JSON without another content fetch |
 | `npm audit` | Locked full dependency graph audit | Covers development and deployment dependencies |
 | `npm audit --omit=dev` | Locked production dependency graph audit | Covers the deployed runtime dependency graph |
 | `npm run db:migrate:local` | Pending tracked migrations against Wrangler's local D1 state | Never targets preview or production |
-| `npm run verify` | Docs check, lint, typecheck, full tests, and normal build | Does not run focused scripts or install a browser separately |
+| `npm run verify` | Docs check, lint, typecheck, full Vitest suite, and normal build | Compatibility local gate; does not install Chromium |
+| `npm run verify:priority` | Docs check, lint, typecheck, priority Vitest and browser suites, and normal build | Portable pull-request-sized local gate; install Chromium first |
+| `npm run verify:full` | Docs check, lint, typecheck, complete Vitest and Playwright suites, and normal build | Release-candidate gate; its Linux-only visual comparison must run on Ubuntu 24.04 |
 | `npm run verify:local` | Dependency preparation, explicit content generation, then `verify` | The final normal build invokes generation again |
 
 Use the cross-platform `verify:local:node` alias when PowerShell is unavailable.
@@ -55,7 +61,7 @@ Run:
 npm run docs:check
 ```
 
-`scripts/validateDocumentation.mjs` reads `README.md` and every Markdown file under `docs/`. It checks:
+`scripts/validateDocumentation.mjs` reads `README.md`, every Markdown file under `docs/`, the optional root `AGENTS.md`, and every Markdown file under `.agents/`. It checks:
 
 - Exactly one H1 per document.
 - Balanced fenced code blocks.
@@ -65,7 +71,7 @@ npm run docs:check
 - Rejection of absolute Windows user paths.
 - Localhost URL use only in the approved local-development documents.
 - Rejection of workbook URL patterns and obvious unresolved placeholders.
-- Rejection of excluded local tooling terminology.
+- Validation of repository-local agent skill frontmatter and links when `.agents/` is present.
 - Rejection of prose that presents generated output directories as committed source.
 
 The validator uses only Node.js standard-library APIs and does not check external-link availability. Its fixture tests live in `scripts/validateDocumentation.test.mjs`.
@@ -127,7 +133,7 @@ Many accessibility assertions verify semantic roles, names, focus behavior, keyb
 
 ## Browser navigation coverage
 
-`tests/e2e/navigation.spec.ts` runs against Chromium through `playwright.config.ts`. The configuration starts Next.js on `127.0.0.1:3100`, reuses an existing local server outside CI, captures screenshots only on failure, and retains traces for failed attempts. It also verifies the explicit Next 16 smooth-scroll opt-in that preserves instant client-route scrolling while retaining smooth in-page scrolling. The browser suites fail on browser console errors, warnings, or page errors so React hydration diagnostics cannot be accepted as visual-only regressions. Their shared layout-settling helper waits for document load, fonts, and two animation frames by default because a valid media request can remain active while a rendered page is ready; geometry suites without long-lived media may explicitly add network-idle settling. The global font remains `display: swap` but does not emit a framework preload link; repeated cached-document browser tests otherwise produce a delayed unused-preload warning even though the font is available through the generated stylesheet.
+`tests/e2e/navigation.spec.ts` runs against Chromium through `playwright.config.ts`. The configuration starts an owned Next.js server on `127.0.0.1:3100` by default, captures screenshots only on failure, and retains traces for failed attempts. It never adopts a server from another worktree; set `PLAYWRIGHT_PORT` to an unused port when needed. It also verifies the explicit Next 16 smooth-scroll opt-in that preserves instant client-route scrolling while retaining smooth in-page scrolling. The browser suites fail on browser console errors, warnings, or page errors so React hydration diagnostics cannot be accepted as visual-only regressions. Their shared layout-settling helper waits for document load, fonts, and two animation frames by default because a valid media request can remain active while a rendered page is ready; geometry suites without long-lived media may explicitly add network-idle settling. The global font remains `display: swap` but does not emit a framework preload link; repeated cached-document browser tests otherwise produce a delayed unused-preload warning even though the font is available through the generated stylesheet.
 
 The suite verifies the fixed bottom dock at 320, 390, and 768 CSS pixels; a viewport-bounded rail whose intentionally wider route/action content remains reachable by horizontal scrolling; canonical route links followed by social and theme actions in one moving rail; native overflow with hard clipping; viewport-bottom persistence while the document scrolls; upward unclipped theme placement; document-level overflow protection; initial idle drift; five-second interaction pause and resume from the current position; and the reduced-motion fallback. Static availability cases request reduced motion before navigation so automatic drift cannot race their viewport assertions; the separate regular-motion case installs Playwright's page clock before navigation and advances the actual idle and interaction timers, proving that the rail remains paused through 4.9 seconds and resumes at its five-second deadline without depending on host wall-clock scheduling. It also verifies dark and light device preference changes, manual My mode precedence, returning to System without a stored override, representative opaque backgrounds without gradients or glow in every manual palette, and the hydrated palette fade boundary: initial selection stays immediate, later eligible choices use one native transition, and reduced motion applies the next palette immediately without moving the open control. The reusable `tests/e2e/themePreference.ts` helper establishes all-palette coverage through the supported pre-hydration `portfolio-theme` preference or the hydrated chooser; it never mutates `html[data-theme]` directly. A desktop case protects the sticky top header, identity, route list, and compact-on-scroll behavior. Route-level cases verify that every registered resolved page receives the body entrance while the shared header and footer do not, that same-document client navigation mounts a fresh animated page root, and that reduced motion removes the entrance. Unit and style-contract coverage keeps route skeleton roots separate from the resolved page selector.
 
@@ -162,7 +168,7 @@ The workflow contract tests inspect checked-in workflow text and execute the man
 
 The `verify` job installs locked dependencies before any conditional quality work.
 
-### Pull requests
+### Pull requests: priority gate
 
 Pull requests targeting `main` or `develop`:
 
@@ -170,32 +176,32 @@ Pull requests targeting `main` or `develop`:
 2. Run documentation integrity.
 3. Run lint.
 4. Run typecheck.
-5. Run the focused footer and navigation suites.
-6. Run the full Vitest suite.
-7. Install Chromium once and run the skeleton, navigation, footer, recommendation, experience, and research browser regressions.
+5. Run the priority Vitest contracts once.
+6. Install Chromium once and run the priority browser suite: skeleton alignment, navigation, footer, and a locally mocked contact flow.
 8. Build with `build:generated`.
 9. Stop without creating a deployment artifact.
 
-### Push deployments
+### Push deployments: complete gate
 
 Latest pushes to `main` or `develop`:
 
 1. Validate the fixed Pages project and assigned domain.
 2. Download and generate one strict workbook snapshot with at most one bounded transient retry.
 3. Read and validate its SHA-256 content hash.
-4. Run the same quality gates as pull requests.
-5. Build with `build:generated` and the branch-specific public Turnstile key.
-6. Create, verify, and upload the artifact manifest.
-7. Enter the conditional deploy job, validate the selected D1 binding, and apply pending migrations.
-8. Upload the Pages artifact only after migration succeeds.
+4. Run the complete Vitest suite once, including local D1 integration coverage.
+5. Install Chromium once and run the complete browser suite once. This includes the direct skeleton alignment matrix, held-navigation semantics, and Linux zero-difference visual matrix.
+6. Build with `build:generated` and the branch-specific public Turnstile key.
+7. Create, verify, and upload the artifact manifest.
+8. Enter the conditional deploy job, validate the selected D1 binding, and apply pending migrations.
+9. Upload the Pages artifact only after migration succeeds.
 
 ### Scheduled and manual checks
 
 Scheduled runs and non-forced manual runs perform the strict content work before deciding whether full verification is required. When both the candidate content hash and commit SHA match production, documentation integrity, lint, typecheck, tests, build, artifact upload, and deployment are skipped. A mismatch in either field selects the complete path, while forced manual runs always select it after strict content validation.
 
-### Focused regression duplication
+### Tier boundaries and diagnostics
 
-CI deliberately runs `test:footer` and `test:navigation` before `test`. The complete suite includes the same Vitest files, so they execute twice. The focused steps preserve named regression signals while the full suite catches cross-component failures. After the full suite passes, the Ubuntu 24.04 verify job conditionally installs Chromium once and runs the skeleton, navigation, footer, recommendation, experience, and research Playwright suites; candidates that skip verification do not download the browser. If a verify step fails, the job uploads any available `playwright-report/` and `test-results/` files as a seven-day `playwright-diagnostics-<run-id>-<attempt>` artifact. That failure-only artifact is distinct from, and never used as, the one-day `cloudflare-pages-build` deployment artifact.
+The stable `verify` job selects `priority` for pull requests and `full` for every candidate that can produce a deployment artifact. Each tier runs its unit and browser selections once; CI does not run focused subsets before repeating them inside the complete suites. Stale, unchanged scheduled, and non-forced manual candidates select no tier. `main` branch protection was independently verified on 2026-09-11 to require the current `verify` status check on pull requests; the workflow name and job name must remain stable. If a verify step fails, the job uploads any available `playwright-report/` and `test-results/` files as a seven-day `playwright-diagnostics-<run-id>-<attempt>` artifact. That failure-only artifact is distinct from, and never used as, the one-day `cloudflare-pages-build` deployment artifact.
 
 ## Post-deployment smoke tests
 
@@ -233,13 +239,15 @@ npx --no-install vitest run functions/api/contact.test.ts functions/api/contact/
 Run the focused interaction layers:
 
 ```bash
-npm run test:navigation
 npx playwright install chromium
-npm run test:e2e:navigation
-npm run test:e2e:footer
-npm run test:e2e:recommendations
-npm run test:e2e:experience
-npm run test:e2e:research
+npm run verify:priority
+```
+
+Run the complete release-candidate gate on Ubuntu 24.04, after installing Chromium:
+
+```bash
+npx playwright install chromium
+npm run verify:full
 ```
 
 Use `--reporter=dot` for compact output or the default reporter for individual test names.
@@ -253,19 +261,19 @@ When behavior changes:
 3. Add or update a Playwright case when responsive geometry, native browser scrolling, fixed positioning, or cross-component interaction is the contract under test.
 4. Update workflow contract tests when a CI trigger, condition, permission, action, command, artifact, or environment variable changes.
 5. Update documentation and its cross-links in the same change.
-6. Run the targeted tests first, then `npm run verify`.
+6. Run the targeted tests first, then `npm run verify:priority`; run `npm run verify:full` on Ubuntu 24.04 before deployment.
 
 Avoid snapshot tests that hide semantic changes. Prefer explicit assertions for user-visible text, accessibility state, response contracts, validation errors, and integrity metadata.
 
 ## Current limitations
 
 - No coverage percentage is generated or enforced.
-- Real-browser coverage is intentionally limited to shared navigation, footer, recommendation, experience-detail, and research-detail behavior in Chromium.
+- Real-browser coverage is intentionally limited to Chromium, including a local mocked contact journey; it does not exercise a live security provider, D1 binding, delivery service, or mailbox.
 - No automated Lighthouse or performance threshold runs in CI.
 - No automated browser accessibility scanner is configured.
 - No Workers emulator integration test runs in CI.
 - No automated live contact delivery test is performed.
-- CI covers one Linux and Node-major configuration.
+- CI covers one Linux and Node-major configuration. Local `verify:full` on another operating system cannot replace the required Ubuntu 24.04 visual comparison.
 - Remote D1 binding and migration state, external WAF, DNS, TLS, provider-secret, and branch-protection state are not testable from the repository.
 
 These are explicit boundaries, not implied guarantees. Use the manual checks in [Operations](../operations/OPERATIONS.md) when the release risk reaches beyond the automated suite.

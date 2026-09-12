@@ -30,6 +30,7 @@ jobs:
       pages_domain: ${{ steps.pages.outputs.pages_domain }}
       pages_project_name: ${{ steps.pages.outputs.pages_project_name }}
       should_deploy: ${{ steps.decision.outputs.should_deploy }}
+      verification_tier: ${{ steps.decision.outputs.verification_tier }}
     steps:
       - name: Check out the exact candidate
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
@@ -145,7 +146,7 @@ jobs:
             "$CANDIDATE_SHA" \
             "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${CANDIDATE_SHA}"
 
-      - name: Decide whether full verification and deployment are required
+      - name: Decide verification tier and deployment
         id: decision
         shell: bash
         env:
@@ -158,19 +159,23 @@ jobs:
           should_verify=false
           should_deploy=false
           deploy_target="none"
+          verification_tier="none"
 
           if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
             should_verify=true
+            verification_tier="priority"
           elif [[ "${CANDIDATE_IS_LATEST:-false}" != "true" ]]; then
             echo "The candidate is stale; no verification artifact or deployment will be produced."
           elif [[ "$GITHUB_EVENT_NAME" == "push" && "$GITHUB_REF" == "refs/heads/main" ]]; then
             should_verify=true
             should_deploy=true
             deploy_target="production"
+            verification_tier="full"
           elif [[ "$GITHUB_EVENT_NAME" == "push" && "$GITHUB_REF" == "refs/heads/develop" ]]; then
             should_verify=true
             should_deploy=true
             deploy_target="preview"
+            verification_tier="full"
           else
             deploy_target="production"
             if [[ "${FORCE_DEPLOY:-false}" == "true" ||
@@ -178,12 +183,14 @@ jobs:
                   "${DEPLOYED_COMMIT_MATCHES:-false}" != "true" ]]; then
               should_verify=true
               should_deploy=true
+              verification_tier="full"
             fi
           fi
 
           echo "should_verify=$should_verify" >> "$GITHUB_OUTPUT"
           echo "should_deploy=$should_deploy" >> "$GITHUB_OUTPUT"
           echo "deploy_target=$deploy_target" >> "$GITHUB_OUTPUT"
+          echo "verification_tier=$verification_tier" >> "$GITHUB_OUTPUT"
 
       - name: Documentation integrity
         if: steps.decision.outputs.should_verify == 'true'
@@ -197,45 +204,25 @@ jobs:
         if: steps.decision.outputs.should_verify == 'true'
         run: npm run typecheck
 
-      - name: Footer regression tests
-        if: steps.decision.outputs.should_verify == 'true'
-        run: npm run test:footer
+      - name: Priority unit and contract tests
+        if: steps.decision.outputs.verification_tier == 'priority'
+        run: npm run test:priority
 
-      - name: Navigation regression tests
-        if: steps.decision.outputs.should_verify == 'true'
-        run: npm run test:navigation
-
-      - name: Full test suite
-        if: steps.decision.outputs.should_verify == 'true'
+      - name: Full unit and integration suite
+        if: steps.decision.outputs.verification_tier == 'full'
         run: npm run test
 
       - name: Install Chromium for browser regressions
         if: steps.decision.outputs.should_verify == 'true'
         run: npx --no-install playwright install --with-deps chromium
 
-      - name: Browser skeleton regression tests
-        if: steps.decision.outputs.should_verify == 'true'
-        run: npm run test:e2e:skeletons
+      - name: Priority browser regression suite
+        if: steps.decision.outputs.verification_tier == 'priority'
+        run: npm run test:e2e:priority
 
-      - name: Browser navigation regression tests
-        if: steps.decision.outputs.should_verify == 'true'
-        run: npm run test:e2e:navigation
-
-      - name: Browser footer regression tests
-        if: steps.decision.outputs.should_verify == 'true'
-        run: npm run test:e2e:footer
-
-      - name: Browser recommendation regression tests
-        if: steps.decision.outputs.should_verify == 'true'
-        run: npm run test:e2e:recommendations
-
-      - name: Browser experience regression tests
-        if: steps.decision.outputs.should_verify == 'true'
-        run: npm run test:e2e:experience
-
-      - name: Browser research regression tests
-        if: steps.decision.outputs.should_verify == 'true'
-        run: npm run test:e2e:research
+      - name: Full browser regression suite
+        if: steps.decision.outputs.verification_tier == 'full'
+        run: npm run test:e2e:full
 
       - name: Upload Playwright diagnostics on failure
         if: failure()
