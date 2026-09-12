@@ -84,7 +84,7 @@ The explicit Turnstile widget uses:
 - appearance `always`;
 - execution `render`;
 - the current submission UUID as `cData`;
-- flexible sizing (minimum 300 pixels wide, 65 pixels high), or compact sizing (150 by 140 pixels) below 300 pixels of available width;
+- normal sizing (300 by 65 pixels), or compact sizing (150 by 140 pixels) below 300 pixels of available width;
 - light widget styling only for the Light site theme, and dark styling for My mode and Dark;
 - manual token refresh and retry behavior so the client controls recovery;
 - no hidden Turnstile response field because the token is sent in explicit JSON.
@@ -93,7 +93,7 @@ The widget script loads from Cloudflare after hydration and renders a visible ga
 
 Each new logical draft receives a cryptographically random submission UUID before the gate. The UUID binds Turnstile custom data, the signed ticket, the reviewed payload, the D1 retry identity, and Resend idempotency keys. When the widget supplies a fresh token, the browser posts only that UUID and token to `/api/contact/verify`. The browser records the form-start time when the form opens automatically or through Continue, so time spent at the gate is not counted as form completion. A later ticket refresh for the same locked delivery preserves the original UUID and form-start time, then returns to locked review without starting delivery.
 
-The verification well persists through loading, token confirmation, success, failure, expiry, and retry. A CSS container query reserves the documented widget height plus status and recovery rows. Provider removal or shrinking never moves the heading, gate actions, email alternative, or card boundary at a given viewport. Theme and width changes recreate only the widget as needed. Later form steps may fit their content. See [Cloudflare widget sizing](https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/widget-configurations/).
+The verification well persists through loading, token confirmation, success, failure, expiry, and retry. A CSS container query reserves the documented widget height plus status and recovery rows. The full available content width chooses native normal or compact rendering before verification; the fixed native host is centered inside that measuring width. Provider removal or shrinking never moves the heading, gate actions, email alternative, or card boundary at a given viewport. Theme and width changes recreate the widget before verification when needed. During the 500-millisecond server-verified hold, a retained normal widget scales down within its presentation box if the available width falls below 300 pixels, without rerendering the provider. Later form steps may fit their content. See [Cloudflare widget sizing](https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/widget-configurations/).
 
 ### Three wizard steps
 

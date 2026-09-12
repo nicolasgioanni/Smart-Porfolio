@@ -3,7 +3,7 @@ import type { Page } from "@playwright/test";
 
 type TurnstileOptions = {
   callback: (token: string) => void;
-  size: "compact" | "flexible";
+  size: "compact" | "normal";
   theme: string;
   "error-callback": () => void;
   "expired-callback": () => void;
@@ -38,7 +38,7 @@ export async function installTurnstileMock(page: Page) {
       const button = document.createElement("button");
       button.type = "button";
       button.textContent = "Complete test security check";
-      button.style.width = widget.options.size === "compact" ? "150px" : "100%";
+      button.style.width = widget.options.size === "compact" ? "150px" : "300px";
       button.style.height = widget.options.size === "compact" ? "140px" : "65px";
       button.dataset.size = widget.options.size;
       button.dataset.theme = widget.options.theme;

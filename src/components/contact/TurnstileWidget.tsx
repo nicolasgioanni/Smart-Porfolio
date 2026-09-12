@@ -1,7 +1,7 @@
 "use client";
 
 import Script from "next/script";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { type CSSProperties, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 export type TurnstileStatus = "loading" | "ready" | "expired" | "error" | "unavailable";
 
@@ -13,7 +13,7 @@ type TurnstileRenderOptions = {
   appearance: "always";
   execution: "render";
   cData: string;
-  size: "flexible" | "compact";
+  size: "normal" | "compact";
   theme: TurnstileTheme;
   callback: (token: string) => void;
   "expired-callback": () => void;
@@ -51,6 +51,7 @@ function resolveWidgetTheme(): TurnstileTheme {
 }
 
 export function TurnstileWidget({ cData, onStatusChange, onTokenChange, serverVerified = false, siteKey }: TurnstileWidgetProps) {
+  const measurementRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const statusRef = useRef<HTMLParagraphElement>(null);
   const widgetIdRef = useRef<string | undefined>(undefined);
@@ -62,30 +63,37 @@ export function TurnstileWidget({ cData, onStatusChange, onTokenChange, serverVe
   const [theme, setTheme] = useState<TurnstileTheme>("dark");
   const [renderAttempt, setRenderAttempt] = useState(0);
   const [size, setSize] = useState<TurnstileRenderOptions["size"]>();
+  const [availableWidth, setAvailableWidth] = useState(0);
 
   useLayoutEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    const measure = () => {
-      if (serverVerifiedRef.current) return;
-      const width = container.getBoundingClientRect().width;
-      setSize(width > 0 && width < 300 ? "compact" : "flexible");
+    serverVerifiedRef.current = serverVerified;
+  }, [serverVerified]);
+
+  useLayoutEffect(() => {
+    const measurement = measurementRef.current;
+    if (!measurement) return;
+
+    const measure = (entry?: ResizeObserverEntry) => {
+      const width = entry?.contentBoxSize?.[0]?.inlineSize ?? entry?.contentRect.width ?? measurement.clientWidth;
+      setAvailableWidth(width);
     };
     measure();
     if (typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(measure);
-    observer.observe(container);
+    const observer = new ResizeObserver(([entry]) => measure(entry));
+    observer.observe(measurement);
     return () => observer.disconnect();
   }, []);
+
+  useLayoutEffect(() => {
+    if (!serverVerified && availableWidth > 0) {
+      setSize(availableWidth < 300 ? "compact" : "normal");
+    }
+  }, [availableWidth, serverVerified]);
 
   useEffect(() => {
     onStatusChangeRef.current = onStatusChange;
     onTokenChangeRef.current = onTokenChange;
   }, [onStatusChange, onTokenChange]);
-
-  useLayoutEffect(() => {
-    serverVerifiedRef.current = serverVerified;
-  }, [serverVerified]);
 
   const updateStatus = useCallback((nextStatus: TurnstileStatus) => {
     setStatus(nextStatus);
@@ -232,6 +240,17 @@ export function TurnstileWidget({ cData, onStatusChange, onTokenChange, serverVe
     error: "Verification could not run. Try again.",
     unavailable: "Verification is temporarily unavailable."
   };
+  const retryAvailable = status === "expired" || status === "error";
+  const nativeWidth = size === "compact" ? 150 : 300;
+  const nativeHeight = size === "compact" ? 140 : 65;
+  const presentationScale = serverVerified && size === "normal" && availableWidth > 0
+    ? Math.min(1, availableWidth / nativeWidth)
+    : 1;
+  const widgetPresentationStyle = {
+    "--contact-turnstile-native-width": `${nativeWidth}px`,
+    "--contact-turnstile-native-height": `${nativeHeight}px`,
+    "--contact-turnstile-presentation-scale": String(presentationScale)
+  } as CSSProperties;
 
   return (
     <div className="contact-turnstile" data-status={status}>
@@ -243,23 +262,26 @@ export function TurnstileWidget({ cData, onStatusChange, onTokenChange, serverVe
           strategy="afterInteractive"
         />
       ) : null}
-      <div className="contact-turnstile__widget" ref={containerRef} />
-      <div className="contact-turnstile__status-row">
-        <p
-          aria-atomic="true"
-          aria-hidden={serverVerified || undefined}
-          aria-live={serverVerified ? undefined : "polite"}
-          ref={statusRef}
-          role={serverVerified ? undefined : "status"}
-          tabIndex={serverVerified ? undefined : -1}
-        >
-          {serverVerified ? null : statusMessage[status]}
-        </p>
-        {!serverVerified && (status === "expired" || status === "error") ? (
-          <button className="contact-text-button" onClick={resetWidget} type="button">
-            Run check again
-          </button>
-        ) : <span aria-hidden="true" />}
+      <div className="contact-turnstile__group">
+        <div className="contact-turnstile__measurement" ref={measurementRef}>
+          <div className="contact-turnstile__widget-frame" style={widgetPresentationStyle}>
+            <div className="contact-turnstile__widget" data-size={size} ref={containerRef} />
+          </div>
+        </div>
+        {!serverVerified ? (
+          <>
+            <div className="contact-turnstile__status-row">
+              <p aria-atomic="true" aria-live="polite" ref={statusRef} role="status" tabIndex={-1}>
+                <span className="contact-turnstile__status-label">{statusMessage[status]}</span>
+              </p>
+            </div>
+            {retryAvailable ? (
+              <button className="contact-text-button" onClick={resetWidget} type="button">
+                Run check again
+              </button>
+            ) : null}
+          </>
+        ) : null}
       </div>
     </div>
   );

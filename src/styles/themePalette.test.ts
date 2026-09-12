@@ -7,6 +7,10 @@ const tokenStyles = readFileSync(path.join(projectRoot, "src", "styles", "tokens
 const glassStyles = readFileSync(path.join(projectRoot, "src", "styles", "glass.css"), "utf8");
 const layoutStyles = readFileSync(path.join(projectRoot, "src", "styles", "layout.css"), "utf8");
 const contactStyles = readFileSync(path.join(projectRoot, "src", "styles", "contact.css"), "utf8");
+const contactStylesWithoutPendingGradient = contactStyles.replace(
+  /background: linear-gradient\(90deg, var\(--color-progress-base\) 0%, var\(--color-progress-base\) 42%, var\(--color-progress-highlight\) 50%, var\(--color-progress-base\) 58%, var\(--color-progress-base\) 100%\);\r?\n/,
+  ""
+);
 const styleSources = [
   "base.css",
   "contact.css",
@@ -23,7 +27,9 @@ const styleSources = [
   "skeletons.css",
   "tokens.css",
   "utilities.css"
-].map((fileName) => readFileSync(path.join(projectRoot, "src", "styles", fileName), "utf8"));
+].map((fileName) => fileName === "contact.css"
+  ? contactStylesWithoutPendingGradient
+  : readFileSync(path.join(projectRoot, "src", "styles", fileName), "utf8"));
 
 const themePatterns = {
   dark: /\[data-theme="dark"\]\s*\{([\s\S]*?)\r?\n\}/,
@@ -193,5 +199,12 @@ describe("theme palette contract", () => {
       expect(styleSource).not.toMatch(/mask-image\s*:/);
       expect(styleSource).not.toMatch(/--shadow-glow/);
     }
+  });
+
+  it("allows only the pending verification text highlight to use a moving gradient", () => {
+    expect(contactStyles).toMatch(
+      /@supports \(\(-webkit-background-clip: text\) or \(background-clip: text\)\) \{[\s\S]*?background: linear-gradient\(90deg,[\s\S]*?-webkit-background-clip: text[\s\S]*?background-clip: text[\s\S]*?animation: contact-turnstile-progress 2\.4s linear infinite/s
+    );
+    expect(contactStylesWithoutPendingGradient).not.toMatch(/(?:linear|radial|conic)-gradient\(/);
   });
 });
