@@ -4,6 +4,7 @@ import { ResearchVideoPreview } from "@/components/portfolio/research/ResearchVi
 
 const graphicalAbstract = {
   alt: "A research workflow diagram.",
+  displayTitle: "CytoCV Graphical Abstract",
   height: 941,
   source: "curated" as const,
   src: "/images/research/cytocv-graphical-abstract.png",
@@ -13,6 +14,7 @@ const graphicalAbstract = {
 const video = {
   captionsSrc: "/images/research/cytocv-supplementary-video-s1.en.vtt",
   description: "A narrated scientific workflow.",
+  displayTitle: "CytoCV Demo",
   durationLabel: "5 min 28 sec",
   height: 1108,
   mimeType: "video/mp4" as const,
@@ -69,6 +71,8 @@ describe("ResearchVideoPreview", () => {
     expect(download).toHaveAttribute("download");
     expect(download).toHaveClass("glass-icon-link", "research-video__toolbar-control");
     expect(download).toHaveAttribute("data-tooltip", "Download MP4");
+    expect(screen.getByText(video.displayTitle)).toHaveClass("research-media-title");
+    expect(screen.getByText(video.durationLabel)).toHaveClass("research-video__duration");
     expect(openButton).toHaveAttribute("aria-haspopup", "dialog");
     expect(openButton).toHaveAttribute("aria-expanded", "false");
     expect(openButton).toHaveClass("glass-icon-button", "research-video__toolbar-control");

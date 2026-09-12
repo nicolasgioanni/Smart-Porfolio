@@ -3,6 +3,7 @@ import { isSupportedResearchGraphicalAbstractPath } from "@/lib/content/validate
 
 export type ResearchGraphicalAbstract = {
   alt: string;
+  displayTitle: string;
   height?: number;
   source: "canonical" | "curated";
   src: string;
@@ -14,18 +15,21 @@ type CuratedGraphicalAbstract = Omit<ResearchGraphicalAbstract, "source">;
 const curatedGraphicalAbstracts: Readonly<Record<string, CuratedGraphicalAbstract>> = {
   "cytocv-miller-lab": {
     alt: "Four-step CytoCV workflow from yeast microscopy channels through segmentation and fluorescence measurement to reviewable CSV/XLSX export.",
+    displayTitle: "CytoCV Graphical Abstract",
     height: 941,
     src: "/images/research/cytocv-graphical-abstract.png",
     width: 1672
   },
   "adversarial-machine-learning": {
     alt: "Four-step adversarial machine-learning study showing image-classification data and models, attack experiments, defense experiments, and evaluation outputs.",
+    displayTitle: "AML Graphical Abstract",
     height: 2160,
     src: "/images/research/independent-study-graphical-abstract.png",
     width: 3840
   },
   "yeast-dna-target-selection": {
     alt: "Four-step GuideDonorScheduler workflow from FASTA input through guide selection and donor design to annotated XLS output.",
+    displayTitle: "GuideDonorScheduler Graphical Abstract",
     height: 2160,
     src: "/images/research/guide-donor-scheduler-graphical-abstract.png",
     width: 3840
@@ -52,6 +56,7 @@ export function getResearchGraphicalAbstract(
 
     return {
       alt: canonicalAlt,
+      displayTitle: curated?.displayTitle ?? "Graphical Abstract",
       ...dimensions,
       source: "canonical",
       src: canonicalSrc

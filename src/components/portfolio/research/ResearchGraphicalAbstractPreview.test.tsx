@@ -4,6 +4,7 @@ import { ResearchGraphicalAbstractPreview } from "@/components/portfolio/researc
 
 const graphicalAbstract = {
   alt: "Four-step research workflow.",
+  displayTitle: "Example Graphical Abstract",
   height: 900,
   source: "curated" as const,
   src: "/images/research/example.png",
@@ -24,6 +25,8 @@ describe("ResearchGraphicalAbstractPreview", () => {
     expect(thumbnail).toHaveAttribute("alt", "");
     expect(thumbnail).toHaveAttribute("width", "1600");
     expect(thumbnail).toHaveAttribute("height", "900");
+    expect(screen.getByText(graphicalAbstract.displayTitle)).toHaveClass("research-media-title");
+    expect(screen.queryByRole("heading", { name: graphicalAbstract.displayTitle })).not.toBeInTheDocument();
 
     fireEvent.click(trigger);
 

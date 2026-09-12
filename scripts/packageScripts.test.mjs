@@ -4,7 +4,11 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { createArtifactManifest, verifyArtifactManifest } from "./artifactIntegrity.mjs";
 import { resolvePagesDeploymentUrl } from "./checkDeployedContent.mjs";
-import { priorityTestTargets, requiredPriorityFiles } from "./runValidationTier.mjs";
+import {
+  priorityTestDirectories,
+  priorityTestTargets,
+  requiredPriorityFiles
+} from "./runValidationTier.mjs";
 import { readContentVersion, writeContentVersion } from "./writeContentVersion.mjs";
 
 const projectRoot = path.resolve(import.meta.dirname, "..");
@@ -85,7 +89,7 @@ describe("package and CI deployment automation", () => {
       "playwright test contact.spec.ts --project=chromium"
     );
     expect(packageJson.scripts["test:e2e:priority"]).toBe(
-      "playwright test skeleton-alignment.spec.ts navigation.spec.ts footer.spec.ts contact.spec.ts --project=chromium"
+      "playwright test skeleton-alignment.spec.ts skeletons.transition.spec.ts navigation.spec.ts footer.spec.ts contact.spec.ts recommendations.spec.ts experience.spec.ts research.spec.ts --project=chromium"
     );
     expect(packageJson.scripts["test:e2e:full"]).toBe(
       "playwright test --project=chromium"
@@ -102,6 +106,15 @@ describe("package and CI deployment automation", () => {
     const packageJson = JSON.parse(await readFile(path.join(projectRoot, "package.json"), "utf8"));
     expect(packageJson.scripts["test:priority"]).toBe("node scripts/runValidationTier.mjs priority");
     expect(priorityTestTargets).toContain("functions");
+    expect(priorityTestDirectories).toEqual([
+      "src/components/overlay",
+      "src/components/portfolio/experience",
+      "src/components/portfolio/recommendations",
+      "src/components/portfolio/research",
+      "src/components/portfolio/shared",
+      "src/components/theme",
+      "src/lib/theme"
+    ]);
     expect(requiredPriorityFiles).toEqual(
       expect.arrayContaining([
         "functions/api/contact.test.ts",
@@ -110,7 +123,12 @@ describe("package and CI deployment automation", () => {
         "src/lib/content/content.test.ts",
         "src/lib/content/security.test.ts",
         "src/lib/media/researchVideoAssets.test.ts",
-        "src/lib/theme/themeTransition.test.ts"
+        "src/lib/theme/themeTransition.test.ts",
+        "src/styles/themePalette.test.ts",
+        "src/components/portfolio/experience/ExperienceShowcase.test.tsx",
+        "src/components/portfolio/recommendations/RecommendationsList.test.tsx",
+        "src/components/portfolio/research/ResearchShowcase.test.tsx",
+        "src/components/overlay/ModalDialog.test.tsx"
       ])
     );
 
@@ -168,11 +186,13 @@ describe("package and CI deployment automation", () => {
     expect(verifyJob).toContain("Generate validated local template content for pull requests");
     expect(verifyJob).toContain("if: github.event_name == 'pull_request'");
     expect(verifyJob).toContain('PORTFOLIO_REQUIRE_REMOTE_CONTENT: "false"');
+    expect(pullRequestGeneration).toContain('PORTFOLIO_WORKBOOK_URL: ""');
     expect(verifyJob).toContain("run: npm run lint");
     expect(verifyJob).toContain("run: npm run typecheck");
     expect(verifyJob).toContain("run: npm run test:priority");
     expect(verifyJob).toContain("run: npx --no-install playwright install --with-deps chromium");
     expect(verifyJob).toContain("run: npm run test:e2e:priority");
+    expect(verifyJob).toContain("run: npm run test:e2e:skeletons:visual");
     expect(verifyJob).not.toContain("run: npm run test:footer");
     expect(verifyJob).not.toContain("run: npm run test:navigation");
     expect(verifyJob).toMatch(
@@ -180,6 +200,9 @@ describe("package and CI deployment automation", () => {
     );
     expect(verifyJob).toMatch(
       /- name: Priority browser regression suite\s+if: steps\.decision\.outputs\.verification_tier == 'priority'\s+run: npm run test:e2e:priority/
+    );
+    expect(verifyJob).toMatch(
+      /- name: Linux skeleton visual regression\s+if: steps\.decision\.outputs\.verification_tier == 'priority'\s+run: npm run test:e2e:skeletons:visual/
     );
     expect(pullRequestBuild).toContain("run: npm run build:generated");
     expect(pullRequestGeneration).not.toContain("secrets.");
@@ -287,6 +310,7 @@ describe("package and CI deployment automation", () => {
     for (const [stepName, tier] of [
       ["Priority unit and contract tests", "priority"],
       ["Priority browser regression suite", "priority"],
+      ["Linux skeleton visual regression", "priority"],
       ["Full unit and integration suite", "full"],
       ["Full browser regression suite", "full"]
     ]) {
@@ -305,6 +329,16 @@ describe("package and CI deployment automation", () => {
     expect(verifyJob.match(/playwright install --with-deps chromium/g)).toHaveLength(1);
     expect(verifyJob.indexOf("Install Chromium for browser regressions")).toBeLessThan(
       verifyJob.indexOf("Priority browser regression suite")
+    );
+    expect(verifyJob.indexOf("Priority browser regression suite")).toBeLessThan(
+      verifyJob.indexOf("Linux skeleton visual regression")
+    );
+    expect(verifyJob.indexOf("Linux skeleton visual regression")).toBeLessThan(
+      verifyJob.indexOf("Full browser regression suite")
+    );
+    expect(verifyJob.match(/run: npm run test:e2e:full/g)).toHaveLength(1);
+    expect(verifyJob).toMatch(
+      /- name: Full browser regression suite\s+if: steps\.decision\.outputs\.verification_tier == 'full'\s+run: npm run test:e2e:full/
     );
 
     const diagnosticsUpload = section(

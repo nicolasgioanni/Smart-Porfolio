@@ -92,6 +92,7 @@ function resolveResearchSkeletonProfiles(items: readonly ResearchItem[]): Resear
 function ResearchAbstractSkeleton({ inset = false }: { inset?: boolean }) {
   return (
     <div className={["research-skeleton__abstract", inset ? "research-skeleton__abstract--inset" : null].filter(Boolean).join(" ")}>
+      <SkeletonBlock className="research-skeleton__media-title research-skeleton__abstract-title" height={14} width="58%" />
       <div className="research-skeleton__abstract-frame">
         <SkeletonBlock className="research-skeleton__abstract-surface" height="100%" radius={0} />
         <SkeletonBlock className="research-skeleton__abstract-hint" height={44} radius="999px" width={44} />
@@ -104,8 +105,8 @@ function ResearchVideoSkeleton() {
   return (
     <section className="research-skeleton__video">
       <div className="research-skeleton__video-header">
-        <SkeletonBlock height={14} width="46%" />
-        <SkeletonBlock height={12} width="28%" />
+        <SkeletonBlock className="research-skeleton__media-title research-skeleton__video-title" height={14} width="46%" />
+        <SkeletonBlock className="research-skeleton__video-duration" height={12} width="28%" />
       </div>
       <div className="research-skeleton__video-viewport">
         <SkeletonBlock className="research-skeleton__video-surface" height="100%" radius={0} />
