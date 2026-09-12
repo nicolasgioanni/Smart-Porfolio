@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { siteRoutes } from "@/components/navigation/siteRoutes";
-import { ExperienceShowcase } from "@/components/portfolio/ExperienceShowcase";
+import { siteRoutes } from "@/lib/routing/siteRoutes";
+import { ExperienceShowcase } from "@/components/portfolio/experience/ExperienceShowcase";
 import { createPageMetadata } from "@/lib/content/createPageMetadata";
 import { getPortfolioContent } from "@/lib/content/getPortfolioContent";
 import { resolveRouteHeaderContent, routeHeaderContent } from "@/lib/content/routeHeaderContent";
-import { selectExperienceDetailContent } from "@/lib/content/selectHomeContent";
+import { selectExperienceDetailContent } from "@/lib/content/selectDetailContent";
 
 const experienceHeader = routeHeaderContent[siteRoutes.experience];
 

@@ -6,8 +6,8 @@ import { GlassIconLink } from "@/components/glass/GlassIconLink";
 import { GlassLink } from "@/components/glass/GlassLink";
 import { createNavigationItems } from "@/components/navigation/navigationItems";
 import { SmartLink } from "@/components/navigation/SmartLink";
-import { isSiteRouteHref, siteRoutePaths } from "@/components/navigation/siteRoutes";
-import { PortfolioHero } from "@/components/portfolio/PortfolioHero";
+import { isSiteRouteHref, siteRoutePaths } from "@/lib/routing/siteRoutes";
+import { PortfolioHero } from "@/components/portfolio/home/PortfolioHero";
 
 vi.mock("next/link", () => ({
   default: ({ children, href, ...props }: AnchorHTMLAttributes<HTMLAnchorElement> & { href: string }) => (

@@ -93,7 +93,7 @@ Use the narrowest authoritative implementation source when documentation and cod
 | Static export and route implementation | `next.config.mjs` and `src/app/` |
 | Content types and runtime validation | `src/content/types.ts` and `src/lib/content/` |
 | Workbook download and structure | `scripts/fetchPortfolioContent.ts` and `scripts/lib/portfolioContentGeneration.ts` |
-| Home selection and section order | `src/lib/content/selectHomeContent.ts` and `src/components/portfolio/HomeOverview.tsx` |
+| Home selection and section order | `src/lib/content/selectHomeContent.ts` and `src/components/portfolio/home/HomeOverview.tsx` |
 | Themes, layout, motion, and styling | `src/components/`, `src/lib/theme/`, and `src/styles/` |
 | Contact request boundary | `functions/api/`, `functions/_shared/contact.ts`, and `src/components/contact/` |
 | Function routing and static headers | `public/_routes.json` and `public/_headers` |

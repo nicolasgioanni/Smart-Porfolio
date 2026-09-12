@@ -2,7 +2,7 @@ import { PageSkeleton } from "@/components/loading/PageSkeleton";
 import { projectSkeletonProfiles } from "@/components/loading/projectSkeletonProfiles";
 import { SkeletonBlock } from "@/components/loading/SkeletonBlock";
 import { SkeletonText } from "@/components/loading/SkeletonText";
-import { siteRoutes } from "@/components/navigation/siteRoutes";
+import { siteRoutes } from "@/lib/routing/siteRoutes";
 
 export function ProjectsPageSkeleton() {
   return (

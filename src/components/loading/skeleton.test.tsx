@@ -36,7 +36,7 @@ import { RouteHeaderSkeleton } from "@/components/loading/RouteHeaderSkeleton";
 import { RouteSkeleton, routeSkeletons, skeletonRoutePaths } from "@/components/loading/RouteSkeleton";
 import { SkeletonBlock } from "@/components/loading/SkeletonBlock";
 import { SkeletonText } from "@/components/loading/SkeletonText";
-import { siteRoutePaths, type SiteRoutePath } from "@/components/navigation/siteRoutes";
+import { siteRoutePaths, type SiteRoutePath } from "@/lib/routing/siteRoutes";
 import { getResearchVisibleResources } from "@/lib/content/researchNarratives";
 import { routeHeaderContent } from "@/lib/content/routeHeaderContent";
 

@@ -2,11 +2,11 @@ import { PageSkeleton } from "@/components/loading/PageSkeleton";
 import { RouteHeaderSkeleton } from "@/components/loading/RouteHeaderSkeleton";
 import { SkeletonBlock } from "@/components/loading/SkeletonBlock";
 import { SkeletonText } from "@/components/loading/SkeletonText";
-import { siteRoutes } from "@/components/navigation/siteRoutes";
+import { siteRoutes } from "@/lib/routing/siteRoutes";
 import type { ResearchItem } from "@/content/types";
 import { getPortfolioContent } from "@/lib/content/getPortfolioContent";
 import { getResearchVisibleResources } from "@/lib/content/researchNarratives";
-import { selectResearchDetailContent } from "@/lib/content/selectHomeContent";
+import { selectResearchDetailContent } from "@/lib/content/selectDetailContent";
 
 type ResearchSkeletonMedia = "abstract" | "video-and-abstract";
 

@@ -53,5 +53,37 @@ export default [
         ...globals.vitest
       }
     }
+  },
+  {
+    files: ["src/lib/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@/components/**", "@/features/**", "**/components/**", "**/features/**"],
+              message: "Library modules must not depend on presentation or feature modules."
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    files: ["src/components/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@/content/generated/**", "**/content/generated/**", "**/functions/**", "**/scripts/**"],
+              message: "Components must receive content through supported application and library boundaries."
+            }
+          ]
+        }
+      ]
+    }
   }
 ];

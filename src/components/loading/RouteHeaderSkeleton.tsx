@@ -1,4 +1,4 @@
-import type { SiteRoutePath } from "@/components/navigation/siteRoutes";
+import type { SiteRoutePath } from "@/lib/routing/siteRoutes";
 import { getPortfolioContent } from "@/lib/content/getPortfolioContent";
 import { resolveRouteHeaderContent, type RouteHeaderContentSource } from "@/lib/content/routeHeaderContent";
 
