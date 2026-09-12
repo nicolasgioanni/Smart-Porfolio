@@ -63,7 +63,7 @@ export async function readJsonBody(request: Request): Promise<ReadBodyResult> {
 export async function readContactApiRequest(
   request: Request,
   env: ContactEnv,
-  configurationIsValid: boolean
+  isConfigurationValid: () => boolean
 ): Promise<ContactApiRequest> {
   if (request.method !== "POST") {
     return {
@@ -72,7 +72,7 @@ export async function readContactApiRequest(
     };
   }
 
-  if (!configurationIsValid) {
+  if (!isConfigurationValid()) {
     return { kind: "rejected", response: jsonResponse(503, { ok: false, error: "service_unavailable" }) };
   }
 

@@ -17,7 +17,7 @@ interface PagesContext<Env> {
 export async function onRequest(context: PagesContext<ContactEnv>): Promise<Response> {
   const { request, env } = context;
 
-  const parsedRequest = await readContactApiRequest(request, env, hasRequiredTurnstileConfiguration(env));
+  const parsedRequest = await readContactApiRequest(request, env, () => hasRequiredTurnstileConfiguration(env));
   if (parsedRequest.kind === "rejected") return parsedRequest.response;
 
   const parsed = parseTurnstileVerificationPayload(parsedRequest.body);
