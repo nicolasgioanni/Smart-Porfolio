@@ -1,12 +1,13 @@
 import { hasUnsafeControlCharacters } from "../../../src/lib/contact/validation";
 import { parseHostnames } from "./config";
 import { CONTACT_ACTION, type ContactEnv, type TurnstileVerificationPayload, type TurnstileVerificationResult } from "./contracts";
-import { fetchWithTimeout } from "./transport";
+import { fetchWithJsonTimeout, type ReadJsonResponse } from "./transport";
 import { isPlainObject } from "./values";
 
 const TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 const TURNSTILE_TIMEOUT_MS = 5_000;
 const TURNSTILE_MAX_ATTEMPTS = 2;
+const TURNSTILE_MAX_RESPONSE_BYTES = 16_384;
 
 interface TurnstileResponse {
   success: boolean;
@@ -51,8 +52,14 @@ export async function verifyTurnstile(
   };
 
   for (let attempt = 0; attempt < TURNSTILE_MAX_ATTEMPTS; attempt += 1) {
-    const response = await fetchWithTimeout(TURNSTILE_VERIFY_URL, requestInit, TURNSTILE_TIMEOUT_MS);
-    const result = await classifyTurnstileAttempt(response, payload.submissionId, allowedHostnames);
+    const result =
+      (await fetchWithJsonTimeout(
+        TURNSTILE_VERIFY_URL,
+        requestInit,
+        TURNSTILE_TIMEOUT_MS,
+        TURNSTILE_MAX_RESPONSE_BYTES,
+        (response, readJson) => classifyTurnstileAttempt(response, readJson, payload.submissionId, allowedHostnames)
+      )) ?? { kind: "transient" as const };
     if (result.kind !== "transient") return result;
   }
 
@@ -60,11 +67,11 @@ export async function verifyTurnstile(
 }
 
 async function classifyTurnstileAttempt(
-  response: Response | undefined,
+  response: Response,
+  readJson: ReadJsonResponse,
   submissionId: string,
   allowedHostnames: string[]
 ): Promise<TurnstileAttemptResult> {
-  if (!response) return { kind: "transient" };
   if (!response.ok) {
     return response.status === 408 || response.status === 429 || response.status >= 500
       ? { kind: "transient" }
@@ -73,7 +80,7 @@ async function classifyTurnstileAttempt(
 
   let result: unknown;
   try {
-    result = await response.json();
+    result = await readJson();
   } catch {
     return { kind: "transient" };
   }

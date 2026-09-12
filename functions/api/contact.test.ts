@@ -16,6 +16,7 @@ import {
   type ContactRateLimitPreparedStatement,
   type ContactRateLimitResult
 } from "../_shared/contact";
+import { oversizedJsonResponse, stalledJsonResponse } from "../testSupport/streams";
 import { onRequest } from "./contact";
 
 const privateRecipient = "private-owner@example.net";
@@ -436,6 +437,36 @@ describe("email-domain validation", () => {
     await expect(validateEmailDomain("Avery@Example.co")).resolves.toEqual({ kind: "valid" });
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock.mock.calls[0]?.[0]).toContain("name=example.co&type=MX");
+    expect((fetchMock.mock.calls[0]?.[1] as RequestInit).redirect).toBe("error");
+  });
+
+  it("does not wait for cancellation when a DNS JSON body exceeds its cap", async () => {
+    let cancellationCount = 0;
+    const fetchMock = vi.fn().mockResolvedValueOnce(oversizedJsonResponse(() => {
+      cancellationCount += 1;
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(validateEmailDomain("avery@example.com")).resolves.toEqual({ kind: "unavailable" });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(cancellationCount).toBe(1);
+  });
+
+  it("bounds a stalled DNS JSON body by the same resolver deadline", async () => {
+    vi.useFakeTimers();
+    let cancellationCount = 0;
+    const fetchMock = vi.fn().mockResolvedValueOnce(stalledJsonResponse(() => {
+      cancellationCount += 1;
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const validation = validateEmailDomain("avery@example.com");
+    await vi.advanceTimersByTimeAsync(3_000);
+
+    await expect(validation).resolves.toEqual({ kind: "unavailable" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(cancellationCount).toBe(1);
   });
 
   it("rejects null MX and NXDOMAIN results", async () => {
@@ -670,6 +701,29 @@ describe("sequential contact delivery", () => {
       subject: "New contact request from Avery <script> Nguyen & Co."
     });
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes("siteverify"))).toBe(false);
+  });
+
+  it("uses only Resend status and cancels unread provider bodies", async () => {
+    let cancellationCount = 0;
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(mxResponse())
+      .mockResolvedValueOnce(stalledJsonResponse(() => {
+        cancellationCount += 1;
+      }, 202))
+      .mockResolvedValueOnce(stalledJsonResponse(() => {
+        cancellationCount += 1;
+      }, 202));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await invoke(requestFor(validPayload(), { cookie: await ticketCookie() }));
+
+    expect(response.status).toBe(200);
+    expect(cancellationCount).toBe(2);
+    const resendCalls = fetchMock.mock.calls.filter(([url]) => url === "https://api.resend.com/emails");
+    expect(resendCalls).toHaveLength(2);
+    expect((resendCalls[0]?.[1] as RequestInit).redirect).toBe("error");
+    expect((resendCalls[1]?.[1] as RequestInit).redirect).toBe("error");
   });
 
   it("does not contact the owner when visitor delivery is rejected", async () => {
