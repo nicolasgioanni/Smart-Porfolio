@@ -131,6 +131,62 @@ async function expectNoHorizontalOverflow(page: Page) {
     .toBe(true);
 }
 
+async function expectAbstractFrameGeometry(trigger: Locator) {
+  await trigger.scrollIntoViewIfNeeded();
+  const geometry = await trigger.evaluate((triggerElement) => {
+    const abstract = triggerElement.closest<HTMLElement>(".research-abstract");
+    const title = abstract?.querySelector<HTMLElement>(".research-abstract__title");
+    const thumbnail = triggerElement.querySelector<HTMLImageElement>(".research-abstract__thumbnail");
+    if (!abstract || !title || !thumbnail) throw new Error("The graphical abstract is missing its titled frame or thumbnail.");
+
+    const abstractBox = abstract.getBoundingClientRect();
+    const triggerBox = triggerElement.getBoundingClientRect();
+    const thumbnailBox = thumbnail.getBoundingClientRect();
+    const thumbnailStyles = getComputedStyle(thumbnail);
+    const titleBox = title.getBoundingClientRect();
+
+    return {
+      abstract: { clientWidth: abstract.clientWidth, scrollWidth: abstract.scrollWidth },
+      inset: {
+        bottom: abstractBox.bottom - triggerBox.bottom,
+        left: triggerBox.left - abstractBox.left,
+        right: abstractBox.right - triggerBox.right,
+        titleTop: titleBox.top - abstractBox.top - abstract.clientTop,
+        triggerTopAfterTitle: triggerBox.top - titleBox.bottom
+      },
+      rowGap: Number.parseFloat(getComputedStyle(abstract).rowGap),
+      thumbnail: {
+        height: thumbnailBox.height,
+        naturalHeight: thumbnail.naturalHeight,
+        naturalWidth: thumbnail.naturalWidth,
+        objectFit: thumbnailStyles.objectFit,
+        width: thumbnailBox.width
+      },
+      trigger: {
+        clientHeight: triggerElement.clientHeight,
+        clientWidth: triggerElement.clientWidth,
+        height: triggerBox.height,
+        scrollWidth: triggerElement.scrollWidth,
+        width: triggerBox.width
+      }
+    };
+  });
+
+  expect(geometry.inset.titleTop).toBeCloseTo(16, 0);
+  expect(geometry.inset.triggerTopAfterTitle).toBeCloseTo(geometry.rowGap, 0);
+  expect(geometry.inset.left).toBeCloseTo(16, 0);
+  expect(geometry.inset.right).toBeCloseTo(16, 0);
+  expect(geometry.inset.bottom).toBeGreaterThanOrEqual(16);
+  expect(geometry.trigger.width).toBeCloseTo(geometry.abstract.clientWidth - 32, 0);
+  expect(geometry.trigger.scrollWidth).toBeLessThanOrEqual(geometry.trigger.width + 1);
+  expect(geometry.abstract.scrollWidth).toBeLessThanOrEqual(geometry.abstract.clientWidth + 1);
+  expect(geometry.thumbnail.objectFit).toBe("contain");
+  expect(geometry.thumbnail.naturalWidth).toBeGreaterThan(0);
+  expect(geometry.thumbnail.naturalHeight).toBeGreaterThan(0);
+  expect(geometry.thumbnail.width).toBeCloseTo(geometry.trigger.clientWidth, 0);
+  expect(geometry.thumbnail.height).toBeCloseTo(geometry.trigger.clientHeight, 0);
+}
+
 async function expectVideoHeaderContained(project: Locator) {
   const geometry = await project.evaluate((projectElement) => {
     const visual = projectElement.querySelector<HTMLElement>(".research-project__visual");
@@ -536,6 +592,28 @@ test.describe("Research showcase", () => {
     await expect(trigger).toBeFocused();
   });
 
+  test("anchors full-width graphical abstracts to their local frame at every framing boundary", async ({ page }) => {
+    test.slow();
+
+    for (const viewport of [
+      { width: 1280, height: 900 },
+      { width: 1280, height: 600 },
+      { width: 921, height: 900 },
+      { width: 920, height: 900 },
+      { width: 320, height: 568 }
+    ]) {
+      await page.setViewportSize(viewport);
+      await page.goto("/research");
+      await settleLayout(page);
+
+      for (const trigger of await expectAuthoredAbstractTriggers(page)) {
+        await expectAbstractFrameGeometry(trigger);
+      }
+
+      await expectNoHorizontalOverflow(page);
+    }
+  });
+
   test("supports keyboard activation, focus trapping, scroll locking, and rapid reopen", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto("/research");
@@ -627,7 +705,7 @@ test.describe("Research showcase", () => {
 
     for (const abstractTrigger of abstractTriggers) {
       const thumbnail = abstractTrigger.locator(".research-abstract__thumbnail");
-      await abstractTrigger.scrollIntoViewIfNeeded();
+      await expectAbstractFrameGeometry(abstractTrigger);
       await expect(abstractTrigger).toHaveCSS("aspect-ratio", "16 / 9");
       await expect(thumbnail).toHaveCSS("object-fit", "contain");
       await expect
@@ -654,7 +732,7 @@ test.describe("Research showcase", () => {
 
       const abstractTriggers = await expectAuthoredAbstractTriggers(page);
       for (const trigger of abstractTriggers) {
-        await trigger.scrollIntoViewIfNeeded();
+        await expectAbstractFrameGeometry(trigger);
         await trigger.click();
 
         const dialog = page.getByRole("dialog", { name: /Graphical abstract for/ });
