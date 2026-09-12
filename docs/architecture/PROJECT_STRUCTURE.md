@@ -151,6 +151,7 @@ Shared dialog lifecycle and transition state live in `src/components/overlay/Mod
 | `src/lib/content/routeHeaderContent.ts` | Exhaustive canonical route-header registry and the sole generated Experience summary resolver shared by resolved pages and loaders. |
 | `src/lib/content/researchGraphicalAbstracts.ts` | Canonical graphical-abstract selection and checked-in fallback metadata for established Research IDs. |
 | `scripts/fetchPortfolioContent.ts` | Source-mode selection, anonymous workbook fetch, timeout and byte-cap enforcement, generated-file I/O, and command output. |
+| `scripts/lib/workbookArchive.ts` | XLSX resolved archive-entry and streamed decoded-byte limits enforced before ExcelJS parsing. |
 | `scripts/lib/portfolioContentGeneration.ts` | Workbook URL and payload checks, XLSX parsing, worksheet and row validation, formula extraction, hashing, and metadata finalization. |
 | `scripts/lib/pngMetadata.mjs` and `scripts/stripPngMetadata.mjs` | Strict, resource-bounded PNG chunk parsing and lossless removal of non-rendering text, EXIF, and provenance chunks from contributed research media. |
 
