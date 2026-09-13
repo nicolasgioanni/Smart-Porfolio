@@ -14,11 +14,19 @@ This documentation explains how Smart Portfolio is authored, built, tested, depl
 
 | Reader | Start with | Continue with |
 | --- | --- | --- |
-| Portfolio owner | [Local content editing](content/LOCAL_CONTENT_EDITING.md) | [Content pipeline](content/CONTENT_PIPELINE.md), [sheet schema](content/CONTENT_SHEET_SCHEMA.md), and [content replacement checklist](content/CONTENT_REPLACEMENT_CHECKLIST.md) |
-| Developer | [Architecture](architecture/ARCHITECTURE.md) | [Project structure](architecture/PROJECT_STRUCTURE.md), [agent workflow](development/AGENT_WORKFLOW.md), [local development](development/LOCAL_DEVELOPMENT.md), [testing](quality/TESTING.md), and [maintenance](development/MAINTENANCE.md) |
+| Portfolio owner or developer setting up a local copy | [Local development](development/LOCAL_DEVELOPMENT.md) | [Agent workflow](development/AGENT_WORKFLOW.md) for repository changes, or [local content editing](content/LOCAL_CONTENT_EDITING.md) for content updates |
+| Agent or automated contributor | [Agent workflow](development/AGENT_WORKFLOW.md) | [Local development](development/LOCAL_DEVELOPMENT.md), the selected repository skill, and [testing](quality/TESTING.md) |
 | Design contributor | [Design system](design/DESIGN_SYSTEM.md) | [Accessibility](design/ACCESSIBILITY.md), [animation guidelines](design/ANIMATION_GUIDELINES.md), and [skeleton loading guidelines](design/SKELETON_LOADING_GUIDELINES.md) |
-| Deployment operator | [Deployment](operations/DEPLOYMENT.md) | [Operations](operations/OPERATIONS.md), [testing](quality/TESTING.md), and [troubleshooting](development/TROUBLESHOOTING.md) |
+| Deployment operator restoring this service or adapting a fork | [Deployment](operations/DEPLOYMENT.md) | [Operations](operations/OPERATIONS.md), [testing](quality/TESTING.md), and [troubleshooting](development/TROUBLESHOOTING.md) |
 | Security reviewer | [Security](security/SECURITY.md) | [Contact system](security/CONTACT_SYSTEM.md), [architecture](architecture/ARCHITECTURE.md), and [security checklist](security/SECURITY_CHECKLIST.md) |
+
+## Dependency and setup contract
+
+1. Install a Node 22 release selected by [`.nvmrc`](../.nvmrc) that meets the minimum declared by `package.json`; the setup helper enforces that minimum.
+2. Use `npm ci` for a reproducible dependency installation. [`package-lock.json`](../package-lock.json) locks the exact dependency tree and must stay synchronized with [`package.json`](../package.json).
+3. Run the Windows `npm run setup:local` command or the cross-platform `npm run setup:local:node` command from [Local development](development/LOCAL_DEVELOPMENT.md). The helper creates an ignored `.env` from `.env.example`, installs dependencies when required, and prepares local content.
+
+This is an npm repository: `package.json`, `package-lock.json`, and `.nvmrc` are the dependency requirements. A separate `requirements.txt` would not be used by the application or CI.
 
 ## Start here
 

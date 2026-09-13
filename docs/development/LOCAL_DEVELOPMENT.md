@@ -4,17 +4,63 @@ Smart Portfolio uses Node.js, npm, Next.js App Router, a build-time CSV or XLSX 
 
 ## Prerequisites
 
+- Git, to clone the repository and create focused branches or worktrees.
 - Node.js 22.13 or newer. Node.js 22 matches `.nvmrc` and GitHub Actions.
 - npm.
 - PowerShell for the Windows convenience commands, or Node.js for the cross-platform equivalents.
 - Chromium installed through Playwright when running browser regressions.
 
-Clone the repository with its current slug:
+Follow the numbered [fresh-clone path](#fresh-clone-path) below to clone, prepare, run, and verify a local checkout.
 
-```powershell
-git clone https://github.com/nicolasgioanni/Smart-Porfolio.git
-cd Smart-Porfolio
-```
+## Dependency contract
+
+This is an npm project, so it does not use Python's `requirements.txt` convention.
+
+| File | Role |
+| --- | --- |
+| `.nvmrc` | Selects the supported Node.js major release: Node 22. |
+| `package.json` | Declares the supported Node.js minimum, direct dependencies, development tools, and project commands. |
+| `package-lock.json` | Locks the complete dependency tree consumed by `npm ci` locally and in GitHub Actions. |
+
+Use [npm ci](https://docs.npmjs.com/cli/v10/commands/npm-ci/) for a clean, reproducible install. It removes an existing `node_modules` directory and fails when the lockfile and manifest are out of sync; use `npm install` only when intentionally changing dependencies and commit the matching lockfile update.
+
+No Python runtime, global Next.js installation, or global Wrangler installation is required. `npm ci` installs both application dependencies and the pinned development dependencies used for builds, tests, content generation, Playwright, and Wrangler commands.
+
+## Fresh-clone path
+
+Use this small cross-platform path to confirm that a new checkout can build and run with local template content:
+
+1. Clone the repository and enter it:
+
+   ```bash
+   git clone https://github.com/nicolasgioanni/Smart-Porfolio.git
+   cd Smart-Porfolio
+   ```
+
+2. Prepare the checkout and explicitly generate the selected local content source:
+
+   ```bash
+   npm run setup:local:node -- --force-generate
+   ```
+
+   The helper creates the ignored `.env` when needed. Its blank workbook URL and `PORTFOLIO_REQUIRE_REMOTE_CONTENT=false` defaults select the checked-in templates, so no credentials are required for this static UI path.
+
+3. Start the static UI server and open the URL it prints:
+
+   ```bash
+   npm run dev:smart:node
+   ```
+
+   Confirm the home page and one detail route load, then stop the server with <kbd>Ctrl</kbd>+<kbd>C</kbd>.
+
+4. Install Chromium and run the routine pull-request gate:
+
+   ```bash
+   npx playwright install chromium
+   npm run verify:priority
+   ```
+
+Use `npm run dev:pages` only when testing the built export with local Pages Functions. Its additional development credentials and local D1 behavior are covered in [Complete contact-flow development](#complete-contact-flow-development).
 
 ## Automated setup
 
@@ -39,7 +85,7 @@ Setup performs the following work:
 5. Runs `npm ci` when the lockfile exists and installation is required.
 6. Generates content when the generated JSON is missing or older than a template.
 
-An existing `.env` is never overwritten.
+An existing `.env` is never overwritten. The [fresh-clone path](#fresh-clone-path) shows how to force an initial generation when a local source must be selected explicitly.
 
 Useful setup flags:
 
