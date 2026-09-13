@@ -6,6 +6,7 @@ export const siteRoutes = {
   recommendations: "/recommendations",
   resume: "/resume",
   contact: "/contact",
+  contactTerms: "/contact-terms",
   terms: "/terms",
   privacy: "/privacy",
   security: "/security"
@@ -23,6 +24,7 @@ export const siteRouteIndexing = {
   [siteRoutes.recommendations]: true,
   [siteRoutes.resume]: true,
   [siteRoutes.contact]: false,
+  [siteRoutes.contactTerms]: true,
   [siteRoutes.terms]: true,
   [siteRoutes.privacy]: true,
   [siteRoutes.security]: true

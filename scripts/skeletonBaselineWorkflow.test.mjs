@@ -122,7 +122,7 @@ describe("skeleton visual baseline capture workflow", () => {
     expect(workflow).not.toContain("--ignore-snapshots");
     expect(validation).toContain('baseline_root="tests/e2e/__screenshots__/linux"');
     expect(validation).toContain("-type f -name '*.png'");
-    expect(validation).toContain('"$png_count" != "23"');
+    expect(validation).toContain('"$png_count" != "25"');
     expect(upload).toContain(
       "name: skeleton-baselines-linux-${{ github.run_id }}-${{ github.run_attempt }}-${{ steps.candidate.outputs.sha }}"
     );

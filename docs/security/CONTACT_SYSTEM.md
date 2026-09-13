@@ -103,7 +103,9 @@ The progress UI uses steps `1` through `3`:
 2. Enter a required email address and message, plus an optional phone number.
 3. Review the request and accept both required acknowledgments.
 
-The first acknowledgment permits a response. The second covers the Terms, Privacy Notice, legitimate-inquiry confirmation, and prohibited-material restrictions. The message is limited to 500 characters. Send request remains disabled until both values are true.
+The first acknowledgment links to the [Contact & Communication Terms](../../src/app/contact-terms/page.tsx) and permits the inquiry-related email confirmation and replies, plus a manual call or text only when a phone number is supplied. The second covers the Terms, Privacy Notice, legitimate-inquiry confirmation, and prohibited-material restrictions. The message is limited to 500 characters. Send request remains disabled until both values are true.
+
+The implementation facts behind those terms are deliberately narrow: the visitor receipt is an automated Resend delivery, while any follow-up call or text is personally handled; the two booleans are validated per request, and no historical policy-version audit record is persisted. The notice reflects FTC guidance on [commercial-email compliance](https://www.ftc.gov/business-guidance/resources/can-spam-act-compliance-guide-business) and [recognizing and reporting spam texts](https://consumer.ftc.gov/articles/how-recognize-and-report-spam-text-messages) without treating a generic inquiry as categorically exempt from communications law.
 
 Draft contact values live only in React state. The contact form does not read or write local storage or session storage. The hidden `website` field is a honeypot. A direct `mailto:` link remains available when the form or delivery service cannot be used.
 

@@ -3,7 +3,7 @@ import { SkeletonBlock } from "@/components/loading/SkeletonBlock";
 import { SkeletonText } from "@/components/loading/SkeletonText";
 import { siteRoutes } from "@/lib/routing/siteRoutes";
 
-export type LegalSkeletonRoutePath = (typeof siteRoutes)["terms" | "privacy" | "security"];
+export type LegalSkeletonRoutePath = (typeof siteRoutes)["contactTerms" | "terms" | "privacy" | "security"];
 
 export type LegalSkeletonContentBlock =
   | {
@@ -21,6 +21,42 @@ export type LegalSkeletonSectionProfile = {
 };
 
 export const legalSkeletonProfiles = {
+  [siteRoutes.contactTerms]: [
+    { content: [{ rows: 4, type: "paragraph" }, { rows: 4, type: "paragraph" }], headingWidth: "42%" },
+    { content: [{ rows: 4, type: "paragraph" }, { rows: 4, type: "paragraph" }], headingWidth: "58%" },
+    {
+      content: [
+        { rows: 4, type: "paragraph" },
+        { rows: 3, type: "paragraph" },
+        { rows: 4, type: "paragraph" }
+      ],
+      headingWidth: "54%"
+    },
+    { content: [{ rows: 4, type: "paragraph" }, { rows: 4, type: "paragraph" }], headingWidth: "62%" },
+    { content: [{ rows: 5, type: "paragraph" }, { rows: 5, type: "paragraph" }], headingWidth: "56%" },
+    { content: [{ rows: 5, type: "paragraph" }, { rows: 5, type: "paragraph" }], headingWidth: "46%" },
+    { content: [{ rows: 5, type: "paragraph" }, { rows: 4, type: "paragraph" }], headingWidth: "62%" },
+    { content: [{ rows: 5, type: "paragraph" }, { rows: 4, type: "paragraph" }], headingWidth: "50%" },
+    {
+      content: [
+        { rows: 4, type: "paragraph" },
+        { rows: 4, type: "paragraph" },
+        { rows: 4, type: "paragraph" }
+      ],
+      headingWidth: "70%"
+    },
+    { content: [{ rows: 4, type: "paragraph" }, { rows: 4, type: "paragraph" }], headingWidth: "58%" },
+    { content: [{ rows: 4, type: "paragraph" }], headingWidth: "58%" },
+    {
+      content: [
+        { rows: 5, type: "paragraph" },
+        { rows: 4, type: "paragraph" },
+        { rows: 5, type: "paragraph" }
+      ],
+      headingWidth: "64%"
+    },
+    { content: [{ rows: 4, type: "paragraph" }, { rows: 4, type: "paragraph" }], headingWidth: "44%" }
+  ],
   [siteRoutes.terms]: [
     { content: [{ rows: 3, type: "paragraph" }, { rows: 2, type: "paragraph" }], headingWidth: "42%" },
     {
