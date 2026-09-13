@@ -108,7 +108,9 @@ describe("theme palette contract", () => {
     expect(palettes.light.get("--color-background")).toBe("#f8f4eb");
     expect(palettes.light.get("--color-text-strong")).toBe("#0b2942");
     expect(palettes.navy.get("--color-background")).toBe("#071423");
-    expect(palettes.navy.get("--color-accent")).toBe("#e1c58f");
+    expect(palettes.navy.get("--color-accent")).toBe("#f4f1ea");
+    expect(palettes.navy.get("--color-text-strong")).toBe("#fcfaf5");
+    expect(palettes.navy.get("--color-text-secondary")).toBe("#cecdc7");
     expect(palettes.dark.get("--color-background")).toBe("#0c0d10");
     expect(palettes.dark.get("--color-accent-warm")).toBe("#c3a6ff");
   });
@@ -135,12 +137,17 @@ describe("theme palette contract", () => {
     expect(palettes.dark.get("--color-glass-surface")).not.toBe(palettes.dark.get("--color-card-surface"));
   });
 
-  it("maintains readable text and primary actions on their solid palette layers", () => {
+  it("maintains readable text, links, and actions on their solid palette layers", () => {
     for (const palette of Object.values(palettes)) {
       const background = palette.get("--color-background")!;
 
       expect(contrastRatio(palette.get("--color-text-primary")!, background)).toBeGreaterThanOrEqual(4.5);
       expect(contrastRatio(palette.get("--color-text-secondary")!, background)).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(palette.get("--color-text-strong")!, background)).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(palette.get("--color-accent")!, background)).toBeGreaterThanOrEqual(4.5);
+      expect(
+        contrastRatio(palette.get("--color-accent-strong")!, palette.get("--color-glass-surface")!)
+      ).toBeGreaterThanOrEqual(4.5);
       expect(
         contrastRatio(
           palette.get("--color-control-border")!,
@@ -153,6 +160,15 @@ describe("theme palette contract", () => {
           palette.get("--color-primary-button-text")!,
           palette.get("--color-primary-button-surface")!
         )
+      ).toBeGreaterThanOrEqual(4.5);
+      expect(
+        contrastRatio(
+          palette.get("--hover-base-1-hover-text")!,
+          palette.get("--hover-base-1-hover-surface")!
+        )
+      ).toBeGreaterThanOrEqual(4.5);
+      expect(
+        contrastRatio(palette.get("--hover-base-1-inline-link-text")!, background)
       ).toBeGreaterThanOrEqual(4.5);
     }
   });

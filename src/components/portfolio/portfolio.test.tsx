@@ -516,7 +516,13 @@ describe("portfolio UI helpers", () => {
     };
 
     const { container } = render(
-      <ResearchList items={[item]} mode="overview" onToggle={() => undefined} openByProject={{}} />
+      <ResearchList
+        items={[item]}
+        mode="overview"
+        onToggle={() => undefined}
+        openDetail={null}
+        overlayEnabled
+      />
     );
 
     expect(container.querySelector(".research-project")).toHaveAttribute("id", "research-fragment");

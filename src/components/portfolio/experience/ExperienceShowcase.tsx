@@ -1,13 +1,14 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { ExperienceItem } from "@/content/types";
 import { GlassSurface } from "@/components/glass/GlassSurface";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { DetailDisclosureList } from "@/components/portfolio/shared/DetailDisclosureList";
 import { DetailLevelControl } from "@/components/portfolio/shared/DetailLevelControl";
 import { EmptyState } from "@/components/portfolio/shared/EmptyState";
+import { useDetailDisclosure } from "@/components/portfolio/shared/useDetailDisclosure";
 import type { DetailMode } from "@/lib/content/detailNarratives";
 import { getExperienceModeContent } from "@/lib/content/experienceNarratives";
 import { formatProfileOverviewDateRange } from "@/lib/content/profileOverview";
@@ -54,13 +55,12 @@ function isCurrentRole(item: ExperienceItem): boolean {
 
 export function ExperienceShowcase({ items, motionEnabled = true, summary }: ExperienceShowcaseProps) {
   const [mode, setMode] = useState<DetailMode>("overview");
-  const [openByRole, setOpenByRole] = useState<Record<string, string | undefined>>({});
+  const showcaseRef = useRef<HTMLDivElement>(null);
+  const { close, onFocusCapture, openDetail, toggle, usesNaturalFlow } = useDetailDisclosure(showcaseRef);
 
-  function toggleSection(itemId: string, sectionId: string) {
-    setOpenByRole((current) => ({
-      ...current,
-      [itemId]: current[itemId] === sectionId ? undefined : sectionId
-    }));
+  function changeMode(nextMode: DetailMode) {
+    setMode(nextMode);
+    close();
   }
 
   return (
@@ -68,13 +68,18 @@ export function ExperienceShowcase({ items, motionEnabled = true, summary }: Exp
       className="page-container--experience"
       description={summary}
       introAccessory={
-        items.length > 0 ? <DetailLevelControl contextLabel="Experience" mode={mode} onChange={setMode} /> : undefined
+        items.length > 0 ? <DetailLevelControl contextLabel="Experience" mode={mode} onChange={changeMode} /> : undefined
       }
       introVariant="panel"
       motionEnabled={motionEnabled}
       title={routeHeaderContent["/experience"].title}
     >
-      <div className="experience-showcase" data-motion={motionEnabled ? "enabled" : "disabled"}>
+      <div
+        className="experience-showcase"
+        data-motion={motionEnabled ? "enabled" : "disabled"}
+        onFocusCapture={onFocusCapture}
+        ref={showcaseRef}
+      >
         {items.length === 0 ? (
           <EmptyState message="Experience entries will appear here when content is available." />
         ) : (
@@ -143,8 +148,9 @@ export function ExperienceShowcase({ items, motionEnabled = true, summary }: Exp
                         idPrefix="experience"
                         itemId={item.id}
                         mode={mode}
-                        onToggle={(sectionId) => toggleSection(item.id, sectionId)}
-                        openSectionId={openByRole[item.id]}
+                        onToggle={(sectionId) => toggle(item.id, sectionId)}
+                        openSectionId={openDetail?.itemId === item.id ? openDetail.sectionId : undefined}
+                        overlayEnabled={!usesNaturalFlow}
                         sections={modeContent.sections}
                       />
                     </div>

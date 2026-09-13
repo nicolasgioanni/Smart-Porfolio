@@ -20,6 +20,7 @@ type ResearchCardProps = {
   onToggle: (sectionId: string) => void;
   openSectionId?: string;
   order: number;
+  overlayEnabled: boolean;
 };
 
 function getProjectTheme(itemId: string): string {
@@ -29,7 +30,7 @@ function getProjectTheme(itemId: string): string {
   return "default";
 }
 
-export function ResearchCard({ item, mode, onToggle, openSectionId, order }: ResearchCardProps) {
+export function ResearchCard({ item, mode, onToggle, openSectionId, order, overlayEnabled }: ResearchCardProps) {
   const modeContent = getResearchModeContent(item, mode);
   const displayTitle = getResearchDisplayTitle(item);
   const formalTitle = getResearchFormalTitle(item);
@@ -78,6 +79,7 @@ export function ResearchCard({ item, mode, onToggle, openSectionId, order }: Res
             mode={mode}
             onToggle={onToggle}
             openSectionId={openSectionId}
+            overlayEnabled={overlayEnabled}
             sections={modeContent.sections}
           />
         </div>
