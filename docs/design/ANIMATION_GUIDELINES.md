@@ -4,7 +4,7 @@ Motion is restrained, legible, and tied to comprehension or state. It must not d
 
 ## Preferred properties
 
-Animate `transform` and `opacity` first. Experience disclosure, recommendation disclosure, footer grid rows, and the small header island are explicit bounded exceptions. Do not introduce layout animation elsewhere without documenting why it communicates state better than an immediate change.
+Animate `transform` and `opacity` first. Experience disclosure, recommendation disclosure, footer grid rows, the small header island, and the measured Contact data-entry frame are explicit bounded exceptions. Do not introduce layout animation elsewhere without documenting why it communicates state better than an immediate change.
 
 ## Reduced motion
 
@@ -19,6 +19,12 @@ Keep this effect CSS-only and limited to opacity and transform. Do not add route
 ## Form validation feedback
 
 After each invalid Next or Review attempt, shake each invalid control and its validation message for `180ms` with `ease-in-out`, two iterations, and no more than `2px` of horizontal travel in either direction. Replay the shake for every invalid attempt even when the validation text has not changed. Under `prefers-reduced-motion: reduce`, disable the shake while preserving the error message, red field treatment, and focus behavior.
+
+## Contact step changes
+
+After verified entry, only the single live data-entry step fades in and settles upward over `8px` for `280ms` with the shared page-entry easing. Its frame snapshots the outgoing presentation height before Next, Review, or Back changes state, then performs one bounded height animation to the incoming step. This carries the normal-flow email fallback and contact-card boundary with the changing content without duplicating fields or scaling text. The frame releases its temporary height and clipping after completion, interruption, viewport change, document hiding, or unmount.
+
+The verification gate and its reserved Turnstile well do not participate. Reduced motion disables both the CSS entrance and height interpolation. Unavailable Web Animations support, hidden documents, and equal measurements apply only the next height immediately while retaining the CSS entrance when the browser supports it; existing focus and live-region behavior remains unchanged.
 
 ## Contact notifications
 
