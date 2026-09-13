@@ -55,6 +55,26 @@ describe("shared detail styles", () => {
     expect(accentDividerRule).toMatch(/left:\s*var\(--space-1\)/);
   });
 
+  it("clips disclosure grid motion outside the capped, keyboard-scrollable body", () => {
+    const clipRule = detailStyles.match(/\.detail-section__panel-clip\s*\{[^}]*}/s)?.[0] ?? "";
+    const scrollBaseRule = detailStyles.match(/\.detail-section__panel-scroll\s*\{[^}]*}/s)?.[0] ?? "";
+    const scrollRule =
+      detailStyles.match(
+        /@media \(min-width: 981px\)[\s\S]*?\.detail-list\[data-layout-mode="overlay"\] \.detail-section__panel-scroll\s*\{[^}]*}/
+      )?.[0] ?? "";
+    const focusRule = detailStyles.match(/\.detail-section__panel-scroll:focus-visible\s*\{[^}]*}/s)?.[0] ?? "";
+
+    expect(clipRule).toMatch(/min-height:\s*0/);
+    expect(clipRule).toMatch(/overflow:\s*hidden/);
+    expect(clipRule).not.toMatch(/max-block-size|overflow:\s*auto/);
+    expect(scrollBaseRule).toMatch(/min-block-size:\s*0/);
+    expect(scrollRule).toMatch(/max-block-size:\s*60dvh/);
+    expect(scrollRule).toMatch(/overflow-x:\s*hidden/);
+    expect(scrollRule).toMatch(/overflow-y:\s*auto/);
+    expect(scrollRule).toMatch(/overscroll-behavior:\s*contain/);
+    expect(focusRule).toMatch(/inset 0 0 0 2px var\(--color-canvas\), inset 0 0 0 5px var\(--color-focus-ring\)/);
+  });
+
   it("keeps full-card elevation exclusive to pointer hover", () => {
     const sharedAttentionRule =
       experienceStyles.match(/\.experience-card:hover,\s*\.experience-card:focus-within\s*\{[^}]*}/s)?.[0] ?? "";

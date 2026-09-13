@@ -5,9 +5,12 @@ import {
 } from "./cardFocusElevation";
 import { captureBrowserConsole, expectNoBrowserConsoleIssues } from "./browserConsole";
 import {
+  expectDetailPanelScrollportFocusVisible,
+  expectDetailPanelScrollportWithoutOverflow,
   expectStableDetailOverlay,
   getDetailOverlaySample,
   sampleDetailOverlay,
+  sampleDetailPanelScrollport,
   settleDetailPanelMotion,
   settleDetailOverlayMotion
 } from "./detailOverlay";
@@ -136,7 +139,7 @@ test.describe("Experience showcase", () => {
 
     await firstDisclosure.focus();
     await page.keyboard.press("Tab");
-    await expect(panel.locator(".detail-section__panel-clip")).toBeFocused();
+    await expect(panel.locator(".detail-section__panel-scroll")).toBeFocused();
     await page.keyboard.press("Tab");
     await expect(secondDisclosure).toBeFocused();
     await page.keyboard.press("Enter");
@@ -254,22 +257,33 @@ test.describe("Experience showcase", () => {
     if (!(await trigger.count())) return;
 
     const panel = page.locator(`#${await trigger.getAttribute("aria-controls")}`);
-    const clip = panel.locator(".detail-section__panel-clip");
+    const scrollport = panel.locator(".detail-section__panel-scroll");
     await trigger.scrollIntoViewIfNeeded();
     await trigger.focus();
     await page.keyboard.press("Enter");
     await page.keyboard.press("Tab");
-    await expect(clip).toBeFocused();
+    await expect(scrollport).toBeFocused();
+    await settleDetailPanelMotion(panel);
+    await expectDetailPanelScrollportFocusVisible(scrollport);
 
-    const scrollable = await clip.evaluate((element) => element.scrollHeight > element.clientHeight);
+    const scrollable = await scrollport.evaluate((element) => element.scrollHeight > element.clientHeight);
     expect(scrollable).toBe(true);
     await page.keyboard.press("PageDown");
-    await expect.poll(() => clip.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+    await expect.poll(() => scrollport.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
     await expect(trigger).toHaveAttribute("aria-expanded", "true");
 
     await page.keyboard.press("Escape");
     await expect(trigger).toHaveAttribute("aria-expanded", "false");
     await expect(trigger).toBeFocused();
+
+    await trigger.press("Enter");
+    await expect(trigger).toHaveAttribute("aria-expanded", "true");
+    await page.setViewportSize({ width: 1100, height: 180 });
+    await expect(scrollport).toHaveCSS("max-height", "108px");
+    await page.setViewportSize({ width: 980, height: 900 });
+    await expect(trigger).toHaveAttribute("aria-expanded", "false");
+    await expect(panel).toHaveCSS("position", "static");
+    await expect(scrollport).toHaveCSS("max-height", "none");
   });
 
   test("defers large-viewport touch focus dismissal until the outside button activates", async ({ browser }) => {
@@ -347,16 +361,18 @@ test.describe("Experience showcase", () => {
     await settleDetailOverlayMotion(root);
     const collapsedLayout = await getDetailOverlaySample(root, selectors);
     const openingSamples = sampleDetailOverlay(root, selectors);
+    const openingScrollportSamples = sampleDetailPanelScrollport(panel);
     await activeTrigger.focus();
     await page.keyboard.press("Enter");
     await expect(activeTrigger).toHaveAttribute("aria-expanded", "true");
     await expect(panel).toHaveAttribute("aria-hidden", "false");
     await expect(panel).not.toHaveAttribute("inert");
     await expect(panel).toHaveCSS("position", "absolute");
-    await expect(panel.locator(".detail-section__panel-clip")).toHaveCSS("max-height", "540px");
+    await expect(panel.locator(".detail-section__panel-scroll")).toHaveCSS("max-height", "540px");
     await expect(panel).toHaveCSS("background-image", "none");
     await expect(panel).toHaveCSS("background-color", /^rgb\(/);
     expectStableDetailOverlay(await openingSamples, collapsedLayout);
+    expectDetailPanelScrollportWithoutOverflow(await openingScrollportSamples);
 
     const activePanelId = await panel.getAttribute("id");
     expect(activePanelId).toBeTruthy();
@@ -388,31 +404,43 @@ test.describe("Experience showcase", () => {
     expect(overlayHit.panelOwnsTop).toBe(true);
 
     const closingSamples = sampleDetailOverlay(root, selectors);
+    const closingScrollportSamples = sampleDetailPanelScrollport(panel);
     await activeTrigger.press("Escape");
     await expect(activeTrigger).toHaveAttribute("aria-expanded", "false");
     await expect(activeTrigger).toBeFocused();
     await expect(panel).toHaveAttribute("aria-hidden", "true");
     await expect(panel).toHaveAttribute("inert", "");
     expectStableDetailOverlay(await closingSamples, collapsedLayout);
+    expectDetailPanelScrollportWithoutOverflow(await closingScrollportSamples);
 
     await activeTrigger.press("Enter");
     await expect(activeTrigger).toHaveAttribute("aria-expanded", "true");
+    const rapidScrollportSamples = sampleDetailPanelScrollport(panel);
     await activeTrigger.press("Escape");
     await activeTrigger.press("Enter");
     await expect(activeTrigger).toHaveAttribute("aria-expanded", "true");
     await settleDetailPanelMotion(panel);
     await expect(activeTrigger.locator("..")).toHaveAttribute("data-visual-state", "open");
+    expectDetailPanelScrollportWithoutOverflow(await rapidScrollportSamples);
 
     const globalSwitchIndex = expandableIndexes.find((index) => index !== activeIndex);
     if (globalSwitchIndex !== undefined) {
       const switchTrigger = cards.nth(globalSwitchIndex).locator("button.detail-section__trigger").first();
+      const switchPanel = page.locator(`#${await switchTrigger.getAttribute("aria-controls")}`);
 
       await switchTrigger.focus();
       const switchingSamples = sampleDetailOverlay(root, selectors);
+      const switchingScrollportSamples = Promise.all([
+        sampleDetailPanelScrollport(panel),
+        sampleDetailPanelScrollport(switchPanel)
+      ]);
       await page.keyboard.press("Enter");
       await expect(activeTrigger).toHaveAttribute("aria-expanded", "false");
       await expect(switchTrigger).toHaveAttribute("aria-expanded", "true");
       expectStableDetailOverlay(await switchingSamples, collapsedLayout);
+      for (const samples of await switchingScrollportSamples) {
+        expectDetailPanelScrollportWithoutOverflow(samples);
+      }
 
       const switchTriggerId = await switchTrigger.getAttribute("id");
       expect(switchTriggerId).toBeTruthy();

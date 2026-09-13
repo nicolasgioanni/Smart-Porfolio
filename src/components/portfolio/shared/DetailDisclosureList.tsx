@@ -157,27 +157,29 @@ function DetailDisclosure({
         ref={panelRef}
         role="region"
       >
-        <div
-          aria-labelledby={titleId}
-          className="detail-section__panel-clip"
-          role="group"
-          tabIndex={panelIsInteractive ? 0 : -1}
-        >
-          <div className="detail-section__panel-content">
-            {section.details.length > 0 ? (
-              <ul className="detail-section__details">
-                {section.details.map((detail) => (
-                  <li key={detail}>{detail}</li>
-                ))}
-              </ul>
-            ) : null}
-            {section.tools && section.tools.length > 0 ? (
-              <ul aria-label={`${section.title} tools`} className="detail-section__tools">
-                {section.tools.map((tool) => (
-                  <li key={tool}>{tool}</li>
-                ))}
-              </ul>
-            ) : null}
+        <div className="detail-section__panel-clip">
+          <div
+            aria-labelledby={titleId}
+            className="detail-section__panel-scroll"
+            role="group"
+            tabIndex={panelIsInteractive ? 0 : -1}
+          >
+            <div className="detail-section__panel-content">
+              {section.details.length > 0 ? (
+                <ul className="detail-section__details">
+                  {section.details.map((detail) => (
+                    <li key={detail}>{detail}</li>
+                  ))}
+                </ul>
+              ) : null}
+              {section.tools && section.tools.length > 0 ? (
+                <ul aria-label={`${section.title} tools`} className="detail-section__tools">
+                  {section.tools.map((tool) => (
+                    <li key={tool}>{tool}</li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>
