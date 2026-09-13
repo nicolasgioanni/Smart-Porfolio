@@ -3,6 +3,7 @@ import path from "node:path";
 import type { AnchorHTMLAttributes } from "react";
 import { render, screen } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import ContactTermsPage, { generateMetadata as generateContactTermsMetadata } from "@/app/contact-terms/page";
 import PrivacyPage, { generateMetadata as generatePrivacyMetadata } from "@/app/privacy/page";
 import SecurityPage, { generateMetadata as generateSecurityMetadata } from "@/app/security/page";
 import TermsPage, { generateMetadata as generateTermsMetadata } from "@/app/terms/page";
@@ -13,7 +14,8 @@ const siteSettingsTemplate = readFileSync(
   path.join(process.cwd(), "src", "content", "templates", "site_settings.csv"),
   "utf8"
 );
-const sharedEffectiveDate = resolveLegalEffectiveDate(getPortfolioContent().siteSettings.legalEffectiveDate);
+const termsEffectiveDate = resolveLegalEffectiveDate("2026-09-13");
+const securityEffectiveDate = resolveLegalEffectiveDate(getPortfolioContent().siteSettings.legalEffectiveDate);
 
 vi.mock("next/link", () => ({
   default: ({ children, href, ...props }: AnchorHTMLAttributes<HTMLAnchorElement> & { href: string }) => (
@@ -56,8 +58,8 @@ describe("legal document routes", () => {
     expect(introModule).toHaveTextContent("How portfolio information may be used, verified, and attributed.");
     expect(introModule).not.toContainElement(effectiveDate);
     expect(effectiveDate?.querySelector("time")).toBeInTheDocument();
-    expect(effectiveDate?.querySelector("time")).toHaveAttribute("datetime", sharedEffectiveDate.iso);
-    expect(effectiveDate?.querySelector("time")).toHaveTextContent(sharedEffectiveDate.label);
+    expect(effectiveDate?.querySelector("time")).toHaveAttribute("datetime", termsEffectiveDate.iso);
+    expect(effectiveDate?.querySelector("time")).toHaveTextContent(termsEffectiveDate.label);
     expect(effectiveDate).toHaveClass("legal-document__effective-date");
     expect(
       screen.getByText(/Employment, education, credentials, metrics, authorship, project status, and availability/).closest("p")
@@ -65,7 +67,31 @@ describe("legal document routes", () => {
       "Employment, education, credentials, metrics, authorship, project status, and availability should be independently confirmed through Nicolas Gioanni at ngioanni@uw.edu and, where appropriate, the relevant institution or organization before being relied upon for a material decision."
     );
     expect(screen.getByRole("link", { name: "Privacy Notice" })).toHaveAttribute("href", "/privacy");
-    expect(screen.getByText(/contact form asks visitors to acknowledge this Notice/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Contact & Communication Terms" })).toHaveAttribute("href", "/contact-terms");
+  });
+
+  it("publishes contact communication choices, limits, and links without changing contact processing", () => {
+    render(<ContactTermsPage />);
+
+    const title = screen.getByRole("heading", { level: 1, name: "Contact & Communication Terms" });
+    const introModule = title.closest(".page-intro__surface");
+    const effectiveDate = screen.getByText(/Effective date:/).closest("p");
+
+    expect(introModule).toHaveClass("glass-surface", "glass-surface--strong");
+    expect(introModule).toHaveTextContent("Conditions for contact requests, replies, communication costs, and responsible use.");
+    expect(effectiveDate?.querySelector("time")).toHaveAttribute("datetime", "2026-09-13");
+    expect(effectiveDate?.querySelector("time")).toHaveTextContent("September 13, 2026");
+    expect(screen.getByRole("heading", { name: "What communication you request" })).toBeInTheDocument();
+    expect(screen.getByText(/automated email confirmation and permits email replies and reasonable follow-up/)).toBeInTheDocument();
+    expect(screen.getByText(/manually placed call or a personally composed text/)).toBeInTheDocument();
+    expect(screen.getByText(/does not authorize marketing campaigns/)).toBeInTheDocument();
+    expect(screen.getByText(/best-effort intention, not a guaranteed response time/)).toBeInTheDocument();
+    expect(screen.getByText(/does not by itself establish an NDA, legal privilege/)).toBeInTheDocument();
+    expect(screen.getByText(/Nothing in these Terms excludes or limits liability for fraud/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "contact form" })).toHaveAttribute("href", "/contact");
+    expect(screen.getByRole("link", { name: "Site Terms & Accuracy Notice" })).toHaveAttribute("href", "/terms");
+    expect(screen.getAllByRole("link", { name: "Privacy Notice" })[0]).toHaveAttribute("href", "/privacy");
+    expect(screen.getAllByRole("link", { name: "Security & Responsible Disclosure Notice" })[0]).toHaveAttribute("href", "/security");
   });
 
   it("discloses active contact processing, providers, retention, theme storage, and the correction channel", () => {
@@ -155,8 +181,8 @@ describe("legal document routes", () => {
     expect(introModule).not.toContainElement(effectiveDate);
     expect(effectiveDate).toHaveClass("legal-document__effective-date");
     expect(effectiveDate?.querySelector("time")).toBeInTheDocument();
-    expect(effectiveDate?.querySelector("time")).toHaveAttribute("datetime", sharedEffectiveDate.iso);
-    expect(effectiveDate?.querySelector("time")).toHaveTextContent(sharedEffectiveDate.label);
+    expect(effectiveDate?.querySelector("time")).toHaveAttribute("datetime", securityEffectiveDate.iso);
+    expect(effectiveDate?.querySelector("time")).toHaveTextContent(securityEffectiveDate.label);
     expect(screen.getByText(/public portfolio pages are statically generated/)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Contact submission safeguards" })).toBeInTheDocument();
     expect(screen.getByText(/renders a visible Turnstile gate/)).toBeInTheDocument();
@@ -201,6 +227,7 @@ describe("legal document routes", () => {
       absolute: "Nicolas Gioanni | Site Terms & Accuracy Notice"
     });
     expect(generatePrivacyMetadata().title).toEqual({ absolute: "Nicolas Gioanni | Privacy Notice" });
+    expect(generateContactTermsMetadata().title).toEqual({ absolute: "Nicolas Gioanni | Contact & Communication Terms" });
     expect(generateSecurityMetadata().title).toEqual({
       absolute: "Nicolas Gioanni | Security & Responsible Disclosure"
     });

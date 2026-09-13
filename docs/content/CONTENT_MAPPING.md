@@ -192,7 +192,7 @@ Home and detail cards both display the unchanged `full_quote`, recommender name,
 | `license_name`, `license_url` | Footer license resource when both are populated. |
 | `repository_url` | Preferred footer source-code destination. |
 | `legal_contact_email` | Footer contact email, with profile email fallback. |
-| `legal_effective_date` | Shared security and terms notice date. The Privacy Notice keeps a component-owned revision date beside its implementation-specific disclosure copy. |
+| `legal_effective_date` | Security notice date. The Terms, Contact Terms, and Privacy Notice keep component-owned revision dates beside their route copy. |
 | `hosting_provider_name`, `hosting_privacy_url` | Privacy and hosting notice content. |
 
 The footer's notice labels, internal notice routes, descriptive text, and closing statement are component-owned. The footer always includes the contact form, adds contact email when available, and conditionally adds repository and license resources.

@@ -16,6 +16,7 @@ vi.mock("@/lib/content/getPortfolioContent", () => ({
   })
 }));
 import LoadingContact from "@/app/contact/loading";
+import LoadingContactTerms from "@/app/contact-terms/loading";
 import LoadingExperience from "@/app/experience/loading";
 import LoadingHome from "@/app/loading";
 import LoadingPrivacy from "@/app/privacy/loading";
@@ -48,6 +49,7 @@ const routeLoadingComponents = {
   "/recommendations": LoadingRecommendations,
   "/resume": LoadingResume,
   "/contact": LoadingContact,
+  "/contact-terms": LoadingContactTerms,
   "/terms": LoadingTerms,
   "/privacy": LoadingPrivacy,
   "/security": LoadingSecurity
@@ -177,6 +179,7 @@ describe("skeleton components", () => {
     expect(routeHeaderContent["/experience"]).toMatchObject({ accessory: "detail-level", placement: "embedded", title: "Experience" });
     expect(routeHeaderContent["/research"]).toMatchObject({ accessory: "detail-level", placement: "embedded", title: "Applied AI Research" });
     expect(routeHeaderContent["/terms"].eyebrow).toBe("Site notice");
+    expect(routeHeaderContent["/contact-terms"].title).toBe("Contact & Communication Terms");
 
     const { container } = render(<RouteHeaderSkeleton pathname="/security" />);
     const skeleton = container.querySelector(".route-header-skeleton");
@@ -231,6 +234,21 @@ describe("skeleton components", () => {
 
   it("keeps shared legal sections route-faithful through registered row profiles", () => {
     const expectedLegalContentShapes = {
+      "/contact-terms": [
+        ["paragraph", "paragraph"],
+        ["paragraph", "paragraph"],
+        ["paragraph", "paragraph", "paragraph"],
+        ["paragraph", "paragraph"],
+        ["paragraph", "paragraph"],
+        ["paragraph", "paragraph"],
+        ["paragraph", "paragraph"],
+        ["paragraph", "paragraph"],
+        ["paragraph", "paragraph", "paragraph"],
+        ["paragraph", "paragraph"],
+        ["paragraph"],
+        ["paragraph", "paragraph", "paragraph"],
+        ["paragraph", "paragraph"]
+      ],
       "/terms": [
         ["paragraph", "paragraph"],
         ["paragraph", "paragraph", "paragraph"],
@@ -261,16 +279,19 @@ describe("skeleton components", () => {
       ]
     } as const;
     const expectedListItemCounts = {
+      "/contact-terms": [],
       "/terms": [],
       "/privacy": [],
       "/security": [4, 6]
     } as const;
     const expectedParagraphRowTotals = {
+      "/contact-terms": [8, 8, 11, 8, 10, 10, 9, 9, 12, 8, 4, 14, 8],
       "/terms": [5, 8, 8, 3, 7, 4, 2],
       "/privacy": [9, 15, 5, 51, 6, 16, 5, 3],
       "/security": [13, 34, 4, 4, 3, 3, 2]
     } as const;
     const expectedListItemRows = {
+      "/contact-terms": [],
       "/terms": [],
       "/privacy": [],
       "/security": [
@@ -281,7 +302,7 @@ describe("skeleton components", () => {
 
     expect(Object.keys(legalSkeletonProfiles)).toEqual(Object.keys(expectedLegalContentShapes));
 
-    for (const pathname of ["/terms", "/privacy", "/security"] as const) {
+    for (const pathname of ["/contact-terms", "/terms", "/privacy", "/security"] as const) {
       const profile = legalSkeletonProfiles[pathname];
       const { container, unmount } = render(<RouteSkeleton pathname={pathname} />);
       const renderedSections = Array.from(container.querySelectorAll(".legal-skeleton__section"));

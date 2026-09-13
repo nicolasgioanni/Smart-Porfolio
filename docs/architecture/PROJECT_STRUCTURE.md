@@ -97,6 +97,7 @@ Every route under `src/app/` is compatible with the Next.js static export. Clien
 | `/recommendations` | `src/app/recommendations/page.tsx` | Recommendation list or configured empty state | Conditional |
 | `/resume` | `src/app/resume/page.tsx` | Private resume request instructions without a published file | Yes |
 | `/contact` | `src/app/contact/page.tsx` | Static form shell that calls the isolated contact Functions | No, footer only |
+| `/contact-terms` | `src/app/contact-terms/page.tsx` | Contact and communication terms | No, footer only |
 | `/privacy` | `src/app/privacy/page.tsx` | Privacy notice | No, footer only |
 | `/terms` | `src/app/terms/page.tsx` | Terms and accuracy notice | No, footer only |
 | `/security` | `src/app/security/page.tsx` | Security and responsible disclosure notice | No, footer only |

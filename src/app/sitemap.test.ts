@@ -14,7 +14,7 @@ describe("sitemap static metadata", () => {
 
     expect(urls).toEqual(approvedUrls);
     expect(new Set(urls).size).toBe(urls.length);
-    expect(urls).toHaveLength(9);
+    expect(urls).toHaveLength(10);
 
     for (const urlValue of urls) {
       const url = new URL(urlValue);
@@ -26,7 +26,7 @@ describe("sitemap static metadata", () => {
 
     expect(sitemap).toContain('<?xml version="1.0" encoding="UTF-8"?>');
     expect(sitemap).toContain('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">');
-    expect(urls.join("\n")).not.toMatch(/contact|\/api\/|content-version|artifact-integrity|pages\.dev|www\./);
+    expect(urls.join("\n")).not.toMatch(/(?:^|\/)contact(?:$|\/)|\/api\/|content-version|artifact-integrity|pages\.dev|www\./);
     expect(sitemap).not.toMatch(/<priority>|<changefreq>|<lastmod>/);
   });
 });

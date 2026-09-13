@@ -87,6 +87,39 @@ for (const width of [1280, 390, 320]) {
   }
 }
 
+test("opens contact terms in a new tab without changing a reviewed contact request", async ({ page }) => {
+  await page.route("**/api/contact/verify", (route) =>
+    route.fulfill({ body: JSON.stringify({ ok: true }), contentType: "application/json", status: 200 })
+  );
+  await page.goto("/contact");
+  await settleLayout(page);
+  await page.getByRole("button", { name: "Complete test security check" }).press("Enter");
+  await expect(page.getByRole("heading", { level: 2, name: "Tell me your name" })).toBeFocused();
+  await page.getByLabel("First name").fill("Avery");
+  await page.getByLabel("Last name").fill("Nguyen");
+  await page.getByRole("button", { exact: true, name: "Next" }).press("Enter");
+  await page.getByLabel("Email address").fill("avery@example.com");
+  await page.getByRole("textbox", { name: /^Message/ }).fill("Please contact me about a professional opportunity.");
+  await page.getByRole("button", { name: "Review" }).press("Enter");
+
+  const acknowledgments = page.getByRole("checkbox");
+  await acknowledgments.nth(0).check();
+  const termsLink = page.getByRole("link", { name: "Contact & Communication Terms (opens in a new tab)" });
+  await expect(termsLink).toHaveAttribute("rel", "noopener noreferrer");
+  const popupPromise = page.waitForEvent("popup");
+  await termsLink.click();
+  const popup = await popupPromise;
+  await expect(popup).toHaveURL(/\/contact-terms$/);
+  await expect(popup.getByRole("heading", { level: 1, name: "Contact & Communication Terms" })).toBeVisible();
+  await popup.close();
+
+  await expect(page.getByRole("heading", { level: 2, name: "Review your request" })).toBeVisible();
+  await expect(acknowledgments.nth(0)).toBeChecked();
+  await expect(acknowledgments.nth(1)).not.toBeChecked();
+  await expect(page.getByText("avery@example.com", { exact: true })).toBeVisible();
+  await expect(page.getByText("Please contact me about a professional opportunity.", { exact: true })).toBeVisible();
+});
+
 test("keeps stacked notifications readable, fixed, dismissible, and bounded on a short touch viewport", async ({ browser, baseURL }) => {
   const context = await browser.newContext({ baseURL, viewport: { width: 360, height: 300 }, hasTouch: true });
   // Use the regular page fixture's provider helper in this touch-enabled context.

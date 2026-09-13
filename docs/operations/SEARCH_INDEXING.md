@@ -26,9 +26,10 @@ The central route registry classifies every visitor page into exactly one indexi
 4. `/projects`
 5. `/recommendations`
 6. `/resume`
-7. `/terms`
-8. `/privacy`
-9. `/security`
+7. `/contact-terms`
+8. `/terms`
+9. `/privacy`
+10. `/security`
 
 `/contact` is the only non-indexable visitor route. It remains crawlable and emits `noindex, follow`, allowing Google to read the directive and follow its links. It is deliberately absent from the sitemap but is not blocked by `robots.txt`. The directive is an indexing policy, not an access-control boundary.
 
@@ -84,6 +85,7 @@ Check these production URLs after the deployment completes:
 - `https://nicolasmgioanni.dev/projects`
 - `https://nicolasmgioanni.dev/recommendations`
 - `https://nicolasmgioanni.dev/resume`
+- `https://nicolasmgioanni.dev/contact-terms`
 - `https://nicolasmgioanni.dev/terms`
 - `https://nicolasmgioanni.dev/privacy`
 - `https://nicolasmgioanni.dev/security`

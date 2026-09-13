@@ -79,8 +79,8 @@ jobs:
           baseline_root="tests/e2e/__screenshots__/linux"
           png_count="$(find "$baseline_root" -type f -name '*.png' -print | wc -l)"
 
-          if [[ "$png_count" != "23" ]]; then
-            echo "Expected exactly 23 Linux skeleton baseline PNGs under $baseline_root; found $png_count."
+          if [[ "$png_count" != "25" ]]; then
+            echo "Expected exactly 25 Linux skeleton baseline PNGs under $baseline_root; found $png_count."
             exit 1
           fi
 
