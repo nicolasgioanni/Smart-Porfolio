@@ -11,6 +11,11 @@ import {
   settleDetailPanelMotion,
   settleDetailOverlayMotion
 } from "./detailOverlay";
+import {
+  expectConnectedDetailSurfaceAcrossPalettes,
+  expectConnectedDetailSurfaceResponsiveBoundary,
+  expectReducedMotionConnectedDetailSurface
+} from "./detailConnectedSurface";
 import { settleLayout } from "./settleLayout";
 import { selectThemeWithChooser } from "./themePreference";
 
@@ -492,6 +497,26 @@ test.describe("Experience showcase", () => {
         expect(nextFollowingTop).toBeGreaterThan(followingTop + 1);
       }
     }
+  });
+
+  test("keeps the final evidence row as one connected card surface", async ({ page }) => {
+    test.slow();
+
+    const hasDetail = await expectConnectedDetailSurfaceAcrossPalettes(page, {
+      cardSelector: "article.experience-card",
+      pathname: "/experience"
+    });
+    if (!hasDetail) return;
+
+    await expectConnectedDetailSurfaceResponsiveBoundary(page, {
+      cardSelector: "article.experience-card",
+      pathname: "/experience"
+    });
+
+    await expectReducedMotionConnectedDetailSurface(page, {
+      cardSelector: "article.experience-card",
+      pathname: "/experience"
+    });
   });
 
   test("removes evidence-panel motion in reduced-motion mode", async ({ page }) => {
