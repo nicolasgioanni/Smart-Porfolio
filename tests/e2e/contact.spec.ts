@@ -52,10 +52,12 @@ for (const width of [1280, 390, 320]) {
       await triggerContactChallenge(page, "shrink");
       expect(await gateGeometry(page)).toEqual(geometry);
       await page.getByRole("button", { name: "Run check again" }).press("Enter");
+      await expect(page.locator(".contact-turnstile__status-row [role=status]")).toBeFocused();
       expect(await gateGeometry(page)).toEqual(geometry);
       await triggerContactChallenge(page, "error");
       expect(await gateGeometry(page)).toEqual(geometry);
       await page.getByRole("button", { name: "Run check again" }).press("Enter");
+      await expect(page.locator(".contact-turnstile__status-row [role=status]")).toBeFocused();
 
       await challenge.press("Enter");
       await expect(page.locator(".contact-gate-status")).toHaveAttribute("data-status", "verifying");
@@ -71,10 +73,13 @@ for (const width of [1280, 390, 320]) {
       await page.clock.install({ time: new Date("2026-09-12T12:00:00Z") });
       await page.clock.pauseAt(new Date("2026-09-12T13:00:00Z"));
       releaseResponse = undefined;
+      const verifiedWidgetRenderId = await challenge.getAttribute("data-render-id");
+      if (!verifiedWidgetRenderId) throw new Error("Expected the test Turnstile widget render ID.");
       await challenge.press("Enter");
       await expect.poll(() => Boolean(releaseResponse)).toBe(true);
       releaseResponse!();
       await expect(page.locator(".contact-gate-status")).toHaveAttribute("data-status", "verified");
+      await expect(challenge).toHaveAttribute("data-render-id", verifiedWidgetRenderId);
       expect(await gateGeometry(page)).toEqual(geometry);
       await page.getByRole("button", { name: "Continue" }).press("Enter");
       await expect(page.getByRole("heading", { name: "Tell me your name" })).toBeFocused();
