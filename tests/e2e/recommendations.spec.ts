@@ -167,7 +167,7 @@ function geometriesOverlap(active: RecommendationGeometry, candidate: Recommenda
 async function getExpandableSlotIndexes(slots: Locator): Promise<number[]> {
   return slots.evaluateAll((elements) =>
     elements.flatMap((element, index) =>
-      element.querySelector(".recommendation-expandable__toggle") ? [index] : []
+      element.querySelector('[data-can-expand="true"] .recommendation-expandable__toggle') ? [index] : []
     )
   );
 }
