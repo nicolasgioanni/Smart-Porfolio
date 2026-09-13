@@ -14,6 +14,11 @@ import {
   settleDetailPanelMotion,
   settleDetailOverlayMotion
 } from "./detailOverlay";
+import {
+  expectConnectedDetailSurfaceAcrossPalettes,
+  expectConnectedDetailSurfaceResponsiveBoundary,
+  expectReducedMotionConnectedDetailSurface
+} from "./detailConnectedSurface";
 import { settleLayout } from "./settleLayout";
 import { reloadWithStoredTheme } from "./themePreference";
 
@@ -1097,6 +1102,26 @@ test.describe("Research showcase", () => {
         expect(nextFollowingTop).toBeGreaterThan(followingTop + 1);
       }
     }
+  });
+
+  test("keeps the final evidence row as one connected project surface", async ({ page }) => {
+    test.slow();
+
+    const hasDetail = await expectConnectedDetailSurfaceAcrossPalettes(page, {
+      cardSelector: "article.research-project",
+      pathname: "/research"
+    });
+    if (!hasDetail) return;
+
+    await expectConnectedDetailSurfaceResponsiveBoundary(page, {
+      cardSelector: "article.research-project",
+      pathname: "/research"
+    });
+
+    await expectReducedMotionConnectedDetailSurface(page, {
+      cardSelector: "article.research-project",
+      pathname: "/research"
+    });
   });
 
   test("keeps expanded projects at rest after focus and scrolling in every palette", async ({ page }) => {
