@@ -20,6 +20,10 @@ Keep this effect CSS-only and limited to opacity and transform. Do not add route
 
 After each invalid Next or Review attempt, shake each invalid control and its validation message for `180ms` with `ease-in-out`, two iterations, and no more than `2px` of horizontal travel in either direction. Replay the shake for every invalid attempt even when the validation text has not changed. Under `prefers-reduced-motion: reduce`, disable the shake while preserving the error message, red field treatment, and focus behavior.
 
+## Contact notifications
+
+The contact body portal enters from 8 pixels above with a 200ms opacity/transform animation. Cards use 10-pixel peeks and small 1.00/0.98/0.96 scales, expanding into measured separate rows through 200ms transforms. Dismissal fades and travels up 8 pixels over 200ms. Reserve stack geometry immediately; do not animate the contact form or surrounding page to accommodate notifications. Reduced motion disables these animations and removes dismissed cards immediately. Independent notification countdowns pause during hover, focus, touch-expanded reading, and document hiding. The verification well separately reserves widget/status/recovery space so provider lifecycle changes never move the surrounding gate.
+
 ## Home role rotation
 
 The desktop Home role uses a fixed-height, overflow-hidden window sized for the widest configured role so neither the line nor surrounding layout shifts. Server rendering and initial hydration show the first configured engineer role. Its hard clipping edge keeps text sharp. Do not animate `filter` or text blur.
