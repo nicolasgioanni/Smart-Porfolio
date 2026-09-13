@@ -62,11 +62,16 @@ describe("DetailDisclosureList", () => {
     const { rerender } = renderList("evidence");
     const trigger = screen.getByRole("button", { name: /Evidence/i });
     const panel = screen.getByRole("region", { name: "Evidence" });
+    const title = trigger.querySelector(".detail-section__title");
 
     expect(trigger).toHaveAttribute("aria-expanded", "true");
     expect(panel).toHaveAttribute("aria-hidden", "false");
     expect(panel).not.toHaveAttribute("inert");
-    expect(panel.querySelector(".detail-section__panel-clip")).toHaveAttribute("tabindex", "0");
+    expect(panel.querySelector(".detail-section__panel-clip")).not.toHaveAttribute("tabindex");
+    expect(title).not.toBeNull();
+    expect(panel.querySelector(".detail-section__panel-scroll")).toHaveAttribute("aria-labelledby", title!.id);
+    expect(panel.querySelector(".detail-section__panel-scroll")).toHaveAttribute("role", "group");
+    expect(panel.querySelector(".detail-section__panel-scroll")).toHaveAttribute("tabindex", "0");
 
     rerender(
       <DetailDisclosureList
@@ -82,7 +87,7 @@ describe("DetailDisclosureList", () => {
     expect(trigger).toHaveAttribute("aria-expanded", "false");
     expect(panel).toHaveAttribute("aria-hidden", "true");
     expect(panel).toHaveAttribute("inert");
-    expect(panel.querySelector(".detail-section__panel-clip")).toHaveAttribute("tabindex", "-1");
+    expect(panel.querySelector(".detail-section__panel-scroll")).toHaveAttribute("tabindex", "-1");
     expect(panel.closest(".detail-section")).toHaveAttribute("data-visual-state", "closing");
   });
 
