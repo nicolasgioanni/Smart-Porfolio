@@ -4,6 +4,13 @@ import {
   findFirstExpandableCard
 } from "./cardFocusElevation";
 import { captureBrowserConsole, expectNoBrowserConsoleIssues } from "./browserConsole";
+import {
+  expectStableDetailOverlay,
+  getDetailOverlaySample,
+  sampleDetailOverlay,
+  settleDetailPanelMotion,
+  settleDetailOverlayMotion
+} from "./detailOverlay";
 import { settleLayout } from "./settleLayout";
 import { reloadWithStoredTheme } from "./themePreference";
 
@@ -49,6 +56,42 @@ async function expectAuthoredAbstractTriggers(page: Page): Promise<Locator[]> {
   return triggers;
 }
 
+async function expectResolverOwnedMediaTitles(projects: Locator) {
+  const media = projects.locator(".research-video, .research-abstract");
+  const mediaCount = await media.count();
+
+  if (mediaCount === 0) return;
+
+  await expect(media.locator(".research-media-title")).toHaveCount(mediaCount);
+  for (let index = 0; index < mediaCount; index += 1) {
+    const currentMedia = media.nth(index);
+    const title = currentMedia.locator(".research-media-title");
+    const geometry = await title.evaluate((titleElement) => {
+      const mediaElement = titleElement.closest<HTMLElement>(".research-video, .research-abstract");
+      const mediumSelector = mediaElement?.classList.contains("research-video")
+        ? ".research-video__viewport"
+        : ".research-abstract__trigger";
+      const renderedMedium = mediaElement?.querySelector<HTMLElement>(mediumSelector);
+      const titleBox = titleElement.getBoundingClientRect();
+      const mediumBox = renderedMedium?.getBoundingClientRect();
+
+      return {
+        clientWidth: titleElement.clientWidth,
+        mediumTop: mediumBox?.top,
+        scrollWidth: titleElement.scrollWidth,
+        text: titleElement.textContent?.trim() ?? "",
+        titleBottom: titleBox.bottom
+      };
+    });
+
+    expect(geometry.text.split(/\s+/).filter(Boolean).length).toBeGreaterThanOrEqual(1);
+    expect(geometry.text.split(/\s+/).filter(Boolean).length).toBeLessThanOrEqual(3);
+    expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.clientWidth + 1);
+    expect(geometry.mediumTop).toBeDefined();
+    expect(geometry.titleBottom).toBeLessThanOrEqual(geometry.mediumTop! + 1);
+  }
+}
+
 async function expectDetailModeSwitch(page: Page) {
   const modeControl = page.locator(".detail-mode-control");
   const modeSwitch = modeControl.locator(".detail-mode-switch");
@@ -88,20 +131,84 @@ async function expectNoHorizontalOverflow(page: Page) {
     .toBe(true);
 }
 
+async function expectAbstractFrameGeometry(trigger: Locator) {
+  await trigger.scrollIntoViewIfNeeded();
+  const geometry = await trigger.evaluate((triggerElement) => {
+    const abstract = triggerElement.closest<HTMLElement>(".research-abstract");
+    const title = abstract?.querySelector<HTMLElement>(".research-abstract__title");
+    const thumbnail = triggerElement.querySelector<HTMLImageElement>(".research-abstract__thumbnail");
+    if (!abstract || !title || !thumbnail) throw new Error("The graphical abstract is missing its titled frame or thumbnail.");
+
+    const abstractBox = abstract.getBoundingClientRect();
+    const triggerBox = triggerElement.getBoundingClientRect();
+    const thumbnailBox = thumbnail.getBoundingClientRect();
+    const thumbnailStyles = getComputedStyle(thumbnail);
+    const titleBox = title.getBoundingClientRect();
+
+    return {
+      abstract: { clientWidth: abstract.clientWidth, scrollWidth: abstract.scrollWidth },
+      inset: {
+        bottom: abstractBox.bottom - triggerBox.bottom,
+        left: triggerBox.left - abstractBox.left,
+        right: abstractBox.right - triggerBox.right,
+        titleTop: titleBox.top - abstractBox.top - abstract.clientTop,
+        triggerTopAfterTitle: triggerBox.top - titleBox.bottom
+      },
+      rowGap: Number.parseFloat(getComputedStyle(abstract).rowGap),
+      thumbnail: {
+        height: thumbnailBox.height,
+        naturalHeight: thumbnail.naturalHeight,
+        naturalWidth: thumbnail.naturalWidth,
+        objectFit: thumbnailStyles.objectFit,
+        width: thumbnailBox.width
+      },
+      trigger: {
+        clientHeight: triggerElement.clientHeight,
+        clientWidth: triggerElement.clientWidth,
+        height: triggerBox.height,
+        scrollWidth: triggerElement.scrollWidth,
+        width: triggerBox.width
+      }
+    };
+  });
+
+  expect(geometry.inset.titleTop).toBeCloseTo(16, 0);
+  expect(geometry.inset.triggerTopAfterTitle).toBeCloseTo(geometry.rowGap, 0);
+  expect(geometry.inset.left).toBeCloseTo(16, 0);
+  expect(geometry.inset.right).toBeCloseTo(16, 0);
+  expect(geometry.inset.bottom).toBeGreaterThanOrEqual(16);
+  expect(geometry.trigger.width).toBeCloseTo(geometry.abstract.clientWidth - 32, 0);
+  expect(geometry.trigger.scrollWidth).toBeLessThanOrEqual(geometry.trigger.width + 1);
+  expect(geometry.abstract.scrollWidth).toBeLessThanOrEqual(geometry.abstract.clientWidth + 1);
+  expect(geometry.thumbnail.objectFit).toBe("contain");
+  expect(geometry.thumbnail.naturalWidth).toBeGreaterThan(0);
+  expect(geometry.thumbnail.naturalHeight).toBeGreaterThan(0);
+  expect(geometry.thumbnail.width).toBeCloseTo(geometry.trigger.clientWidth, 0);
+  expect(geometry.thumbnail.height).toBeCloseTo(geometry.trigger.clientHeight, 0);
+}
+
 async function expectVideoHeaderContained(project: Locator) {
   const geometry = await project.evaluate((projectElement) => {
     const visual = projectElement.querySelector<HTMLElement>(".research-project__visual");
     const header = projectElement.querySelector<HTMLElement>(".research-video__header");
-    const actions = projectElement.querySelector<HTMLElement>(".research-video__actions");
-    const controls = Array.from(actions?.querySelectorAll<HTMLElement>("a, button") ?? []);
-    if (!visual || !header || !actions) throw new Error("CytoCV video header is missing its containment elements.");
+    const toolbar = projectElement.querySelector<HTMLElement>(".research-video__toolbar");
+    const controls = Array.from(toolbar?.querySelectorAll<HTMLElement>("a, button") ?? []);
+    if (!visual || !header || !toolbar) throw new Error("CytoCV video toolbar is missing its containment elements.");
 
     const visualBox = visual.getBoundingClientRect();
     return {
-      actions: { clientWidth: actions.clientWidth, scrollWidth: actions.scrollWidth },
+      toolbar: { clientWidth: toolbar.clientWidth, scrollWidth: toolbar.scrollWidth },
       controls: controls.map((control) => {
         const box = control.getBoundingClientRect();
-        return { left: box.left, right: box.right };
+        const iconBox = control.querySelector<SVGSVGElement>("svg")?.getBoundingClientRect();
+        return {
+          height: box.height,
+          iconHeight: iconBox?.height,
+          iconWidth: iconBox?.width,
+          left: box.left,
+          right: box.right,
+          width: box.width
+        };
       }),
       header: { clientWidth: header.clientWidth, scrollWidth: header.scrollWidth },
       visual: { left: visualBox.left, right: visualBox.right }
@@ -109,12 +216,35 @@ async function expectVideoHeaderContained(project: Locator) {
   });
 
   expect(geometry.header.scrollWidth).toBeLessThanOrEqual(geometry.header.clientWidth + 1);
-  expect(geometry.actions.scrollWidth).toBeLessThanOrEqual(geometry.actions.clientWidth + 1);
+  expect(geometry.toolbar.scrollWidth).toBeLessThanOrEqual(geometry.toolbar.clientWidth + 1);
   expect(geometry.controls).toHaveLength(3);
   for (const control of geometry.controls) {
+    expect(control.width).toBeGreaterThanOrEqual(44);
+    expect(control.height).toBeGreaterThanOrEqual(44);
+    expect(control.iconWidth).toBe(18);
+    expect(control.iconHeight).toBe(18);
     expect(control.left).toBeGreaterThanOrEqual(geometry.visual.left - 1);
     expect(control.right).toBeLessThanOrEqual(geometry.visual.right + 1);
   }
+}
+
+async function expectToolbarAboveNativeControls(toolbar: Locator, player: Locator) {
+  const [toolbarBox, playerBox] = await Promise.all([toolbar.boundingBox(), player.boundingBox()]);
+  expect(toolbarBox).not.toBeNull();
+  expect(playerBox).not.toBeNull();
+  expect(toolbarBox!.x).toBeGreaterThanOrEqual(playerBox!.x);
+  expect(toolbarBox!.y).toBeGreaterThanOrEqual(playerBox!.y);
+  expect(toolbarBox!.x + toolbarBox!.width).toBeLessThanOrEqual(playerBox!.x + playerBox!.width + 1);
+  expect(toolbarBox!.y + toolbarBox!.height).toBeLessThanOrEqual(playerBox!.y + playerBox!.height - 44 + 1);
+}
+
+async function focusWithKeyboard(page: Page, target: Locator, limit: number) {
+  for (let step = 0; step < limit; step += 1) {
+    if (await target.evaluate((element) => document.activeElement === element)) return;
+    await page.keyboard.press("Tab");
+  }
+
+  await expect(target).toBeFocused();
 }
 
 async function getFirstProjectWithDisclosure(projects: Locator): Promise<Locator | undefined> {
@@ -126,6 +256,16 @@ async function getFirstProjectWithDisclosure(projects: Locator): Promise<Locator
   }
 
   return undefined;
+}
+
+async function getExpandableResearchProjectIndexes(projects: Locator): Promise<number[]> {
+  const indexes: number[] = [];
+
+  for (let index = 0; index < (await projects.count()); index += 1) {
+    if (await projects.nth(index).locator("button.detail-section__trigger").count()) indexes.push(index);
+  }
+
+  return indexes;
 }
 
 async function expectRenderedCardIdentity(project: Locator, index: number) {
@@ -253,6 +393,7 @@ test.describe("Research showcase", () => {
       await expect(page.locator(".detail-mode-control")).toHaveCount(0);
       return;
     }
+    await expectResolverOwnedMediaTitles(projects);
     await expectDetailModeSwitch(page);
 
     for (let index = 0; index < (await projects.count()); index += 1) {
@@ -301,7 +442,12 @@ test.describe("Research showcase", () => {
 
     if (await disclosures.count() > 1) {
       const secondDisclosure = disclosures.nth(1);
-      await secondDisclosure.click();
+      await firstDisclosure.focus();
+      await page.keyboard.press("Tab");
+      await expect(panel.locator(".detail-section__panel-clip")).toBeFocused();
+      await page.keyboard.press("Tab");
+      await expect(secondDisclosure).toBeFocused();
+      await page.keyboard.press("Enter");
       await expect(firstDisclosure).toHaveAttribute("aria-expanded", "false");
       await expect(secondDisclosure).toHaveAttribute("aria-expanded", "true");
       await secondDisclosure.press("Escape");
@@ -312,6 +458,84 @@ test.describe("Research showcase", () => {
       await expect(firstDisclosure).toHaveAttribute("aria-expanded", "false");
       await expect(firstDisclosure).toBeFocused();
     }
+  });
+
+  test("clips each desktop visual column at the card's outer corners", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto("/research");
+    await settleLayout(page);
+
+    const projects = await expectResearchProjectsOrEmptyState(page);
+    if (!projects) return;
+
+    const clipping = await projects.evaluateAll((cards) =>
+      cards.map((card) => {
+        const visual = card.querySelector<HTMLElement>(".research-project__visual");
+        if (!visual) throw new Error("Research project is missing its visual column.");
+
+        const cardRect = card.getBoundingClientRect();
+        const visualRect = visual.getBoundingClientRect();
+        const styles = getComputedStyle(visual);
+        return {
+          card: { left: cardRect.left, right: cardRect.right },
+          corners: {
+            bottomLeft: parseFloat(styles.borderBottomLeftRadius),
+            bottomRight: parseFloat(styles.borderBottomRightRadius),
+            topLeft: parseFloat(styles.borderTopLeftRadius),
+            topRight: parseFloat(styles.borderTopRightRadius)
+          },
+          overflow: styles.overflow,
+          side: card.getAttribute("data-visual-side"),
+          visual: { left: visualRect.left, right: visualRect.right }
+        };
+      })
+    );
+
+    for (const project of clipping) {
+      expect(project.overflow).toBe("hidden");
+      if (project.side === "left") {
+        expect(Math.abs(project.visual.left - project.card.left)).toBeCloseTo(1, 1);
+        expect(project.corners.topLeft).toBeGreaterThan(0);
+        expect(project.corners.bottomLeft).toBeGreaterThan(0);
+        expect(project.corners.topRight).toBe(0);
+        expect(project.corners.bottomRight).toBe(0);
+      } else {
+        expect(Math.abs(project.visual.right - project.card.right)).toBeCloseTo(1, 1);
+        expect(project.corners.topRight).toBeGreaterThan(0);
+        expect(project.corners.bottomRight).toBeGreaterThan(0);
+        expect(project.corners.topLeft).toBe(0);
+        expect(project.corners.bottomLeft).toBe(0);
+      }
+    }
+  });
+
+  test("keeps a long desktop evidence body keyboard-scrollable before Escape restores its summary", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 180 });
+    await page.goto("/research");
+    await settleLayout(page);
+
+    const projects = await expectResearchProjectsOrEmptyState(page);
+    if (!projects) return;
+    const trigger = projects.locator("button.detail-section__trigger").first();
+    if (!(await trigger.count())) return;
+
+    const panel = page.locator(`#${await trigger.getAttribute("aria-controls")}`);
+    const clip = panel.locator(".detail-section__panel-clip");
+    await trigger.scrollIntoViewIfNeeded();
+    await trigger.focus();
+    await page.keyboard.press("Enter");
+    await page.keyboard.press("Tab");
+    await expect(clip).toBeFocused();
+
+    const scrollable = await clip.evaluate((element) => element.scrollHeight > element.clientHeight);
+    expect(scrollable).toBe(true);
+    await page.keyboard.press("PageDown");
+    await expect.poll(() => clip.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+    await expect(trigger).toHaveAttribute("aria-expanded", "true");
+
+    await page.keyboard.press("Escape");
+    await expect(trigger).toHaveAttribute("aria-expanded", "false");
+    await expect(trigger).toBeFocused();
   });
 
   test("opens the three authored graphical abstracts in a fitted dialog and restores the exact trigger", async ({ page }) => {
@@ -368,6 +592,28 @@ test.describe("Research showcase", () => {
     await expect(trigger).toBeFocused();
   });
 
+  test("anchors full-width graphical abstracts to their local frame at every framing boundary", async ({ page }) => {
+    test.slow();
+
+    for (const viewport of [
+      { width: 1280, height: 900 },
+      { width: 1280, height: 600 },
+      { width: 921, height: 900 },
+      { width: 920, height: 900 },
+      { width: 320, height: 568 }
+    ]) {
+      await page.setViewportSize(viewport);
+      await page.goto("/research");
+      await settleLayout(page);
+
+      for (const trigger of await expectAuthoredAbstractTriggers(page)) {
+        await expectAbstractFrameGeometry(trigger);
+      }
+
+      await expectNoHorizontalOverflow(page);
+    }
+  });
+
   test("supports keyboard activation, focus trapping, scroll locking, and rapid reopen", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto("/research");
@@ -408,7 +654,7 @@ test.describe("Research showcase", () => {
     await expect(dialog).toBeVisible();
     await closeButton.click();
     await expect(trigger).toHaveAttribute("aria-expanded", "false");
-    await trigger.dispatchEvent("click");
+    await trigger.click();
     await expect(trigger).toHaveAttribute("aria-expanded", "true");
     await expect(dialog).toBeVisible();
     await page.keyboard.press("Escape");
@@ -430,6 +676,7 @@ test.describe("Research showcase", () => {
       await expect(page.locator(".detail-mode-control")).toHaveCount(0);
       return;
     }
+    await expectResolverOwnedMediaTitles(projects);
 
     const modeControl = page.locator(".detail-mode-control");
     const modeSwitch = modeControl.locator(".detail-mode-switch");
@@ -458,7 +705,7 @@ test.describe("Research showcase", () => {
 
     for (const abstractTrigger of abstractTriggers) {
       const thumbnail = abstractTrigger.locator(".research-abstract__thumbnail");
-      await abstractTrigger.scrollIntoViewIfNeeded();
+      await expectAbstractFrameGeometry(abstractTrigger);
       await expect(abstractTrigger).toHaveCSS("aspect-ratio", "16 / 9");
       await expect(thumbnail).toHaveCSS("object-fit", "contain");
       await expect
@@ -485,7 +732,7 @@ test.describe("Research showcase", () => {
 
       const abstractTriggers = await expectAuthoredAbstractTriggers(page);
       for (const trigger of abstractTriggers) {
-        await trigger.scrollIntoViewIfNeeded();
+        await expectAbstractFrameGeometry(trigger);
         await trigger.click();
 
         const dialog = page.getByRole("dialog", { name: /Graphical abstract for/ });
@@ -619,6 +866,211 @@ test.describe("Research showcase", () => {
     }
   });
 
+  test("keeps research evidence overlays out of flow through real keyboard and pointer interactions", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto("/research");
+    await settleLayout(page);
+
+    const projects = await expectResearchProjectsOrEmptyState(page);
+    if (!projects) return;
+
+    const expandableIndexes = await getExpandableResearchProjectIndexes(projects);
+    test.skip(expandableIndexes.length === 0, "Overlay regression requires an expandable Research project.");
+
+    const projectCount = await projects.count();
+    const activeIndex =
+      expandableIndexes.find((index) => index > 0 && index < projectCount - 1) ??
+      expandableIndexes.find((index) => index < projectCount - 1);
+    test.skip(activeIndex === undefined, "Overlay spill regression requires a following Research project.");
+    if (activeIndex === undefined) return;
+
+    const activeProject = projects.nth(activeIndex);
+    const activeTrigger = activeProject.locator("button.detail-section__trigger").last();
+    const panel = page.locator(`#${await activeTrigger.getAttribute("aria-controls")}`);
+    const root = page.locator("main");
+    const selectors = { card: "article.research-project", resource: ".research-project__resources" };
+
+    await activeTrigger.scrollIntoViewIfNeeded();
+    await page.mouse.move(0, 0);
+    await settleDetailOverlayMotion(root);
+    const collapsedLayout = await getDetailOverlaySample(root, selectors);
+    const openingSamples = sampleDetailOverlay(root, selectors);
+    await activeTrigger.focus();
+    await page.keyboard.press("Enter");
+    await expect(activeTrigger).toHaveAttribute("aria-expanded", "true");
+    await expect(panel).toHaveAttribute("aria-hidden", "false");
+    await expect(panel).toHaveCSS("position", "absolute");
+    await expect(panel).toHaveCSS("background-image", "none");
+    await expect(panel).toHaveCSS("background-color", /^rgb\(/);
+    expectStableDetailOverlay(await openingSamples, collapsedLayout);
+
+    const activePanelId = await panel.getAttribute("id");
+    expect(activePanelId).toBeTruthy();
+    if (!activePanelId) return;
+
+    const overlayHit = await page.evaluate((panelId) => {
+      const panel = document.getElementById(panelId);
+      const project = panel?.closest<HTMLElement>("article.research-project");
+      if (!panel || !project) throw new Error("The active Research panel is missing its project.");
+
+      const panelRect = panel.getBoundingClientRect();
+      const candidates = Array.from(
+        document.querySelectorAll<HTMLElement>("article.research-project, .research-project__resources")
+      ).filter((candidate) => candidate !== project);
+      for (const candidate of candidates) {
+        const candidateRect = candidate.getBoundingClientRect();
+        const left = Math.max(panelRect.left, candidateRect.left, 0);
+        const right = Math.min(panelRect.right, candidateRect.right, window.innerWidth);
+        const top = Math.max(panelRect.top, candidateRect.top, 0);
+        const bottom = Math.min(panelRect.bottom, candidateRect.bottom, window.innerHeight);
+        if (right - left < 8 || bottom - top < 8) continue;
+
+        const topElement = document.elementFromPoint(left + 4, top + 4);
+        return { overlap: true, panelOwnsTop: Boolean(topElement && panel.contains(topElement)) };
+      }
+
+      return { overlap: false, panelOwnsTop: false };
+    }, activePanelId);
+    expect(overlayHit.overlap).toBe(true);
+    expect(overlayHit.panelOwnsTop).toBe(true);
+
+    const selectableText = panel.locator(".detail-section__details li").first();
+    const textLine = await selectableText.evaluate((element) => {
+      const text = Array.from(element.childNodes).find((node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim());
+      if (!text) throw new Error("The active evidence detail has no text node to select.");
+
+      const range = document.createRange();
+      range.selectNodeContents(text);
+      const rect = range.getClientRects()[0];
+      if (!rect) throw new Error("The active evidence detail has no selectable text geometry.");
+      return { height: rect.height, left: rect.left, top: rect.top, width: rect.width };
+    });
+    await page.mouse.move(textLine.left + 4, textLine.top + textLine.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(textLine.left + Math.max(16, textLine.width - 4), textLine.top + textLine.height / 2);
+    await page.mouse.up();
+    await expect.poll(() => page.evaluate(() => document.getSelection()?.type === "Range")).toBe(true);
+    await expect(activeTrigger).toHaveAttribute("aria-expanded", "true");
+
+    await page.locator("main").click({ position: { x: 5, y: 5 } });
+    await expect(activeTrigger).toHaveAttribute("aria-expanded", "false");
+    await activeTrigger.press("Enter");
+    await panel.locator(".detail-section__panel-content").click();
+    await expect(activeTrigger).toHaveAttribute("aria-expanded", "false");
+
+    await activeTrigger.press("Enter");
+    await expect(activeTrigger).toHaveAttribute("aria-expanded", "true");
+    const resource = projects.nth(Math.max(0, activeIndex - 1)).locator('a.research-project__resource[target="_blank"]').first();
+    if (await resource.count()) {
+      await resource.click();
+      await expect(activeTrigger).toHaveAttribute("aria-expanded", "false");
+      await activeTrigger.press("Enter");
+      await page.mouse.move(0, 0);
+      await settleDetailOverlayMotion(root);
+    }
+    const closingSamples = sampleDetailOverlay(root, selectors);
+    await activeTrigger.press("Escape");
+    await expect(activeTrigger).toHaveAttribute("aria-expanded", "false");
+    await expect(activeTrigger).toBeFocused();
+    expectStableDetailOverlay(await closingSamples, collapsedLayout);
+
+    await activeTrigger.press("Enter");
+    await activeTrigger.press("Escape");
+    await activeTrigger.press("Enter");
+    await expect(activeTrigger).toHaveAttribute("aria-expanded", "true");
+    await settleDetailPanelMotion(panel);
+    await expect(activeTrigger.locator("..")).toHaveAttribute("data-visual-state", "open");
+
+    const globalSwitchIndex = expandableIndexes.find((index) => index !== activeIndex);
+    if (globalSwitchIndex !== undefined) {
+      const switchTrigger = projects.nth(globalSwitchIndex).locator("button.detail-section__trigger").first();
+
+      await switchTrigger.focus();
+      const switchingSamples = sampleDetailOverlay(root, selectors);
+      await page.keyboard.press("Enter");
+      await expect(activeTrigger).toHaveAttribute("aria-expanded", "false");
+      await expect(switchTrigger).toHaveAttribute("aria-expanded", "true");
+      expectStableDetailOverlay(await switchingSamples, collapsedLayout);
+
+      const switchTriggerId = await switchTrigger.getAttribute("id");
+      expect(switchTriggerId).toBeTruthy();
+      if (!switchTriggerId) throw new Error("The switched Research disclosure needs an id.");
+      await activeTrigger.evaluate((button, openTriggerId) => {
+        document.documentElement.removeAttribute("data-detail-expanded-at-outside-activation");
+        button.addEventListener(
+          "click",
+          () => {
+            document.documentElement.dataset.detailExpandedAtOutsideActivation =
+              document.getElementById(openTriggerId)?.getAttribute("aria-expanded") ?? "missing";
+          },
+          { once: true }
+        );
+      }, switchTriggerId);
+      await activeTrigger.click();
+      await expect(page.locator("html")).toHaveAttribute("data-detail-expanded-at-outside-activation", "true");
+      await expect(switchTrigger).toHaveAttribute("aria-expanded", "false");
+      await expect(activeTrigger).toHaveAttribute("aria-expanded", "true");
+    }
+
+    await activeProject.locator(".research-project__header").click();
+    await expect(activeTrigger).toHaveAttribute("aria-expanded", "false");
+    await activeTrigger.press("Enter");
+    await page.getByRole("heading", { level: 1, name: "Research" }).click();
+    await expect(activeTrigger).toHaveAttribute("aria-expanded", "false");
+
+    await activeTrigger.press("Enter");
+    await page.evaluate(async () => {
+      await document.fonts.ready;
+    });
+    await page.setViewportSize({ width: 1100, height: 900 });
+    await page.mouse.move(0, 0);
+    await settleDetailOverlayMotion(root);
+    const resizedLayout = await getDetailOverlaySample(root, selectors);
+    const resizedCloseSamples = sampleDetailOverlay(root, selectors);
+    await activeTrigger.press("Escape");
+    expectStableDetailOverlay(await resizedCloseSamples, resizedLayout);
+
+    for (const theme of ["navy", "light", "dark"] as const) {
+      await reloadWithStoredTheme(page, theme);
+      await activeTrigger.scrollIntoViewIfNeeded();
+      await activeTrigger.click();
+      await expect(panel).toHaveCSS("background-image", "none");
+      await expect(panel).toHaveCSS("background-color", /^rgb\(/);
+      await activeTrigger.press("Escape");
+    }
+  });
+
+  test("changes only the research evidence panel at the 981 and 980 boundaries", async ({ page }) => {
+    for (const width of [981, 980]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto("/research");
+      await settleLayout(page);
+
+      const projects = await expectResearchProjectsOrEmptyState(page);
+      if (!projects) continue;
+
+      const expandableIndexes = await getExpandableResearchProjectIndexes(projects);
+      const projectCount = await projects.count();
+      const activeIndex = expandableIndexes.find((index) => index < projectCount - 1);
+      if (activeIndex === undefined) continue;
+
+      const trigger = projects.nth(activeIndex).locator("button.detail-section__trigger").first();
+      const panel = page.locator(`#${await trigger.getAttribute("aria-controls")}`);
+      const followingProject = projects.nth(activeIndex + 1);
+      const followingTop = await followingProject.evaluate((project) => project.getBoundingClientRect().top + window.scrollY);
+
+      await trigger.click();
+      await expect(panel).toHaveCSS("position", width === 981 ? "absolute" : "static");
+      const nextFollowingTop = await followingProject.evaluate((project) => project.getBoundingClientRect().top + window.scrollY);
+
+      if (width === 981) {
+        expect(Math.abs(nextFollowingTop - followingTop)).toBeLessThanOrEqual(1);
+      } else {
+        expect(nextFollowingTop).toBeGreaterThan(followingTop + 1);
+      }
+    }
+  });
+
   test("keeps expanded projects at rest after focus and scrolling in every palette", async ({ page }) => {
     test.slow();
     await page.setViewportSize({ width: 1280, height: 900 });
@@ -669,6 +1121,26 @@ test.describe("Research showcase", () => {
         await expect(project.locator(".research-video__status")).toHaveCount(0);
         await expectVideoHeaderContained(project);
 
+        const toolbar = project.getByRole("group", { name: "CytoCV video tools" });
+        await expect(toolbar).toHaveCount(1);
+        const videoViewport = project.locator(".research-video__viewport");
+        const videoViewportBox = await videoViewport.boundingBox();
+        expect(videoViewportBox).not.toBeNull();
+        await page.mouse.move(0, 0);
+        await expect.poll(() => toolbar.evaluate((element) => getComputedStyle(element).opacity)).toBe("0");
+        await page.mouse.move(videoViewportBox!.x + 2, videoViewportBox!.y + 2);
+        await expect.poll(() => toolbar.evaluate((element) => getComputedStyle(element).opacity)).toBe("1");
+        await expectToolbarAboveNativeControls(toolbar, player);
+
+        if (viewport.width === 1280 && theme === "navy") {
+          await page.mouse.move(0, 0);
+          await expect.poll(() => toolbar.evaluate((element) => getComputedStyle(element).opacity)).toBe("0");
+          await focusWithKeyboard(page, openButton, 60);
+          await expect(openButton).toBeFocused();
+          await expect.poll(() => toolbar.evaluate((element) => getComputedStyle(element).opacity)).toBe("1");
+          await expect.poll(() => openButton.evaluate((control) => getComputedStyle(control, "::after").opacity)).toBe("1");
+        }
+
         await openButton.scrollIntoViewIfNeeded();
         await openButton.click();
         const dialog = page.getByRole("dialog", { name: "CytoCV supplementary workflow video" });
@@ -683,6 +1155,29 @@ test.describe("Research showcase", () => {
         );
         await expect(dialog).toHaveCSS("background-image", "none");
         await expectNoHorizontalOverflow(page);
+        const dialogToolbar = dialog.getByRole("group", { name: "CytoCV video tools" });
+        await expect(dialogToolbar.locator("a, button")).toHaveCount(2);
+        await expect(dialogToolbar.getByRole("link", { name: "Read transcript" })).toHaveAttribute(
+          "href",
+          "/images/research/cytocv-supplementary-video-s1-transcript.txt"
+        );
+        await expect(dialogToolbar.getByRole("link", { name: "Download MP4" })).toHaveAttribute("download", "");
+
+        const dialogVideoViewport = dialog.locator(".research-video-dialog__viewport");
+        const dialogVideoViewportBox = await dialogVideoViewport.boundingBox();
+        expect(dialogVideoViewportBox).not.toBeNull();
+        await page.mouse.move(0, 0);
+        await expect.poll(() => dialogToolbar.evaluate((element) => getComputedStyle(element).opacity)).toBe("0");
+        await page.mouse.move(dialogVideoViewportBox!.x + 2, dialogVideoViewportBox!.y + 2);
+        await expect.poll(() => dialogToolbar.evaluate((element) => getComputedStyle(element).opacity)).toBe("1");
+        await expectToolbarAboveNativeControls(dialogToolbar, dialogPlayer);
+        await page.mouse.move(0, 0);
+        await expect.poll(() => dialogToolbar.evaluate((element) => getComputedStyle(element).opacity)).toBe("0");
+        const dialogTranscript = dialogToolbar.getByRole("link", { name: "Read transcript" });
+        await focusWithKeyboard(page, dialogTranscript, 8);
+        await expect(dialogTranscript).toBeFocused();
+        await expect.poll(() => dialogToolbar.evaluate((element) => getComputedStyle(element).opacity)).toBe("1");
+        await expect.poll(() => dialogTranscript.evaluate((control) => getComputedStyle(control, "::after").opacity)).toBe("1");
 
         const [dialogBox, viewportBox] = await Promise.all([
           dialog.boundingBox(),
@@ -694,11 +1189,45 @@ test.describe("Research showcase", () => {
         expect(dialogBox!.y).toBeGreaterThanOrEqual(0);
         expect(dialogBox!.x + dialogBox!.width).toBeLessThanOrEqual(viewport.width + 1);
         expect(dialogBox!.y + dialogBox!.height).toBeLessThanOrEqual(viewport.height + 1);
+        const closeBox = await closeButton.boundingBox();
+        expect(closeBox).not.toBeNull();
+        expect(closeBox!.y + closeBox!.height).toBeLessThanOrEqual(viewportBox!.y + 1);
         await closeButton.click();
         await expect(dialog).toHaveCount(0);
         await expect(openButton).toBeFocused();
         await expect(project.locator(".research-video__status")).toHaveCount(0);
       }
+    }
+  });
+
+  test("keeps Research video tools icon-only and visible on coarse no-hover input", async ({ browser, page }) => {
+    await page.goto("/research");
+    const mobileContext = await browser.newContext({
+      hasTouch: true,
+      isMobile: true,
+      viewport: { height: 568, width: 320 }
+    });
+
+    try {
+      const mobilePage = await mobileContext.newPage();
+      await mobilePage.goto(page.url());
+      await settleLayout(mobilePage);
+      await expect(mobilePage.locator('article.research-project[id="cytocv-miller-lab"]')).toHaveCount(1);
+      await expect
+        .poll(() => mobilePage.evaluate(() => matchMedia("(hover: none)").matches || matchMedia("(pointer: coarse)").matches))
+        .toBe(true);
+
+      const toolbar = mobilePage.getByRole("group", { name: "CytoCV video tools" });
+      await expect(toolbar).toHaveCount(1);
+      await expect.poll(() => toolbar.evaluate((element) => getComputedStyle(element).opacity)).toBe("1");
+      await expect.poll(() =>
+        toolbar.locator("a, button").evaluateAll((controls) =>
+          controls.every((control) => getComputedStyle(control, "::after").content === "none")
+        )
+      ).toBe(true);
+      await expectNoHorizontalOverflow(mobilePage);
+    } finally {
+      await mobileContext.close();
     }
   });
 });

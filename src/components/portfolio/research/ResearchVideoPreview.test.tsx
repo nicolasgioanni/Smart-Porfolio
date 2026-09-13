@@ -4,6 +4,7 @@ import { ResearchVideoPreview } from "@/components/portfolio/research/ResearchVi
 
 const graphicalAbstract = {
   alt: "A research workflow diagram.",
+  displayTitle: "CytoCV Graphical Abstract",
   height: 941,
   source: "curated" as const,
   src: "/images/research/cytocv-graphical-abstract.png",
@@ -13,6 +14,7 @@ const graphicalAbstract = {
 const video = {
   captionsSrc: "/images/research/cytocv-supplementary-video-s1.en.vtt",
   description: "A narrated scientific workflow.",
+  displayTitle: "CytoCV Demo",
   durationLabel: "5 min 28 sec",
   height: 1108,
   mimeType: "video/mp4" as const,
@@ -48,6 +50,7 @@ describe("ResearchVideoPreview", () => {
     const transcript = screen.getByRole("link", { name: "Read transcript" });
     const download = screen.getByRole("link", { name: "Download MP4" });
     const openButton = screen.getByRole("button", { name: "Expand video for Example Research" });
+    const toolbar = screen.getByRole("group", { name: "Example Research video tools" });
 
     expect(player).not.toBeNull();
     expect(player).toHaveAttribute("controls");
@@ -61,10 +64,20 @@ describe("ResearchVideoPreview", () => {
     expect(player?.querySelector("track")).toHaveAttribute("src", video.captionsSrc);
     expect(player?.querySelector("track")).toHaveAttribute("default");
     expect(transcript).toHaveAttribute("href", video.transcriptSrc);
+    expect(transcript).toHaveClass("glass-icon-link", "research-video__toolbar-control");
+    expect(transcript).toHaveAttribute("data-tooltip", "Read transcript");
+    expect(transcript).toHaveAttribute("title", "Read transcript");
     expect(download).toHaveAttribute("href", video.src);
     expect(download).toHaveAttribute("download");
+    expect(download).toHaveClass("glass-icon-link", "research-video__toolbar-control");
+    expect(download).toHaveAttribute("data-tooltip", "Download MP4");
+    expect(screen.getByText(video.displayTitle)).toHaveClass("research-media-title");
+    expect(screen.getByText(video.durationLabel)).toHaveClass("research-video__duration");
     expect(openButton).toHaveAttribute("aria-haspopup", "dialog");
     expect(openButton).toHaveAttribute("aria-expanded", "false");
+    expect(openButton).toHaveClass("glass-icon-button", "research-video__toolbar-control");
+    expect(openButton).toHaveAttribute("data-tooltip", "Open enlarged player");
+    expect(toolbar.querySelectorAll("a, button")).toHaveLength(3);
   });
 
   it("uses the shared modal lifecycle while handing off a paused timeline on close, Escape, and rapid reopen", async () => {
@@ -79,6 +92,7 @@ describe("ResearchVideoPreview", () => {
     const closeButton = within(dialog).getByRole("button", { name: "Close video for Example Research" });
     const modalPlayer = dialog.querySelector<HTMLVideoElement>(".research-video-dialog__player")!;
     const pauseModal = vi.spyOn(modalPlayer, "pause");
+    const dialogToolbar = within(dialog).getByRole("group", { name: "Example Research video tools" });
 
     expect(openButton).toHaveAttribute("aria-expanded", "true");
     expect(inlinePlayer.currentTime).toBe(12.5);
@@ -86,6 +100,12 @@ describe("ResearchVideoPreview", () => {
     expect(pauseInline).toHaveBeenCalled();
     await waitFor(() => expect(closeButton).toHaveFocus());
     expect(document.body.style.overflow).toBe("hidden");
+    expect(dialogToolbar.querySelectorAll("a, button")).toHaveLength(2);
+    expect(within(dialogToolbar).getByRole("link", { name: "Read transcript" })).toHaveAttribute(
+      "href",
+      video.transcriptSrc
+    );
+    expect(within(dialogToolbar).getByRole("link", { name: "Download MP4" })).toHaveAttribute("download");
 
     setMediaTimeline(modalPlayer, 46.25);
     fireEvent.keyDown(document, { key: "Escape" });

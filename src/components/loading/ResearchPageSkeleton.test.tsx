@@ -19,6 +19,12 @@ function getResourceCounts(container: HTMLElement): number[] {
   );
 }
 
+function getMediaTitleCounts(container: HTMLElement): number[] {
+  return Array.from(container.querySelectorAll(".research-skeleton__project")).map(
+    (project) => project.querySelectorAll(".research-skeleton__media-title").length
+  );
+}
+
 describe("ResearchPageSkeleton", () => {
   afterEach(() => {
     researchContentFixture.items = [];
@@ -42,5 +48,23 @@ describe("ResearchPageSkeleton", () => {
 
     expect(getResourceCounts(defaultRender.container)).toEqual(productionFixture.resourceCounts);
     expect(getResourceCounts(isolatedRender.container)).toEqual(researchSkeletonFixtures[0].resourceCounts);
+  });
+
+  it("keeps canonical graphical abstract frames noninteractive", () => {
+    const { container } = render(<ResearchPageSkeleton detailItems={canonicalResearchSkeletonItems} />);
+    const frames = Array.from(container.querySelectorAll<HTMLElement>(".research-skeleton__abstract-frame"));
+
+    expect(frames).toHaveLength(3);
+    for (const frame of frames) {
+      expect(frame.closest(".research-skeleton__abstract")).not.toBeNull();
+      expect(frame.querySelectorAll("a, button, input, select, textarea")).toHaveLength(0);
+    }
+  });
+
+  it("uses noninteractive title placeholders for every resolved research medium", () => {
+    const { container } = render(<ResearchPageSkeleton detailItems={canonicalResearchSkeletonItems} />);
+
+    expect(getMediaTitleCounts(container)).toEqual([2, 1, 1]);
+    expect(container.querySelectorAll(".research-skeleton__media-title a, .research-skeleton__media-title button")).toHaveLength(0);
   });
 });
