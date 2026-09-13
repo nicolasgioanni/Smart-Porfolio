@@ -16,6 +16,17 @@ type DetailPanelScrollportSample = {
   scrollHeight: number;
 };
 
+type DetailPanelMotionSample = {
+  borderBottomWidth: number;
+  borderLeftWidth: number;
+  clipHeight: number;
+  elapsedMs: number | null;
+  opacity: number;
+  panelHeight: number;
+  panelWidth: number;
+  visualState: string | null;
+};
+
 export async function getDetailOverlaySample(root: Locator, selectors: DetailOverlaySelectors): Promise<DetailOverlaySample> {
   return root.evaluate((element, options) => {
     const rootTop = element.getBoundingClientRect().top;
@@ -101,6 +112,69 @@ export async function sampleDetailPanelScrollport(panel: Locator, durationMs = 6
           samples.push({ clientHeight: element.clientHeight, scrollHeight: element.scrollHeight });
 
           if (performance.now() - startedAt >= duration) {
+            resolve(samples);
+            return;
+          }
+
+          window.requestAnimationFrame(sample);
+        };
+
+        window.requestAnimationFrame(sample);
+      }),
+    durationMs
+  );
+}
+
+export async function getDetailPanelMotionSample(panel: Locator): Promise<DetailPanelMotionSample> {
+  return panel.evaluate((element) => {
+    const section = element.parentElement;
+    const clip = element.querySelector<HTMLElement>(".detail-section__panel-clip");
+    const panelRect = element.getBoundingClientRect();
+    const styles = getComputedStyle(element);
+
+    return {
+      borderBottomWidth: Number.parseFloat(styles.borderBottomWidth),
+      borderLeftWidth: Number.parseFloat(styles.borderLeftWidth),
+      clipHeight: clip?.getBoundingClientRect().height ?? 0,
+      elapsedMs: 0,
+      opacity: Number.parseFloat(styles.opacity),
+      panelHeight: panelRect.height,
+      panelWidth: panelRect.width,
+      visualState: section?.getAttribute("data-visual-state") ?? null
+    };
+  });
+}
+
+export async function sampleDetailPanelMotion(panel: Locator, durationMs = 620): Promise<DetailPanelMotionSample[]> {
+  return panel.evaluate(
+    (element, duration) =>
+      new Promise<DetailPanelMotionSample[]>((resolve) => {
+        const section = element.parentElement;
+        const clip = element.querySelector<HTMLElement>(".detail-section__panel-clip");
+        const startedAt = performance.now();
+        let closeStartedAt: number | undefined;
+        const samples: DetailPanelMotionSample[] = [];
+        const sample = () => {
+          const now = performance.now();
+          const panelRect = element.getBoundingClientRect();
+          const styles = getComputedStyle(element);
+          const visualState = section?.getAttribute("data-visual-state") ?? null;
+          if (visualState === "closing" && closeStartedAt === undefined) closeStartedAt = now;
+          samples.push({
+            borderBottomWidth: Number.parseFloat(styles.borderBottomWidth),
+            borderLeftWidth: Number.parseFloat(styles.borderLeftWidth),
+            clipHeight: clip?.getBoundingClientRect().height ?? 0,
+            elapsedMs: closeStartedAt === undefined ? null : now - closeStartedAt,
+            opacity: Number.parseFloat(styles.opacity),
+            panelHeight: panelRect.height,
+            panelWidth: panelRect.width,
+            visualState
+          });
+
+          if (
+            (closeStartedAt !== undefined && now - closeStartedAt >= duration) ||
+            (closeStartedAt === undefined && now - startedAt >= duration + 1_000)
+          ) {
             resolve(samples);
             return;
           }
@@ -203,4 +277,48 @@ export function expectDetailPanelScrollportWithoutOverflow(samples: DetailPanelS
     expect(sample.clientHeight).toBeGreaterThan(0);
     expect(sample.scrollHeight).toBeLessThanOrEqual(sample.clientHeight);
   }
+}
+
+export function expectDetailPanelClosingMotion(
+  samples: DetailPanelMotionSample[],
+  opened: DetailPanelMotionSample
+) {
+  const closingSamples = samples.filter((sample) => sample.visualState === "closing");
+  const firstClosingSample = closingSamples[0];
+  const intermediateSample = closingSamples.find(
+    (sample) =>
+      sample.clipHeight > 0 &&
+      sample.clipHeight < opened.clipHeight - 1 &&
+      sample.opacity > 0 &&
+      sample.opacity < opened.opacity
+  );
+  const readableCollapseSample = closingSamples.find(
+    (sample) => sample.elapsedMs !== null && sample.elapsedMs >= 120 && sample.elapsedMs <= 220
+  );
+  const sustainedCloseSample = samples.find((sample) => sample.elapsedMs !== null && sample.elapsedMs >= 400);
+  const completedCloseSample = samples.find((sample) => sample.visualState === "closed" && sample.elapsedMs !== null);
+
+  expect(firstClosingSample).toBeDefined();
+  expect(firstClosingSample!.clipHeight).toBeGreaterThan(0);
+  expect(firstClosingSample!.opacity).toBeGreaterThan(0);
+  expect(Math.abs(firstClosingSample!.panelWidth - opened.panelWidth)).toBeLessThanOrEqual(1);
+  expect(firstClosingSample!.borderLeftWidth).toBe(opened.borderLeftWidth);
+  expect(firstClosingSample!.borderBottomWidth).toBe(opened.borderBottomWidth);
+  expect(intermediateSample).toBeDefined();
+  expect(readableCollapseSample).toBeDefined();
+  expect(readableCollapseSample!.clipHeight).toBeGreaterThanOrEqual(opened.clipHeight * 0.35);
+  expect(readableCollapseSample!.opacity).toBeGreaterThanOrEqual(0.2);
+  expect(sustainedCloseSample).toBeDefined();
+  expect(sustainedCloseSample!.visualState).toBe("closing");
+  expect(completedCloseSample).toBeDefined();
+  expect(completedCloseSample!.elapsedMs).toBeLessThanOrEqual(580);
+}
+
+export function expectDetailPanelRapidReopen(samples: DetailPanelMotionSample[]) {
+  const finalSample = samples.at(-1);
+
+  expect(finalSample).toBeDefined();
+  expect(finalSample!.visualState).toBe("open");
+  expect(finalSample!.clipHeight).toBeGreaterThan(0);
+  expect(finalSample!.opacity).toBe(1);
 }
