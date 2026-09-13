@@ -231,6 +231,14 @@ describe("TurnstileWidget", () => {
     expect(removeMock).not.toHaveBeenCalled();
     expect(resetMock).not.toHaveBeenCalled();
 
+    await act(async () => {
+      document.documentElement.dataset.theme = "light";
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+    });
+
+    expect(renderMock).toHaveBeenCalledTimes(1);
+    expect(removeMock).not.toHaveBeenCalled();
+
     act(() => {
       firstOptions.callback("late-token");
       firstOptions["expired-callback"]();
