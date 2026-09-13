@@ -52,9 +52,11 @@ describe("ResearchGraphicalAbstractPreview", () => {
 
     fireEvent.click(closeButton);
     expect(trigger).toHaveAttribute("aria-expanded", "false");
-    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
-    expect(trigger).toHaveFocus();
-    expect(document.body.style.overflow).toBe(originalBodyOverflow);
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(trigger).toHaveFocus();
+      expect(document.body.style.overflow).toBe(originalBodyOverflow);
+    });
   });
 
   it("closes from Escape and the backdrop through the shared dialog contract", async () => {
