@@ -411,7 +411,7 @@ These rows must exist, but blank values leave the built-in defaults in place. Th
 | `copyright_owner` | `copyrightOwner` | Optional text; footer falls back to profile name. |
 | `repository_url` | `repositoryUrl` | Optional HTTPS URL. |
 | `legal_contact_email` | `legalContactEmail` | Optional validated email address. |
-| `legal_effective_date` | `legalEffectiveDate` | Optional shared Terms and Security notice date using a real ISO date after normalization; the implementation-specific Privacy Notice owns its revision date in the route component. |
+| `legal_effective_date` | `legalEffectiveDate` | Optional Security notice date using a real ISO date after normalization; the Terms, Contact Terms, and implementation-specific Privacy Notice own revision dates in their route components. |
 | `hosting_provider_name` | `hostingProviderName` | Optional text. |
 | `hosting_privacy_url` | `hostingPrivacyUrl` | Optional HTTPS URL. |
 

@@ -89,7 +89,7 @@ The explicit Turnstile widget uses:
 - manual token refresh and retry behavior so the client controls recovery;
 - no hidden Turnstile response field because the token is sent in explicit JSON.
 
-The widget script loads from Cloudflare after hydration and renders a visible gate before contact fields. Expiry, timeout, widget, script, and unsupported-browser callbacks clear the token and fail closed. A valid client token does not open the form by itself: `/api/contact/verify` must accept it and set the signed ticket. Success enables Continue and starts a 500-millisecond transition to the form; the visitor can activate Continue sooner. Failed or expired challenges remain at the gate for an explicit retry.
+The widget script loads from Cloudflare after hydration and renders a visible gate before contact fields. Expiry, timeout, widget, script, and unsupported-browser callbacks clear the token and fail closed. A valid client token does not open the form by itself: `/api/contact/verify` must accept it and set the signed ticket. After server success, the same visible provider widget remains mounted during the 500-millisecond transition so its native completion state can remain visible; its callbacks no longer alter the consumed token. Success enables Continue and starts the transition to the form; the visitor can activate Continue sooner. Failed or expired challenges remain at the gate for an explicit retry.
 
 Each new logical draft receives a cryptographically random submission UUID before the gate. The UUID binds Turnstile custom data, the signed ticket, the reviewed payload, the D1 retry identity, and Resend idempotency keys. When the widget supplies a fresh token, the browser posts only that UUID and token to `/api/contact/verify`. The browser records the form-start time when the form opens automatically or through Continue, so time spent at the gate is not counted as form completion. A later ticket refresh for the same locked delivery preserves the original UUID and form-start time, then returns to locked review without starting delivery.
 
@@ -103,7 +103,9 @@ The progress UI uses steps `1` through `3`:
 2. Enter a required email address and message, plus an optional phone number.
 3. Review the request and accept both required acknowledgments.
 
-The first acknowledgment permits a response. The second covers the Terms, Privacy Notice, legitimate-inquiry confirmation, and prohibited-material restrictions. The message is limited to 500 characters. Send request remains disabled until both values are true.
+The first acknowledgment links to the [Contact & Communication Terms](../../src/app/contact-terms/page.tsx) and permits the inquiry-related email confirmation and replies, plus a manual call or text only when a phone number is supplied. The second covers the Terms, Privacy Notice, legitimate-inquiry confirmation, and prohibited-material restrictions. The message is limited to 500 characters. Send request remains disabled until both values are true.
+
+The implementation facts behind those terms are deliberately narrow: the visitor receipt is an automated Resend delivery, while any follow-up call or text is personally handled; the two booleans are validated per request, and no historical policy-version audit record is persisted. The notice reflects FTC guidance on [commercial-email compliance](https://www.ftc.gov/business-guidance/resources/can-spam-act-compliance-guide-business) and [recognizing and reporting spam texts](https://consumer.ftc.gov/articles/how-recognize-and-report-spam-text-messages) without treating a generic inquiry as categorically exempt from communications law.
 
 Draft contact values live only in React state. The contact form does not read or write local storage or session storage. The hidden `website` field is a honeypot. A direct `mailto:` link remains available when the form or delivery service cannot be used.
 

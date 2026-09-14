@@ -1185,6 +1185,7 @@ describe("portfolio UI helpers", () => {
       "https://www.linkedin.com/in/example"
     );
     expect(screen.queryByRole("link", { name: "Source Code" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Contact & Communication Terms" })).toHaveAttribute("href", "/contact-terms");
     expect(screen.getByRole("link", { name: "Site Terms & Accuracy" })).toHaveAttribute("href", "/terms");
     const emailLink = screen.getByRole("link", { name: "nicolas@example.com" });
     const contactLink = screen.getByRole("link", { name: "Contact Form" });

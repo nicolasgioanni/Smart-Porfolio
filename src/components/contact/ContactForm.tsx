@@ -17,6 +17,7 @@ import {
 import { ContactNotifications } from "./ContactNotifications";
 import { useContactNotifications } from "./useContactNotifications";
 import { TurnstileWidget, type TurnstileStatus } from "@/components/contact/TurnstileWidget";
+import { siteRoutes } from "@/lib/routing/siteRoutes";
 
 type ContactStep = 1 | 2 | 3;
 type ContactView = "verification" | "form";
@@ -112,11 +113,13 @@ function FieldLabel({ error, errorId, htmlFor, label, optional = false }: FieldL
 function StepHeading({
   description,
   status,
+  statusTone,
   step,
   title
 }: {
   description: string;
   status?: string;
+  statusTone?: "error" | "success";
   step: ContactStep;
   title: string;
 }) {
@@ -125,7 +128,12 @@ function StepHeading({
       <div className="contact-step__counter-row">
         <p className="contact-step__counter">Step {step} of 3</p>
         {status ? (
-          <p aria-atomic="true" aria-live="polite" className="contact-step__counter contact-step__counter--status">
+          <p
+            aria-atomic="true"
+            aria-live="polite"
+            className="contact-step__counter contact-step__counter--status"
+            data-tone={statusTone}
+          >
             {status}
           </p>
         ) : null}
@@ -743,12 +751,15 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
               <div className="contact-verification-well">
                 <div className="contact-verification-slot">
                   {submissionId &&
-                  (verificationGateStatus === "waiting" || verificationGateStatus === "verifying") ? (
+                  (verificationGateStatus === "waiting" ||
+                    verificationGateStatus === "verifying" ||
+                    verificationGateStatus === "verified") ? (
                     <TurnstileWidget
                       cData={submissionId}
                       key={turnstileWidgetAttempt}
                       onStatusChange={handleTurnstileStatusChange}
                       onTokenChange={handleTurnstileTokenChange}
+                      serverVerified={verificationGateStatus === "verified"}
                       siteKey={turnstileSiteKey}
                     />
                   ) : (
@@ -933,6 +944,7 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
               <StepHeading
                 description="Review your details and confirm both acknowledgments before sending."
                 status={`${acceptedConsentCount} of 2 acknowledgments checked`}
+                statusTone={acceptedConsentCount === 2 ? "success" : "error"}
                 step={3}
                 title="Review your request"
               />
@@ -963,6 +975,7 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
                   onClick={(event) => toggleConsentFromCard("contact", event.target)}
                 >
                   <input
+                    aria-labelledby="contact-consent-label"
                     checked={consents.contact}
                     disabled={reviewLocked}
                     id="contact-consent"
@@ -971,10 +984,14 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
                     required
                     type="checkbox"
                   />
-                  <label htmlFor="contact-consent">
-                    I agree that Nicolas Gioanni may respond by email and, if I provide a phone number, by a manual call
-                    or text. No automated or marketing messages.
-                  </label>
+                  <span id="contact-consent-label">
+                    I agree to the{" "}
+                    <SmartLink href={siteRoutes.contactTerms} onClick={(event) => event.stopPropagation()} target="_blank">
+                      Contact &amp; Communication Terms<span className="visually-hidden"> (opens in a new tab)</span>
+                    </SmartLink>{" "}
+                    for email confirmations and replies, plus manual calls/texts if I provide a number. Carrier charges may
+                    apply. No marketing.
+                  </span>
                 </div>
                 <div
                   className="contact-consent-card"

@@ -193,6 +193,67 @@ describe("TurnstileWidget", () => {
     expect(removeMock).toHaveBeenCalledWith("widget-id");
   });
 
+  it("keeps the completed provider widget in place without accepting late callbacks", async () => {
+    const onStatusChange = vi.fn();
+    const onTokenChange = vi.fn();
+    const { rerender } = render(
+      <TurnstileWidget
+        cData="submission-123"
+        onStatusChange={onStatusChange}
+        onTokenChange={onTokenChange}
+        siteKey="public-site-key"
+      />
+    );
+    await waitFor(() => expect(renderMock).toHaveBeenCalledTimes(1));
+    const firstOptions = renderedOptions();
+
+    act(() => firstOptions["error-callback"]());
+    expect(screen.getByRole("button", { name: "Run check again" })).toBeInTheDocument();
+    onStatusChange.mockClear();
+    onTokenChange.mockClear();
+
+    rerender(
+      <TurnstileWidget
+        cData="submission-123"
+        onStatusChange={onStatusChange}
+        onTokenChange={onTokenChange}
+        serverVerified
+        siteKey="public-site-key"
+      />
+    );
+
+    await waitFor(() => expect(screen.queryByRole("status")).not.toBeInTheDocument());
+    const statusRow = document.querySelector(".contact-turnstile__status-row p");
+    expect(statusRow).toHaveAttribute("aria-hidden", "true");
+    expect(statusRow).toBeEmptyDOMElement();
+    expect(screen.queryByRole("button", { name: "Run check again" })).not.toBeInTheDocument();
+    expect(renderMock).toHaveBeenCalledTimes(1);
+    expect(removeMock).not.toHaveBeenCalled();
+    expect(resetMock).not.toHaveBeenCalled();
+
+    await act(async () => {
+      document.documentElement.dataset.theme = "light";
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+    });
+
+    expect(renderMock).toHaveBeenCalledTimes(1);
+    expect(removeMock).not.toHaveBeenCalled();
+
+    act(() => {
+      firstOptions.callback("late-token");
+      firstOptions["expired-callback"]();
+      firstOptions["error-callback"]();
+      firstOptions["timeout-callback"]();
+      firstOptions["unsupported-callback"]();
+    });
+
+    expect(onStatusChange).not.toHaveBeenCalled();
+    expect(onTokenChange).not.toHaveBeenCalled();
+    expect(renderMock).toHaveBeenCalledTimes(1);
+    expect(removeMock).not.toHaveBeenCalled();
+    expect(resetMock).not.toHaveBeenCalled();
+  });
+
   it("recreates the challenge for a new submission and ignores stale callbacks", async () => {
     const onStatusChange = vi.fn();
     const onTokenChange = vi.fn();
