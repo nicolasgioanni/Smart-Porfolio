@@ -87,6 +87,206 @@ for (const width of [1280, 390, 320]) {
   }
 }
 
+async function contactTransitionGeometry(page: Page) {
+  return page.locator(".contact-wizard, .contact-email-fallback").evaluateAll((elements) =>
+    elements.map((element) => {
+      const box = element.getBoundingClientRect();
+      return { height: box.height, y: box.y + window.scrollY };
+    })
+  );
+}
+
+test("animates the live contact step and card geometry, then rebases rapid changes", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.route("**/api/contact/verify", (route) =>
+    route.fulfill({ body: JSON.stringify({ ok: true }), contentType: "application/json", status: 200 })
+  );
+  await page.goto("/contact");
+  await settleLayout(page);
+  await page.getByRole("button", { name: "Complete test security check" }).press("Enter");
+  await expect(page.getByRole("heading", { name: "Tell me your name" })).toBeFocused();
+
+  const frame = page.locator(".contact-step-frame");
+  const initialGeometry = await contactTransitionGeometry(page);
+  await page.getByLabel("First name").fill("Avery");
+  await page.getByLabel("Last name").fill("Nguyen");
+  await page.getByRole("button", { exact: true, name: "Next" }).click();
+
+  const transition = await frame.evaluate((element) => {
+    const step = element.querySelector<HTMLElement>(".contact-step");
+    for (const animation of [...element.getAnimations(), ...step!.getAnimations()]) animation.pause();
+    return {
+      animations: step?.getAnimations().map((animation) => (animation as CSSAnimation).animationName),
+      height: element.getAttribute("style"),
+      opacity: step ? Number(window.getComputedStyle(step).opacity) : 1,
+      overflow: window.getComputedStyle(element).overflow,
+      transform: step ? window.getComputedStyle(step).transform : "none"
+    };
+  });
+  expect(transition.height).toContain("height:");
+  expect(["clip", "hidden"]).toContain(transition.overflow);
+  expect(transition.animations).toContain("page-body-enter");
+  expect(transition.opacity < 1 || transition.transform !== "none").toBe(true);
+  await expect(page.getByRole("heading", { name: "How can I reach you?" })).toBeFocused();
+
+  await frame.evaluate((element) => {
+    for (const animation of [...element.getAnimations(), ...element.querySelector<HTMLElement>(".contact-step")!.getAnimations()]) {
+      animation.pause();
+      animation.currentTime = 140;
+    }
+  });
+  const middleGeometry = await contactTransitionGeometry(page);
+  await frame.evaluate((element) => {
+    for (const animation of [...element.getAnimations(), ...element.querySelector<HTMLElement>(".contact-step")!.getAnimations()]) {
+      animation.finish();
+    }
+  });
+  const finalGeometry = await contactTransitionGeometry(page);
+  expect(middleGeometry[0].height).toBeGreaterThan(initialGeometry[0].height);
+  expect(middleGeometry[0].height).toBeLessThan(finalGeometry[0].height);
+  expect(middleGeometry[1].y).toBeGreaterThan(initialGeometry[1].y);
+  expect(middleGeometry[1].y).toBeLessThan(finalGeometry[1].y);
+  expect(finalGeometry[0].height).toBeGreaterThan(initialGeometry[0].height);
+  await expect.poll(() => frame.evaluate((element) => element.style.height === "" && element.style.overflow === "")).toBe(true);
+  await expect(frame.locator(".contact-step")).toHaveCount(1);
+
+  const detailsGeometry = await contactTransitionGeometry(page);
+  await page.getByRole("button", { name: "Back" }).click();
+  await frame.evaluate((element) => {
+    for (const animation of [...element.getAnimations(), ...element.querySelector<HTMLElement>(".contact-step")!.getAnimations()]) {
+      animation.pause();
+      animation.currentTime = 140;
+    }
+  });
+  const shrinkGeometry = await contactTransitionGeometry(page);
+  const measuredShrinkHeight = await frame.evaluate((element) => element.getBoundingClientRect().height);
+  const namePresentationHeight = await page.evaluate(() => {
+    const frame = document.querySelector<HTMLElement>(".contact-step-frame");
+    const next = Array.from(document.querySelectorAll<HTMLButtonElement>("button")).find((button) => button.textContent === "Next");
+    if (!frame || !next) throw new Error("Expected the active name step and Next button.");
+    const height = frame.getBoundingClientRect().height;
+    next.click();
+    return height;
+  });
+  expect(namePresentationHeight).toBeCloseTo(measuredShrinkHeight, 1);
+  const rapidGrowStartHeight = await frame.evaluate((element) => Number.parseFloat(element.style.height));
+  expect(rapidGrowStartHeight).toBeCloseTo(measuredShrinkHeight, 1);
+  const rapidGrowPresentationHeight = await page.evaluate(() => {
+    const frame = document.querySelector<HTMLElement>(".contact-step-frame");
+    const back = Array.from(document.querySelectorAll<HTMLButtonElement>("button")).find((button) => button.textContent === "Back");
+    if (!frame || !back) throw new Error("Expected the active details step and Back button.");
+    const height = frame.getBoundingClientRect().height;
+    back.click();
+    return height;
+  });
+  const rapidShrinkStartHeight = await frame.evaluate((element) => Number.parseFloat(element.style.height));
+  expect(rapidShrinkStartHeight).toBeCloseTo(rapidGrowPresentationHeight, 1);
+  await frame.evaluate((element) => element.getAnimations().forEach((animation) => animation.finish()));
+  const nameGeometry = await contactTransitionGeometry(page);
+  expect(shrinkGeometry[0].height).toBeLessThan(detailsGeometry[0].height);
+  expect(shrinkGeometry[0].height).toBeGreaterThan(nameGeometry[0].height);
+  expect(shrinkGeometry[1].y).toBeLessThan(detailsGeometry[1].y);
+  expect(shrinkGeometry[1].y).toBeGreaterThan(nameGeometry[1].y);
+
+  await expect(page.getByRole("heading", { name: "Tell me your name" })).toBeFocused();
+  await expect(frame.locator(".contact-step")).toHaveCount(1);
+  await expect.poll(() => frame.evaluate((element) => element.style.height === "" && element.style.overflow === "")).toBe(true);
+  expect(await page.getByLabel("First name").inputValue()).toBe("Avery");
+});
+
+test("keeps contact step changes immediate with reduced motion and visible after a narrow-screen Back", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.route("**/api/contact/verify", (route) =>
+    route.fulfill({ body: JSON.stringify({ ok: true }), contentType: "application/json", status: 200 })
+  );
+  await page.goto("/contact");
+  await page.getByRole("button", { name: "Complete test security check" }).press("Enter");
+  await expect(page.getByRole("heading", { name: "Tell me your name" })).toBeFocused();
+  await page.getByLabel("First name").fill("Avery");
+  await page.getByLabel("Last name").fill("Nguyen");
+  await page.getByRole("button", { exact: true, name: "Next" }).press("Enter");
+
+  const frame = page.locator(".contact-step-frame");
+  await expect(frame.locator(".contact-step")).toHaveCSS("animation-name", "none");
+  await expect.poll(() => frame.evaluate((element) => element.style.height === "" && element.style.overflow === "")).toBe(true);
+  await page.getByLabel("Email address").fill("avery@example.com");
+  await page.getByRole("textbox", { name: /^Message/ }).fill("A contact request with enough detail to wrap naturally on a narrow screen.");
+  await page.getByRole("button", { name: "Review" }).press("Enter");
+  await page.getByRole("button", { name: "Back" }).press("Enter");
+
+  const heading = page.getByRole("heading", { name: "How can I reach you?" });
+  await expect(heading).toBeFocused();
+  await expect(heading).toBeInViewport();
+  await expect(frame.locator(".contact-step")).toHaveCount(1);
+  await expect.poll(() => frame.evaluate((element) => element.style.height === "" && element.style.overflow === "")).toBe(true);
+});
+
+test("interpolates the contact card on a narrow normal-motion layout", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.route("**/api/contact/verify", (route) =>
+    route.fulfill({ body: JSON.stringify({ ok: true }), contentType: "application/json", status: 200 })
+  );
+  await page.goto("/contact");
+  await page.getByRole("button", { name: "Complete test security check" }).press("Enter");
+  await expect(page.getByRole("heading", { name: "Tell me your name" })).toBeFocused();
+  const frame = page.locator(".contact-step-frame");
+  const before = await contactTransitionGeometry(page);
+  await page.getByLabel("First name").fill("Avery");
+  await page.getByLabel("Last name").fill("Nguyen");
+  await page.getByRole("button", { exact: true, name: "Next" }).click();
+  await frame.evaluate((element) => {
+    for (const animation of [...element.getAnimations(), ...element.querySelector<HTMLElement>(".contact-step")!.getAnimations()]) {
+      animation.pause();
+      animation.currentTime = 140;
+    }
+  });
+  const middle = await contactTransitionGeometry(page);
+  await frame.evaluate((element) => element.getAnimations().forEach((animation) => animation.finish()));
+  const after = await contactTransitionGeometry(page);
+  expect(middle[0].height).toBeGreaterThan(before[0].height);
+  expect(middle[0].height).toBeLessThan(after[0].height);
+  expect(middle[1].y).toBeGreaterThan(before[1].y);
+  expect(middle[1].y).toBeLessThan(after[1].y);
+  await expect(page.getByRole("heading", { name: "How can I reach you?" })).toBeFocused();
+});
+
+for (const { height, label, width } of [
+  { height: 900, label: "desktop", width: 1280 },
+  { height: 568, label: "phone", width: 320 }
+]) {
+  test(`restores settled normal-motion Back focus and values on ${label}`, async ({ page }) => {
+    await page.setViewportSize({ width, height });
+    await page.route("**/api/contact/verify", (route) =>
+      route.fulfill({ body: JSON.stringify({ ok: true }), contentType: "application/json", status: 200 })
+    );
+    await page.goto("/contact");
+    await page.getByRole("button", { name: "Complete test security check" }).press("Enter");
+    await expect(page.getByRole("heading", { name: "Tell me your name" })).toBeFocused();
+    await page.getByLabel("First name").fill("Avery");
+    await page.getByLabel("Last name").fill("Nguyen");
+    await page.getByRole("button", { exact: true, name: "Next" }).click();
+    await page.getByLabel("Email address").fill("avery@example.com");
+    await page.getByRole("textbox", { name: /^Message/ }).fill("A normal-motion Back focus regression check.");
+    await page.getByRole("button", { exact: true, name: "Review" }).click();
+
+    const back = page.getByRole("button", { exact: true, name: "Back" });
+    await back.scrollIntoViewIfNeeded();
+    await back.click();
+
+    const heading = page.getByRole("heading", { name: "How can I reach you?" });
+    const frame = page.locator(".contact-step-frame");
+    await expect(heading).toBeFocused();
+    await expect(heading).toBeInViewport();
+    await expect.poll(() => frame.evaluate((element) => element.style.height === "" && element.style.overflow === "")).toBe(true);
+    await expect.poll(() => frame.evaluate((element) => element.scrollTop)).toBe(0);
+    expect(await page.getByLabel("Email address").inputValue()).toBe("avery@example.com");
+    expect(await page.getByRole("textbox", { name: /^Message/ }).inputValue()).toBe(
+      "A normal-motion Back focus regression check."
+    );
+  });
+}
+
 test("opens contact terms in a new tab without changing a reviewed contact request", async ({ page }) => {
   await page.route("**/api/contact/verify", (route) =>
     route.fulfill({ body: JSON.stringify({ ok: true }), contentType: "application/json", status: 200 })
