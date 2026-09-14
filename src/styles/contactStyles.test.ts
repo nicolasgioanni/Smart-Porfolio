@@ -86,6 +86,16 @@ describe("contact wizard styles", () => {
     );
   });
 
+  it("gives each live contact step the page-entry fade and rise while reduced motion remains immediate", () => {
+    expect(contactStyles).toMatch(
+      /\.contact-step-frame > \.contact-step\s*{[^}]*animation: page-body-enter 280ms cubic-bezier\(0\.16, 1, 0\.3, 1\);/s
+    );
+    expect(contactStyles).not.toMatch(/contact-step-enter|\.contact-step-frame > \.contact-step\s*{[^}]*scale\(/);
+    expect(contactStyles).toMatch(
+      /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.contact-step-frame > \.contact-step\s*{[^}]*animation: none/s
+    );
+  });
+
   it("provides checked, keyboard-focus, solid fallback, and reduced-motion states", () => {
     expect(contactStyles).toMatch(/\.contact-consent-card:focus-within\s*{[^}]*var\(--focus-ring\)/);
     expect(contactStyles).toMatch(

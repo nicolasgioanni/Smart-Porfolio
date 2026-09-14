@@ -115,6 +115,8 @@ Successful delivery replaces the wizard with a standalone completion view. Its <
 
 The browser validates and trims the visible fields, freezes the reviewed payload during delivery, and sends the final JSON to `/api/contact` only after `/api/contact/verify` succeeds. It does not send the Turnstile token to the delivery endpoint.
 
+After verification, each Next, Review, or Back action keeps exactly one data-entry step in the form. The incoming body fades and rises by 8 pixels while a bounded measured frame interpolates only the step-content height, carrying the normal-flow email fallback and card boundary. Temporary clipping is released after the transition, interruption, resize, document hiding, or unmount. The Turnstile gate remains outside this frame so its reserved verification geometry and provider lifecycle stay stable. Reduced-motion and unsupported-animation paths apply the new step immediately.
+
 The review Back button, repeat Send actions, and acknowledgment controls are locked while delivery is active. A pre-delivery correction or service result can unlock the form because no email-provider request was made. After a provider or delivery-network failure makes the outcome ambiguous or partial, the browser keeps the reviewed payload locked for safe retry. It preserves the original submission UUID, `startedAt` value, acknowledgments, and byte-equivalent JSON payload. This matches Resend's requirement that a repeated idempotency key use the same request payload.
 
 Client behavior depends on the response:
