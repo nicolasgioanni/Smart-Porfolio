@@ -37,6 +37,7 @@ export const priorityTestTargets = [
   "src/components/loading/skeletonContentContract.test.ts",
   "src/components/navigation/MobileNavigation.test.tsx",
   "src/components/navigation/navigation.test.tsx",
+  "src/components/navigation/smartLink.test.tsx",
   ...priorityTestDirectories,
   "src/lib/architecture/importBoundaries.test.ts",
   "src/lib/content/content.test.ts",

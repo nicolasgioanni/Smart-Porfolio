@@ -23,7 +23,7 @@ import {
   expectConnectedDetailSurfaceResponsiveBoundary,
   expectReducedMotionConnectedDetailSurface
 } from "./detailConnectedSurface";
-import { settleLayout } from "./settleLayout";
+import { settleLayout, settlePageEntryMotion } from "./settleLayout";
 import { reloadWithStoredTheme } from "./themePreference";
 
 const authoredAbstractProjectIds = [
@@ -1106,6 +1106,7 @@ test.describe("Research showcase", () => {
       await page.setViewportSize({ width, height: 900 });
       await page.goto("/research");
       await settleLayout(page);
+      await settlePageEntryMotion(page);
 
       const projects = await expectResearchProjectsOrEmptyState(page);
       if (!projects) continue;
@@ -1118,10 +1119,16 @@ test.describe("Research showcase", () => {
       const trigger = projects.nth(activeIndex).locator("button.detail-section__trigger").first();
       const panel = page.locator(`#${await trigger.getAttribute("aria-controls")}`);
       const followingProject = projects.nth(activeIndex + 1);
+      const root = page.locator("main");
+      await trigger.scrollIntoViewIfNeeded();
+      await page.mouse.move(0, 0);
+      await settleDetailOverlayMotion(root);
       const followingTop = await followingProject.evaluate((project) => project.getBoundingClientRect().top + window.scrollY);
 
       await trigger.click();
+      await expect(trigger).toHaveAttribute("aria-expanded", "true");
       await expect(panel).toHaveCSS("position", width === 981 ? "absolute" : "static");
+      await settleDetailPanelMotion(panel);
       const nextFollowingTop = await followingProject.evaluate((project) => project.getBoundingClientRect().top + window.scrollY);
 
       if (width === 981) {

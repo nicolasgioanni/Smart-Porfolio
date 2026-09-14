@@ -27,6 +27,7 @@ describe("site route registry", () => {
       "/recommendations",
       "/resume",
       "/contact",
+      "/contact-terms",
       "/terms",
       "/privacy",
       "/security"
@@ -58,8 +59,10 @@ describe("site route registry", () => {
     expect(isSiteRouteHref("/privacy#email-communications")).toBe(true);
     expect(isSiteRouteHref("/security?source=footer")).toBe(true);
     expect(isSiteRouteHref("/contact?source=footer")).toBe(true);
+    expect(isSiteRouteHref("/contact-terms?source=contact#email-communications")).toBe(true);
 
     expect(isSiteRouteHref("/projects/example")).toBe(false);
+    expect(isSiteRouteHref("/contact-terms/receipt")).toBe(false);
     expect(isSiteRouteHref("/resume/demo.pdf")).toBe(false);
     expect(isSiteRouteHref("/images/profile.png")).toBe(false);
     expect(isSiteRouteHref("https://example.com/projects")).toBe(false);
@@ -68,25 +71,28 @@ describe("site route registry", () => {
 });
 
 describe("SmartLink", () => {
-  it("uses Next Link for a declared route while preserving anchor props", () => {
+  it.each([
+    { href: "/research?source=home#current", name: "Research" },
+    { href: "/contact-terms?source=contact#email-communications", name: "Contact terms" }
+  ])("uses Next Link for the $name route while preserving anchor props", ({ href, name }) => {
     const onClick = vi.fn();
 
     render(
       <SmartLink
         className="custom-link"
-        href="/research?source=home#current"
+        href={href}
         onClick={(event) => {
           event.preventDefault();
           onClick();
         }}
       >
-        Research
+        {name}
       </SmartLink>
     );
 
-    const link = screen.getByRole("link", { name: "Research" });
+    const link = screen.getByRole("link", { name });
     expect(link).toHaveAttribute("data-next-link", "true");
-    expect(link).toHaveAttribute("href", "/research?source=home#current");
+    expect(link).toHaveAttribute("href", href);
     expect(link).toHaveClass("custom-link");
 
     fireEvent.click(link);
