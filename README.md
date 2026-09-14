@@ -152,33 +152,47 @@ Primary navigation is assembled by [navigationItems.ts](src/components/navigatio
 
 ## Quick start
 
-### Prerequisites
+### 1. Install the prerequisites
 
 - Git
-- Node.js 22.13 or newer
-- npm
+- Node.js 22.13 or newer. `.nvmrc` selects Node 22, `package.json` declares the minimum version, and the setup helper enforces it.
+- npm, which is installed with Node.js.
 
-### Windows-first setup
+`package.json` declares the application and development dependencies, while `package-lock.json` pins the exact dependency tree used by `npm ci` and CI. These files are this project's equivalent of a dependency requirements file; do not add a separate `requirements.txt`.
+
+### 2. Clone and prepare a local copy
+
+Windows:
 
 ```powershell
 git clone https://github.com/nicolasgioanni/Smart-Porfolio.git
 cd Smart-Porfolio
 npm run setup:local
-npm run dev:smart
 ```
 
-`setup:local` verifies the Node.js version, creates a local `.env` from the placeholder example when missing, uses `npm ci` only when dependencies are missing or stale, and regenerates content only when needed. `dev:smart` starts at port 3000 or the first available port through 3010 and prints the selected URL.
-
-### Cross-platform smart commands
+Cross-platform:
 
 ```bash
 git clone https://github.com/nicolasgioanni/Smart-Porfolio.git
 cd Smart-Porfolio
 npm run setup:local:node
+```
+
+`setup:local` verifies the Node.js version, creates a local `.env` from the placeholder example when missing, uses `npm ci` only when dependencies are missing or stale, and regenerates local content when needed. To deliberately regenerate from the selected local source after setup, run `npm run setup:local:node -- --force-generate`.
+
+### 3. Start the right local server
+
+For static UI work, use the smart server:
+
+```powershell
+npm run dev:smart
+```
+
+```bash
 npm run dev:smart:node
 ```
 
-### Standard npm path
+It starts at port 3000 or the first available port through 3010 and prints the selected URL. The standard npm path is also available:
 
 ```bash
 npm ci
@@ -196,7 +210,7 @@ npm run dev:pages
 
 This command builds first, applies pending migrations to Wrangler's local D1 state, then starts Pages development with the address printed by Wrangler. It does not require production credentials or a remote database.
 
-See [Local development](docs/development/LOCAL_DEVELOPMENT.md) for command flags, setup-state behavior, Function configuration, and safe cleanup.
+Continue with [Local development](docs/development/LOCAL_DEVELOPMENT.md) for the complete environment setup, UI versus Pages testing, command flags, verification, and safe cleanup. Contributors should then follow the [Agent workflow](docs/development/AGENT_WORKFLOW.md); deployment operators should use [Deployment](docs/operations/DEPLOYMENT.md).
 
 ## Editing content
 
