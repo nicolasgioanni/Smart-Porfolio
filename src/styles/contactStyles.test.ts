@@ -10,7 +10,7 @@ describe("contact wizard styles", () => {
     expect(contactStyles).toMatch(/\.contact-progress\s*{[^}]*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/s);
     expect(contactStyles).toMatch(/\.contact-success\s*{[^}]*display: grid[^}]*gap: var\(--space-6\)/s);
     expect(contactStyles).toMatch(
-      /\.contact-turnstile\[data-status="ready"\] \.contact-turnstile__status-row\s*{[^}]*color: var\(--color-ink-strong\)/s
+      /\.contact-turnstile\[data-status="ready"\] \.contact-turnstile__status-label\s*{[^}]*color: var\(--color-progress-base\)/s
     );
     expect(contactStyles).toMatch(
       /\.contact-gate-status\[data-status="verified"\]\s*{[^}]*color: var\(--color-success\)/s
@@ -30,13 +30,17 @@ describe("contact wizard styles", () => {
     );
   });
 
-  it("reserves flexible and compact verification geometry", () => {
+  it("reserves normal and compact verification geometry without clipping the native widget", () => {
     expect(contactStyles).toMatch(
       /\.contact-gate-status,\s*\.contact-review__fine-print,\s*\.contact-submit-status\s*{[^}]*font-size: var\(--font-size-eyebrow\)[^}]*line-height: var\(--line-height-normal\)/s
     );
     expect(contactStyles).toMatch(
-      /\.contact-turnstile__widget\s*{[^}]*height: var\(--contact-widget-height, 65px\)[^}]*overflow: hidden/s
+      /\.contact-turnstile__measurement\s*{[^}]*width: 100%[^}]*justify-items: center/s
     );
+    expect(contactStyles).toMatch(
+      /\.contact-turnstile__widget-frame\s*{[^}]*width: calc\(var\(--contact-turnstile-native-width\) \* var\(--contact-turnstile-presentation-scale\)\)[^}]*overflow: visible/s
+    );
+    expect(contactStyles).not.toMatch(/\.contact-turnstile__widget iframe/);
   });
 
   it("uses palette-specific dual focus treatments for fields in every theme", () => {
@@ -94,7 +98,7 @@ describe("contact wizard styles", () => {
     expect(contactStyles).toMatch(
       /\.site-shell\[data-glass-effects="false"\] \.contact-field :is\(input, textarea\),[\s\S]*?background:\s*var\(--color-background-elevated\)/s
     );
-    expect(contactStyles).not.toMatch(/backdrop-filter|gradient|mask-image/);
+    expect(contactStyles).not.toMatch(/backdrop-filter|mask-image/);
     expect(contactStyles).toMatch(
       /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.contact-field textarea,[\s\S]*?\.contact-consent-card\s*{[^}]*transition: none/
     );
@@ -121,6 +125,21 @@ describe("contact wizard styles", () => {
     expect(tokenStyles.match(/--color-success:/g)).toHaveLength(3);
     expect(tokenStyles.match(/--color-success-border:/g)).toHaveLength(3);
     expect(tokenStyles.match(/--color-success-surface:/g)).toHaveLength(3);
+    expect(tokenStyles.match(/--color-progress-base:/g)).toHaveLength(3);
+    expect(tokenStyles.match(/--color-progress-highlight:/g)).toHaveLength(3);
+  });
+
+  it("limits the pending verification text highlight to its supported text clip", () => {
+    expect(contactStyles).toMatch(
+      /@supports \(\(-webkit-background-clip: text\) or \(background-clip: text\)\)\s*{[\s\S]*?\.contact-turnstile\[data-status="loading"\][\s\S]*?background: linear-gradient\(90deg,[\s\S]*?animation: contact-turnstile-progress 2\.4s linear infinite/s
+    );
+    expect(contactStyles).toMatch(/\.contact-turnstile__status-label\s*{[\s\S]*?color: var\(--color-progress-base\)/s);
+    expect(contactStyles).toMatch(
+      /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.contact-turnstile\[data-status="loading"\][\s\S]*?background: none[\s\S]*?animation: none/s
+    );
+    expect(contactStyles).toMatch(
+      /@media \(forced-colors: active\)[\s\S]*?color: CanvasText[\s\S]*?background: none/s
+    );
   });
 
   it("stacks controls and makes every action full width on narrow screens", () => {

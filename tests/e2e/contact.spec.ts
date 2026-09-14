@@ -35,8 +35,8 @@ for (const width of [1280, 390, 320]) {
       await settleLayout(page);
       const challenge = page.getByRole("button", { name: "Complete test security check" });
       await expect(challenge).toBeVisible();
-      const availableWidth = await page.locator(".contact-turnstile__widget").evaluate((element) => element.clientWidth);
-      await expect(challenge).toHaveAttribute("data-size", availableWidth < 300 ? "compact" : "flexible");
+      const availableWidth = await page.locator(".contact-turnstile__measurement").evaluate((element) => element.clientWidth);
+      await expect(challenge).toHaveAttribute("data-size", availableWidth < 300 ? "compact" : "normal");
       expect((await page.locator(".contact-turnstile__widget").boundingBox())?.height).toBe(availableWidth < 300 ? 140 : 65);
       const geometry = await gateGeometry(page);
       expect(geometry).toHaveLength(5);
