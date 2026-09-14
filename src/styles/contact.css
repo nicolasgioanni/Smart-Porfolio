@@ -35,6 +35,10 @@
   gap: var(--space-6);
 }
 
+.contact-step-frame > .contact-step {
+  animation: page-body-enter 280ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 .contact-step__heading {
   gap: var(--space-2);
 }
@@ -865,6 +869,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .contact-step-frame > .contact-step {
+    animation: none;
+  }
+
   .contact-notifications__item {
     transition: none;
   }

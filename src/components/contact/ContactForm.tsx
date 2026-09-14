@@ -17,6 +17,7 @@ import {
 import { ContactNotifications } from "./ContactNotifications";
 import { useContactNotifications } from "./useContactNotifications";
 import { TurnstileWidget, type TurnstileStatus } from "@/components/contact/TurnstileWidget";
+import { useContactStepTransition } from "./useContactStepTransition";
 import { siteRoutes } from "@/lib/routing/siteRoutes";
 
 type ContactStep = 1 | 2 | 3;
@@ -234,6 +235,12 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
   const successHeadingRef = useRef<HTMLHeadingElement>(null);
   const stepHeadingRef = useRef<HTMLDivElement>(null);
   const previousLocationRef = useRef(`${view}:${step}`);
+  const { frameRef: stepFrameRef, transitionToStep } = useContactStepTransition({
+    active: view === "form" && !submittedEmail,
+    onStepChange: setStep,
+    step,
+    view
+  });
   const mailtoHref = `mailto:${contactEmail}?subject=Portfolio%20Contact`;
   const acceptedConsentCount = Object.values(consents).filter(Boolean).length;
   const allConsentsAccepted = Object.values(consents).every(Boolean);
@@ -413,7 +420,7 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
       return;
     }
 
-    setStep(2);
+    transitionToStep(2);
   }
 
   function goToReviewStep() {
@@ -425,7 +432,7 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
       return;
     }
 
-    setStep(3);
+    transitionToStep(3);
   }
 
   function updateConsent(field: ConsentField, checked: boolean) {
@@ -494,7 +501,7 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
 
     unlockReviewedPayload();
     notify(message);
-    if (returnToEmail) setStep(2);
+    if (returnToEmail) transitionToStep(2);
   }
 
   function beginAnotherRequest() {
@@ -678,7 +685,7 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
     const nextErrors = { ...nameErrors, ...detailErrors };
     if (hasFieldErrors(nextErrors)) {
       setErrors(nextErrors);
-      setStep(hasFieldErrors(nameErrors) ? 1 : 2);
+      transitionToStep(hasFieldErrors(nameErrors) ? 1 : 2);
       return;
     }
 
@@ -814,8 +821,13 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
             </div>
           ) : null}
 
-          {view === "form" && step === 1 ? (
-            <div className="contact-step" data-step="1">
+          {view === "form" ? (
+            <div
+              className="contact-step-frame"
+              ref={stepFrameRef}
+            >
+          {step === 1 ? (
+            <div className="contact-step" data-step="1" key="contact-step-1">
               <StepHeading description="Tell me who I will be replying to." step={1} title="Tell me your name" />
               <div className="contact-fields">
                 <ContactFieldInput
@@ -852,8 +864,8 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
             </div>
           ) : null}
 
-          {view === "form" && step === 2 ? (
-            <div className="contact-step" data-step="2">
+          {step === 2 ? (
+            <div className="contact-step" data-step="2" key="contact-step-2">
               <StepHeading
                 description="Email is required for your confirmation. A phone number can help me respond more quickly."
                 step={2}
@@ -923,7 +935,7 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
               <div className="contact-step__actions">
                 <button
                   className="contact-action contact-action--secondary glass-button glass-button--secondary hover-base-1"
-                  onClick={() => setStep(1)}
+                  onClick={() => transitionToStep(1)}
                   type="button"
                 >
                   Back
@@ -939,8 +951,8 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
             </div>
           ) : null}
 
-          {view === "form" && step === 3 ? (
-            <div className="contact-step" data-step="3">
+          {step === 3 ? (
+            <div className="contact-step" data-step="3" key="contact-step-3">
               <StepHeading
                 description="Review your details and confirm both acknowledgments before sending."
                 status={`${acceptedConsentCount} of 2 acknowledgments checked`}
@@ -1031,7 +1043,7 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
                 <button
                   className="contact-action contact-action--secondary glass-button glass-button--secondary hover-base-1"
                   disabled={isSubmissionBusy || reviewLocked}
-                  onClick={() => setStep(2)}
+                  onClick={() => transitionToStep(2)}
                   type="button"
                 >
                   Back
@@ -1054,6 +1066,8 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
                   </button>
                 )}
               </div>
+            </div>
+          ) : null}
             </div>
           ) : null}
         </div>
