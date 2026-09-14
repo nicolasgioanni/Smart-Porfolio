@@ -42,6 +42,7 @@ function StatefulVerificationHarness() {
 beforeEach(() => {
   options = undefined;
   document.documentElement.dataset.theme = "dark";
+  vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(320);
   renderMock = vi.fn((_container: HTMLElement, nextOptions: WidgetOptions) => {
     options = nextOptions;
     return "widget-id";
@@ -82,7 +83,7 @@ describe("TurnstileWidget", () => {
       appearance: "always",
       execution: "render",
       cData: "submission-123",
-      size: "flexible",
+      size: "normal",
       theme: "dark",
       "response-field": false,
       retry: "never",
@@ -223,9 +224,7 @@ describe("TurnstileWidget", () => {
     );
 
     await waitFor(() => expect(screen.queryByRole("status")).not.toBeInTheDocument());
-    const statusRow = document.querySelector(".contact-turnstile__status-row p");
-    expect(statusRow).toHaveAttribute("aria-hidden", "true");
-    expect(statusRow).toBeEmptyDOMElement();
+    expect(document.querySelector(".contact-turnstile__status-row")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Run check again" })).not.toBeInTheDocument();
     expect(renderMock).toHaveBeenCalledTimes(1);
     expect(removeMock).not.toHaveBeenCalled();
