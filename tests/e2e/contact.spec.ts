@@ -4,7 +4,7 @@ import {
   captureBrowserConsole,
   expectNoBrowserConsoleIssues
 } from "./browserConsole";
-import { settleLayout } from "./settleLayout";
+import { settleLayout, settlePageEntryMotion } from "./settleLayout";
 import { selectThemeWithChooser } from "./themePreference";
 
 async function gateGeometry(page: Page) {
@@ -33,6 +33,7 @@ for (const width of [1280, 390, 320]) {
       });
       await page.goto("/contact");
       await settleLayout(page);
+      await settlePageEntryMotion(page);
       const challenge = page.getByRole("button", { name: "Complete test security check" });
       await expect(challenge).toBeVisible();
       const availableWidth = await page.locator(".contact-turnstile__measurement").evaluate((element) => element.clientWidth);
