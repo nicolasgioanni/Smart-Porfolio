@@ -17,7 +17,7 @@ describe("connected detail disclosure styles", () => {
     expect(fallbackSurfaceRule).toMatch(/--detail-panel-surface:\s*var\(--glass-fallback-surface\)/);
   });
 
-  it("joins summary and panel without a seam or independent panel elevation", () => {
+  it("joins summary and panel with a disclosed outline instead of persistent trigger shadows", () => {
     const connectedTriggerRule =
       detailStyles.match(
         /\.detail-section:is\(\[data-visual-state="open"\], \[data-visual-state="closing"\]\) \.detail-section__trigger\s*\{[^}]*}/s
@@ -30,9 +30,7 @@ describe("connected detail disclosure styles", () => {
     expect(connectedTriggerRule).toMatch(/border-end-end-radius:\s*0/);
     expect(connectedTriggerRule).toMatch(/border-end-start-radius:\s*0/);
     expect(connectedTriggerRule).toMatch(/background:\s*var\(--detail-panel-surface\)/);
-    expect(connectedTriggerRule).toMatch(/inset 1px 0 var\(--color-line-strong\)/);
-    expect(connectedTriggerRule).toMatch(/inset -1px 0 var\(--color-line-strong\)/);
-    expect(connectedTriggerRule).toMatch(/inset 0 1px var\(--color-line-strong\)/);
+    expect(connectedTriggerRule).not.toMatch(/box-shadow/);
     expect(connectedTriggerRule).toMatch(/transition:\s*none/);
 
     for (const panelRule of [openPanelRule, closingPanelRule]) {
@@ -42,9 +40,11 @@ describe("connected detail disclosure styles", () => {
       expect(panelRule).not.toMatch(/box-shadow/);
     }
 
-    expect(detailStyles).toMatch(
-      /\.detail-section:is\(\[data-visual-state="open"\], \[data-visual-state="closing"\]\)::before,[\s\S]*?\.detail-section:is\(\[data-visual-state="open"\], \[data-visual-state="closing"\]\)::after\s*\{[^}]*opacity:\s*0/s
-    );
+    expect(detailStyles).toMatch(/\.detail-section__trigger::before,\s*\.detail-section__trigger::after\s*\{[\s\S]*?top:\s*-1px[\s\S]*?right:\s*0[\s\S]*?bottom:\s*0[\s\S]*?left:\s*0/s);
+    expect(detailStyles).toMatch(/\.detail-section__trigger::before\s*\{[^}]*border-top-color:\s*var\(--color-line-strong\)/s);
+    expect(detailStyles).toMatch(/\.detail-section__trigger::after\s*\{[\s\S]*?border-right-color:\s*var\(--color-line-strong\)[\s\S]*?border-left-color:\s*var\(--color-line-strong\)[\s\S]*?transform:\s*scaleY\(0\)[\s\S]*?transform-origin:\s*bottom/s);
+    expect(detailStyles).toMatch(/\.detail-section\[data-open="true"\] \.detail-section__trigger::before,[\s\S]*?\.detail-section\[data-open="true"\] \.detail-section__trigger::after\s*\{[^}]*opacity:\s*1/s);
+    expect(detailStyles).toMatch(/\.detail-list:has\(> \.detail-section:first-child\[data-open="true"\]\)::before,[\s\S]*?\.detail-section:has\(\+ \.detail-section\[data-open="true"\]\)::before/s);
     expect(detailStyles).toMatch(/top:\s*100%/);
     expect(detailStyles).not.toMatch(/top:\s*calc\(100% - 1px\)/);
   });
@@ -56,6 +56,7 @@ describe("connected detail disclosure styles", () => {
       )?.[0] ?? "";
 
     expect(focusRule).toMatch(/var\(--focus-ring\)/);
+    expect(focusRule).not.toMatch(/inset/);
     expect(detailStyles).toMatch(
       /\.detail-section:not\(\[data-visual-state="open"\]\):not\(\[data-visual-state="closing"\]\)[\s\S]*?\.detail-section__trigger:not\(\.detail-section__trigger--static\):hover/s
     );
