@@ -78,9 +78,9 @@ describe("ResearchShowcase", () => {
     expect(projects.map((project) => project.dataset.visualSide)).toEqual(["left", "right", "left"]);
     expect(screen.getAllByRole("img", { name: "UW Bothell School of STEM logo" })).toHaveLength(3);
     expect(projects.map((project) => project.querySelector(".research-project__index")?.textContent)).toEqual([
-      "01",
-      "02",
-      "03"
+      "1",
+      "2",
+      "3"
     ]);
     expect(
       screen.getAllByRole("button", { name: /Open graphical abstract for/ }).map((button) => button.getAttribute("aria-label"))
@@ -115,7 +115,7 @@ describe("ResearchShowcase", () => {
     expect(screen.queryByRole("img", { name: /segmentation diagram|attack and defense matrix|sequence design diagram/i })).not.toBeInTheDocument();
     expect(screen.queryByText("Graduate Research Assistant")).not.toBeInTheDocument();
     expect(screen.queryByText("Bothell, Washington, United States")).not.toBeInTheDocument();
-    expect(screen.queryByText("Research 01")).not.toBeInTheDocument();
+    expect(screen.queryByText("Research 1")).not.toBeInTheDocument();
   });
 
   it("keeps technical skills visible for research items without authored bullets", () => {

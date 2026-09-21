@@ -52,7 +52,7 @@ export function ResearchCard({ item, mode, onToggle, openSectionId, order, overl
         <header className="research-project__header">
           <div className="research-project__identity">
             <span aria-hidden="true" className="research-project__index">
-              {String(order + 1).padStart(2, "0")}
+              {order + 1}
             </span>
             {item.organizationLogo ? (
               <img
