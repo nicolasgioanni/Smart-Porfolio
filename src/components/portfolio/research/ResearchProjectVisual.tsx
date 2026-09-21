@@ -42,7 +42,7 @@ export function ResearchProjectVisual({ item, order, title }: ResearchProjectVis
   return (
     <figure className="research-visual">
       <div className="research-visual__header">
-        <span>R&amp;D / {String(order + 1).padStart(2, "0")}</span>
+        <span>R&amp;D / {order + 1}</span>
         <span className="research-visual__status">
           <span aria-hidden="true" className="research-visual__status-dot" />
           Active

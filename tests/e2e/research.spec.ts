@@ -285,7 +285,7 @@ async function expectRenderedCardIdentity(project: Locator, index: number) {
   const organizationLogo = project.locator("img.research-project__organization-logo");
   const pendingResources = project.locator("button.research-project__resource--pending");
 
-  await expect(projectIndex).toHaveText(String(index + 1).padStart(2, "0"));
+  await expect(projectIndex).toHaveText(String(index + 1));
 
   if (await organizationLogo.count()) {
     await expect(organizationLogo).toHaveCount(1);

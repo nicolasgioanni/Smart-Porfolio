@@ -114,7 +114,7 @@ function DetailDisclosure({
   const summary = (
     <>
       <span aria-hidden="true" className="detail-section__number">
-        {String(order + 1).padStart(2, "0")}
+        {order + 1}
       </span>
       <span className="detail-section__copy">
         <span aria-level={3} className="detail-section__title" id={titleId} role="heading">
