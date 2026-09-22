@@ -40,19 +40,17 @@ describe("shared detail styles", () => {
     );
   });
 
-  it("insets disclosure dividers without narrowing their trigger targets", () => {
+  it("insets persistent disclosure dividers without retaining the obsolete accent divider", () => {
     const listRule = detailStyles.match(/\.detail-list\s*\{[^}]*}/s)?.[0] ?? "";
     const sectionRule = detailStyles.match(/\.detail-section\s*\{[^}]*}/s)?.[0] ?? "";
     const dividerRule =
       detailStyles.match(/\.detail-list::before,\s*\.detail-section::before\s*\{[^}]*}/s)?.[0] ?? "";
-    const accentDividerRule = detailStyles.match(/\.detail-section::after\s*\{[^}]*}/s)?.[0] ?? "";
 
     expect(listRule).toMatch(/border-top:\s*1px solid transparent/);
     expect(sectionRule).toMatch(/border-bottom:\s*1px solid transparent/);
     expect(dividerRule).toMatch(/right:\s*var\(--space-1\)/);
     expect(dividerRule).toMatch(/left:\s*var\(--space-1\)/);
-    expect(accentDividerRule).toMatch(/right:\s*var\(--space-1\)/);
-    expect(accentDividerRule).toMatch(/left:\s*var\(--space-1\)/);
+    expect(detailStyles).not.toMatch(/\.detail-section::after\s*\{/);
   });
 
   it("clips disclosure grid motion outside the capped, keyboard-scrollable body", () => {

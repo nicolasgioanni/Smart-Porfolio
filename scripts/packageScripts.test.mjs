@@ -125,6 +125,8 @@ describe("package and CI deployment automation", () => {
         "src/lib/media/researchVideoAssets.test.ts",
         "src/lib/theme/themeTransition.test.ts",
         "src/styles/themePalette.test.ts",
+        "src/components/portfolio/shared/DetailDisclosureList.test.tsx",
+        "src/components/portfolio/shared/detailDisclosureStyles.test.ts",
         "src/components/portfolio/experience/ExperienceShowcase.test.tsx",
         "src/components/portfolio/recommendations/RecommendationsList.test.tsx",
         "src/components/portfolio/research/ResearchShowcase.test.tsx",

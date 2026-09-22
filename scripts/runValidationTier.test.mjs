@@ -20,6 +20,10 @@ describe("priority validation tier", () => {
       "src/components/navigation/smartLink.test.tsx",
       "src/styles/contactStyles.test.ts"
     ]));
+    expect(requiredPriorityFiles).toEqual(expect.arrayContaining([
+      "src/components/portfolio/shared/DetailDisclosureList.test.tsx",
+      "src/components/portfolio/shared/detailDisclosureStyles.test.ts"
+    ]));
 
     for (const directory of priorityTestDirectories) {
       expect(existsSync(path.join(projectRoot, directory))).toBe(true);

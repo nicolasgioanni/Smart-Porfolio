@@ -110,7 +110,6 @@ function expectConnectedSurface(snapshot: SurfaceSnapshot) {
   expect(snapshot.panelTopLeftRadius).toBe("0px");
   expect(snapshot.panelRadius).toMatch(/^0px 0px /);
   expect(snapshot.panelBoxShadow).toBe("none");
-  expect(snapshot.separatorOpacity).toBe("0");
   expect(Math.abs(snapshot.panelTop - snapshot.triggerBottom)).toBeLessThanOrEqual(1);
 }
 
@@ -143,7 +142,9 @@ export async function expectConnectedDetailSurfaceAcrossPalettes(
       expect(opened.triggerBoxShadow).toContain("rgb(");
 
       await settleDetailPanelMotion(detail.panel);
-      expectConnectedSurface(await readSurfaceSnapshot(detail));
+      const settledOpen = await readSurfaceSnapshot(detail);
+      expectConnectedSurface(settledOpen);
+      expect(settledOpen.separatorOpacity).toBe("0");
 
       const triggerBox = await detail.trigger.boundingBox();
       expect(triggerBox).not.toBeNull();
@@ -224,6 +225,23 @@ export async function expectReducedMotionConnectedDetailSurface(
   await expect(detail.section).toHaveAttribute("data-visual-state", "open");
   expectConnectedSurface(await readSurfaceSnapshot(detail));
   await expect(detail.panel).toHaveCSS("transition-duration", "0s");
+  expect(
+    await detail.trigger.evaluate((trigger) => {
+      const section = trigger.parentElement;
+      const precedingSeparator = section?.previousElementSibling ?? section?.parentElement;
+      if (!section || !precedingSeparator) throw new Error("The detail separator is missing.");
+
+      return {
+        precedingSeparator: getComputedStyle(precedingSeparator, "::before").transitionDuration,
+        sideStroke: getComputedStyle(trigger, "::after").transitionDuration,
+        topStroke: getComputedStyle(trigger, "::before").transitionDuration
+      };
+    })
+  ).toEqual({ precedingSeparator: "0s", sideStroke: "0s", topStroke: "0s" });
+
+  await detail.trigger.press("Escape");
+  await expect(detail.section).toHaveAttribute("data-visual-state", "closed");
+  await expect.poll(() => detail.section.evaluate((section) => getComputedStyle(section, "::before").opacity)).toBe("1");
 
   return true;
 }

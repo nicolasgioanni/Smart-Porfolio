@@ -55,6 +55,8 @@ export const requiredPriorityFiles = [...new Set([
   "functions/api/contact.test.ts",
   "functions/api/contact/verify.test.ts",
   "src/components/overlay/ModalDialog.test.tsx",
+  "src/components/portfolio/shared/DetailDisclosureList.test.tsx",
+  "src/components/portfolio/shared/detailDisclosureStyles.test.ts",
   "src/components/portfolio/experience/ExperienceShowcase.test.tsx",
   "src/components/portfolio/experience/experienceStyles.test.ts",
   "src/components/portfolio/recommendations/ExpandableRecommendationText.test.tsx",

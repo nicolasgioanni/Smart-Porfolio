@@ -23,6 +23,7 @@ import {
   expectConnectedDetailSurfaceResponsiveBoundary,
   expectReducedMotionConnectedDetailSurface
 } from "./detailConnectedSurface";
+import { expectDetailOutlineMotion, expectReducedMotionDetailOutline } from "./detailOutline";
 import { settleLayout, settlePageEntryMotion } from "./settleLayout";
 import { reloadWithStoredTheme } from "./themePreference";
 
@@ -886,6 +887,8 @@ test.describe("Research showcase", () => {
       const panelId = await disclosure.getAttribute("aria-controls");
       expect(panelId).toBeTruthy();
       await expect(page.locator(`#${panelId}`)).toHaveCSS("transition-duration", "0s");
+      await disclosure.press("Escape");
+      await expectReducedMotionDetailOutline(disclosure);
     }
   });
 
@@ -1157,6 +1160,17 @@ test.describe("Research showcase", () => {
       cardSelector: "article.research-project",
       pathname: "/research"
     });
+  });
+
+  test("crossfades first, middle, and final evidence outlines with their separators", async ({ page }) => {
+    for (const width of [1280, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto("/research");
+      await settleLayout(page);
+      await settlePageEntryMotion(page);
+
+      await expectDetailOutlineMotion(page, "article.research-project");
+    }
   });
 
   test("keeps expanded projects at rest after focus and scrolling in every palette", async ({ page }) => {
