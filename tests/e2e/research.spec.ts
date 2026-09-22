@@ -27,11 +27,6 @@ import { expectDetailOutlineMotion, expectReducedMotionDetailOutline } from "./d
 import { settleLayout, settlePageEntryMotion } from "./settleLayout";
 import { reloadWithStoredTheme } from "./themePreference";
 
-const authoredAbstractProjectIds = [
-  "cytocv-miller-lab",
-  "adversarial-machine-learning",
-  "yeast-dna-target-selection"
-] as const;
 
 test.beforeEach(async ({ page }) => {
   captureBrowserConsole(page);
@@ -52,21 +47,11 @@ async function expectResearchProjectsOrEmptyState(page: Page): Promise<Locator |
   return projects;
 }
 
-async function expectAuthoredAbstractTriggers(page: Page): Promise<Locator[]> {
+async function getRenderedAbstractTriggers(page: Page): Promise<Locator[]> {
   const allTriggers = page.locator("button.research-abstract__trigger");
-  const triggers = [];
-
-  await expect(allTriggers).toHaveCount(authoredAbstractProjectIds.length);
-  for (const projectId of authoredAbstractProjectIds) {
-    const project = page.locator(`article.research-project[id="${projectId}"]`);
-    const trigger = project.locator("button.research-abstract__trigger");
-
-    await expect(project).toHaveCount(1);
-    await expect(trigger).toHaveCount(1);
-    triggers.push(trigger);
-  }
-
-  return triggers;
+  return Array.from({ length: await allTriggers.count() }, (_, index) =>
+    allTriggers.nth(index),
+  );
 }
 
 async function expectResolverOwnedMediaTitles(projects: Locator) {
@@ -116,8 +101,9 @@ async function expectDetailModeSwitch(page: Page) {
   for (const button of await buttons.all()) {
     const buttonBox = await button.boundingBox();
     expect(buttonBox).not.toBeNull();
-    expect(buttonBox!.width).toBeGreaterThanOrEqual(44);
-    expect(buttonBox!.height).toBeGreaterThanOrEqual(44);
+    // Device-pixel rounding can report a 44px CSS target as 43.99998px.
+    expect(buttonBox!.width).toBeGreaterThanOrEqual(43.99);
+    expect(buttonBox!.height).toBeGreaterThanOrEqual(43.99);
   }
   await expect.poll(() => buttons.evaluateAll((elements) => elements.map((element) => element.getAttribute("aria-pressed"))))
     .toEqual(["true", "false"]);
@@ -144,60 +130,491 @@ async function expectNoHorizontalOverflow(page: Page) {
     .toBe(true);
 }
 
+async function getRenderedResearchExplainers(page: Page): Promise<Locator[]> {
+  const explainers = page.locator("[data-research-explainer]");
+  return Array.from({ length: await explainers.count() }, (_, index) =>
+    explainers.nth(index),
+  );
+}
+
+type ExplainerCinematicContract = {
+  labels: readonly string[];
+  phaseSubjects: readonly string[];
+  title: string;
+};
+
+const explainerCinematicContracts = {
+  aml: {
+    labels: [
+      "Clean image",
+      "Altered copy",
+      "Train with both",
+      "Binary detector",
+      "Test image",
+      "Clean or manipulated?",
+    ],
+    phaseSubjects: [
+      ".research-explainer__pixel-patches",
+      ".research-explainer__data-token",
+      ".research-explainer__detector-ring",
+      ".research-explainer__test-token",
+    ],
+    title: "Can AI spot an altered image?",
+  },
+  "guide-donor": {
+    labels: [
+      "Target DNA",
+      "A → G",
+      "Guide site",
+      "Donor design",
+      "Export designs",
+      "Guide",
+      "Donor",
+    ],
+    phaseSubjects: [
+      ".research-explainer__change-marker--requested",
+      ".research-explainer__guide-bracket",
+      ".research-explainer__donor-token",
+      ".research-explainer__export-token",
+    ],
+    title: "Design a DNA change",
+  },
+} as const satisfies Record<string, ExplainerCinematicContract>;
+
+function getExplainerCinematicContract(
+  variant: string | null,
+): ExplainerCinematicContract {
+  const contract = variant
+    ? explainerCinematicContracts[
+        variant as keyof typeof explainerCinematicContracts
+      ]
+    : undefined;
+  if (!contract) {
+    throw new Error(`Unexpected Research explainer variant: ${variant}`);
+  }
+  return contract;
+}
+
+async function expectResearchExplainerStaticContent(
+  explainer: Locator,
+): Promise<ExplainerCinematicContract> {
+  const variant = await explainer.getAttribute("data-research-explainer");
+  const contract = getExplainerCinematicContract(variant);
+  await expect(explainer).toHaveAttribute("data-research-explainer", variant!);
+  await expect(explainer.locator(".research-explainer__title")).toHaveText(
+    contract.title,
+  );
+  await expect(explainer.locator(".research-explainer__scene")).toHaveCount(1);
+  await expect(explainer.locator(".research-explainer__scene")).toBeVisible();
+  await expect(
+    explainer.locator("svg.research-explainer__diagram"),
+  ).toHaveCount(1);
+  await expect(
+    explainer.locator("svg.research-explainer__diagram"),
+  ).toBeVisible();
+  await expect(explainer.locator(".research-explainer__caption")).toBeVisible();
+  await expect(
+    explainer.locator(".research-explainer__caption"),
+  ).not.toBeEmpty();
+  const sceneLabels = explainer.locator(
+    ".research-explainer__scene-labels",
+  );
+  await expect(
+    sceneLabels.locator(".research-explainer__scene-label"),
+  ).toHaveCount(contract.labels.length);
+  const labelText = await sceneLabels
+    .locator(".research-explainer__scene-label")
+    .evaluateAll((labels) =>
+      labels.map((label) =>
+        (label instanceof HTMLElement ? label.innerText : label.textContent ?? "")
+          .replace(/\s+/g, " ")
+          .trim(),
+      ),
+    );
+  expect(labelText).toEqual(contract.labels);
+
+  const phases = await explainer
+    .locator(".research-explainer__phase")
+    .evaluateAll((elements) =>
+      elements.map((element) => ({
+        className: element.getAttribute("class") ?? "",
+        opacity: Number.parseFloat(getComputedStyle(element).opacity),
+        visibility: getComputedStyle(element).visibility,
+      })),
+    );
+  expect(phases).toHaveLength(4);
+  expect(phases.map((phase) => phase.className)).toEqual(
+    expect.arrayContaining([
+      expect.stringContaining("research-explainer__phase--one"),
+      expect.stringContaining("research-explainer__phase--two"),
+      expect.stringContaining("research-explainer__phase--three"),
+      expect.stringContaining("research-explainer__phase--four"),
+    ]),
+  );
+  for (const phase of phases) {
+    expect(phase.visibility).toBe("visible");
+    expect(phase.opacity).toBeGreaterThan(0);
+  }
+
+  return contract;
+}
+
+async function expectExplainerSceneVisibleAtEveryPhase(
+  explainer: Locator,
+  contract: ExplainerCinematicContract,
+) {
+  const samples = await explainer.evaluate((root, options) => {
+    const phases = Array.from(
+      root.querySelectorAll<HTMLElement>(".research-explainer__phase"),
+    );
+    const labels = Array.from(
+      root.querySelectorAll<HTMLElement>(".research-explainer__scene-label"),
+    );
+    const scene = root.querySelector<HTMLElement>(".research-explainer__scene");
+    const animations = root
+      .getAnimations({ subtree: true })
+      .filter((animation) => {
+        const target = (animation.effect as KeyframeEffect | null)?.target;
+        return (
+          target instanceof Element &&
+          (target.matches(options.subjectSelector) ||
+            Boolean(target.closest(options.subjectSelector)))
+        );
+      });
+    const animationsByPhase = options.phaseSubjects.map((selector) =>
+      animations.filter((animation) => {
+        const target = (animation.effect as KeyframeEffect | null)?.target;
+        return (
+          target instanceof Element &&
+          (target.matches(selector) || Boolean(target.closest(selector)))
+        );
+      }),
+    );
+    if (
+      phases.length !== 4 ||
+      !scene ||
+      labels.length !== options.labelCount ||
+      animationsByPhase.some((phaseAnimations) => phaseAnimations.length === 0)
+    ) {
+      throw new Error(
+        "Research explainer must keep four persistent phases, its connected scene, visible HTML labels, and an animated subject for each phase.",
+      );
+    }
+
+    const snapshots = [1_500, 4_600, 7_500, 10_200, 11_500].map((time) => {
+      for (const animation of animations) {
+        animation.pause();
+        animation.currentTime = time;
+      }
+      return {
+        animationCounts: animationsByPhase.map(
+          (phaseAnimations) => phaseAnimations.length,
+        ),
+        animationDurations: animations.map((animation) => {
+          const target = (animation.effect as KeyframeEffect).target as Element;
+          return getComputedStyle(target).animationDuration;
+        }),
+        animationTimes: animations.map((animation) =>
+          Number(animation.currentTime ?? -1),
+        ),
+        labels: labels.map((label) => {
+          const style = getComputedStyle(label);
+          const box = label.getBoundingClientRect();
+          return {
+            height: box.height,
+            opacity: Number.parseFloat(style.opacity),
+            visibility: style.visibility,
+            width: box.width,
+          };
+        }),
+        phases: phases.map((phase) => {
+          const style = getComputedStyle(phase);
+          return {
+            opacity: Number.parseFloat(style.opacity),
+            visibility: style.visibility,
+          };
+        }),
+        subjects: options.phaseSubjects.map((selector) =>
+          Array.from(root.querySelectorAll<HTMLElement>(selector)).map(
+            (subject) => {
+              const style = getComputedStyle(subject);
+              const box = subject.getBoundingClientRect();
+              return {
+                height: box.height,
+                opacity: Number.parseFloat(style.opacity),
+                transform: style.transform,
+                visibility: style.visibility,
+                width: box.width,
+              };
+            },
+          ),
+        ),
+      };
+    });
+    let guideExportPathSample: {
+      closestPathDistance: number;
+      opacity: number;
+      visibility: string;
+    } | undefined;
+    if (options.variant === "guide-donor") {
+      for (const animation of animations) {
+        animation.pause();
+        animation.currentTime = 9_720;
+      }
+      const svg = root.querySelector<SVGSVGElement>(
+        "svg.research-explainer__diagram",
+      );
+      const guideToken = root.querySelector<SVGCircleElement>(
+        ".research-explainer__export-token--guide",
+      );
+      const guidePath = root.querySelector<SVGPathElement>(
+        ".research-explainer__export-path",
+      );
+      if (!svg || !guideToken || !guidePath) {
+        throw new Error(
+          "GuideDonorScheduler needs a guide export token and visible path.",
+        );
+      }
+      const svgBox = svg.getBoundingClientRect();
+      const tokenBox = guideToken.getBoundingClientRect();
+      const viewBox = svg.viewBox.baseVal;
+      const tokenCenter = {
+        x:
+          viewBox.x +
+          ((tokenBox.left + tokenBox.width / 2 - svgBox.left) / svgBox.width) *
+            viewBox.width,
+        y:
+          viewBox.y +
+          ((tokenBox.top + tokenBox.height / 2 - svgBox.top) / svgBox.height) *
+            viewBox.height,
+      };
+      const totalLength = guidePath.getTotalLength();
+      let closestPathDistance = Number.POSITIVE_INFINITY;
+      for (let step = 0; step <= 200; step += 1) {
+        const point = guidePath.getPointAtLength((totalLength * step) / 200);
+        closestPathDistance = Math.min(
+          closestPathDistance,
+          Math.hypot(point.x - tokenCenter.x, point.y - tokenCenter.y),
+        );
+      }
+      const style = getComputedStyle(guideToken);
+      guideExportPathSample = {
+        closestPathDistance,
+        opacity: Number.parseFloat(style.opacity),
+        visibility: style.visibility,
+      };
+    }
+    for (const animation of animations) animation.play();
+    return { guideExportPathSample, snapshots };
+  }, {
+    labelCount: contract.labels.length,
+    phaseSubjects: contract.phaseSubjects,
+    subjectSelector: contract.phaseSubjects.join(", "),
+    variant: await explainer.getAttribute("data-research-explainer"),
+  });
+
+  expect(samples.snapshots).toHaveLength(5);
+  for (const [sampleIndex, sample] of samples.snapshots.entries()) {
+    expect(sample.phases).toHaveLength(4);
+    expect(sample.labels).toHaveLength(contract.labels.length);
+    expect(sample.animationCounts).toHaveLength(4);
+    expect(sample.animationCounts.every((count) => count > 0)).toBe(true);
+    expect(sample.animationDurations.every((duration) => duration === "12s")).toBe(
+      true,
+    );
+    expect(
+      sample.animationTimes.every(
+        (time) => Math.abs(time - [1_500, 4_600, 7_500, 10_200, 11_500][sampleIndex]!) <= 1,
+      ),
+    ).toBe(true);
+    for (const phase of sample.phases) {
+      expect(phase.visibility).toBe("visible");
+      expect(phase.opacity).toBeGreaterThan(0);
+    }
+    for (const label of sample.labels) {
+      expect(label.visibility).toBe("visible");
+      expect(label.opacity).toBeGreaterThan(0);
+      expect(label.width).toBeGreaterThan(0);
+      expect(label.height).toBeGreaterThan(0);
+    }
+    for (const phaseSubjects of sample.subjects) {
+      expect(phaseSubjects.length).toBeGreaterThan(0);
+      for (const subject of phaseSubjects) {
+        expect(subject.visibility).toBe("visible");
+        expect(subject.width).toBeGreaterThan(0);
+        expect(subject.height).toBeGreaterThan(0);
+      }
+    }
+    if (sampleIndex < 4) {
+      const emphasizedSubject = sample.subjects[sampleIndex]!;
+      expect(
+        emphasizedSubject.some(
+          (subject) => subject.opacity > 0,
+        ),
+      ).toBe(true);
+      expect(
+        emphasizedSubject.some(
+          (subject) => subject.transform !== "none" || subject.opacity < 0.99,
+        ),
+      ).toBe(true);
+    }
+  }
+  if (samples.guideExportPathSample) {
+    expect(samples.guideExportPathSample.visibility).toBe("visible");
+    expect(samples.guideExportPathSample.opacity).toBeGreaterThan(0);
+    expect(samples.guideExportPathSample.closestPathDistance).toBeLessThanOrEqual(
+      6,
+    );
+  }
+}
+
+async function sampleExplainerTimeline(
+  explainer: Locator,
+  selector: string,
+  frames = 0,
+): Promise<number[]> {
+  return explainer.evaluate(async (root, options) => {
+    for (let frame = 0; frame < options.frames; frame += 1) {
+      await new Promise<void>((resolve) =>
+        window.requestAnimationFrame(() => resolve()),
+      );
+    }
+    return root
+      .getAnimations({ subtree: true })
+      .filter((animation) => {
+        const target = (animation.effect as KeyframeEffect | null)?.target;
+        return (
+          target instanceof Element &&
+          (target.matches(options.selector) ||
+            Boolean(target.closest(options.selector)))
+        );
+      })
+      .map((animation) => Number.parseFloat(String(animation.currentTime ?? -1)));
+  }, { frames, selector });
+}
+
+async function getExplainerAnimationStyles(
+  explainer: Locator,
+  selector: string,
+) {
+  return explainer.evaluate((root, targetSelector) =>
+    root
+      .getAnimations({ subtree: true })
+      .filter((animation) => {
+        const target = (animation.effect as KeyframeEffect | null)?.target;
+        return (
+          target instanceof Element &&
+          (target.matches(targetSelector) ||
+            Boolean(target.closest(targetSelector)))
+        );
+      })
+      .map((animation) => {
+        const target = (animation.effect as KeyframeEffect).target as Element;
+        const style = getComputedStyle(target);
+        return {
+          animationDuration: style.animationDuration,
+          animationName: style.animationName,
+          playState: style.animationPlayState,
+        };
+      }),
+  selector);
+}
+
+async function waitForExplainerTimelineToFreeze(explainer: Locator, selector: string) {
+  await expect.poll(async () => {
+    const start = await sampleExplainerTimeline(explainer, selector);
+    const next = await sampleExplainerTimeline(explainer, selector, 2);
+    return next.every((time, index) => Math.abs(time - start[index]!) <= 1);
+  }).toBe(true);
+}
+
+async function setDocumentVisibilityForTest(page: Page, hidden: boolean) {
+  await page.evaluate((nextHidden) => {
+    Object.defineProperty(document, "hidden", {
+      configurable: true,
+      get: () => nextHidden,
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+  }, hidden);
+}
+
 async function expectAbstractFrameGeometry(trigger: Locator) {
   await trigger.scrollIntoViewIfNeeded();
   const geometry = await trigger.evaluate((triggerElement) => {
     const abstract = triggerElement.closest<HTMLElement>(".research-abstract");
-    const title = abstract?.querySelector<HTMLElement>(".research-abstract__title");
-    const thumbnail = triggerElement.querySelector<HTMLImageElement>(".research-abstract__thumbnail");
-    if (!abstract || !title || !thumbnail) throw new Error("The graphical abstract is missing its titled frame or thumbnail.");
+    const row = abstract?.closest<HTMLElement>(
+      ".research-project__media-row--abstract",
+    );
+    const title = abstract?.querySelector<HTMLElement>(
+      ".research-abstract__title",
+    );
+    const thumbnail = triggerElement.querySelector<HTMLImageElement>(
+      ".research-abstract__thumbnail",
+    );
+    if (!abstract || !row || !title || !thumbnail)
+      throw new Error(
+        "The graphical abstract is missing its titled frame, media row, or thumbnail.",
+      );
 
     const abstractBox = abstract.getBoundingClientRect();
+    const rowBox = row.getBoundingClientRect();
     const triggerBox = triggerElement.getBoundingClientRect();
     const thumbnailBox = thumbnail.getBoundingClientRect();
     const thumbnailStyles = getComputedStyle(thumbnail);
     const titleBox = title.getBoundingClientRect();
 
     return {
-      abstract: { clientWidth: abstract.clientWidth, scrollWidth: abstract.scrollWidth },
-      inset: {
-        bottom: abstractBox.bottom - triggerBox.bottom,
-        left: triggerBox.left - abstractBox.left,
-        right: abstractBox.right - triggerBox.right,
-        titleTop: titleBox.top - abstractBox.top - abstract.clientTop,
-        triggerTopAfterTitle: triggerBox.top - titleBox.bottom
+      abstract: {
+        clientWidth: abstract.clientWidth,
+        scrollWidth: abstract.scrollWidth,
       },
+      row: {
+        left: abstractBox.left - rowBox.left,
+        paddingLeft: getComputedStyle(row).paddingLeft,
+        paddingRight: getComputedStyle(row).paddingRight,
+        right: rowBox.right - abstractBox.right,
+      },
+      title: { triggerTopAfterTitle: triggerBox.top - titleBox.bottom },
       rowGap: Number.parseFloat(getComputedStyle(abstract).rowGap),
       thumbnail: {
         height: thumbnailBox.height,
         naturalHeight: thumbnail.naturalHeight,
         naturalWidth: thumbnail.naturalWidth,
         objectFit: thumbnailStyles.objectFit,
-        width: thumbnailBox.width
+        width: thumbnailBox.width,
       },
       trigger: {
         clientHeight: triggerElement.clientHeight,
         clientWidth: triggerElement.clientWidth,
         height: triggerBox.height,
         scrollWidth: triggerElement.scrollWidth,
-        width: triggerBox.width
-      }
+        width: triggerBox.width,
+      },
     };
   });
 
-  expect(geometry.inset.titleTop).toBeCloseTo(16, 0);
-  expect(geometry.inset.triggerTopAfterTitle).toBeCloseTo(geometry.rowGap, 0);
-  expect(geometry.inset.left).toBeCloseTo(16, 0);
-  expect(geometry.inset.right).toBeCloseTo(16, 0);
-  expect(geometry.inset.bottom).toBeGreaterThanOrEqual(16);
-  expect(geometry.trigger.width).toBeCloseTo(geometry.abstract.clientWidth - 32, 0);
-  expect(geometry.trigger.scrollWidth).toBeLessThanOrEqual(geometry.trigger.width + 1);
-  expect(geometry.abstract.scrollWidth).toBeLessThanOrEqual(geometry.abstract.clientWidth + 1);
+  expect(geometry.row.paddingLeft).toBe("16px");
+  expect(geometry.row.paddingRight).toBe("16px");
+  expect(Math.abs(geometry.row.left - geometry.row.right)).toBeLessThanOrEqual(
+    1,
+  );
+  expect(geometry.trigger.height).toBeGreaterThan(0);
+  expect(geometry.title.triggerTopAfterTitle).toBeCloseTo(geometry.rowGap, 0);
+  expect(geometry.trigger.width).toBeCloseTo(geometry.abstract.clientWidth, 0);
+  expect(geometry.trigger.scrollWidth).toBeLessThanOrEqual(
+    geometry.trigger.width + 1,
+  );
+  expect(geometry.abstract.scrollWidth).toBeLessThanOrEqual(
+    geometry.abstract.clientWidth + 1,
+  );
   expect(geometry.thumbnail.objectFit).toBe("contain");
   expect(geometry.thumbnail.naturalWidth).toBeGreaterThan(0);
   expect(geometry.thumbnail.naturalHeight).toBeGreaterThan(0);
   expect(geometry.thumbnail.width).toBeCloseTo(geometry.trigger.clientWidth, 0);
-  expect(geometry.thumbnail.height).toBeCloseTo(geometry.trigger.clientHeight, 0);
+  expect(geometry.thumbnail.height).toBeCloseTo(
+    geometry.trigger.clientHeight,
+    0,
+  );
 }
 
 async function expectVideoHeaderContained(project: Locator) {
@@ -279,6 +696,127 @@ async function getExpandableResearchProjectIndexes(projects: Locator): Promise<n
   }
 
   return indexes;
+}
+
+type ResearchOverlayTarget = {
+  projectIndex: number;
+  triggerIndex: number;
+};
+
+async function getResearchOverlayHit(page: Page, panelId: string) {
+  return page.evaluate((id) => {
+    const panel = document.getElementById(id);
+    const project = panel?.closest<HTMLElement>("article.research-project");
+    if (!panel || !project) {
+      throw new Error("The active Research panel is missing its project.");
+    }
+
+    const panelRect = panel.getBoundingClientRect();
+    const candidates = Array.from(
+      document.querySelectorAll<HTMLElement>(
+        "article.research-project, .research-project__resources",
+      ),
+    ).filter((candidate) => candidate !== project);
+    for (const candidate of candidates) {
+      const candidateRect = candidate.getBoundingClientRect();
+      const left = Math.max(panelRect.left, candidateRect.left, 0);
+      const right = Math.min(panelRect.right, candidateRect.right, window.innerWidth);
+      const top = Math.max(panelRect.top, candidateRect.top, 0);
+      const bottom = Math.min(panelRect.bottom, candidateRect.bottom, window.innerHeight);
+      if (right - left < 8 || bottom - top < 8) continue;
+
+      const topElement = document.elementFromPoint(left + 4, top + 4);
+      return {
+        overlap: true,
+        panelOwnsTop: Boolean(topElement && panel.contains(topElement)),
+      };
+    }
+
+    return { overlap: false, panelOwnsTop: false };
+  }, panelId);
+}
+
+async function findResearchOverlayTarget(
+  page: Page,
+  projects: Locator,
+  expandableIndexes: readonly number[],
+): Promise<ResearchOverlayTarget | undefined> {
+  for (const projectIndex of expandableIndexes) {
+    const triggers = projects
+      .nth(projectIndex)
+      .locator("button.detail-section__trigger");
+
+    for (let triggerIndex = (await triggers.count()) - 1; triggerIndex >= 0; triggerIndex -= 1) {
+      const trigger = triggers.nth(triggerIndex);
+      const panelId = await trigger.getAttribute("aria-controls");
+      if (!panelId) continue;
+
+      await trigger.evaluate((element) =>
+        element.scrollIntoView({ behavior: "instant", block: "center" }),
+      );
+      await trigger.focus();
+      await page.keyboard.press("Enter");
+      await expect(trigger).toHaveAttribute("aria-expanded", "true");
+
+      const panel = page.locator(`#${panelId}`);
+      await settleDetailPanelMotion(panel);
+      const overlayHit = await getResearchOverlayHit(page, panelId);
+
+      await page.keyboard.press("Escape");
+      await expect(trigger).toHaveAttribute("aria-expanded", "false");
+
+      if (overlayHit.overlap) {
+        return { projectIndex, triggerIndex };
+      }
+    }
+  }
+
+  return undefined;
+}
+
+async function findResearchResourceWithFreeHitTarget(
+  page: Page,
+): Promise<Locator | undefined> {
+  const resources = page.locator(
+    'a.research-project__resource[target="_blank"]',
+  );
+
+  for (let index = 0; index < (await resources.count()); index += 1) {
+    const resource = resources.nth(index);
+    await resource.evaluate((element) =>
+      element.scrollIntoView({ behavior: "instant", block: "center" }),
+    );
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) =>
+          window.requestAnimationFrame(() =>
+            window.requestAnimationFrame(() => resolve()),
+          ),
+        ),
+    );
+    const canReceivePointer = await resource.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      if (
+        rect.width === 0 ||
+        rect.height === 0 ||
+        rect.left < 0 ||
+        rect.right > window.innerWidth ||
+        rect.top < 0 ||
+        rect.bottom > window.innerHeight
+      ) {
+        return false;
+      }
+
+      const hit = document.elementFromPoint(
+        rect.left + rect.width / 2,
+        rect.top + rect.height / 2,
+      );
+      return Boolean(hit && element.contains(hit));
+    });
+    if (canReceivePointer) return resource;
+  }
+
+  return undefined;
 }
 
 async function expectRenderedCardIdentity(project: Locator, index: number) {
@@ -522,6 +1060,303 @@ test.describe("Research showcase", () => {
     }
   });
 
+  test("keeps each rendered media stack abstract-first in two centered desktop rows", async ({
+    page,
+  }) => {
+    test.slow();
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto("/research");
+    await settleLayout(page);
+
+    for (const theme of ["navy", "light", "dark"] as const) {
+      await reloadWithStoredTheme(page, theme);
+      await settleLayout(page);
+      const projects = await expectResearchProjectsOrEmptyState(page);
+      if (!projects) continue;
+
+      const stacks = projects.locator(".research-media-stack");
+      for (let index = 0; index < (await stacks.count()); index += 1) {
+        const stack = stacks.nth(index);
+        const rows = stack.locator(":scope > .research-project__media-row");
+        const divider = stack.locator(
+          ":scope > .research-project__media-divider",
+        );
+        await expect(rows).toHaveCount(2);
+        await expect(divider).toHaveCount(1);
+        await expect(rows.nth(0)).toHaveClass(
+          /research-project__media-row--abstract/,
+        );
+        await expect(rows.nth(1)).toHaveClass(
+          /research-project__media-row--explainer/,
+        );
+        await expect(rows.nth(0).locator(".research-abstract")).toHaveCount(1);
+        await expect(
+          rows
+            .nth(1)
+            .locator(":is(.research-video, [data-research-explainer])"),
+        ).toHaveCount(1);
+
+        const geometry = await stack.evaluate((stackElement) => {
+          const rows = Array.from(
+            stackElement.querySelectorAll<HTMLElement>(
+              ":scope > .research-project__media-row",
+            ),
+          );
+          const divider = stackElement.querySelector<HTMLElement>(
+            ":scope > .research-project__media-divider",
+          );
+          if (rows.length !== 2 || !divider)
+            throw new Error(
+              "Research media stack is missing its rows or divider.",
+            );
+
+          const stackBox = stackElement.getBoundingClientRect();
+          const dividerBox = divider.getBoundingClientRect();
+          return {
+            backgroundColor: getComputedStyle(stackElement).backgroundColor,
+            backgroundImage: getComputedStyle(stackElement).backgroundImage,
+            divider: {
+              height: dividerBox.height,
+              left: dividerBox.left - stackBox.left,
+              right: stackBox.right - dividerBox.right,
+            },
+            rows: rows.map((row) => {
+              const box = row.getBoundingClientRect();
+              const medium = row.querySelector<HTMLElement>(
+                ":scope > .research-abstract, :scope > .research-video, :scope > .research-explainer",
+              );
+              const mediumBox = medium?.getBoundingClientRect();
+              const style = getComputedStyle(row);
+              return {
+                alignContent: style.alignContent,
+                height: box.height,
+                mediumLeft: mediumBox ? mediumBox.left - box.left : undefined,
+                mediumRight: mediumBox
+                  ? box.right - mediumBox.right
+                  : undefined,
+                mediumWidth: mediumBox?.width,
+                paddingLeft: style.paddingLeft,
+                paddingRight: style.paddingRight,
+                width: box.width,
+              };
+            }),
+          };
+        });
+
+        expect(geometry.backgroundColor).toMatch(/^rgb\(\d+,\s*\d+,\s*\d+\)$/);
+        expect(geometry.backgroundImage).toBe("none");
+        expect(geometry.divider.height).toBeCloseTo(1, 0);
+        expect(geometry.divider.left).toBeCloseTo(24, 0);
+        expect(geometry.divider.right).toBeCloseTo(24, 0);
+        expect(geometry.rows[0]!.height).toBeCloseTo(
+          geometry.rows[1]!.height,
+          0,
+        );
+        for (const row of geometry.rows) {
+          expect(row.alignContent).toBe("center");
+          expect(row.paddingLeft).toBe("16px");
+          expect(row.paddingRight).toBe("16px");
+          expect(row.mediumWidth).toBeDefined();
+          expect(row.mediumWidth!).toBeLessThanOrEqual(512);
+          expect(
+            Math.abs((row.mediumLeft ?? 0) - (row.mediumRight ?? 0)),
+          ).toBeLessThanOrEqual(1);
+        }
+      }
+
+      await expectNoHorizontalOverflow(page);
+    }
+  });
+
+  test("keeps complete connected explainer scenes visible through every cinematic phase", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto("/research");
+    await settleLayout(page);
+
+    for (const explainer of await getRenderedResearchExplainers(page)) {
+      await explainer.scrollIntoViewIfNeeded();
+      const contract = await expectResearchExplainerStaticContent(explainer);
+      await expectExplainerSceneVisibleAtEveryPhase(explainer, contract);
+    }
+  });
+
+  test("runs rendered diagram explainers only while eligible and retains a manual pause", async ({
+    page,
+  }) => {
+    test.slow();
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto("/research");
+    await settleLayout(page);
+
+    const explainers = await getRenderedResearchExplainers(page);
+    if (explainers.length === 0) return;
+
+    for (const explainer of explainers) {
+      await explainer.scrollIntoViewIfNeeded();
+      const contract = await expectResearchExplainerStaticContent(explainer);
+      const subjectSelector = contract.phaseSubjects.join(", ");
+      const control = explainer.locator(
+        "button.research-explainer__playback-control",
+      );
+      await expect(control).toHaveCount(1);
+      await expect(explainer).toHaveAttribute("data-playback", "playing");
+      await expect(control).toHaveAccessibleName(/^Pause\b/);
+
+      const controlBox = await control.boundingBox();
+      expect(controlBox).not.toBeNull();
+      expect(controlBox!.width).toBeGreaterThanOrEqual(44);
+      expect(controlBox!.height).toBeGreaterThanOrEqual(44);
+      const subjectAnimations = await getExplainerAnimationStyles(
+        explainer,
+        subjectSelector,
+      );
+      expect(subjectAnimations.length).toBeGreaterThanOrEqual(4);
+      for (const animation of subjectAnimations) {
+        expect(animation.animationName).not.toBe("none");
+        expect(animation.animationDuration).toBe("12s");
+        expect(animation.playState).toBe("running");
+      }
+
+      const runningSubjectStart = await sampleExplainerTimeline(explainer, subjectSelector);
+      const runningSubjectNextFrame = await sampleExplainerTimeline(explainer, subjectSelector, 2);
+      expect(runningSubjectNextFrame.some((time, index) => time > runningSubjectStart[index]!)).toBe(true);
+
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await expect(explainer).toHaveAttribute("data-playback", "waiting");
+      await expect(control).toHaveAccessibleName(/^Pause\b/);
+      await expect
+        .poll(async () =>
+          (await getExplainerAnimationStyles(explainer, subjectSelector)).every(
+            (animation) => animation.playState === "paused",
+          ),
+        )
+        .toBe(true);
+      await waitForExplainerTimelineToFreeze(explainer, subjectSelector);
+      const heldSubjectStart = await sampleExplainerTimeline(explainer, subjectSelector);
+      const heldSubjectNextFrame = await sampleExplainerTimeline(explainer, subjectSelector, 2);
+      for (const [index, time] of heldSubjectNextFrame.entries()) {
+        expect(Math.abs(time - heldSubjectStart[index]!)).toBeLessThanOrEqual(1);
+      }
+
+      await explainer.scrollIntoViewIfNeeded();
+      await expect(explainer).toHaveAttribute("data-playback", "playing");
+      const resumedTimeline = await sampleExplainerTimeline(explainer, subjectSelector, 2);
+      expect(
+        resumedTimeline.some(
+          (time, index) => time > heldSubjectNextFrame[index]!,
+        ),
+      ).toBe(true);
+
+      await setDocumentVisibilityForTest(page, true);
+      await expect(explainer).toHaveAttribute("data-playback", "waiting");
+      await expect(control).toHaveAccessibleName(/^Pause\b/);
+      await setDocumentVisibilityForTest(page, false);
+      await expect(explainer).toHaveAttribute("data-playback", "playing");
+
+      await control.click();
+      await expect(explainer).toHaveAttribute("data-playback", "paused");
+      await expect(control).toHaveAccessibleName(/^Resume\b/);
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await expect(explainer).toHaveAttribute("data-playback", "paused");
+      await explainer.scrollIntoViewIfNeeded();
+      await expect(explainer).toHaveAttribute("data-playback", "paused");
+      await setDocumentVisibilityForTest(page, true);
+      await setDocumentVisibilityForTest(page, false);
+      await expect(explainer).toHaveAttribute("data-playback", "paused");
+      await expect(control).toHaveAccessibleName(/^Resume\b/);
+
+      await control.click();
+      await expect(explainer).toHaveAttribute("data-playback", "playing");
+      await expect(control).toHaveAccessibleName(/^Pause\b/);
+    }
+  });
+
+  test("keeps cinematic scene labels readable inside each scene at 320px in every palette", async ({
+    page,
+  }) => {
+    test.slow();
+    await page.setViewportSize({ width: 320, height: 844 });
+    await page.goto("/research");
+    await settleLayout(page);
+
+    for (const theme of ["navy", "light", "dark"] as const) {
+      await reloadWithStoredTheme(page, theme);
+      const explainers = await getRenderedResearchExplainers(page);
+      for (const explainer of explainers) {
+        await explainer.scrollIntoViewIfNeeded();
+        const contract = await expectResearchExplainerStaticContent(explainer);
+        const labelGeometry = await explainer
+          .locator(".research-explainer__scene-label")
+          .evaluateAll((labels) =>
+            labels.map((label) => {
+              const scene = label.closest<HTMLElement>(
+                ".research-explainer__scene",
+              );
+              if (!scene) {
+                throw new Error("Research explainer label is outside its scene.");
+              }
+              const labelBox = label.getBoundingClientRect();
+              const sceneBox = scene.getBoundingClientRect();
+              const style = getComputedStyle(label);
+              return {
+                bottom: labelBox.bottom,
+                fontSize: Number.parseFloat(style.fontSize),
+                height: labelBox.height,
+                left: labelBox.left,
+                right: labelBox.right,
+                sceneBottom: sceneBox.bottom,
+                sceneLeft: sceneBox.left,
+                sceneRight: sceneBox.right,
+                sceneTop: sceneBox.top,
+                top: labelBox.top,
+                visibility: style.visibility,
+                width: labelBox.width,
+              };
+            }),
+          );
+        expect(labelGeometry).toHaveLength(contract.labels.length);
+        for (const label of labelGeometry) {
+          expect(label.visibility).toBe("visible");
+          expect(label.fontSize).toBeGreaterThanOrEqual(13);
+          expect(label.width).toBeGreaterThan(0);
+          expect(label.height).toBeGreaterThan(0);
+          expect(label.left).toBeGreaterThanOrEqual(label.sceneLeft - 1);
+          expect(label.right).toBeLessThanOrEqual(label.sceneRight + 1);
+          expect(label.top).toBeGreaterThanOrEqual(label.sceneTop - 1);
+          expect(label.bottom).toBeLessThanOrEqual(label.sceneBottom + 1);
+        }
+      }
+      await expectNoHorizontalOverflow(page);
+    }
+  });
+
+  test("keeps diagram explainers complete and noninteractive when reduced motion is requested", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/research");
+    await settleLayout(page);
+
+    const reducedExplainers = await getRenderedResearchExplainers(page);
+    for (const explainer of reducedExplainers) {
+      await explainer.scrollIntoViewIfNeeded();
+      const contract = await expectResearchExplainerStaticContent(explainer);
+      await expect(explainer).toHaveAttribute("data-playback", "complete");
+      await expect(
+        explainer.locator("button.research-explainer__playback-control"),
+      ).toHaveCount(0);
+      await expect(
+        explainer.locator(".research-explainer__control-slot"),
+      ).toBeEmpty();
+      expect(
+        await getExplainerAnimationStyles(
+          explainer,
+          contract.phaseSubjects.join(", "),
+        ),
+      ).toHaveLength(0);
+    }
+    await expectNoHorizontalOverflow(page);
+  });
+
   test("keeps a long desktop evidence body keyboard-scrollable before Escape restores its summary", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 180 });
     await page.goto("/research");
@@ -562,12 +1397,13 @@ test.describe("Research showcase", () => {
     await expect(scrollport).toHaveCSS("max-height", "none");
   });
 
-  test("opens the three authored graphical abstracts in a fitted dialog and restores the exact trigger", async ({ page }) => {
+  test("opens each rendered graphical abstract in a fitted dialog and restores the exact trigger", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto("/research");
     await settleLayout(page);
 
-    const abstractTriggers = await expectAuthoredAbstractTriggers(page);
+    const abstractTriggers = await getRenderedAbstractTriggers(page);
+    if (abstractTriggers.length === 0) return;
 
     for (const trigger of abstractTriggers) {
       const thumbnail = trigger.locator(".research-abstract__thumbnail");
@@ -624,13 +1460,14 @@ test.describe("Research showcase", () => {
       { width: 1280, height: 600 },
       { width: 921, height: 900 },
       { width: 920, height: 900 },
-      { width: 320, height: 568 }
+      { width: 320, height: 568 },
+      { width: 390, height: 568 }
     ]) {
       await page.setViewportSize(viewport);
       await page.goto("/research");
       await settleLayout(page);
 
-      for (const trigger of await expectAuthoredAbstractTriggers(page)) {
+      for (const trigger of await getRenderedAbstractTriggers(page)) {
         await expectAbstractFrameGeometry(trigger);
       }
 
@@ -643,7 +1480,8 @@ test.describe("Research showcase", () => {
     await page.goto("/research");
     await settleLayout(page);
 
-    const trigger = (await expectAuthoredAbstractTriggers(page))[0]!;
+    const trigger = (await getRenderedAbstractTriggers(page))[0];
+    if (!trigger) return;
     const originalBodyOverflow = await page.evaluate(() => document.body.style.overflow);
 
     await trigger.scrollIntoViewIfNeeded();
@@ -691,7 +1529,7 @@ test.describe("Research showcase", () => {
     await page.goto("/research");
     await settleLayout(page);
 
-    const abstractTriggers = await expectAuthoredAbstractTriggers(page);
+    const abstractTriggers = await getRenderedAbstractTriggers(page);
     const projects = await expectResearchProjectsOrEmptyState(page);
 
     await expectNoHorizontalOverflow(page);
@@ -748,13 +1586,14 @@ test.describe("Research showcase", () => {
   test("contains every abstract dialog in short desktop and mobile viewports", async ({ page }) => {
     for (const viewport of [
       { width: 1280, height: 600 },
-      { width: 320, height: 568 }
+      { width: 320, height: 568 },
+      { width: 390, height: 568 }
     ]) {
       await page.setViewportSize(viewport);
       await page.goto("/research");
       await settleLayout(page);
 
-      const abstractTriggers = await expectAuthoredAbstractTriggers(page);
+      const abstractTriggers = await getRenderedAbstractTriggers(page);
       for (const trigger of abstractTriggers) {
         await expectAbstractFrameGeometry(trigger);
         await trigger.click();
@@ -773,7 +1612,7 @@ test.describe("Research showcase", () => {
     test.slow();
     await page.emulateMedia({ reducedMotion: "reduce" });
 
-    for (const width of [921, 920, 621, 620]) {
+    for (const width of [921, 920, 621, 620, 390, 320]) {
       await page.setViewportSize({ width, height: 900 });
       await page.goto("/research");
       await settleLayout(page);
@@ -842,7 +1681,8 @@ test.describe("Research showcase", () => {
         expect(surface.opacity).toBe("1");
       }
 
-      const trigger = (await expectAuthoredAbstractTriggers(page))[0]!;
+      const trigger = (await getRenderedAbstractTriggers(page))[0];
+      if (!trigger) continue;
       await trigger.scrollIntoViewIfNeeded();
       await trigger.click();
       const dialog = page.getByRole("dialog", { name: /Graphical abstract for/ });
@@ -872,13 +1712,15 @@ test.describe("Research showcase", () => {
     await expect(projects.locator(".research-project__body").first()).toHaveCSS("animation-name", "none");
     await expect(page.locator(".detail-mode-switch__lens")).toHaveCSS("transition-duration", "0s");
 
-    const abstractTrigger = (await expectAuthoredAbstractTriggers(page))[0]!;
-    await expect(abstractTrigger).toHaveCSS("transition-duration", "0s");
-    await abstractTrigger.click();
-    const dialogRoot = page.locator(".research-abstract-dialog");
-    await expect(dialogRoot).toHaveAttribute("data-reduced-motion", "true");
-    await page.keyboard.press("Escape");
-    await expect(dialogRoot).toBeHidden();
+    const abstractTrigger = (await getRenderedAbstractTriggers(page))[0];
+    if (abstractTrigger) {
+      await expect(abstractTrigger).toHaveCSS("transition-duration", "0s");
+      await abstractTrigger.click();
+      const dialogRoot = page.locator(".research-abstract-dialog");
+      await expect(dialogRoot).toHaveAttribute("data-reduced-motion", "true");
+      await page.keyboard.press("Escape");
+      await expect(dialogRoot).toBeHidden();
+    }
 
     const disclosureProject = await getFirstProjectWithDisclosure(projects);
     if (disclosureProject) {
@@ -899,19 +1741,27 @@ test.describe("Research showcase", () => {
 
     const projects = await expectResearchProjectsOrEmptyState(page);
     if (!projects) return;
+    await expectDetailModeSwitch(page);
 
     const expandableIndexes = await getExpandableResearchProjectIndexes(projects);
     test.skip(expandableIndexes.length === 0, "Overlay regression requires an expandable Research project.");
 
-    const projectCount = await projects.count();
-    const activeIndex =
-      expandableIndexes.find((index) => index > 0 && index < projectCount - 1) ??
-      expandableIndexes.find((index) => index < projectCount - 1);
-    test.skip(activeIndex === undefined, "Overlay spill regression requires a following Research project.");
-    if (activeIndex === undefined) return;
+    const overlayTarget = await findResearchOverlayTarget(
+      page,
+      projects,
+      expandableIndexes,
+    );
+    test.skip(
+      overlayTarget === undefined,
+      "Overlay regression requires a rendered Research disclosure with a visible overlap target.",
+    );
+    if (!overlayTarget) return;
 
+    const activeIndex = overlayTarget.projectIndex;
     const activeProject = projects.nth(activeIndex);
-    const activeTrigger = activeProject.locator("button.detail-section__trigger").last();
+    const activeTrigger = activeProject
+      .locator("button.detail-section__trigger")
+      .nth(overlayTarget.triggerIndex);
     const panel = page.locator(`#${await activeTrigger.getAttribute("aria-controls")}`);
     const root = page.locator("main");
     const selectors = { card: "article.research-project", resource: ".research-project__resources" };
@@ -936,33 +1786,17 @@ test.describe("Research showcase", () => {
     expect(activePanelId).toBeTruthy();
     if (!activePanelId) return;
 
-    const overlayHit = await page.evaluate((panelId) => {
-      const panel = document.getElementById(panelId);
-      const project = panel?.closest<HTMLElement>("article.research-project");
-      if (!panel || !project) throw new Error("The active Research panel is missing its project.");
-
-      const panelRect = panel.getBoundingClientRect();
-      const candidates = Array.from(
-        document.querySelectorAll<HTMLElement>("article.research-project, .research-project__resources")
-      ).filter((candidate) => candidate !== project);
-      for (const candidate of candidates) {
-        const candidateRect = candidate.getBoundingClientRect();
-        const left = Math.max(panelRect.left, candidateRect.left, 0);
-        const right = Math.min(panelRect.right, candidateRect.right, window.innerWidth);
-        const top = Math.max(panelRect.top, candidateRect.top, 0);
-        const bottom = Math.min(panelRect.bottom, candidateRect.bottom, window.innerHeight);
-        if (right - left < 8 || bottom - top < 8) continue;
-
-        const topElement = document.elementFromPoint(left + 4, top + 4);
-        return { overlap: true, panelOwnsTop: Boolean(topElement && panel.contains(topElement)) };
-      }
-
-      return { overlap: false, panelOwnsTop: false };
-    }, activePanelId);
+    const overlayHit = await getResearchOverlayHit(page, activePanelId);
     expect(overlayHit.overlap).toBe(true);
     expect(overlayHit.panelOwnsTop).toBe(true);
 
     const selectableText = panel.locator(".detail-section__details li").first();
+    await selectableText.evaluate((element) =>
+      element.scrollIntoView({ behavior: "instant", block: "center" })
+    );
+    await page.evaluate(
+      () => new Promise<void>((resolve) => window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve())))
+    );
     const textLine = await selectableText.evaluate((element) => {
       const text = Array.from(element.childNodes).find((node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim());
       if (!text) throw new Error("The active evidence detail has no text node to select.");
@@ -971,13 +1805,37 @@ test.describe("Research showcase", () => {
       range.selectNodeContents(text);
       const rect = range.getClientRects()[0];
       if (!rect) throw new Error("The active evidence detail has no selectable text geometry.");
-      return { height: rect.height, left: rect.left, top: rect.top, width: rect.width };
+      const y = rect.top + rect.height / 2;
+      const startX = rect.left + Math.min(8, rect.width / 4);
+      const endX = rect.right - Math.min(8, rect.width / 4);
+      return {
+        endX,
+        hitEnd: element.contains(document.elementFromPoint(endX, y)),
+        hitStart: element.contains(document.elementFromPoint(startX, y)),
+        startX,
+        visible: rect.left >= 0 && rect.right <= window.innerWidth && rect.top >= 0 && rect.bottom <= window.innerHeight,
+        y
+      };
     });
-    await page.mouse.move(textLine.left + 4, textLine.top + textLine.height / 2);
+    expect(textLine.visible).toBe(true);
+    expect(textLine.hitStart).toBe(true);
+    expect(textLine.hitEnd).toBe(true);
+    await page.mouse.move(textLine.startX, textLine.y);
     await page.mouse.down();
-    await page.mouse.move(textLine.left + Math.max(16, textLine.width - 4), textLine.top + textLine.height / 2);
+    await page.mouse.move(
+      textLine.endX,
+      textLine.y,
+      { steps: 12 }
+    );
     await page.mouse.up();
-    await expect.poll(() => page.evaluate(() => document.getSelection()?.type === "Range")).toBe(true);
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          const selection = document.getSelection();
+          return selection?.type === "Range" && Boolean(selection.toString().trim());
+        })
+      )
+      .toBe(true);
     await expect(activeTrigger).toHaveAttribute("aria-expanded", "true");
 
     await page.locator("main").click({ position: { x: 5, y: 5 } });
@@ -988,8 +1846,8 @@ test.describe("Research showcase", () => {
 
     await activeTrigger.press("Enter");
     await expect(activeTrigger).toHaveAttribute("aria-expanded", "true");
-    const resource = projects.nth(Math.max(0, activeIndex - 1)).locator('a.research-project__resource[target="_blank"]').first();
-    if (await resource.count()) {
+    const resource = await findResearchResourceWithFreeHitTarget(page);
+    if (resource) {
       await resource.click();
       await expect(activeTrigger).toHaveAttribute("aria-expanded", "false");
       await activeTrigger.press("Enter");
@@ -1096,11 +1954,19 @@ test.describe("Research showcase", () => {
 
     for (const theme of ["navy", "light", "dark"] as const) {
       await reloadWithStoredTheme(page, theme);
-      await activeTrigger.scrollIntoViewIfNeeded();
-      await activeTrigger.click();
-      await expect(panel).toHaveCSS("background-image", "none");
-      await expect(panel).toHaveCSS("background-color", /^rgb\(/);
-      await activeTrigger.press("Escape");
+      const themeTrigger = page
+        .locator("article.research-project")
+        .nth(activeIndex)
+        .locator("button.detail-section__trigger")
+        .last();
+      const themePanel = page.locator(
+        `#${await themeTrigger.getAttribute("aria-controls")}`
+      );
+      await themeTrigger.scrollIntoViewIfNeeded();
+      await themeTrigger.click();
+      await expect(themePanel).toHaveCSS("background-image", "none");
+      await expect(themePanel).toHaveCSS("background-color", /^rgb\(/);
+      await themeTrigger.press("Escape");
     }
   });
 
@@ -1226,6 +2092,7 @@ test.describe("Research showcase", () => {
         const toolbar = project.getByRole("group", { name: "CytoCV video tools" });
         await expect(toolbar).toHaveCount(1);
         const videoViewport = project.locator(".research-video__viewport");
+        await videoViewport.scrollIntoViewIfNeeded();
         const videoViewportBox = await videoViewport.boundingBox();
         expect(videoViewportBox).not.toBeNull();
         await page.mouse.move(0, 0);

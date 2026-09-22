@@ -32,7 +32,7 @@ Reusable primitives and compositions include:
 | Route group | Loading composition |
 | --- | --- |
 | Home | Profile shell, core content sections, three skills cards, and recommendation footprint. |
-| Research | Page introduction, compact audience selector, and three alternating visualization-and-evidence modules. |
+| Research | Page introduction, compact audience selector, and three alternating visualization-and-evidence modules, each with abstract and explainer-row footprints. |
 | Projects | Page introduction and card grid shaped like the evidence route. |
 | Experience | Page introduction, compact audience selector, and logo-led role cards with evidence-row footprints. |
 | Recommendations | Page introduction and recommendation cards. |
@@ -59,7 +59,7 @@ Experience is the only generated page-header override. Both its resolved route a
 
 Research card footprint counts come from validated selected detail items and the same `getResearchVisibleResources()` resolver used by resolved cards. Only the isolated visual renderer may inject controlled canonical local-template Research items; normal loading boundaries and direct alignment remain generated-workbook driven.
 
-Research graphical-abstract frames preserve the resolved route's local 16px top-aligned inset, full available visual-column width, rounded clipping, and 16:9 containment geometry. Keep the placeholders noninteractive while updating this frame.
+Research visual columns preserve the resolved route's two-row order: graphical abstract first, then the CytoCV video or an explainer scene. Above `920px`, the two static rows use the same flexible centered tracks as the resolved column; at `920px` and below they return to natural heights. The one-pixel divider is inset `24px` on desktop and `16px` on narrow layouts. Graphical-abstract frames retain their 16px local inset and 16:9 containment geometry. An explainer loader reserves a linked-scene surface, compact nonsemantic label and marker-key shapes, and a 44px playback-control footprint. It does not copy the resolved caption or workflow prose. Keep all placeholders noninteractive while updating these frames.
 
 ## Accessibility
 
@@ -75,13 +75,13 @@ Skeletons use static solid `--color-skeleton-surface` fills in every motion sett
 
 `tests/e2e/standaloneSkeletonDocument.ts` provides the shared same-origin inert document and asset-readiness contract for the alignment and visual suites. It carries only the real shell's resolved HTML/body attributes, generated body font class, and absolute compiled stylesheet hrefs. Fixtures contain canonical server-rendered `RouteSkeleton` markup, no application scripts, and no `nextjs-portal`, so neither React reconciliation nor the Next development toolbar can affect measurements or pixels.
 
-`tests/e2e/skeleton-alignment.spec.ts` compares resolved page-header Range line boxes with canonical loader ink relative to the persistent `site-main` shell. It covers compact, phone, tablet, transition, and fluid desktop widths; representative wrap boundaries; the generated Experience summary; Home overflow; Projects and Research detail footprints; Light and Dark; and reduced motion. Run it locally with `npm run test:e2e:skeletons:alignment`. Keep its existing font-metric tolerance strict.
+`tests/e2e/skeleton-alignment.spec.ts` compares resolved page-header Range line boxes with canonical loader ink relative to the persistent `site-main` shell. It covers compact, phone, tablet, transition, and fluid desktop widths; representative wrap boundaries; the generated Experience summary; Home overflow; Projects and Research detail footprints; Light and Dark; and reduced motion. Research footprint checks include media-row order, divider insets, centered groups, graphical-abstract and explainer-scene surface widths, static label/key shapes, and the inert 44px playback-control placeholder. Each rendering keeps equal desktop rows internally; loader prose remains nonsemantic placeholder geometry rather than an exact copy of resolved captions. Run it locally with `npm run test:e2e:skeletons:alignment`. Keep its existing header font-metric tolerance strict.
 
 `tests/e2e/skeletons.visual.spec.ts` additionally asserts dark-theme resolution, stylesheet count and load state, `document.fonts.ready`, the loaded Space Grotesk face and computed font, static skeleton block styling, and stylesheet/font request or HTTP failures while the two-frame layout settle is in progress. Browser warnings, errors, and page errors are rejected before and after each screenshot. The source document's inline development style only defines Next toolbar fonts and is intentionally not copied. It covers every registered route at desktop and mobile widths plus the selected `980px` boundaries. Baselines are Linux-only, live under `tests/e2e/__screenshots__/linux/`, and are captured manually on Ubuntu 24.04 through the read-only baseline workflow. Review every PNG update deliberately.
 
 Research visual snapshots inject controlled canonical local-template detail items only through the isolated renderer for deterministic baselines. Normal Research loading boundaries and component or alignment coverage remain generated-workbook driven.
 
-The Research video loader reserves three static 44px toolbar blocks inside the video frame to match the transcript, download, and enlargement footprint. They remain `aria-hidden` placeholders without links, buttons, tooltips, or playback behavior.
+The Research video loader reserves three static 44px toolbar blocks inside the video frame to match the transcript, download, and enlargement footprint. The two explanatory diagram loaders also reserve an inert 44px playback-control placeholder. These remain `aria-hidden` placeholders without links, buttons, tooltips, or playback behavior.
 
 `tests/e2e/skeletons.transition.spec.ts` disables viewport prefetch before hydration, clicks real rendered Next links, and holds a target non-prefetch RSC request for every non-Home route. A route with no source link or no held navigation request fails; it must never pass by skipping. With these synchronous Server Component routes, holding the whole Flight response keeps the source body in place rather than mounting a streamable `loading.tsx` fallback. This validates App Router request and navigation ownership in development. The published site is a static export, where Next 16 does not support loading UI streaming, so canonical static markup, busy semantics, and no-animation contracts remain the deployed-artifact geometry protection.
 

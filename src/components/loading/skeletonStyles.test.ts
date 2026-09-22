@@ -121,16 +121,31 @@ describe("skeleton style contracts", () => {
       /\.research-skeleton__video-toolbar\s*\{[^}]*position: absolute[^}]*grid-template-columns: repeat\(3, 44px\)/s
     );
     expect(researchStyles).toMatch(
-      /\.research-skeleton__abstract\s*\{[^}]*align-content: start[^}]*padding: var\(--space-4\)[^}]*overflow: hidden[^}]*border-radius: var\(--radius-card\)[^}]*gap: var\(--space-3\)/s
+      /\.research-skeleton__media-stack\s*\{[^}]*grid-template-rows: minmax\(min-content, 1fr\) 1px minmax\(min-content, 1fr\)[^}]*background: #061525/s
+    );
+    expect(researchStyles).toMatch(
+      /\.research-skeleton__media-row\s*\{[^}]*align-content: center[^}]*justify-items: center[^}]*padding: var\(--space-4\)/s
+    );
+    expect(researchStyles).toMatch(
+      /\.research-skeleton__media-divider\s*\{[^}]*height: 1px[^}]*margin-inline: 24px[^}]*background: rgba\(220, 235, 255, 0\.12\)/s
     );
     expect(researchStyles).toMatch(
       /\.research-skeleton__abstract-frame\s*\{[^}]*width: 100%[^}]*max-width: none[^}]*aspect-ratio: 16 \/ 9/s
     );
     expect(researchStyles).toMatch(
-      /\.research-skeleton__abstract\s*\{[^}]*align-content:\s*start[^}]*gap:\s*var\(--space-3\)/s
+      /\.research-skeleton__media-row > \.research-skeleton__abstract,[\s\S]*?\.research-skeleton__media-row > \.research-skeleton__explainer\s*\{[^}]*width: min\(100%, 32rem\)/s
     );
     expect(researchStyles).toMatch(
-      /\.research-skeleton__abstract-title\s*\{[^}]*max-width:\s*44rem[^}]*justify-self:\s*start/s
+      /\.research-skeleton__abstract-title\s*\{[^}]*max-width:\s*44rem[^}]*justify-self:\s*center/s
+    );
+    expect(researchStyles).toMatch(
+      /\.research-skeleton__video-header\s*\{[^}]*justify-items:\s*center/s
+    );
+    expect(researchStyles).toMatch(
+      /\.research-skeleton__explainer-title\s*\{[^}]*justify-self:\s*center/s
+    );
+    expect(researchStyles).toMatch(
+      /@media \(max-width: 920px\)[\s\S]*?\.research-skeleton__media-stack\s*\{[^}]*grid-template-rows: auto 1px auto[^}]*}[\s\S]*?\.research-skeleton__media-divider\s*\{[^}]*margin-inline: var\(--space-4\)/s
     );
     expect(researchStyles).toMatch(/\.research-skeleton__details\s*\{[^}]*gap: 1px/s);
     expect(researchStyles).toMatch(/\.research-skeleton__resources\s*\{[^}]*flex-wrap: wrap/s);

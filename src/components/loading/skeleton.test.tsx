@@ -152,7 +152,12 @@ describe("skeleton components", () => {
         )
       ).toEqual([4, 3, 3]);
       expect(container.querySelectorAll(".research-skeleton__video-toolbar > .skeleton-block")).toHaveLength(3);
-      expect(container.querySelectorAll(".research-skeleton__media-stack")).toHaveLength(1);
+      expect(container.querySelectorAll(".research-skeleton__media-stack")).toHaveLength(3);
+      expect(container.querySelectorAll(".research-skeleton__media-row--abstract")).toHaveLength(3);
+      expect(container.querySelectorAll(".research-skeleton__media-row--explainer")).toHaveLength(3);
+      expect(container.querySelectorAll(".research-skeleton__media-divider")).toHaveLength(3);
+      expect(container.querySelectorAll(".research-skeleton__explainer")).toHaveLength(2);
+      expect(container.querySelectorAll(".research-project-skeleton__media-control")).toHaveLength(2);
       expect(container.querySelectorAll(".research-skeleton__abstract-frame")).toHaveLength(3);
       expect(resolvedResourceCounts).toEqual(resourceCounts);
       expect(renderedResourceCounts).toEqual(resolvedResourceCounts);
