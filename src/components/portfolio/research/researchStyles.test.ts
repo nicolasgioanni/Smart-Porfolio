@@ -62,11 +62,17 @@ describe("research showcase styles", () => {
   it("keeps connected explainer scenes complete while twelve-second timelines animate actual subjects", () => {
     const sceneRule = researchStyles.match(/\.research-explainer__scene\s*\{[^}]*}/s)?.[0] ?? "";
     const labelRule = researchStyles.match(/\.research-explainer__scene-label\s*\{[^}]*}/s)?.[0] ?? "";
+    const guideDonorLabelRule = researchStyles.match(/\.research-explainer__scene-label--guide-row,[\s\S]*?\.research-explainer__scene-label--donor-row\s*\{[^}]*}/s)?.[0] ?? "";
+    const controlRule = rule("\\.research-explainer__playback-control");
+    const diagramSymbolRule = rule("\\.research-explainer__base-letter");
     const subjectSetupRule = researchStyles.match(/\.research-explainer\[data-animation-ready="true"\] \.research-explainer__pixel-patches,[\s\S]*?\.research-explainer\[data-animation-ready="true"\] \.research-explainer__export-token\s*\{[^}]*}/s)?.[0] ?? "";
     const subjectRunRule = researchStyles.match(/\.research-explainer\[data-animation-ready="true"\]\[data-playback="playing"\] \.research-explainer__pixel-patches,[\s\S]*?\.research-explainer\[data-animation-ready="true"\]\[data-playback="playing"\] \.research-explainer__export-token\s*\{[^}]*}/s)?.[0] ?? "";
 
     expect(sceneRule).toMatch(/overflow:\s*hidden/);
-    expect(labelRule).toMatch(/font-size:\s*13px/);
+    expect(labelRule).toMatch(/font-size:\s*var\(--font-size-small\)/);
+    expect(guideDonorLabelRule).toMatch(/font-size:\s*var\(--font-size-small\)/);
+    expect(controlRule).toMatch(/font-size:\s*var\(--font-size-control-glyph\)/);
+    expect(diagramSymbolRule).toMatch(/font-size:\s*var\(--font-size-diagram-symbol\)/);
     expect(subjectSetupRule).toMatch(/animation-duration:\s*12s/);
     expect(subjectSetupRule).toMatch(/animation-play-state:\s*paused/);
     expect(subjectRunRule).toMatch(/animation-play-state:\s*running/);
@@ -168,6 +174,8 @@ describe("research showcase styles", () => {
     expect(researchStyles).toMatch(/\.research-video-player\[data-controls-visible="false"\] \.research-video-player__bottom-bar,[\s\S]*?\.research-video-player\[data-controls-visible="false"\] \.research-video-player__center-control/);
     expect(researchStyles).toMatch(/\.research-video-player__captions--lower\s*\{[^}]*display:\s*none/);
     expect(researchStyles).toMatch(/\.research-video-player__captions--raised\s*\{[^}]*bottom:\s*82px/);
+    expect(researchStyles).toMatch(/@media \(max-width: 420px\)[\s\S]*?\.research-video-player__captions--raised\s*\{[^}]*font-size:\s*var\(--font-size-caption\)/);
+    expect(researchStyles).toMatch(/@media \(max-height: 420px\)[\s\S]*?\.research-video-player\[data-controls-visible="true"\] \.research-video-player__captions--raised\s*\{[^}]*font-size:\s*var\(--font-size-caption\)/);
     expect(researchStyles).toMatch(/\.research-video-player:fullscreen \.research-video-player__captions--raised,[\s\S]*?bottom:\s*calc\(82px \+ var\(--space-3\)\)/);
     expect(researchStyles).toMatch(/research-video-player__captions--lower[\s\S]*?opacity:\s*0/);
     expect(researchStyles).toMatch(/--research-video-glass-ink:\s*#fffdf7/);
