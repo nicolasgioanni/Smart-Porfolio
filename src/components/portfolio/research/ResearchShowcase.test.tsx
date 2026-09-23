@@ -97,7 +97,7 @@ describe("ResearchShowcase", () => {
       "/images/research/guide-donor-scheduler-graphical-abstract.png"
     ]);
     const cytocvProject = projects[0]!;
-    expect(cytocvProject.querySelector(".research-video__player source")).toHaveAttribute(
+    expect(cytocvProject.querySelector(".research-video-player__media source")).toHaveAttribute(
       "src",
       "/images/research/cytocv-supplementary-video-s1.mp4"
     );

@@ -7,6 +7,7 @@ const tokenStyles = readFileSync(path.join(projectRoot, "src", "styles", "tokens
 const glassStyles = readFileSync(path.join(projectRoot, "src", "styles", "glass.css"), "utf8");
 const layoutStyles = readFileSync(path.join(projectRoot, "src", "styles", "layout.css"), "utf8");
 const contactStyles = readFileSync(path.join(projectRoot, "src", "styles", "contact.css"), "utf8");
+const researchStyles = readFileSync(path.join(projectRoot, "src", "styles", "research.css"), "utf8");
 const contactStylesWithoutPendingGradient = contactStyles.replace(
   /background: linear-gradient\(90deg, var\(--color-progress-base\) 0%, var\(--color-progress-base\) 42%, var\(--color-progress-highlight\) 50%, var\(--color-progress-base\) 58%, var\(--color-progress-base\) 100%\);\r?\n/,
   ""
@@ -29,6 +30,8 @@ const styleSources = [
   "utilities.css"
 ].map((fileName) => fileName === "contact.css"
   ? contactStylesWithoutPendingGradient
+  : fileName === "research.css"
+    ? researchStyles
   : readFileSync(path.join(projectRoot, "src", "styles", fileName), "utf8"));
 
 const themePatterns = {
@@ -70,6 +73,15 @@ function contrastRatio(firstColor: string, secondColor: string) {
   const darker = Math.min(firstLuminance, secondLuminance);
 
   return (lighter + 0.05) / (darker + 0.05);
+}
+
+function readBackdropFilterRules(styleSource: string) {
+  return [...styleSource.matchAll(/([^{}]+)\{([^{}]*\bbackdrop-filter\s*:\s*[^;{}]+;?[^{}]*)\}/g)].map(
+    (match) => ({
+      selectors: match[1]!.trim(),
+      declarations: match[2]!
+    })
+  );
 }
 
 const palettes = {
@@ -193,9 +205,23 @@ describe("theme palette contract", () => {
   });
 
   it("keeps UI styles free of decorative gradients, glows, blur, and mask fades", () => {
+    const researchBackdropFilterRules = readBackdropFilterRules(researchStyles);
+    const playerControlSelector = /^(?:\.site-shell\[data-glass-effects="false"\]\s+)?(?:\.research-video-player__(?:bottom-bar|settings|captions|seek)|\.research-video-player__control::before|\.research-video-player__settings button|\.research-video-player__volume-range input\[aria-label="Volume"\])$/;
+
+    // The media player's documented liquid-control exception is intentionally limited to these
+    // controls, captions, settings, and range tracks. Its @supports condition is not a declaration,
+    // so inspect CSS rule bodies here.
+    expect(researchBackdropFilterRules.length).toBeGreaterThan(0);
+    for (const rule of researchBackdropFilterRules) {
+      expect(rule.declarations).toMatch(/\bbackdrop-filter\s*:/);
+      expect(rule.selectors.split(",").map((selector) => selector.trim()).every((selector) => playerControlSelector.test(selector))).toBe(true);
+    }
+
     for (const styleSource of styleSources) {
       expect(styleSource).not.toMatch(/(?:linear|radial|conic)-gradient\(/);
-      expect(styleSource).not.toMatch(/backdrop-filter\s*:/);
+      if (styleSource !== researchStyles) {
+        expect(readBackdropFilterRules(styleSource)).toHaveLength(0);
+      }
       expect(styleSource).not.toMatch(/mask-image\s*:/);
       expect(styleSource).not.toMatch(/--shadow-glow/);
     }

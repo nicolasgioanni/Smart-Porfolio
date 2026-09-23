@@ -81,7 +81,78 @@ export function LinkIcon({ kind = "external", ...props }: IconProps) {
     return (
       <BaseIcon {...props}>
         <path d="M9 4.5H4.5V9M15 4.5h4.5V9M9 19.5H4.5V15M15 19.5h4.5V15" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
-        <path d="m4.5 9 4-4m11 4-4-4m-11 10 4 4m11-4-4 4" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+      </BaseIcon>
+    );
+  }
+
+  if (normalizedKind === "fullscreen") {
+    return (
+      <BaseIcon {...props}>
+        <path d="M9 4.5H4.5V9M15 4.5h4.5V9M9 19.5H4.5V15M15 19.5h4.5V15" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+      </BaseIcon>
+    );
+  }
+
+  if (normalizedKind === "exit-fullscreen") {
+    return (
+      <BaseIcon {...props}>
+        <path d="M4.5 9H9V4.5M19.5 9H15V4.5M4.5 15H9v4.5M19.5 15H15v4.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+      </BaseIcon>
+    );
+  }
+
+  if (normalizedKind === "play") {
+    return (
+      <BaseIcon {...props}>
+        <path d="m9 6 9 6-9 6V6Z" fill="currentColor" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.4" />
+      </BaseIcon>
+    );
+  }
+
+  if (normalizedKind === "pause") {
+    return (
+      <BaseIcon {...props}>
+        <path d="M8.5 6v12M15.5 6v12" stroke="currentColor" strokeLinecap="round" strokeWidth="2.6" />
+      </BaseIcon>
+    );
+  }
+
+  if (normalizedKind === "volume" || normalizedKind === "mute") {
+    return (
+      <BaseIcon {...props}>
+        <path d="M5 10h3l4-3.5v11L8 14H5v-4Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.8" />
+        {normalizedKind === "mute" ? (
+          <path d="m16 10 4 4m0-4-4 4" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+        ) : (
+          <path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+        )}
+      </BaseIcon>
+    );
+  }
+
+  if (normalizedKind === "captions") {
+    return (
+      <BaseIcon {...props}>
+        <rect height="13" rx="1.5" stroke="currentColor" strokeWidth="1.8" width="18" x="3" y="5.5" />
+        <path d="M9.5 10.5H8.8a1.7 1.7 0 1 0 0 3.4h.7m5-3.4h-.7a1.7 1.7 0 1 0 0 3.4h.7" stroke="currentColor" strokeLinecap="round" strokeWidth="1.5" />
+      </BaseIcon>
+    );
+  }
+
+  if (normalizedKind === "settings") {
+    return (
+      <BaseIcon {...props}>
+        <circle cx="12" cy="12" r="5.4" stroke="currentColor" strokeWidth="1.65" />
+        <circle cx="12" cy="12" r="2.1" stroke="currentColor" strokeWidth="1.65" />
+        <path d="M12 3.5v2M12 18.5v2M20.5 12h-2M5.5 12h-2M18.01 5.99 16.6 7.4M7.4 16.6l-1.41 1.41M18.01 18.01 16.6 16.6M7.4 7.4 5.99 5.99" stroke="currentColor" strokeLinecap="round" strokeWidth="1.65" />
+      </BaseIcon>
+    );
+  }
+
+  if (normalizedKind === "collapse") {
+    return (
+      <BaseIcon {...props}>
+        <path d="M9 9H5V5M15 9h4V5M9 15H5v4M15 15h4v4" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
       </BaseIcon>
     );
   }

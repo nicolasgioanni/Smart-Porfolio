@@ -62,19 +62,6 @@ The persistent desktop route indicator moves after pathname commit. Its `420ms` 
 
 Reduced motion disables lift, arrow travel, and route-indicator travel while preserving hover, focus, pressed, expanded, and selected surfaces.
 
-## Research video toolbar
-
-On fine pointers, the in-player research-video toolbar reveals with a short opacity and upward-transform transition
-on viewport hover or keyboard focus within. It remains available on touch and no-hover devices, and reduced motion
-applies the visible state without a transition. Tooltips use the same restrained transition and never replace the
-accessible icon labels.
-
-## Research diagram explainers
-
-The Adversarial Machine Learning and GuideDonorScheduler Research rows use CSS animation on static inline SVG scenes. Each explainer has a complete visible scene, persistent HTML labels, and caption before motion begins, and the same complete scene remains visible while paused. A twelve-second loop has four three-second emphasis phases, with seconds eleven through twelve holding the complete scene: AML emphasizes changed pixels, clean and manipulated sample travel, detector-ring rotation, then the neutral check; GuideDonorScheduler emphasizes the requested target change, guide bracket, donor marks, then guide and donor spreadsheet rows. Motion may animate opacity and transform while labels, paths, scene frame, and caption remain legible throughout. The implementation must not schedule per-frame React updates, fetch content, or depend on a media runtime.
-
-Each explainer observes viewport visibility and `document.visibilityState`: it suspends when offscreen or hidden, resumes only when its conditions become eligible, and preserves a manual pause across those automatic changes. Its native control has a 44px target: it remains `Pause` while automatic conditions temporarily hold an otherwise active animation and changes to `Resume` only for a manual pause. Initial reduced-motion or unsupported-observer rendering shows the complete static diagram and caption, omits playback controls, and schedules no animation work. A live preference change retains a focused control as disabled static content only until focus leaves, then removes it.
-
 ## Header and theme disclosure
 
 Above `980px`, header expansion and compaction are state-driven, not continuously scroll-linked. Scroll input changes state only after the implemented direction and distance thresholds. Header pieces share the centralized `460ms` transition token. Keep the property list explicit and confined to the header island. At `max-width: 980px`, the header becomes a fixed bottom dock, remains expanded, and disables scroll and pointer geometry transitions.
@@ -90,6 +77,18 @@ Shared modal entry and exit use opacity plus a small consumer-configurable trans
 Research graphical-abstract thumbnails transition their shadow and transform for a two-pixel direct lift on fine-pointer hover and keyboard `:focus-visible`. Their palette-dependent border state remains immediate so palette changes stay within the shared page-level transition. The image stays contained and the surrounding research card does not inherit that lift. The enlarged abstract uses only the shared modal lifecycle.
 
 Reduced motion removes the transition and entry transform while preserving portal rendering, focus containment, dismissal, scroll locking, and focus restoration.
+
+## Research video controls
+
+The centered play/pause module and bottom video bar use short opacity and transform fades on pointer activity. They fade out when the pointer leaves or after four seconds without pointer movement inside the player, including while paused; new movement resets that delay. Keyboard-visible focus, scrubbing, open control surfaces, media feedback, and touch reveal keep them reachable. Its semantic hover and focus treatment changes surface and border without translating the already centered button.
+
+The volume range expands horizontally beside the sound button through width and opacity and keeps the surrounding left action group stable. Settings and its playback-speed submenu use the same restrained fade treatment, with pointer travel and keyboard focus supported inside each surface. In inline non-fullscreen playback, two aria-hidden caption layers make a fast handoff: the lower cue fades and slides down as controls appear while the raised cue fades and slides in from above, then reverse when controls hide. Reduced motion removes bar, slider, menu, and caption transitions while preserving every state. Shared modal entry, exit, focus, and scroll locking remain owned by `ModalDialog`.
+
+## Research diagram explainers
+
+The Adversarial Machine Learning and GuideDonorScheduler Research rows use CSS animation on static inline SVG scenes. Each explainer has a complete visible scene, persistent HTML labels, and caption before motion begins, and the same complete scene remains visible while paused. A twelve-second loop has four three-second emphasis phases, with seconds eleven through twelve holding the complete scene: AML emphasizes changed pixels, clean and manipulated sample travel, detector-ring rotation, then the neutral check; GuideDonorScheduler emphasizes the requested target change, guide bracket, donor marks, then guide and donor spreadsheet rows. Motion may animate opacity and transform while labels, paths, scene frame, and caption remain legible throughout. The implementation must not schedule per-frame React updates, fetch content, or depend on a media runtime.
+
+Each explainer observes viewport visibility and `document.visibilityState`: it suspends when offscreen or hidden, resumes only when its conditions become eligible, and preserves a manual pause across those automatic changes. Its native control has a 44px target: it remains `Pause` while automatic conditions temporarily hold an otherwise active animation and changes to `Resume` only for a manual pause. Initial reduced-motion or unsupported-observer rendering shows the complete static diagram and caption, omits playback controls, and schedules no animation work. A live preference change retains a focused control as disabled static content only until focus leaves, then removes it.
 
 ## Mobile navigation rail
 
@@ -119,7 +118,7 @@ The footer expands into reserved normal-flow space. Each pathname owns a fresh c
 
 ## Surface constraints
 
-Use opaque semantic surfaces. Do not use backdrop blur, gradients, glow shadows, decorative page overlays, or CSS mask fades for hierarchy or motion.
+Use opaque semantic surfaces. Research video controls alone may use theme-based translucency and restrained backdrop blur with an opaque fallback; their blur is not animated. Do not use gradients, glow shadows, decorative page overlays, or CSS mask fades for hierarchy or motion.
 
 ## Visual constraint
 

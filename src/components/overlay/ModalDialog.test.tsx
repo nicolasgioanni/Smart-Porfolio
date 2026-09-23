@@ -129,6 +129,34 @@ function PersistentDialogHarness({ onRequestClose }: { onRequestClose: () => voi
   );
 }
 
+function FullscreenDialogHarness() {
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  return (
+    <ModalDialog
+      ariaLabel="Fullscreen dialog"
+      dialogId="fullscreen-dialog"
+      initialFocusRef={closeButtonRef}
+      onRequestClose={() => undefined}
+      open
+    >
+      <button ref={closeButtonRef} type="button">
+        Close fullscreen dialog
+      </button>
+      <div
+        data-testid="fullscreen-scope"
+        onKeyDown={(event) => {
+          if (event.key === "Escape") event.preventDefault();
+        }}
+        tabIndex={-1}
+      >
+        <button type="button">Fullscreen first</button>
+        <button type="button">Fullscreen last</button>
+      </div>
+    </ModalDialog>
+  );
+}
+
 describe("ModalDialog", () => {
   beforeEach(() => {
     motionPreference.reduced = false;
@@ -319,5 +347,30 @@ describe("ModalDialog", () => {
     fireEvent.keyDown(document, { key: "Escape" });
 
     expect(onRequestClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps focus inside a fullscreen dialog descendant and lets that surface consume Escape", () => {
+    vi.useFakeTimers();
+    render(<FullscreenDialogHarness />);
+    act(() => vi.runOnlyPendingTimers());
+
+    const dialog = screen.getByRole("dialog", { name: "Fullscreen dialog" });
+    const closeButton = within(dialog).getByRole("button", { name: "Close fullscreen dialog" });
+    const fullscreenScope = screen.getByTestId("fullscreen-scope");
+    const first = within(fullscreenScope).getByRole("button", { name: "Fullscreen first" });
+    const last = within(fullscreenScope).getByRole("button", { name: "Fullscreen last" });
+    Object.defineProperty(document, "fullscreenElement", { configurable: true, value: fullscreenScope });
+
+    closeButton.focus();
+    fireEvent.focusIn(closeButton);
+    expect(first).toHaveFocus();
+
+    last.focus();
+    fireEvent.keyDown(document, { key: "Tab" });
+    expect(first).toHaveFocus();
+
+    fireEvent.keyDown(first, { key: "Escape" });
+    expect(screen.getByRole("dialog", { name: "Fullscreen dialog" })).toBeInTheDocument();
+    Object.defineProperty(document, "fullscreenElement", { configurable: true, value: null });
   });
 });

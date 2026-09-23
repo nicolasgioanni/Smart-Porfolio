@@ -16,6 +16,7 @@ type ModalDialogAccessibleName =
 type ModalDialogProps = ModalDialogAccessibleName & {
   ariaDescribedBy?: string;
   children: ReactNode;
+  dataTestId?: string;
   dialogId: string;
   frameClassName?: string;
   initialFocusRef?: RefObject<HTMLElement | null>;
@@ -116,8 +117,16 @@ function acquireBodyScrollLock() {
 
 function getFocusableElements(container: HTMLElement): HTMLElement[] {
   return Array.from(container.querySelectorAll<HTMLElement>(focusableElementSelector)).filter(
-    (element) => !element.hidden && element.getAttribute("aria-hidden") !== "true"
+    (element) =>
+      !element.hidden &&
+      element.getAttribute("aria-hidden") !== "true" &&
+      !element.closest('[aria-hidden="true"], [hidden], [inert]')
   );
+}
+
+function getDialogFocusScope(dialogFrame: HTMLElement): HTMLElement {
+  const fullscreenElement = document.fullscreenElement;
+  return fullscreenElement instanceof HTMLElement && dialogFrame.contains(fullscreenElement) ? fullscreenElement : dialogFrame;
 }
 
 export function ModalDialog({
@@ -125,6 +134,7 @@ export function ModalDialog({
   ariaLabel,
   ariaLabelledBy,
   children,
+  dataTestId,
   dialogId,
   frameClassName,
   initialFocusRef,
@@ -234,16 +244,21 @@ export function ModalDialog({
     function focusFirstDialogControl() {
       const dialogFrame = dialogFrameRef.current;
       if (!dialogFrame) return;
-      const firstFocusableElement = getFocusableElements(dialogFrame)[0];
+      const focusScope = getDialogFocusScope(dialogFrame);
+      const firstFocusableElement = getFocusableElements(focusScope)[0];
       if (firstFocusableElement) {
         firstFocusableElement.focus();
       } else {
-        dialogFrame.focus();
+        focusScope.focus();
       }
     }
 
     function handleKeyDown(event: KeyboardEvent) {
       if (focusContainmentReleasedRef.current) return;
+
+      // Nested controls such as the Research player may consume Escape for an
+      // in-context surface before the dialog itself should be dismissed.
+      if (event.defaultPrevented) return;
 
       if (event.key === "Escape") {
         event.preventDefault();
@@ -255,18 +270,19 @@ export function ModalDialog({
 
       const dialogFrame = dialogFrameRef.current;
       if (!dialogFrame) return;
+      const focusScope = getDialogFocusScope(dialogFrame);
 
-      const focusableElements = getFocusableElements(dialogFrame);
+      const focusableElements = getFocusableElements(focusScope);
       const firstFocusableElement = focusableElements[0];
       const lastFocusableElement = focusableElements.at(-1);
 
       if (!firstFocusableElement || !lastFocusableElement) {
         event.preventDefault();
-        dialogFrame.focus();
+        focusScope.focus();
         return;
       }
 
-      if (!dialogFrame.contains(document.activeElement)) {
+      if (!focusScope.contains(document.activeElement)) {
         event.preventDefault();
         firstFocusableElement.focus();
         return;
@@ -285,7 +301,9 @@ export function ModalDialog({
       if (focusContainmentReleasedRef.current) return;
 
       const dialogFrame = dialogFrameRef.current;
-      if (!dialogFrame || (event.target instanceof Node && dialogFrame.contains(event.target))) return;
+      if (!dialogFrame) return;
+      const focusScope = getDialogFocusScope(dialogFrame);
+      if (event.target instanceof Node && focusScope.contains(event.target)) return;
       focusFirstDialogControl();
     }
 
@@ -309,6 +327,7 @@ export function ModalDialog({
     <div
       aria-hidden={isTopmost ? undefined : "true"}
       className={["modal-dialog", rootClassName].filter(Boolean).join(" ")}
+      data-testid={dataTestId}
       data-reduced-motion={prefersReducedMotion ? "true" : "false"}
       data-state={dialogState}
       data-topmost={isTopmost ? "true" : "false"}

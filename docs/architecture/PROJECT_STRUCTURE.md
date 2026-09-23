@@ -117,7 +117,7 @@ The recommendation route and navigation item remain discoverable only when recom
 
 ### Portfolio components
 
-`src/components/portfolio/` groups the Home summary layer and evidence-focused route components by owner: `home/`, `profile/`, `experience/`, `research/`, `projects/`, `recommendations/`, `skills/`, and `resume/`. `shared/` contains only domain-neutral display and control primitives. Skills components remain under `skills/` when another portfolio domain consumes them. `home/HomeOverview.tsx` owns Home section order. `selectHomeContent.ts`, `selectVisibleContent.ts`, `selectDetailContent.ts`, `selectRecommendationContent.ts`, and `profileOverview.ts` divide content selection by surface and domain. `research/ResearchGraphicalAbstractPreview.tsx` owns Research thumbnail and enlarged-preview composition while delegating lifecycle behavior to the shared dialog.
+`src/components/portfolio/` groups the Home summary layer and evidence-focused route components by owner: `home/`, `profile/`, `experience/`, `research/`, `projects/`, `recommendations/`, `skills/`, and `resume/`. `shared/` contains only domain-neutral display and control primitives. Skills components remain under `skills/` when another portfolio domain consumes them. `home/HomeOverview.tsx` owns Home section order. `selectHomeContent.ts`, `selectVisibleContent.ts`, `selectDetailContent.ts`, `selectRecommendationContent.ts`, and `profileOverview.ts` divide content selection by surface and domain. `research/ResearchGraphicalAbstractPreview.tsx` owns Research thumbnails; `ResearchVideoPreview.tsx` coordinates inline/enlarged playback handoff. Both use `ResearchMediaDialog.tsx` for fitted media framing over the shared modal lifecycle. `ResearchVideoPlayer.tsx` owns the progressively enhanced player, browser caption cues, responsive controls, and fullscreen presentation.
 
 Focused client behavior includes the configured role rotation, modal media and skills dialogs, recommendation measurement and expansion, optional scroll reveals, and the shared shell interactions. Content rendering remains server-generated. Modal consumers provide their content and geometry while `src/components/overlay/ModalDialog.tsx` provides the common accessible interaction contract.
 
@@ -222,3 +222,5 @@ Vitest discovers the complete suite. ESLint, TypeScript, the static build, docum
 - [Design system](../design/DESIGN_SYSTEM.md)
 - [Testing](../quality/TESTING.md)
 - [Maintenance](../development/MAINTENANCE.md)
+
+The shell composes Research’s `ResearchNoScriptRouteGate` outside route loading boundaries. Its server-resolved pathname exposes the shared Research showcase only when scripting is disabled; normal route children retain their direct `site-main` relationship for motion and skeleton checks. No runtime content fetching or export rewriting is involved.
