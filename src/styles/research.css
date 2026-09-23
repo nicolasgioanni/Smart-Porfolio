@@ -407,7 +407,7 @@
   background: var(--detail-accent-soft);
   cursor: pointer;
   font: inherit;
-  font-size: 1rem;
+  font-size: var(--font-size-control-glyph);
   line-height: 1;
 }
 
@@ -489,7 +489,7 @@
 .research-explainer__scene-label {
   position: absolute;
   color: #f7fbff;
-  font-size: 13px;
+  font-size: var(--font-size-small);
   font-weight: var(--font-weight-bold);
   line-height: var(--line-height-heading);
   text-wrap: balance;
@@ -573,7 +573,7 @@
 .research-explainer__scene-label--donor-row {
   left: 60%;
   color: #eafaff;
-  font-size: 13px;
+  font-size: var(--font-size-small);
   font-weight: var(--font-weight-medium);
   line-height: 1;
 }
@@ -748,7 +748,7 @@
 .research-explainer__base-letter {
   fill: #f7fbff;
   font-family: var(--font-sans);
-  font-size: 18px;
+  font-size: var(--font-size-diagram-symbol);
   font-weight: var(--font-weight-bold);
   text-anchor: middle;
 }
@@ -1832,7 +1832,7 @@ button.research-video-player__center-control::before {
     left: var(--space-3);
     max-width: calc(100% - 2 * var(--space-3));
     padding: var(--space-1) var(--space-2);
-    font-size: 0.75rem;
+    font-size: var(--font-size-caption);
   }
 }
 
@@ -1859,7 +1859,7 @@ button.research-video-player__center-control::before {
   .research-video-player[data-controls-visible="true"] .research-video-player__captions--raised {
     top: var(--space-2);
     bottom: auto;
-    font-size: 0.75rem;
+    font-size: var(--font-size-caption);
   }
 }
 

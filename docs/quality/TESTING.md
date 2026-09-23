@@ -25,7 +25,7 @@ Smart Portfolio uses a layered quality gate for documentation, static content, R
 | `npm run generate:content` | Content source download or template read, normalization, validation, and generated JSON write | Uses `.env` when run through the CLI |
 | `npm run lint` | ESLint over the repository with `--max-warnings=0` | Generated content and build directories are ignored; direct library/component import boundaries cover alias and relative specifiers |
 | `npm run typecheck` | `next typegen && tsc --noEmit` | Regenerates Next route types and the ignored managed `next-env.d.ts` before strict TypeScript checking |
-| `npm run test:priority` | High-risk documentation, deployment, contact, shared dialog, theme palette, Research, Experience, Recommendations, navigation, and skeleton contracts | Pull-request unit and contract gate; it includes `SmartLink` route recognition and internal-link behavior, every Function test under `functions/`, and feature directories for future shared-detail tests. |
+| `npm run test:priority` | High-risk documentation, deployment, contact, shared dialog, typography, theme palette, Research, Experience, Recommendations, navigation, and skeleton contracts | Pull-request unit and contract gate; it includes `SmartLink` route recognition and internal-link behavior, every Function test under `functions/`, and feature directories for future shared-detail tests. |
 | `npm run test:footer` | Two focused footer regression files | Use while changing the footer; release CI covers them through `test` |
 | `npm run test:navigation` | Focused mobile rail, header, responsive-query, theme, and navigation style tests | Use while changing navigation; release CI covers them through `test` |
 | `npm run test:skeletons` | Focused skeleton component, content, style, and page-entry tests | Protects route fallback semantics, fixture geometry, and static no-motion placeholders |
@@ -186,7 +186,7 @@ Pull requests targeting `main` or `develop`:
 2. Run documentation integrity.
 3. Run lint.
 4. Run typecheck.
-5. Run the priority Vitest contracts once.
+5. Run the priority Vitest contracts once, including the centralized typography-token contract.
 6. Install Chromium once and run the portable priority browser suite: skeleton alignment and held-navigation transitions, navigation, footer, locally mocked contact, Recommendations, Experience, and Research flows.
 7. Run the separate Linux-only skeleton visual comparison against the explicit template-content generated for the pull request.
 8. Build with `build:generated`.

@@ -70,7 +70,9 @@ Space Grotesk is loaded through `next/font` with Segoe UI and sans-serif fallbac
 | Supporting metadata | `--font-size-small` | `0.8125rem` (13px) |
 | Primary copy, navigation, and form controls | `--font-size-body` | `0.875rem` (14px) |
 | Prominent copy and quotation emphasis | `--font-size-body-large`, `--font-size-quote` | `0.9375rem` (15px) |
+| Control glyphs | `--font-size-control-glyph` | `1rem` (16px) |
 | Feature leads | `--font-size-lead` | `1.0625rem` (17px) |
+| Diagram symbols | `--font-size-diagram-symbol` | `1.125rem` (18px) |
 | Card headings | `--font-size-card-title` | `1.25rem` (20px) |
 | Section headings | `--font-size-section-title` | `1.375rem` (22px) |
 | Research project titles | `--font-size-research-title` | Fluid 25.6-36px |

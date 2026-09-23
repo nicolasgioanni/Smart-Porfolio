@@ -47,6 +47,7 @@ export const priorityTestTargets = [
   "src/lib/media/researchVideoAssets.test.ts",
   "src/lib/media/researchVideoPlayback.test.ts",
   "src/lib/routing/siteRoutes.test.ts",
+  "src/styles/typographyStyles.test.ts",
   "src/styles/themePalette.test.ts"
 ];
 
