@@ -49,7 +49,7 @@ type ResearchFootprint = {
   mediaStacks: number;
   overviewRows: number;
   resources: number;
-  videoActions: number;
+  videoPlayers: number;
 };
 
 type ResearchMediaGeometry = {
@@ -509,8 +509,8 @@ test("matches real Project and Research detail footprints at compact, phone, tab
             .length,
           resources: card.querySelectorAll(".research-project__resource")
             .length,
-          videoActions: card.querySelectorAll(
-            ".research-video__toolbar > a, .research-video__toolbar > button",
+          videoPlayers: card.querySelectorAll(
+            '[data-testid="research-video-player"]',
           ).length,
         })),
       );
@@ -558,8 +558,8 @@ test("matches real Project and Research detail footprints at compact, phone, tab
           card.locator(".research-project-skeleton__media-control"),
         ).toHaveCount(footprint.explainerControls);
         await expect(
-          card.locator(".research-skeleton__video-toolbar > .skeleton-block"),
-        ).toHaveCount(footprint.videoActions);
+          card.locator(".research-skeleton__video-viewport"),
+        ).toHaveCount(footprint.videoPlayers);
         await expect(
           card.locator(".research-skeleton__media-title"),
         ).toHaveCount(footprint.mediaTitles);
