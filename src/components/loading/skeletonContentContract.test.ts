@@ -193,7 +193,8 @@ describe("skeleton source contracts", () => {
       "adversarial-machine-learning",
       "yeast-dna-target-selection"
     ]);
-    expect(researchSkeletonProfiles.map((profile) => profile.media)).toEqual(["video-and-abstract", "abstract", "abstract"]);
+    expect(researchSkeletonProfiles.map((profile) => profile.media)).toEqual(["video", "explainer", "explainer"]);
+    expect(researchSkeletonProfiles.map((profile) => profile.legend)).toEqual([false, false, true]);
     expect(researchSkeletonProfiles.map((profile) => profile.resourceWidths.length)).toEqual([4, 3, 1]);
     expect(researchSkeletonProfiles.every((profile) => profile.organizationLogo && profile.impact)).toBe(true);
 

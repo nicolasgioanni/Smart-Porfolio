@@ -69,6 +69,12 @@ on viewport hover or keyboard focus within. It remains available on touch and no
 applies the visible state without a transition. Tooltips use the same restrained transition and never replace the
 accessible icon labels.
 
+## Research diagram explainers
+
+The Adversarial Machine Learning and GuideDonorScheduler Research rows use CSS animation on static inline SVG scenes. Each explainer has a complete visible scene, persistent HTML labels, and caption before motion begins, and the same complete scene remains visible while paused. A twelve-second loop has four three-second emphasis phases, with seconds eleven through twelve holding the complete scene: AML emphasizes changed pixels, clean and manipulated sample travel, detector-ring rotation, then the neutral check; GuideDonorScheduler emphasizes the requested target change, guide bracket, donor marks, then guide and donor spreadsheet rows. Motion may animate opacity and transform while labels, paths, scene frame, and caption remain legible throughout. The implementation must not schedule per-frame React updates, fetch content, or depend on a media runtime.
+
+Each explainer observes viewport visibility and `document.visibilityState`: it suspends when offscreen or hidden, resumes only when its conditions become eligible, and preserves a manual pause across those automatic changes. Its native control has a 44px target: it remains `Pause` while automatic conditions temporarily hold an otherwise active animation and changes to `Resume` only for a manual pause. Initial reduced-motion or unsupported-observer rendering shows the complete static diagram and caption, omits playback controls, and schedules no animation work. A live preference change retains a focused control as disabled static content only until focus leaves, then removes it.
+
 ## Header and theme disclosure
 
 Above `980px`, header expansion and compaction are state-driven, not continuously scroll-linked. Scroll input changes state only after the implemented direction and distance thresholds. Header pieces share the centralized `460ms` transition token. Keep the property list explicit and confined to the header island. At `max-width: 980px`, the header becomes a fixed bottom dock, remains expanded, and disables scroll and pointer geometry transitions.

@@ -40,18 +40,51 @@ describe("research showcase styles", () => {
 
   it("uses opaque per-project surfaces behind every research visual", () => {
     const visualSurfaces = [...researchStyles.matchAll(/--visual-surface:\s*([^;]+);/g)].map(([, surface]) => surface.trim());
-    const abstractRule = researchStyles.match(/\.research-abstract\s*\{[^}]*}/s)?.[0] ?? "";
+    const visualRule = researchStyles.match(/\.research-project__visual\s*\{[^}]*}/s)?.[0] ?? "";
+    const mediaStackRule = researchStyles.match(/\.research-media-stack\s*\{[^}]*}/s)?.[0] ?? "";
+    const mediaRowRule = researchStyles.match(/\.research-project__media-row\s*\{[^}]*}/s)?.[0] ?? "";
+    const mediaDividerRule = researchStyles.match(/\.research-project__media-divider\s*\{[^}]*}/s)?.[0] ?? "";
 
     expect(visualSurfaces).toHaveLength(6);
     expect(visualSurfaces.every((surface) => /^#[\da-f]{6}$/i.test(surface))).toBe(true);
     expect(researchStyles).toMatch(/\.research-visual\s*{[^}]*background:\s*var\(--visual-surface\)/s);
-    expect(abstractRule).toMatch(/background:\s*var\(--visual-surface\)/);
-    expect(abstractRule).toMatch(/align-content:\s*start/);
-    expect(abstractRule).toMatch(/padding:\s*var\(--space-4\)/);
-    expect(abstractRule).toMatch(/overflow:\s*hidden/);
-    expect(abstractRule).toMatch(/border-radius:\s*var\(--radius-card\)/);
-    expect(abstractRule).toMatch(/gap:\s*var\(--space-3\)/);
-    expect(abstractRule).not.toMatch(/gradient|rgba|transparent/);
+    expect(visualRule).toMatch(/background:\s*var\(--visual-surface\)/);
+    expect(mediaStackRule).toMatch(/background:\s*var\(--visual-surface\)/);
+    expect(mediaStackRule).toMatch(/grid-template-rows:\s*minmax\(min-content, 1fr\) 1px minmax\(min-content, 1fr\)/);
+    expect(mediaRowRule).toMatch(/align-content:\s*center/);
+    expect(mediaRowRule).toMatch(/justify-items:\s*center/);
+    expect(mediaRowRule).toMatch(/padding:\s*var\(--space-4\)/);
+    expect(mediaDividerRule).toMatch(/margin-inline:\s*24px/);
+    expect(mediaDividerRule).toMatch(/background:\s*rgba\(220, 235, 255, 0\.12\)/);
+  });
+
+  it("keeps connected explainer scenes complete while twelve-second timelines animate actual subjects", () => {
+    const sceneRule = researchStyles.match(/\.research-explainer__scene\s*\{[^}]*}/s)?.[0] ?? "";
+    const labelRule = researchStyles.match(/\.research-explainer__scene-label\s*\{[^}]*}/s)?.[0] ?? "";
+    const subjectSetupRule = researchStyles.match(/\.research-explainer\[data-animation-ready="true"\] \.research-explainer__pixel-patches,[\s\S]*?\.research-explainer\[data-animation-ready="true"\] \.research-explainer__export-token\s*\{[^}]*}/s)?.[0] ?? "";
+    const subjectRunRule = researchStyles.match(/\.research-explainer\[data-animation-ready="true"\]\[data-playback="playing"\] \.research-explainer__pixel-patches,[\s\S]*?\.research-explainer\[data-animation-ready="true"\]\[data-playback="playing"\] \.research-explainer__export-token\s*\{[^}]*}/s)?.[0] ?? "";
+
+    expect(sceneRule).toMatch(/overflow:\s*hidden/);
+    expect(labelRule).toMatch(/font-size:\s*13px/);
+    expect(subjectSetupRule).toMatch(/animation-duration:\s*12s/);
+    expect(subjectSetupRule).toMatch(/animation-play-state:\s*paused/);
+    expect(subjectRunRule).toMatch(/animation-play-state:\s*running/);
+    for (const subject of [
+      "pixel-patches",
+      "data-token",
+      "detector-ring",
+      "test-token",
+      "change-marker--requested",
+      "guide-bracket",
+      "donor-token",
+      "export-token"
+    ]) {
+      expect(subjectSetupRule).toContain(`research-explainer__${subject}`);
+    }
+    expect(researchStyles).toMatch(/@keyframes research-explainer-aml-clean-flow[\s\S]*?translate3d/);
+    expect(researchStyles).toMatch(/@keyframes research-explainer-detector-outer[\s\S]*?rotate/);
+    expect(researchStyles).toMatch(/@keyframes research-explainer-export-guide[\s\S]*?translate3d/);
+    expect(researchStyles).toMatch(/@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.research-explainer\[data-animation-ready="true"\]\[data-playback\] \.research-explainer__pixel-patches[\s\S]*?\.research-explainer\[data-animation-ready="true"\]\[data-playback\] \.research-explainer__export-token\s*\{[^}]*animation:\s*none/);
   });
 
   it("keeps full-card elevation exclusive to pointer hover", () => {
