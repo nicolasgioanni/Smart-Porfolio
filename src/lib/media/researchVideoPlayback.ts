@@ -1,4 +1,14 @@
-export type ResearchVideoPlaybackSurface = Pick<HTMLMediaElement, "currentTime" | "duration" | "pause">;
+export type ResearchVideoPlaybackSurface = Pick<
+  HTMLMediaElement,
+  "currentTime" | "duration" | "muted" | "pause" | "playbackRate" | "volume"
+>;
+
+export type ResearchVideoPlaybackSettings = {
+  currentTime: number;
+  muted: boolean;
+  playbackRate: number;
+  volume: number;
+};
 
 export function getSafePlaybackTime(surface: ResearchVideoPlaybackSurface): number {
   const currentTime = surface.currentTime;
@@ -39,6 +49,42 @@ export function setPlaybackTime(
   } catch {
     return false;
   }
+}
+
+function getSafeVolume(volume: number): number {
+  if (!Number.isFinite(volume)) return 1;
+  return Math.min(1, Math.max(0, volume));
+}
+
+function getSafePlaybackRate(playbackRate: number): number {
+  if (!Number.isFinite(playbackRate) || playbackRate <= 0) return 1;
+  return Math.min(2, Math.max(0.5, playbackRate));
+}
+
+export function getPlaybackSettings(surface: ResearchVideoPlaybackSurface): ResearchVideoPlaybackSettings {
+  return {
+    currentTime: getSafePlaybackTime(surface),
+    muted: Boolean(surface.muted),
+    playbackRate: getSafePlaybackRate(surface.playbackRate),
+    volume: getSafeVolume(surface.volume)
+  };
+}
+
+export function applyPlaybackSettings(
+  surface: ResearchVideoPlaybackSurface | null | undefined,
+  settings: ResearchVideoPlaybackSettings
+): boolean {
+  if (!surface) return false;
+
+  try {
+    surface.muted = settings.muted;
+    surface.volume = getSafeVolume(settings.volume);
+    surface.playbackRate = getSafePlaybackRate(settings.playbackRate);
+  } catch {
+    return false;
+  }
+
+  return setPlaybackTime(surface, settings.currentTime);
 }
 
 export function pauseAndTransferPlayback(

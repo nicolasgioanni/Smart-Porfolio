@@ -18,7 +18,12 @@ describe("priority validation tier", () => {
       "src/components/contact/ContactNotifications.test.tsx",
       "src/components/contact/useContactStepTransition.test.tsx",
       "src/components/navigation/smartLink.test.tsx",
-      "src/styles/contactStyles.test.ts"
+      "src/styles/contactStyles.test.ts",
+      "src/styles/typographyStyles.test.ts"
+    ]));
+    expect(requiredPriorityFiles).toEqual(expect.arrayContaining([
+      "src/components/portfolio/shared/DetailDisclosureList.test.tsx",
+      "src/components/portfolio/shared/detailDisclosureStyles.test.ts"
     ]));
 
     for (const directory of priorityTestDirectories) {

@@ -62,13 +62,6 @@ The persistent desktop route indicator moves after pathname commit. Its `420ms` 
 
 Reduced motion disables lift, arrow travel, and route-indicator travel while preserving hover, focus, pressed, expanded, and selected surfaces.
 
-## Research video toolbar
-
-On fine pointers, the in-player research-video toolbar reveals with a short opacity and upward-transform transition
-on viewport hover or keyboard focus within. It remains available on touch and no-hover devices, and reduced motion
-applies the visible state without a transition. Tooltips use the same restrained transition and never replace the
-accessible icon labels.
-
 ## Header and theme disclosure
 
 Above `980px`, header expansion and compaction are state-driven, not continuously scroll-linked. Scroll input changes state only after the implemented direction and distance thresholds. Header pieces share the centralized `460ms` transition token. Keep the property list explicit and confined to the header island. At `max-width: 980px`, the header becomes a fixed bottom dock, remains expanded, and disables scroll and pointer geometry transitions.
@@ -85,6 +78,18 @@ Research graphical-abstract thumbnails transition their shadow and transform for
 
 Reduced motion removes the transition and entry transform while preserving portal rendering, focus containment, dismissal, scroll locking, and focus restoration.
 
+## Research video controls
+
+The centered play/pause module and bottom video bar use short opacity and transform fades on pointer activity. They fade out when the pointer leaves or after four seconds without pointer movement inside the player, including while paused; new movement resets that delay. Keyboard-visible focus, scrubbing, open control surfaces, media feedback, and touch reveal keep them reachable. Its semantic hover and focus treatment changes surface and border without translating the already centered button.
+
+The volume range expands horizontally beside the sound button through width and opacity and keeps the surrounding left action group stable. Settings and its playback-speed submenu use the same restrained fade treatment, with pointer travel and keyboard focus supported inside each surface. In inline non-fullscreen playback, two aria-hidden caption layers make a fast handoff: the lower cue fades and slides down as controls appear while the raised cue fades and slides in from above, then reverse when controls hide. Reduced motion removes bar, slider, menu, and caption transitions while preserving every state. Shared modal entry, exit, focus, and scroll locking remain owned by `ModalDialog`.
+
+## Research diagram explainers
+
+The Adversarial Machine Learning and GuideDonorScheduler Research rows use CSS animation on static inline SVG scenes. Each explainer has a complete visible scene, persistent HTML labels, and caption before motion begins, and the same complete scene remains visible while paused. A twelve-second loop has four three-second emphasis phases, with seconds eleven through twelve holding the complete scene: AML emphasizes changed pixels, clean and manipulated sample travel, detector-ring rotation, then the neutral check; GuideDonorScheduler emphasizes the requested target change, guide bracket, donor marks, then guide and donor spreadsheet rows. Motion may animate opacity and transform while labels, paths, scene frame, and caption remain legible throughout. The implementation must not schedule per-frame React updates, fetch content, or depend on a media runtime.
+
+Each explainer observes viewport visibility and `document.visibilityState`: it suspends when offscreen or hidden, resumes only when its conditions become eligible, and preserves a manual pause across those automatic changes. Its native control has a 44px target: it remains `Pause` while automatic conditions temporarily hold an otherwise active animation and changes to `Resume` only for a manual pause. Initial reduced-motion or unsupported-observer rendering shows the complete static diagram and caption, omits playback controls, and schedules no animation work. A live preference change retains a focused control as disabled static content only until focus leaves, then removes it.
+
 ## Mobile navigation rail
 
 At `max-width: 980px`, route links followed by GitHub, LinkedIn, Email, and theme controls remain in one native horizontal rail. After each pathname loads, automatic motion starts immediately when the rail overflows. From the Home edge it drifts immediately; from another position it first returns to that edge over `420ms`, then drifts at approximately `20px` per second and reverses at each boundary. Controls are never cloned or reordered, and the motion has no live announcement.
@@ -99,7 +104,7 @@ Scroll motion must not blur text. The `enable_scroll_motion` setting gates scrol
 
 ## Experience and research disclosure
 
-The shared audience lens translates over `260ms`; selected text changes immediately through `aria-pressed`. Switching views clears the selected evidence row before the new card copy settles with its short opacity and vertical-transform transition. Research and Experience share the recommendation disclosure tokens: panel height uses `520ms`, panel opacity uses `320ms`, and both use `cubic-bezier(0.22, 1, 0.36, 1)` when opening. Closing retains those durations but uses `ease-in-out` for both properties so the clipped body remains readable as it begins to collapse. Exactly one row across each route may be selected. Above `980px`, only its opaque panel is absolutely layered below the permanently normal-flow summary, with no reserve or card reflow. The outer grid clip owns that height animation; an inner labelled body caps and scrolls only content longer than `60dvh`. Semantic close immediately applies `aria-hidden`, inertness, and pointer inactivity, while its visual layer stays stacked beneath a newly active panel until the height transition settles and releases that stacking state. At `980px` and below, the panel follows normal document flow. Fine-pointer card lift is decorative and never required to find content.
+The shared audience lens translates over `260ms`; selected text changes immediately through `aria-pressed`. Switching views clears the selected evidence row before the new card copy settles with its short opacity and vertical-transform transition. Research and Experience share the recommendation disclosure tokens: panel height uses `520ms`, panel opacity uses `320ms`, and both use `cubic-bezier(0.22, 1, 0.36, 1)` when opening. Closing retains those durations but uses `ease-in-out` for both properties so the clipped body remains readable as it begins to collapse. The selected trigger's noninteractive top stroke crossfades by opacity while its side strokes use that same opacity duration with a bottom-origin vertical scale; all reverse with the closing easing and without timers or delays. The actual preceding separator crossfades at the same time: the list top separator for a first row, otherwise the preceding row's bottom separator. Exactly one row across each route may be selected. Above `980px`, only its opaque panel is absolutely layered below the permanently normal-flow summary, with no reserve or card reflow. The outer grid clip owns that height animation; an inner labelled body caps and scrolls only content longer than `60dvh`. Semantic close immediately applies `aria-hidden`, inertness, and pointer inactivity, while its visual layer stays stacked beneath a newly active panel until the height transition settles and releases that stacking state. At `980px` and below, the panel follows normal document flow. Fine-pointer card lift is decorative and never required to find content.
 
 Card-wide elevation belongs exclusively to active fine-pointer hover. A disclosure keeps focus after it opens, so `:focus-within` may strengthen the card border but must not apply the large surface shadow or translation. Keyboard focus remains visible on the focused control without leaving a tall elevated rectangle around expanded content while the page scrolls.
 
@@ -113,7 +118,7 @@ The footer expands into reserved normal-flow space. Each pathname owns a fresh c
 
 ## Surface constraints
 
-Use opaque semantic surfaces. Do not use backdrop blur, gradients, glow shadows, decorative page overlays, or CSS mask fades for hierarchy or motion.
+Use opaque semantic surfaces. Research video controls alone may use theme-based translucency and restrained backdrop blur with an opaque fallback; their blur is not animated. Do not use gradients, glow shadows, decorative page overlays, or CSS mask fades for hierarchy or motion.
 
 ## Visual constraint
 

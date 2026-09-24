@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useRef, useState } from "react";
-import { ModalDialog } from "@/components/overlay/ModalDialog";
+import { ResearchMediaDialog } from "@/components/portfolio/research/ResearchMediaDialog";
 import type { ResearchGraphicalAbstract } from "@/lib/content/researchGraphicalAbstracts";
 
 type ResearchGraphicalAbstractPreviewProps = {
@@ -15,7 +15,6 @@ export function ResearchGraphicalAbstractPreview({
 }: ResearchGraphicalAbstractPreviewProps) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const dialogId = `research-abstract-${useId().replaceAll(":", "")}`;
 
   return (
@@ -47,36 +46,27 @@ export function ResearchGraphicalAbstractPreview({
         </button>
       </figure>
 
-      <ModalDialog
+      <ResearchMediaDialog
         ariaLabel={`Graphical abstract for ${title}`}
+        closeLabel={`Close graphical abstract for ${title}`}
         dialogId={dialogId}
-        frameClassName="research-abstract-dialog__frame"
-        initialFocusRef={closeButtonRef}
+        frameClassName="research-media-dialog__frame--abstract"
+        kind="abstract"
         onRequestClose={() => setOpen(false)}
         open={open}
         restoreFocusRef={triggerRef}
-        rootClassName="research-abstract-dialog"
       >
-        <button
-          aria-label={`Close graphical abstract for ${title}`}
-          className="research-abstract-dialog__close hover-base-1 hover-base-1--compact"
-          onClick={() => setOpen(false)}
-          ref={closeButtonRef}
-          type="button"
-        >
-          <span aria-hidden="true">×</span>
-        </button>
-        <figure className="research-abstract-dialog__figure">
+        <figure className="research-media-dialog__figure">
           <img
             alt={abstract.alt}
-            className="research-abstract-dialog__image"
+            className="research-media-dialog__image"
             decoding="async"
             height={abstract.height}
             src={abstract.src}
             width={abstract.width}
           />
         </figure>
-      </ModalDialog>
+      </ResearchMediaDialog>
     </>
   );
 }

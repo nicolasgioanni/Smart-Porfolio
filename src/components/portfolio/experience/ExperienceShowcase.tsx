@@ -124,7 +124,7 @@ export function ExperienceShowcase({ items, motionEnabled = true, summary }: Exp
                         <div className="experience-card__organization-row">
                           <p className="experience-card__organization">{item.organization}</p>
                           <span aria-hidden="true" className="experience-card__index">
-                            {String(itemIndex + 1).padStart(2, "0")}
+                            {itemIndex + 1}
                           </span>
                         </div>
                         <h2 className="experience-card__title">{item.title}</h2>

@@ -23,7 +23,8 @@ import {
   expectConnectedDetailSurfaceResponsiveBoundary,
   expectReducedMotionConnectedDetailSurface
 } from "./detailConnectedSurface";
-import { settleLayout } from "./settleLayout";
+import { expectDetailOutlineMotion, expectReducedMotionDetailOutline } from "./detailOutline";
+import { settleLayout, settlePageEntryMotion } from "./settleLayout";
 import { selectThemeWithChooser } from "./themePreference";
 
 test.beforeEach(async ({ page }) => {
@@ -67,6 +68,7 @@ test.describe("Experience showcase", () => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto("/experience");
     await settleLayout(page);
+    await settlePageEntryMotion(page);
 
     const introSurface = page.locator(".page-intro__surface");
     const pageHeading = introSurface.getByRole("heading", { level: 1, name: "Experience" });
@@ -229,26 +231,23 @@ test.describe("Experience showcase", () => {
       const chaptersElement = element.parentElement!;
       const topDivider = getComputedStyle(chaptersElement, "::before");
       const rowDivider = getComputedStyle(element, "::before");
-      const accentDivider = getComputedStyle(element, "::after");
 
       return {
-        accentLeft: accentDivider.left,
-        accentRight: accentDivider.right,
         rowLeft: rowDivider.left,
         rowRight: rowDivider.right,
         topLeft: topDivider.left,
-        topRight: topDivider.right
+        topRight: topDivider.right,
+        retiredAccentContent: getComputedStyle(element, "::after").content
       };
     });
     const [chapterBox, triggerBox] = await Promise.all([chapter.boundingBox(), trigger.boundingBox()]);
 
     expect(dividerInsets).toEqual({
-      accentLeft: "4px",
-      accentRight: "4px",
       rowLeft: "4px",
       rowRight: "4px",
       topLeft: "4px",
-      topRight: "4px"
+      topRight: "4px",
+      retiredAccentContent: "none"
     });
     expect(chapterBox).not.toBeNull();
     expect(triggerBox).not.toBeNull();
@@ -574,6 +573,17 @@ test.describe("Experience showcase", () => {
     });
   });
 
+  test("crossfades first, middle, and final evidence outlines with their separators", async ({ page }) => {
+    for (const width of [1280, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto("/experience");
+      await settleLayout(page);
+      await settlePageEntryMotion(page);
+
+      await expectDetailOutlineMotion(page, "article.experience-card");
+    }
+  });
+
   test("removes evidence-panel motion in reduced-motion mode", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.setViewportSize({ width: 1280, height: 900 });
@@ -590,8 +600,7 @@ test.describe("Experience showcase", () => {
     expect(
       await panel.evaluate((element) => getComputedStyle(element).transitionDuration.split(",").every((value) => value.trim() === "0s"))
     ).toBe(true);
-    await trigger.press("Escape");
-    await expect(panel.locator("..")).toHaveAttribute("data-visual-state", "closed");
+    await expectReducedMotionDetailOutline(trigger);
   });
 
   test("keeps expanded cards at rest after focus and scrolling in every palette", async ({ page }) => {

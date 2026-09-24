@@ -9,7 +9,7 @@ import {
 } from "@/lib/media/researchVideoPlayback";
 
 function createSurface(currentTime = 0, duration = Number.NaN): ResearchVideoPlaybackSurface {
-  return { currentTime, duration, pause: vi.fn() };
+  return { currentTime, duration, muted: false, pause: vi.fn(), playbackRate: 1, volume: 1 };
 }
 
 describe("research video playback transfer", () => {

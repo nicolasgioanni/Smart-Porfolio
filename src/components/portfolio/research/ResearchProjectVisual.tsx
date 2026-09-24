@@ -1,5 +1,6 @@
 import type { ResearchItem } from "@/content/types";
 import { ResearchGraphicalAbstractPreview } from "@/components/portfolio/research/ResearchGraphicalAbstractPreview";
+import { ResearchExplainer, type ResearchExplainerVariant } from "@/components/portfolio/research/ResearchExplainer";
 import { ResearchVideoPreview } from "@/components/portfolio/research/ResearchVideoPreview";
 import { getResearchGraphicalAbstract } from "@/lib/content/researchGraphicalAbstracts";
 import { getResearchVideo } from "@/lib/content/researchVideos";
@@ -9,6 +10,13 @@ type ResearchProjectVisualProps = {
   order: number;
   title: string;
 };
+
+/** Keep authored media selection tied to the stable generated Research ids. */
+export function getResearchExplainerVariant(itemId: string): ResearchExplainerVariant | undefined {
+  if (itemId === "adversarial-machine-learning") return "aml";
+  if (itemId === "yeast-dna-target-selection") return "guide-donor";
+  return undefined;
+}
 
 function FallbackVisual() {
   return (
@@ -25,12 +33,19 @@ function FallbackVisual() {
 export function ResearchProjectVisual({ item, order, title }: ResearchProjectVisualProps) {
   const graphicalAbstract = getResearchGraphicalAbstract(item);
   const video = getResearchVideo(item);
+  const explainerVariant = getResearchExplainerVariant(item.id);
 
-  if (graphicalAbstract && video) {
+  if (graphicalAbstract && (video || explainerVariant)) {
     return (
       <div className="research-media-stack">
-        <ResearchVideoPreview poster={graphicalAbstract} title={title} video={video} />
-        <ResearchGraphicalAbstractPreview abstract={graphicalAbstract} title={title} />
+        <div className="research-project__media-row research-project__media-row--abstract">
+          <ResearchGraphicalAbstractPreview abstract={graphicalAbstract} title={title} />
+        </div>
+        <div aria-hidden="true" className="research-project__media-divider" />
+        <div className="research-project__media-row research-project__media-row--explainer">
+          {video ? <ResearchVideoPreview poster={graphicalAbstract} title={title} video={video} /> : null}
+          {explainerVariant ? <ResearchExplainer variant={explainerVariant} /> : null}
+        </div>
       </div>
     );
   }
@@ -42,7 +57,7 @@ export function ResearchProjectVisual({ item, order, title }: ResearchProjectVis
   return (
     <figure className="research-visual">
       <div className="research-visual__header">
-        <span>R&amp;D / {String(order + 1).padStart(2, "0")}</span>
+        <span>R&amp;D / {order + 1}</span>
         <span className="research-visual__status">
           <span aria-hidden="true" className="research-visual__status-dot" />
           Active

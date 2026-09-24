@@ -78,9 +78,9 @@ describe("ResearchShowcase", () => {
     expect(projects.map((project) => project.dataset.visualSide)).toEqual(["left", "right", "left"]);
     expect(screen.getAllByRole("img", { name: "UW Bothell School of STEM logo" })).toHaveLength(3);
     expect(projects.map((project) => project.querySelector(".research-project__index")?.textContent)).toEqual([
-      "01",
-      "02",
-      "03"
+      "1",
+      "2",
+      "3"
     ]);
     expect(
       screen.getAllByRole("button", { name: /Open graphical abstract for/ }).map((button) => button.getAttribute("aria-label"))
@@ -97,7 +97,7 @@ describe("ResearchShowcase", () => {
       "/images/research/guide-donor-scheduler-graphical-abstract.png"
     ]);
     const cytocvProject = projects[0]!;
-    expect(cytocvProject.querySelector(".research-video__player source")).toHaveAttribute(
+    expect(cytocvProject.querySelector(".research-video-player__media source")).toHaveAttribute(
       "src",
       "/images/research/cytocv-supplementary-video-s1.mp4"
     );
@@ -108,14 +108,18 @@ describe("ResearchShowcase", () => {
     expect(
       projects.map((project) => Array.from(project.querySelectorAll(".research-media-title"), (title) => title.textContent))
     ).toEqual([
-      ["CytoCV Demo", "CytoCV Graphical Abstract"],
-      ["AML Graphical Abstract"],
-      ["GuideDonorScheduler Graphical Abstract"]
+      ["CytoCV Graphical Abstract", "CytoCV Demo"],
+      ["AML Graphical Abstract", "Can AI spot an altered image?"],
+      ["GuideDonorScheduler Graphical Abstract", "Design a DNA change"]
     ]);
+    expect(projects.map((project) => project.querySelectorAll(".research-project__media-row").length)).toEqual([2, 2, 2]);
+    expect(projects.map((project) => project.querySelectorAll(".research-project__media-divider").length)).toEqual([1, 1, 1]);
+    expect(container.querySelectorAll('[data-research-explainer="aml"]')).toHaveLength(1);
+    expect(container.querySelectorAll('[data-research-explainer="guide-donor"]')).toHaveLength(1);
     expect(screen.queryByRole("img", { name: /segmentation diagram|attack and defense matrix|sequence design diagram/i })).not.toBeInTheDocument();
     expect(screen.queryByText("Graduate Research Assistant")).not.toBeInTheDocument();
     expect(screen.queryByText("Bothell, Washington, United States")).not.toBeInTheDocument();
-    expect(screen.queryByText("Research 01")).not.toBeInTheDocument();
+    expect(screen.queryByText("Research 1")).not.toBeInTheDocument();
   });
 
   it("keeps technical skills visible for research items without authored bullets", () => {

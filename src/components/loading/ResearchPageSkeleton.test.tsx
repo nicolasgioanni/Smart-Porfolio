@@ -64,7 +64,8 @@ describe("ResearchPageSkeleton", () => {
   it("uses noninteractive title placeholders for every resolved research medium", () => {
     const { container } = render(<ResearchPageSkeleton detailItems={canonicalResearchSkeletonItems} />);
 
-    expect(getMediaTitleCounts(container)).toEqual([2, 1, 1]);
+    expect(getMediaTitleCounts(container)).toEqual([2, 2, 2]);
     expect(container.querySelectorAll(".research-skeleton__media-title a, .research-skeleton__media-title button")).toHaveLength(0);
+    expect(container.querySelectorAll(".research-skeleton__explainer-key")).toHaveLength(1);
   });
 });

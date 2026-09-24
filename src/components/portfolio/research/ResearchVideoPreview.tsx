@@ -1,13 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useId, useRef, useState, type MutableRefObject, type RefObject } from "react";
-import { GlassIconButton } from "@/components/glass/GlassIconButton";
-import { GlassIconLink } from "@/components/glass/GlassIconLink";
-import { LinkIcon } from "@/components/icons/LinkIcon";
-import { ModalDialog } from "@/components/overlay/ModalDialog";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { ResearchMediaDialog } from "@/components/portfolio/research/ResearchMediaDialog";
+import { ResearchVideoPlayer } from "@/components/portfolio/research/ResearchVideoPlayer";
 import type { ResearchGraphicalAbstract } from "@/lib/content/researchGraphicalAbstracts";
 import type { ResearchVideo } from "@/lib/content/researchVideos";
-import { pauseAndTransferPlayback, pausePlayback, setPlaybackTime } from "@/lib/media/researchVideoPlayback";
+import { getPlaybackSettings, pausePlayback, type ResearchVideoPlaybackSettings } from "@/lib/media/researchVideoPlayback";
 
 type ResearchVideoPreviewProps = {
   poster: ResearchGraphicalAbstract;
@@ -15,170 +13,27 @@ type ResearchVideoPreviewProps = {
   video: ResearchVideo;
 };
 
-type VideoStatus = "ended" | "error" | "loading" | "ready";
-
-type ScientificVideoPlayerProps = {
-  className: string;
-  label: string;
-  onEnded: () => void;
-  onError: () => void;
-  onLoadedData: () => void;
-  onLoadedMetadata: () => void;
-  onLoadStart: () => void;
-  onPlay: () => void;
-  onVideoElementAvailable?: (videoElement: HTMLVideoElement | null) => void;
-  poster: ResearchGraphicalAbstract;
-  video: ResearchVideo;
-  videoRef: MutableRefObject<HTMLVideoElement | null>;
-};
-
-function ScientificVideoPlayer({
-  className,
-  label,
-  onEnded,
-  onError,
-  onLoadedData,
-  onLoadedMetadata,
-  onLoadStart,
-  onPlay,
-  onVideoElementAvailable,
-  poster,
-  video,
-  videoRef
-}: ScientificVideoPlayerProps) {
-  const setVideoRef = useCallback(
-    (videoElement: HTMLVideoElement | null) => {
-      videoRef.current = videoElement;
-      onVideoElementAvailable?.(videoElement);
-    },
-    [onVideoElementAvailable, videoRef]
-  );
-
-  return (
-    <video
-      aria-label={label}
-      className={className}
-      controls
-      height={video.height}
-      onEnded={onEnded}
-      onError={onError}
-      onLoadedData={onLoadedData}
-      onLoadedMetadata={onLoadedMetadata}
-      onLoadStart={onLoadStart}
-      onPlay={onPlay}
-      playsInline
-      poster={poster.src}
-      preload="metadata"
-      ref={setVideoRef}
-      width={video.width}
-    >
-      <source src={video.src} type={video.mimeType} />
-      <track default kind="captions" label="English" src={video.captionsSrc} srcLang="en" />
-      Your browser cannot play this video. Use the download link or read the transcript below.
-    </video>
-  );
-}
-
-function VideoStatusMessage({ status }: { status: VideoStatus }) {
-  if (status === "ready") return null;
-
-  return (
-    <p aria-live="polite" className="research-video__status" role="status">
-      {status === "loading" && "Loading video metadata."}
-      {status === "ended" && "Video ended. Use the video controls to replay it."}
-      {status === "error" && "Video playback is unavailable. Use the download or transcript link."}
-    </p>
-  );
-}
-
-type VideoToolbarProps = {
-  dialogId?: string;
-  expandButtonRef?: RefObject<HTMLButtonElement | null>;
-  expanded?: boolean;
-  onExpand?: () => void;
-  title: string;
-  video: ResearchVideo;
-};
-
-function VideoToolbar({ dialogId, expandButtonRef, expanded, onExpand, title, video }: VideoToolbarProps) {
-  const controls = [
-    {
-      download: false,
-      icon: "file",
-      label: "Read transcript",
-      url: video.transcriptSrc
-    },
-    {
-      download: true,
-      icon: "download",
-      label: "Download MP4",
-      url: video.src
-    }
-  ] as const;
-
-  return (
-    <div aria-label={`${title} video tools`} className="research-video__toolbar" role="group">
-      {controls.map(({ download, icon, label, url }) => (
-        <GlassIconLink
-          className="research-video__toolbar-control"
-          data-tooltip={label}
-          download={download}
-          key={label}
-          kind={icon}
-          label={label}
-          showLabel={false}
-          title={label}
-          url={url}
-        />
-      ))}
-      {onExpand ? (
-        <GlassIconButton
-          aria-controls={dialogId}
-          aria-expanded={expanded}
-          aria-haspopup="dialog"
-          className="research-video__toolbar-control"
-          data-tooltip="Open enlarged player"
-          label={`Expand video for ${title}`}
-          onClick={onExpand}
-          ref={expandButtonRef}
-          title="Open enlarged player"
-        >
-          <LinkIcon kind="expand" />
-        </GlassIconButton>
-      ) : null}
-    </div>
-  );
-}
-
-function applyPendingPlaybackTime(videoElement: HTMLVideoElement | null, pendingTimeRef: { current: number | null }) {
-  if (pendingTimeRef.current === null) return;
-  if (setPlaybackTime(videoElement, pendingTimeRef.current)) pendingTimeRef.current = null;
-}
-
-function getLoadedVideoStatus(videoElement: HTMLVideoElement | null): VideoStatus | undefined {
+function getPausedPlaybackSettings(videoElement: HTMLVideoElement | null): ResearchVideoPlaybackSettings | undefined {
   if (!videoElement) return undefined;
-  if (videoElement.error) return "error";
-  return videoElement.readyState >= HTMLMediaElement.HAVE_METADATA ? "ready" : undefined;
+  pausePlayback(videoElement);
+  return getPlaybackSettings(videoElement);
 }
 
 export function ResearchVideoPreview({ poster, title, video }: ResearchVideoPreviewProps) {
   const [open, setOpen] = useState(false);
+  const [preserveInlineControls, setPreserveInlineControls] = useState(false);
+  const [captionsEnabled, setCaptionsEnabled] = useState(true);
+  const [modalPlaybackSettings, setModalPlaybackSettings] = useState<ResearchVideoPlaybackSettings>();
+  const [inlinePlaybackSettings, setInlinePlaybackSettings] = useState<ResearchVideoPlaybackSettings>();
+  const [modalTransferKey, setModalTransferKey] = useState(0);
+  const [inlineTransferKey, setInlineTransferKey] = useState(0);
   const inlineVideoRef = useRef<HTMLVideoElement>(null);
   const modalVideoRef = useRef<HTMLVideoElement>(null);
-  const pendingInlineTimeRef = useRef<number | null>(null);
-  const pendingModalTimeRef = useRef<number | null>(null);
   const expandButtonRef = useRef<HTMLButtonElement>(null);
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
-  const [inlineVideoStatus, setInlineVideoStatus] = useState<VideoStatus>("loading");
-  const [modalVideoStatus, setModalVideoStatus] = useState<VideoStatus>("loading");
   const componentId = useId().replaceAll(":", "");
   const dialogId = `research-video-${componentId}`;
   const dialogDescriptionId = `${dialogId}-description`;
   const inlineLabel = `${title} supplementary workflow video`;
-  const applyModalPlaybackTime = useCallback(
-    (videoElement: HTMLVideoElement | null) => applyPendingPlaybackTime(videoElement, pendingModalTimeRef),
-    []
-  );
 
   useEffect(
     () => () => {
@@ -188,32 +43,41 @@ export function ResearchVideoPreview({ poster, title, video }: ResearchVideoPrev
     []
   );
 
-  useEffect(() => {
-    const loadedStatus = getLoadedVideoStatus(inlineVideoRef.current);
-    if (loadedStatus) setInlineVideoStatus(loadedStatus);
-  }, []);
+  const openDialog = useCallback(() => {
+    const startDialog = () => {
+      const snapshot = getPausedPlaybackSettings(inlineVideoRef.current);
+      if (snapshot) {
+        setModalPlaybackSettings(snapshot);
+        setModalTransferKey((value) => value + 1);
+      }
+      setPreserveInlineControls(true);
+      setOpen(true);
+    };
 
-  useEffect(() => {
-    if (open) {
-      applyPendingPlaybackTime(modalVideoRef.current, pendingModalTimeRef);
+    if (document.fullscreenElement) {
+      void document.exitFullscreen().then(startDialog).catch(() => undefined);
       return;
     }
 
-    const loadedStatus = getLoadedVideoStatus(inlineVideoRef.current);
-    if (loadedStatus) setInlineVideoStatus(loadedStatus);
-  }, [open]);
+    startDialog();
+  }, []);
 
-  function openDialog() {
-    pendingModalTimeRef.current = pauseAndTransferPlayback(inlineVideoRef.current, undefined);
-    setModalVideoStatus("loading");
-    setOpen(true);
-  }
-
-  function closeDialog() {
-    pendingInlineTimeRef.current = pauseAndTransferPlayback(modalVideoRef.current, inlineVideoRef.current);
-    applyPendingPlaybackTime(inlineVideoRef.current, pendingInlineTimeRef);
+  const closeDialog = useCallback(() => {
+    const modalVideo = modalVideoRef.current;
+    pausePlayback(modalVideo);
+    const liveSettings = modalVideo ? getPlaybackSettings(modalVideo) : undefined;
+    const snapshot =
+      liveSettings && (modalVideo!.readyState >= HTMLMediaElement.HAVE_METADATA || liveSettings.currentTime > 0)
+        ? liveSettings
+        : modalPlaybackSettings && liveSettings
+          ? { ...liveSettings, currentTime: modalPlaybackSettings.currentTime }
+          : modalPlaybackSettings ?? liveSettings;
+    if (snapshot) {
+      setInlinePlaybackSettings(snapshot);
+      setInlineTransferKey((value) => value + 1);
+    }
     setOpen(false);
-  }
+  }, [modalPlaybackSettings]);
 
   return (
     <>
@@ -224,86 +88,55 @@ export function ResearchVideoPreview({ poster, title, video }: ResearchVideoPrev
             <span className="research-video__duration">{video.durationLabel}</span>
           </div>
         </div>
-        <div className="research-video__viewport">
-          <ScientificVideoPlayer
-            className="research-video__player"
-            label={inlineLabel}
-            onEnded={() => setInlineVideoStatus("ended")}
-            onError={() => setInlineVideoStatus("error")}
-            onLoadedData={() => setInlineVideoStatus("ready")}
-            onLoadedMetadata={() => {
-              applyPendingPlaybackTime(inlineVideoRef.current, pendingInlineTimeRef);
-              setInlineVideoStatus("ready");
-            }}
-            onLoadStart={() => setInlineVideoStatus("loading")}
-            onPlay={() => {
-              pausePlayback(modalVideoRef.current);
-              setInlineVideoStatus("ready");
-            }}
-            poster={poster}
-            video={video}
-            videoRef={inlineVideoRef}
-          />
-          <VideoToolbar
-            dialogId={dialogId}
-            expandButtonRef={expandButtonRef}
-            expanded={open}
-            onExpand={openDialog}
-            title={title}
-            video={video}
-          />
-        </div>
-        <VideoStatusMessage status={inlineVideoStatus} />
+        <ResearchVideoPlayer
+          captionsEnabled={captionsEnabled}
+          className="research-video__viewport"
+          expandButtonRef={expandButtonRef}
+          keepControlsVisible={preserveInlineControls}
+          label={inlineLabel}
+          onCaptionsEnabledChange={setCaptionsEnabled}
+          onPlay={() => pausePlayback(modalVideoRef.current)}
+          onRequestExpand={openDialog}
+          playbackSettings={inlinePlaybackSettings}
+          playbackTransferKey={inlineTransferKey}
+          poster={poster}
+          showExpandControl
+          video={video}
+          videoRef={inlineVideoRef}
+        />
+        <a className="research-video__transcript" data-testid="read-transcript" href={video.transcriptSrc} rel="noreferrer" target="_blank">
+          Read transcript
+        </a>
       </section>
 
-      <ModalDialog
+      <ResearchMediaDialog
         ariaDescribedBy={dialogDescriptionId}
         ariaLabel={`${title} supplementary workflow video`}
+        closeLabel={`Close video for ${title}`}
         dialogId={dialogId}
-        frameClassName="research-video-dialog__frame"
-        initialFocusRef={closeButtonRef}
+        frameClassName="research-media-dialog__frame--video"
+        kind="video"
+        onAfterClose={() => setPreserveInlineControls(false)}
         onRequestClose={closeDialog}
         open={open}
         restoreFocusRef={expandButtonRef}
-        rootClassName="research-video-dialog"
       >
         <p className="visually-hidden" id={dialogDescriptionId}>
-          {video.description} Captions are available from the video controls. Playback remains paused while its timeline is transferred between views.
+          {video.description} English captions are available. Playback remains paused while its timeline and settings move between views.
         </p>
-        <button
-          aria-label={`Close video for ${title}`}
-          className="research-video-dialog__close hover-base-1 hover-base-1--compact"
-          onClick={closeDialog}
-          ref={closeButtonRef}
-          type="button"
-        >
-          <span aria-hidden="true">×</span>
-        </button>
-        <div className="research-video-dialog__viewport">
-          <ScientificVideoPlayer
-            className="research-video-dialog__player"
-            label={`${inlineLabel}, enlarged`}
-            onEnded={() => setModalVideoStatus("ended")}
-            onError={() => setModalVideoStatus("error")}
-            onLoadedData={() => setModalVideoStatus("ready")}
-            onLoadedMetadata={() => {
-              applyPendingPlaybackTime(modalVideoRef.current, pendingModalTimeRef);
-              setModalVideoStatus("ready");
-            }}
-            onLoadStart={() => setModalVideoStatus("loading")}
-            onPlay={() => {
-              pausePlayback(inlineVideoRef.current);
-              setModalVideoStatus("ready");
-            }}
-            poster={poster}
-            video={video}
-            onVideoElementAvailable={applyModalPlaybackTime}
-            videoRef={modalVideoRef}
-          />
-          <VideoToolbar title={title} video={video} />
-        </div>
-        <VideoStatusMessage status={modalVideoStatus} />
-      </ModalDialog>
+        <ResearchVideoPlayer
+          captionsEnabled={captionsEnabled}
+          className="research-media-dialog__video"
+          label={`${inlineLabel}, enlarged`}
+          onCaptionsEnabledChange={setCaptionsEnabled}
+          onPlay={() => pausePlayback(inlineVideoRef.current)}
+          playbackSettings={modalPlaybackSettings}
+          playbackTransferKey={modalTransferKey}
+          poster={poster}
+          video={video}
+          videoRef={modalVideoRef}
+        />
+      </ResearchMediaDialog>
     </>
   );
 }
