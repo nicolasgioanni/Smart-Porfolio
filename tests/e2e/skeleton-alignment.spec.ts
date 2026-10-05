@@ -449,6 +449,51 @@ test("keeps canonical Home loader within each responsive header matrix width", a
   }
 });
 
+test("matches the Home hero's 720, 860, and 980 responsive boundaries", async ({ page }) => {
+  for (const width of [720, 721, 860, 861, 980, 981]) {
+    const viewport = { height: 900, name: `home-boundary-${width}`, width };
+    await preparePage(page, viewport, siteRoutes.projects);
+    const { fixturePage, skeleton } = await mountStaticRouteSkeleton(page, siteRoutes.home, viewport);
+    try {
+      const geometry = await skeleton.locator(".home-skeleton__hero").evaluate((hero) => {
+        const read = (selector: string) => {
+          const element = hero.querySelector<HTMLElement>(selector);
+          if (!element) throw new Error(`Missing ${selector}`);
+          const rect = element.getBoundingClientRect();
+          return { bottom: rect.bottom, left: rect.left, right: rect.right, top: rect.top };
+        };
+        const introduction = read(".home-skeleton__introduction");
+        const profile = read(".home-skeleton__profile");
+        const details = read(".home-skeleton__details");
+        const portrait = read(".home-skeleton__portrait-column");
+        const identity = read(".home-skeleton__identity-list");
+        return {
+          detailsAfterProfile: details.top >= profile.bottom - 1,
+          identityBesidePortrait: identity.left >= portrait.right - 1 && identity.top <= portrait.bottom,
+          introductionBeforeDetails: introduction.bottom <= details.top + 1,
+          introductionBeforeProfile: introduction.bottom <= profile.top + 1,
+          profileBesideIntroduction: profile.right <= introduction.left + 1
+        };
+      });
+
+      if (width <= 720) {
+        expect(geometry.introductionBeforeProfile).toBe(true);
+        expect(geometry.identityBesidePortrait).toBe(true);
+      } else if (width <= 980) {
+        expect(geometry.introductionBeforeProfile).toBe(true);
+        expect(geometry.identityBesidePortrait).toBe(true);
+        expect(geometry.detailsAfterProfile).toBe(true);
+      } else {
+        expect(geometry.profileBesideIntroduction).toBe(true);
+        expect(geometry.introductionBeforeDetails).toBe(true);
+      }
+      await assertViewportHasNoOverflow(fixturePage, `Home skeleton does not overflow at ${width}px`);
+    } finally {
+      await fixturePage.close();
+    }
+  }
+});
+
 test("matches real Project and Research detail footprints at compact, phone, tablet, and desktop widths", async ({ page }) => {
   for (const viewport of [primaryViewports[0]!, primaryViewports[1]!, primaryViewports[3]!, primaryViewports.at(-1)!]) {
     await preparePage(page, viewport, siteRoutes.projects);

@@ -80,6 +80,15 @@ describe("skeleton style contracts", () => {
       /@media \(max-width: 720px\)[\s\S]*?\.home-skeleton__card-grid--recommendations,\s*\.home-skeleton__skill-grid\s*\{[^}]*grid-template-columns: minmax\(0, 1fr\)/s
     );
     expect(skeletonStyles).toMatch(
+      /@media \(min-width: 721px\) and \(max-width: 980px\)[\s\S]*?\.home-skeleton__hero\s*\{[^}]*grid-template-areas:\s*"introduction"\s*"profile"\s*"details"[^}]*gap: var\(--space-6\)/s
+    );
+    expect(skeletonStyles).toMatch(
+      /@media \(min-width: 721px\) and \(max-width: 980px\)[\s\S]*?\.home-skeleton__profile\s*\{[^}]*grid-template-columns: minmax\(160px, 0\.8fr\) minmax\(280px, 1\.2fr\)[^}]*margin-bottom: 0/s
+    );
+    expect(skeletonStyles).toMatch(
+      /@media \(min-width: 721px\) and \(max-width: 980px\)[\s\S]*?\.home-skeleton__portrait\s*\{[^}]*width: clamp\(150px, 20vw, 184px\) !important[^}]*height: clamp\(150px, 20vw, 184px\) !important/s
+    );
+    expect(skeletonStyles).toMatch(
       /@media \(max-width: 620px\)[\s\S]*?\.resume-skeleton\s*\{[^}]*grid-template-columns: minmax\(0, 1fr\)[^}]*align-items: start[^}]*padding: var\(--space-6\)/s
     );
     expect(skeletonStyles).toMatch(
@@ -87,7 +96,7 @@ describe("skeleton style contracts", () => {
     );
     const tabletRules = skeletonStyles.slice(
       skeletonStyles.indexOf("@media (max-width: 980px)"),
-      skeletonStyles.indexOf("@media (max-width: 860px)")
+      skeletonStyles.indexOf("@media (min-width: 721px) and (max-width: 980px)")
     );
     expect(tabletRules).not.toContain(".home-skeleton__academic-grid");
     const phoneRules = skeletonStyles.slice(
