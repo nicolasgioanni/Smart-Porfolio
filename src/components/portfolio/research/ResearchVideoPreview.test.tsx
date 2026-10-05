@@ -3,6 +3,12 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ResearchVideoPreview } from "@/components/portfolio/research/ResearchVideoPreview";
 
+const motionPreference = vi.hoisted(() => ({ reduced: false }));
+
+vi.mock("@/components/motion/useReducedMotionPreference", () => ({
+  useReducedMotionPreference: () => motionPreference.reduced
+}));
+
 const graphicalAbstract = {
   alt: "A research workflow diagram.",
   displayTitle: "CytoCV Graphical Abstract",
@@ -90,6 +96,7 @@ describe("ResearchVideoPreview", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
+    motionPreference.reduced = false;
     document.body.style.overflow = originalBodyOverflow;
   });
 
@@ -205,7 +212,7 @@ describe("ResearchVideoPreview", () => {
     expect(settings).toHaveAttribute("data-open", "true");
     fireEvent.pointerMove(playerRoot, { pointerType: "mouse" });
     expect(settings).toHaveAttribute("data-open", "true");
-    fireEvent.click(within(settings).getByRole("button", { name: "Playback speed — 1×" }));
+    fireEvent.click(within(settings).getByRole("button", { name: "Playback speed: 1x" }));
     expect(settings).toHaveAttribute("data-view", "speeds");
     fireEvent.pointerLeave(playerRoot, { pointerType: "mouse" });
     fireEvent.pointerMove(document.body, { clientX: 500, clientY: 500, pointerType: "mouse" });
@@ -299,7 +306,82 @@ describe("ResearchVideoPreview", () => {
     expect(volumeRange).toHaveAttribute("data-open", "false");
   });
 
-  it("pauses and transfers timeline, volume, speed, and caption preference between the inline and enlarged players", async () => {
+  it("retains an enhanced caption during its 180ms exit and cancels the exit when captions return", async () => {
+    const captionTrack = new EventTarget() as EventTarget & { activeCues: Array<{ text: string }>; mode: TextTrackMode };
+    captionTrack.activeCues = [{ text: "Caption cue remains while it fades." }];
+    captionTrack.mode = "showing";
+    vi.spyOn(HTMLMediaElement.prototype, "textTracks", "get").mockReturnValue([captionTrack] as unknown as TextTrackList);
+
+    const { container } = render(<ResearchVideoPreview poster={graphicalAbstract} title="Example Research" video={video} />);
+    const playerRoot = screen.getByTestId("research-video-player");
+    const player = getInlineVideo(container);
+    await waitFor(() => expect(screen.getByTestId("research-video-captions")).toHaveTextContent("Caption cue remains while it fades."));
+    revealPlayerControls(playerRoot);
+
+    vi.useFakeTimers();
+    fireEvent.click(screen.getByRole("button", { name: "Disable captions" }));
+    expect(playerRoot).toHaveAttribute("data-caption-exiting", "true");
+    expect(screen.getByTestId("research-video-captions")).toBeInTheDocument();
+
+    act(() => vi.advanceTimersByTime(179));
+    expect(screen.getByTestId("research-video-captions")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Enable captions" }));
+    expect(playerRoot).toHaveAttribute("data-caption-exiting", "false");
+    expect(playerRoot).toHaveAttribute("data-caption-visible", "true");
+    act(() => vi.advanceTimersByTime(180));
+    expect(screen.getByTestId("research-video-captions")).toHaveTextContent("Caption cue remains while it fades.");
+
+    fireEvent.click(screen.getByRole("button", { name: "Disable captions" }));
+    act(() => vi.advanceTimersByTime(180));
+    expect(playerRoot).toHaveAttribute("data-caption-visible", "false");
+    expect(screen.getByTestId("research-video-captions")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Enable captions" }));
+    expect(screen.getByTestId("research-video-captions")).toBeInTheDocument();
+    fireEvent(player, new Event("enterpictureinpicture"));
+    expect(screen.queryByTestId("research-video-captions")).not.toBeInTheDocument();
+  });
+
+  it("keeps retained layers hidden when captions return in a gap after seeking", async () => {
+    const captionTrack = new EventTarget() as EventTarget & { activeCues: Array<{ text: string }>; mode: TextTrackMode };
+    captionTrack.activeCues = [{ text: "Previous cue must not return after a gap." }];
+    captionTrack.mode = "showing";
+    vi.spyOn(HTMLMediaElement.prototype, "textTracks", "get").mockReturnValue([captionTrack] as unknown as TextTrackList);
+
+    render(<ResearchVideoPreview poster={graphicalAbstract} title="Example Research" video={video} />);
+    const playerRoot = screen.getByTestId("research-video-player");
+    await waitFor(() => expect(screen.getByTestId("research-video-captions")).toHaveTextContent("Previous cue must not return after a gap."));
+    revealPlayerControls(playerRoot);
+
+    fireEvent.click(screen.getByRole("button", { name: "Disable captions" }));
+    captionTrack.activeCues = [];
+    act(() => captionTrack.dispatchEvent(new Event("cuechange")));
+    fireEvent.click(screen.getByRole("button", { name: "Enable captions" }));
+
+    expect(playerRoot).toHaveAttribute("data-caption-visible", "false");
+    expect(playerRoot).toHaveAttribute("data-caption-exiting", "false");
+    expect(screen.getByTestId("research-video-captions")).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("removes enhanced captions immediately when reduced motion is preferred", async () => {
+    motionPreference.reduced = true;
+    const captionTrack = new EventTarget() as EventTarget & { activeCues: Array<{ text: string }>; mode: TextTrackMode };
+    captionTrack.activeCues = [{ text: "Reduced motion caption." }];
+    captionTrack.mode = "showing";
+    vi.spyOn(HTMLMediaElement.prototype, "textTracks", "get").mockReturnValue([captionTrack] as unknown as TextTrackList);
+
+    render(<ResearchVideoPreview poster={graphicalAbstract} title="Example Research" video={video} />);
+    const playerRoot = screen.getByTestId("research-video-player");
+    await waitFor(() => expect(screen.getByTestId("research-video-captions")).toHaveTextContent("Reduced motion caption."));
+    revealPlayerControls(playerRoot);
+
+    fireEvent.click(screen.getByRole("button", { name: "Disable captions" }));
+    expect(playerRoot).toHaveAttribute("data-caption-exiting", "false");
+    expect(playerRoot).toHaveAttribute("data-caption-visible", "false");
+    expect(screen.getByTestId("research-video-captions")).toBeInTheDocument();
+  });
+
+  it("announces a non-preset rate while keeping its nearest slider position through the enlarged-player handoff", async () => {
     const { container } = render(<ResearchVideoPreview poster={graphicalAbstract} title="Example Research" video={video} />);
     const inlinePlayer = getInlineVideo(container);
     const inlineRoot = getInlinePlayer(container);
@@ -308,12 +390,22 @@ describe("ResearchVideoPreview", () => {
     setMediaTimeline(inlinePlayer, 12.5);
     inlinePlayer.volume = 0.4;
     inlinePlayer.muted = true;
-    inlinePlayer.playbackRate = 1.5;
+    inlinePlayer.playbackRate = 1.75;
+    fireEvent.rateChange(inlinePlayer);
     const pauseInline = vi.spyOn(inlinePlayer, "pause");
 
     fireEvent.click(screen.getByRole("button", { name: "Disable captions" }));
     fireEvent.click(settingsButton);
-    fireEvent.click(within(screen.getByRole("group", { name: "Video settings" })).getByRole("button", { name: "Open enlarged player" }));
+    const inlineSettings = screen.getByRole("group", { name: "Video settings" });
+    const inlineSpeedRow = within(inlineSettings).getByRole("button", { name: "Playback speed: 1.75x" });
+    fireEvent.click(inlineSpeedRow);
+    const inlineSpeedRange = within(inlineSettings).getByRole("slider", { name: "Playback speed" });
+    expect(inlineSpeedRange).toHaveValue("4");
+    expect(inlineSpeedRange).toHaveAttribute("aria-valuetext", "1.75x");
+    expect(within(inlineSettings).getByText("1.75x")).toBeInTheDocument();
+    await act(async () => fireEvent.keyDown(inlineSpeedRange, { key: "Escape" }));
+    await waitFor(() => expect(inlineSpeedRow).toHaveFocus());
+    fireEvent.click(within(inlineSettings).getByRole("button", { name: "Open enlarged player" }));
     const dialog = await screen.findByRole("dialog", { name: "Example Research supplementary workflow video" });
     const modalPlayer = dialog.querySelector<HTMLVideoElement>(".research-video-player__media")!;
     fireEvent.loadedMetadata(modalPlayer);
@@ -324,7 +416,7 @@ describe("ResearchVideoPreview", () => {
     expect(modalPlayer.currentTime).toBe(12.5);
     expect(modalPlayer.volume).toBe(0.4);
     expect(modalPlayer.muted).toBe(true);
-    expect(modalPlayer.playbackRate).toBe(1.5);
+    expect(modalPlayer.playbackRate).toBe(1.75);
     expect(within(dialog).getByRole("button", { name: "Enable captions" })).toHaveAttribute("aria-pressed", "false");
     expect(document.body.style.overflow).toBe("hidden");
 
@@ -347,7 +439,7 @@ describe("ResearchVideoPreview", () => {
     expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
   });
 
-  it("opens a compact settings root, returns speed selection to it, and consumes Escape before the dialog lifecycle", async () => {
+  it("uses a native indexed playback-speed range and returns to settings before the dialog lifecycle", async () => {
     const { container } = render(<ResearchVideoPreview poster={graphicalAbstract} title="Example Research" video={video} />);
     const player = getInlineVideo(container);
     const playerRoot = getInlinePlayer(container);
@@ -357,30 +449,41 @@ describe("ResearchVideoPreview", () => {
 
     fireEvent.click(settingsButton);
     const settings = screen.getByRole("group", { name: "Video settings" });
-    const speedMenu = within(settings).getByRole("button", { name: "Playback speed — 1×" });
+    const speedMenu = within(settings).getByRole("button", { name: "Playback speed: 1x" });
     speedMenu.focus();
     fireEvent.keyDown(speedMenu, { key: "Enter" });
     fireEvent.click(speedMenu);
     expect(settings).toHaveAttribute("data-view", "speeds");
-    const selectedSpeed = within(settings).getByRole("button", { name: "1×" });
-    await waitFor(() => expect(selectedSpeed).toHaveFocus());
-    await act(async () => fireEvent.keyDown(selectedSpeed, { key: "Escape" }));
+    expect(within(settings).getByRole("button", { name: "Back to video settings" })).toBeInTheDocument();
+    const speedRange = within(settings).getByRole("slider", { name: "Playback speed" });
+    expect(speedRange).toHaveAttribute("min", "0");
+    expect(speedRange).toHaveAttribute("max", "5");
+    expect(speedRange).toHaveAttribute("step", "1");
+    expect(speedRange).toHaveAttribute("aria-valuetext", "1x");
+    await waitFor(() => expect(speedRange).toHaveFocus());
+    await act(async () => fireEvent.keyDown(speedRange, { key: "Escape" }));
     expect(settings).toHaveAttribute("data-view", "root");
     await waitFor(() => expect(speedMenu).toHaveFocus());
 
     fireEvent.click(speedMenu);
-    const speed = within(settings).getByRole("button", { name: "1.5×" });
-    fireEvent.click(speed);
-    expect(player.playbackRate).toBe(1.5);
-    expect(speed).toHaveAttribute("aria-pressed", "true");
-    expect(settings).toHaveAttribute("data-open", "true");
-    expect(settings).toHaveAttribute("data-view", "root");
-    await waitFor(() => expect(screen.getByRole("button", { name: "Playback speed — 1.5×" })).toHaveFocus());
+    const updatedSpeedRange = within(settings).getByRole("slider", { name: "Playback speed" });
+    for (const [index, rate] of [0.5, 0.75, 1, 1.25, 1.5, 2].entries()) {
+      fireEvent.change(updatedSpeedRange, { target: { value: String(index) } });
+      expect(player.playbackRate).toBe(rate);
+      expect(updatedSpeedRange).toHaveAttribute("aria-valuetext", `${rate}x`);
+      expect(settings).toHaveAttribute("data-open", "true");
+      expect(settings).toHaveAttribute("data-view", "speeds");
+    }
 
-    fireEvent.click(screen.getByRole("button", { name: "Playback speed — 1.5×" }));
-    await act(async () => fireEvent.keyDown(within(settings).getByRole("button", { name: "1×" }), { key: "Escape" }));
+    await act(async () => fireEvent.keyDown(updatedSpeedRange, { key: "Escape" }));
     expect(settings).toHaveAttribute("data-view", "root");
-    await waitFor(() => expect(screen.getByRole("button", { name: "Playback speed — 1.5×" })).toHaveFocus());
+    await waitFor(() => expect(screen.getByRole("button", { name: "Playback speed: 2x" })).toHaveFocus());
+
+    fireEvent.click(screen.getByRole("button", { name: "Playback speed: 2x" }));
+    const back = within(settings).getByRole("button", { name: "Back to video settings" });
+    fireEvent.click(back);
+    expect(settings).toHaveAttribute("data-view", "root");
+    await waitFor(() => expect(screen.getByRole("button", { name: "Playback speed: 2x" })).toHaveFocus());
 
     await act(async () => fireEvent.keyDown(settings, { key: "Escape" }));
     expect(settings).toHaveAttribute("data-open", "false");
@@ -395,15 +498,15 @@ describe("ResearchVideoPreview", () => {
     fireEvent.click(screen.getByRole("button", { name: "Open video settings" }));
     const settings = screen.getByRole("group", { name: "Video settings" });
     const settingsButton = screen.getByRole("button", { name: "Open video settings" });
-    const speedRoot = within(settings).getByRole("button", { name: "Playback speed — 1×" });
+    const speedRoot = within(settings).getByRole("button", { name: "Playback speed: 1x" });
     settingsButton.focus();
     fireEvent.pointerDown(speedRoot, { pointerType: "mouse" });
     speedRoot.focus();
     fireEvent.click(speedRoot);
-    const selectedSpeed = within(settings).getByRole("button", { name: "1×" });
-    await waitFor(() => expect(selectedSpeed).toHaveFocus());
+    const speedRange = within(settings).getByRole("slider", { name: "Playback speed" });
+    await waitFor(() => expect(speedRange).toHaveFocus());
 
-    await act(async () => fireEvent.keyDown(selectedSpeed, { key: "Escape" }));
+    await act(async () => fireEvent.keyDown(speedRange, { key: "Escape" }));
     await waitFor(() => expect(speedRoot).toHaveFocus());
     fireEvent.pointerMove(playerRoot, { pointerType: "mouse" });
     expect(settings).toHaveAttribute("data-open", "true");

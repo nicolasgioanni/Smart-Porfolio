@@ -155,6 +155,7 @@ describe("research showcase styles", () => {
     const centerRule = rule("\\.research-video-player__center-control");
     const seekRule = rule("\\.research-video-player__seek");
     const timeRule = rule("\\.research-video-player__time");
+    const bottomBarRule = rule("\\.research-video-player__bottom-bar");
 
     expect(playerRule).toMatch(/background:\s*#000/);
     expect(mediaRule).toMatch(/object-fit:\s*contain/);
@@ -163,14 +164,16 @@ describe("research showcase styles", () => {
     expect(controlSurfaceRule).toMatch(/inset:\s*7px/);
     expect(centerRule).toMatch(/width:\s*48px/);
     expect(researchStyles).not.toMatch(/research-video-player__top-bar/);
-    expect(researchStyles).toMatch(/\.research-video-player__bottom-bar\s*\{[^}]*min-height:\s*70px/);
-    expect(researchStyles).toMatch(/\.research-video-player__bottom-bar\s*\{[^}]*padding:\s*0 10px/);
+    expect(bottomBarRule).toMatch(/min-height:\s*70px/);
+    expect(bottomBarRule).toMatch(/padding:\s*0 10px/);
+    expect(bottomBarRule).not.toMatch(/(?:background|border(?:-radius)?|box-shadow|backdrop-filter)\s*:/);
     expect(researchStyles).toMatch(/\.research-video-player__timeline-row\s*\{[^}]*padding-top:\s*7px/);
     expect(researchStyles).toMatch(/\.research-video-player__timeline-row,[\s\S]*?align-items:\s*center/);
     expect(seekRule).not.toMatch(/align-self/);
     expect(timeRule).not.toMatch(/align-self/);
     expect(researchStyles).toMatch(/\.research-video-player__actions\s*\{[^}]*justify-content:\s*space-between/);
-    expect(researchStyles).toMatch(/\.research-video-player__volume-range\[data-open="true"\]\s*\{[^}]*width:\s*68px/);
+    expect(researchStyles).toMatch(/\.research-video-player__volume-range\[data-open="true"\]\s*\{[^}]*width:\s*100px/);
+    expect(researchStyles).toMatch(/\.research-video-player__volume-range input\[aria-label="Volume"\]\s*\{[^}]*width:\s*96px[^}]*border:\s*0[^}]*background:\s*transparent[^}]*box-shadow:\s*none/);
     expect(researchStyles).toMatch(/\.research-video-player\[data-controls-visible="false"\] \.research-video-player__bottom-bar,[\s\S]*?\.research-video-player\[data-controls-visible="false"\] \.research-video-player__center-control/);
     expect(researchStyles).toMatch(/\.research-video-player__captions--lower\s*\{[^}]*display:\s*none/);
     expect(researchStyles).toMatch(/\.research-video-player__captions--raised\s*\{[^}]*bottom:\s*82px/);
@@ -178,10 +181,16 @@ describe("research showcase styles", () => {
     expect(researchStyles).toMatch(/@media \(max-height: 420px\)[\s\S]*?\.research-video-player\[data-controls-visible="true"\] \.research-video-player__captions--raised\s*\{[^}]*font-size:\s*var\(--font-size-caption\)/);
     expect(researchStyles).toMatch(/\.research-video-player:fullscreen \.research-video-player__captions--raised,[\s\S]*?bottom:\s*calc\(82px \+ var\(--space-3\)\)/);
     expect(researchStyles).toMatch(/research-video-player__captions--lower[\s\S]*?opacity:\s*0/);
+    expect(researchStyles).toMatch(/\.research-video-player__captions\s*\{[^}]*font-family:\s*var\(--font-sans\)[^}]*font-weight:\s*var\(--font-weight-regular\)[^}]*transition:\s*opacity 200ms ease, transform 200ms ease/);
+    expect(researchStyles).toMatch(/--research-video-caption-opacity:\s*0/);
+    expect(researchStyles).toMatch(/\[data-caption-visible="true"\]\s*\{[^}]*--research-video-caption-opacity:\s*1/);
+    expect(researchStyles).toMatch(/\[data-caption-transition="true"\][\s\S]*?transition:\s*opacity 180ms ease, transform 200ms ease/);
     expect(researchStyles).toMatch(/--research-video-glass-ink:\s*#fffdf7/);
     expect(researchStyles).toMatch(/--research-video-glass-surface:\s*#061522/);
     expect(researchStyles).toMatch(/text-shadow:\s*var\(--research-video-glass-text-shadow\)/);
     expect(researchStyles).toMatch(/color-mix\(in srgb, var\(--research-video-glass-surface\) 30%, transparent\)/);
+    const glassSupport = researchStyles.match(/@supports \(\(color: color-mix\(in srgb, black, white\) and \(backdrop-filter: blur\(1px\)\)\) \{[\s\S]*?\n}\n\n\.research-video-player:fullscreen/)?.[0] ?? "";
+    expect(glassSupport).not.toMatch(/research-video-player__bottom-bar/);
     expect(researchStyles).not.toMatch(/research-video-player__volume-popover/);
     expect(researchStyles).toMatch(/@supports \(\(color: color-mix\(in srgb, black, white\)\) and \(backdrop-filter: blur\(1px\)\)\)/);
     expect(researchStyles).toMatch(/site-shell\[data-glass-effects="false"\][\s\S]*?backdrop-filter:\s*none/);
@@ -196,14 +205,24 @@ describe("research showcase styles", () => {
     expect(researchStyles).not.toMatch(/research-video-player__top-bar/);
     expect(researchStyles).not.toMatch(/research-video-player__center-control\s*\{[^}]*top:\s*28%/);
     expect(researchStyles).toMatch(/\.research-video-player__settings button\s*\{[^}]*min-height:\s*32px/);
-    expect(researchStyles).toMatch(/\.research-video-player\.research-media-dialog__video .research-video-player__bottom-bar,[\s\S]*?width:\s*clamp\(min\(328px, calc\(100% - 32px\)\), 33\.333%, calc\(100% - 32px\)\)/);
+    expect(researchStyles).toMatch(/\.research-video-player\.research-media-dialog__video .research-video-player__bottom-bar,[\s\S]*?width:\s*clamp\(min\(352px, calc\(100% - 32px\)\), 33\.333%, calc\(100% - 32px\)\)/);
+    expect(researchStyles).toMatch(/@container \(max-width: 24rem\)[\s\S]*?research-video-player\[data-volume-open="true"\][\s\S]*?flex-wrap:\s*wrap/);
+    expect(researchStyles).toMatch(/\.research-video-player__settings\s*\{[^}]*grid-template-areas:\s*"view"[^}]*transition:\s*opacity 180ms ease, transform 180ms ease, visibility 0s linear 180ms/);
+    expect(researchStyles).toMatch(/\.research-video-player__settings-root,[\s\S]*?grid-area:\s*view[^}]*transition:\s*opacity 180ms ease, transform 180ms ease, visibility 0s linear 180ms/);
+    expect(researchStyles).toMatch(/\.research-video-player__settings-root\[data-open="false"\]\s*\{[^}]*transform:\s*translateX\(-6px\)/);
+    expect(researchStyles).toMatch(/\.research-video-player__settings-speeds\[data-open="false"\]\s*\{[^}]*transform:\s*translateX\(6px\)/);
+    expect(researchStyles).toMatch(/\.research-video-player__settings \.research-video-player__settings-back\s*\{[^}]*justify-self:\s*start[^}]*width:\s*32px/);
+    expect(researchStyles).toMatch(/\.research-video-player__speed-range\s*\{[^}]*width:\s*100%/);
     expect(researchStyles).toMatch(/@container research-video-preview \(max-width: 30rem\)[\s\S]*?\.research-video__viewport\[data-enhanced="true"\]:not\(:fullscreen\):not\(:-webkit-full-screen\)\s*\{[^}]*min-block-size:\s*320px/);
     expect(researchStyles).not.toMatch(/@media \(max-width: 420px\)[\s\S]*?\.research-video__viewport\s*\{[^}]*min-block-size/);
-    expect(researchStyles).toMatch(/\.research-video-player__settings-root\[data-open="false"\],[\s\S]*?display:\s*none/);
+    expect(researchStyles).not.toMatch(/\.research-video-player__settings-root\[data-open="false"\],[\s\S]*?display:\s*none/);
     expect(researchStyles).toMatch(/@media \(pointer: coarse\)[\s\S]*?\.research-video-player__settings button[\s\S]*?min-height:\s*44px/);
     expect(researchStyles).toMatch(/\.research-video-player:fullscreen,[\s\S]*?\.research-video-player:-webkit-full-screen/);
     expect(researchStyles).toMatch(
       /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.research-video-player__bottom-bar[\s\S]*?transition:\s*none/
+    );
+    expect(researchStyles).toMatch(
+      /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.research-video-player__settings-root,[\s\S]*?transition:\s*none/
     );
   });
 });

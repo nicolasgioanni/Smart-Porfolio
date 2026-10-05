@@ -206,10 +206,10 @@ describe("theme palette contract", () => {
 
   it("keeps UI styles free of decorative gradients, glows, blur, and mask fades", () => {
     const researchBackdropFilterRules = readBackdropFilterRules(researchStyles);
-    const playerControlSelector = /^(?:\.site-shell\[data-glass-effects="false"\]\s+)?(?:\.research-video-player__(?:bottom-bar|settings|captions|seek)|\.research-video-player__control::before|\.research-video-player__settings button|\.research-video-player__volume-range input\[aria-label="Volume"\])$/;
+    const playerControlSelector = /^(?:\.site-shell\[data-glass-effects="false"\]\s+)?(?:\.research-video-player__(?:settings|captions|seek)|\.research-video-player__control::before|\.research-video-player__settings button)$/;
 
     // The media player's documented liquid-control exception is intentionally limited to these
-    // controls, captions, settings, and range tracks. Its @supports condition is not a declaration,
+    // controls, captions, settings, and seek track. Its @supports condition is not a declaration,
     // so inspect CSS rule bodies here.
     expect(researchBackdropFilterRules.length).toBeGreaterThan(0);
     for (const rule of researchBackdropFilterRules) {

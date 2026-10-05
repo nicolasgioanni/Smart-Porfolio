@@ -148,10 +148,11 @@ async function sampleOutline(trigger: Locator, action: OutlineAction, duration =
           };
         };
         const frames: OutlineFrame[] = [];
-        const startedAt = performance.now();
-        const capture = () => {
+        let startedAt: number | undefined;
+        const capture = (timestamp: number) => {
           frames.push(read());
-          if (performance.now() - startedAt >= options.duration) resolve(frames);
+          if (startedAt === undefined) startedAt = timestamp;
+          if (timestamp - startedAt >= options.duration) resolve(frames);
           else window.requestAnimationFrame(capture);
         };
         if (options.action === "open" ? button.getAttribute("aria-expanded") === "false" : button.getAttribute("aria-expanded") === "true") button.click();
@@ -201,21 +202,25 @@ async function sampleEarlyClose(trigger: Locator, duration = 380): Promise<Early
         const closing: OutlineFrame[] = [];
         let closeStartedAt: number | undefined;
         let openingFrames = 0;
-        const capture = () => {
+        const capture = (timestamp: number) => {
           const frame = read();
           if (closeStartedAt === undefined) {
             opening.push(frame);
             openingFrames += 1;
             if (frame.topOpacity > 0.02 && frame.topOpacity < 0.98 && frame.sideScale > 0.02 && frame.sideScale < 0.98) {
-              closeStartedAt = performance.now();
               button.click();
+              window.requestAnimationFrame((closeStartTimestamp) => {
+                closeStartedAt = closeStartTimestamp;
+                capture(closeStartTimestamp);
+              });
+              return;
             } else if (openingFrames > 60) {
               reject(new Error("The disclosure did not expose a partial opening frame."));
               return;
             }
           } else {
             closing.push(frame);
-            if (performance.now() - closeStartedAt >= closeDuration) return resolve({ closing, opening });
+            if (timestamp - closeStartedAt >= closeDuration) return resolve({ closing, opening });
           }
           window.requestAnimationFrame(capture);
         };
@@ -267,10 +272,11 @@ async function sampleAdjacentSwitch(second: Locator, duration = 380): Promise<Ad
           };
         };
         const frames: AdjacentSwitchFrame[] = [];
-        const startedAt = performance.now();
-        const capture = () => {
+        let startedAt: number | undefined;
+        const capture = (timestamp: number) => {
           frames.push({ first: read(firstButton), second: read(secondButton) });
-          if (performance.now() - startedAt >= sampleDuration) resolve(frames);
+          if (startedAt === undefined) startedAt = timestamp;
+          if (timestamp - startedAt >= sampleDuration) resolve(frames);
           else window.requestAnimationFrame(capture);
         };
         secondButton.click();
