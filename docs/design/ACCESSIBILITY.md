@@ -48,6 +48,8 @@ Interactive controls use shared focus-visible styles and semantic tokens. Do not
 
 The desktop header expands when focus enters it so compact visual behavior does not hide keyboard controls. Focusing or otherwise interacting with the mobile rail pauses its automatic motion. Five seconds without another rail interaction resumes drift from the current position, while an open theme menu keeps the rail paused until it closes. The footer defers automatic collapse while focus remains inside expanded details, except that a route transition replaces the old disclosure with a fresh compact instance.
 
+At `721–980px`, the Home profile remains in its document order—greeting, profile/contact block, then details—while CSS presents the profile block as a two-column row. Contact labels wrap, retain at least 44 CSS-pixel rows, and keep a centered single-column portrait fallback when no contacts are available. This visual compaction does not use DOM reordering or viewport JavaScript.
+
 ## Dialogs and disclosures
 
 ### Shared dialogs

@@ -348,6 +348,16 @@
   }
 }
 
+@media (min-width: 721px) and (max-width: 860px) {
+  .home-section__surface {
+    padding: 20px;
+  }
+
+  .home-section__header {
+    margin-bottom: var(--space-4);
+  }
+}
+
 @media (max-width: 720px) {
   .page-container--home .home-overview-grid {
     gap: var(--space-5);

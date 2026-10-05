@@ -407,9 +407,89 @@ for (const width of [320, 390, 720]) {
   });
 }
 
-test("preserves desktop Home summaries and project skills above the phone breakpoint", async ({ page }) => {
+test("uses a compact intermediate Home layout without overflow or dock overlap", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
-  for (const width of [721, 1280]) {
+  for (const width of [721, 860, 980]) {
+    await page.setViewportSize({ width, height: viewportHeight });
+    await page.goto("/");
+
+    const hero = page.locator(".profile-overview__shell");
+    const identity = hero.locator(".profile-overview__identity-list");
+    await expect(hero).toBeVisible();
+
+    const geometry = await hero.evaluate((element) => {
+      const read = (selector: string) => {
+        const target = element.querySelector<HTMLElement>(selector);
+        if (!target) throw new Error(`Missing ${selector}`);
+        const rect = target.getBoundingClientRect();
+        return { bottom: rect.bottom, left: rect.left, right: rect.right, top: rect.top };
+      };
+      const shell = element.getBoundingClientRect();
+      const introduction = read(".profile-overview__introduction");
+      const profile = read(".profile-overview__photo-column");
+      const details = read(".profile-overview__details");
+      const portrait = read(".profile-overview__portrait-column");
+      const identity = read(".profile-overview__identity-list");
+      return {
+        detailsAfterProfile: details.top >= profile.bottom - 1,
+        identityBesidePortrait: identity.left >= portrait.right - 1 && identity.top <= portrait.bottom,
+        introductionBeforeProfile: introduction.bottom <= profile.top + 1,
+        profileWithinShell: profile.left >= shell.left - 1 && profile.right <= shell.right + 1
+      };
+    });
+
+    expect(geometry.introductionBeforeProfile).toBe(true);
+    expect(geometry.identityBesidePortrait).toBe(true);
+    expect(geometry.detailsAfterProfile).toBe(true);
+    expect(geometry.profileWithinShell).toBe(true);
+    for (const item of await identity.locator(".profile-overview__identity-link, .profile-overview__identity-static").all()) {
+      await expect(item).toHaveCSS("min-height", "44px");
+    }
+    const sectionGeometry = await page.locator(".home-section").evaluateAll((sections) =>
+      sections.map((section) => {
+        const rect = section.getBoundingClientRect();
+        return { bottom: rect.bottom, left: rect.left, right: rect.right, top: rect.top };
+      })
+    );
+    expect(sectionGeometry.length).toBeGreaterThan(0);
+    for (const [index, section] of sectionGeometry.entries()) {
+      expect(section.left).toBeGreaterThanOrEqual(-1);
+      expect(section.right).toBeLessThanOrEqual(width + 1);
+      if (index > 0) expect(section.top).toBeGreaterThanOrEqual(sectionGeometry[index - 1]!.bottom - 1);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
+    await expectDockAtViewportBottom(page);
+    const [lastSectionBox, dockBox] = await Promise.all([
+      page.locator(".home-section").last().boundingBox(),
+      page.locator(".blob-header").boundingBox()
+    ]);
+    expect(lastSectionBox).not.toBeNull();
+    expect(dockBox).not.toBeNull();
+    expect((lastSectionBox?.y ?? 0) + (lastSectionBox?.height ?? 0)).toBeLessThanOrEqual(dockBox?.y ?? 0);
+  }
+});
+
+test("uses concise Home summaries and hides project skills through 860px", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  for (const width of [721, 860]) {
+    await page.setViewportSize({ width, height: viewportHeight });
+    await page.goto("/");
+    for (const summary of await page.locator(".home-card-summary__full").all()) await expect(summary).toBeHidden();
+    for (const summary of await page.locator(".home-card-summary__mobile").all()) await expect(summary).toBeVisible();
+    for (const skills of await page.locator(".home-project-card__skills").all()) await expect(skills).toBeHidden();
+  }
+
+  await page.setViewportSize({ width: 861, height: viewportHeight });
+  await page.goto("/");
+  for (const summary of await page.locator(".home-card-summary__full").all()) await expect(summary).toBeVisible();
+  for (const summary of await page.locator(".home-card-summary__mobile").all()) await expect(summary).toBeHidden();
+  for (const skills of await page.locator(".home-project-card__skills").all()) await expect(skills).toBeVisible();
+});
+
+test("preserves desktop Home summaries and project skills above the intermediate breakpoint", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  for (const width of [861, 981, 1280]) {
     await page.setViewportSize({ width, height: viewportHeight });
     await page.goto("/");
     await expect(page.locator(".page-container--home")).toBeVisible();

@@ -48,6 +48,7 @@ Each route `loading.tsx` calls `shouldRenderSkeletons()` before returning the pa
 - Reserve body image, paragraph, metadata, and action geometry without inventing or imitating prose. Canonical page-header ink is the intentional exception described below.
 - Update a skeleton when its route changes enough to create a noticeable layout jump.
 - Keep responsive column changes aligned with the destination style sheet.
+- For the Home hero, preserve the established desktop and phone geometries. At `721–980px`, mirror the resolved greeting → compact profile/contact row → details order, its two-column `minmax(160px, 0.8fr)` / `minmax(280px, 1.2fr)` profile geometry, `var(--space-6)` rhythm, and `clamp(150px, 20vw, 184px)` portrait. Do not add viewport-specific markup or change the visual viewport matrix solely for this intermediate geometry.
 
 ## Canonical header geometry
 

@@ -169,7 +169,7 @@ Use `PortfolioCard` variants according to meaning:
 | `media` | Card with primary media. |
 | `timeline` | Experience timeline entry. |
 
-Research and project Home cards use concise copy and bottom-aligned verified actions. At `720px` and below, they show one short sentence from `homeMobileSummaries.ts`; unknown IDs use the first authored summary sentence. CSS selects the server-rendered copy for the viewport. Research Home cards omit dates and locations at every size. Project Home skill chips appear above `720px` only. Phone Home sections use 16px panel padding, slightly tighter gaps, 17px card headings, and 13px supporting copy. The Projects route retains evidence cards, while the Research route uses its alternating project showcase described below.
+Research and project Home cards use concise copy and bottom-aligned verified actions. At `720px` and below, they show one short sentence from `homeMobileSummaries.ts`; unknown IDs use the first authored summary sentence. The `721–860px` intermediate Home layout uses that same concise summary and hides Home Project skill chips to keep half-width windows readable; full copy and skills return at `861px`. CSS selects the server-rendered copy for the viewport. Research Home cards omit dates and locations at every size. Project Home skill chips appear above `860px` only. Phone Home sections use 16px panel padding, slightly tighter gaps, 17px card headings, and 13px supporting copy. The Projects route retains evidence cards, while the Research route uses its alternating project showcase described below.
 
 Home section route actions use compact buttons aligned with the section heading. They remain visually subordinate to primary page actions.
 
@@ -262,6 +262,8 @@ The style system uses focused thresholds at 980, 860, 720, 620, 520, 480, and 38
 
 - Desktop navigation yields to the fixed mobile bottom dock at `980px` and below.
 - The mobile rail owns horizontal overflow without creating document-level overflow, and its route and action controls move as one continuous sequence.
+- At `721–980px`, Home keeps the greeting first, then a compact portrait/name and contact-details row, then About/work/academic details. The row uses `minmax(160px, 0.8fr)` and `minmax(280px, 1.2fr)` columns, a `var(--space-6)` gap, a `clamp(150px, 20vw, 184px)` portrait, 44px contact rows, wrapping labels, and a centered single-column no-contact fallback. Above `980px` and at `720px` and below, their established layouts remain unchanged.
+- At `721–860px`, Home section surfaces use 20px padding and 16px internal gaps; Experience and Education rows use 12px gaps and 16px vertical padding. Research and Project cards stay single-column while Skills and Recommendations stay two-column; only the phone layout collapses those latter grids.
 - Profile and academic grids collapse as available width narrows.
 - Skills and featured grids reduce columns without changing content order.
 - Expanded footer columns become one column below 720px.
