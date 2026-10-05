@@ -130,6 +130,21 @@ async function expectNoHorizontalOverflow(page: Page) {
     .toBe(true);
 }
 
+async function wakeVideoControlsWithPointer(player: Locator) {
+  await player.scrollIntoViewIfNeeded();
+  await player.hover({ position: { x: 12, y: 12 } });
+  await player.hover({ position: { x: 28, y: 12 } });
+  await expect(player).toHaveAttribute("data-controls-visible", "true");
+  await player.evaluate(async (playerElement) => {
+    await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+    const finiteAnimations = playerElement.getAnimations({ subtree: true }).filter((animation) => {
+      const iterations = animation.effect?.getTiming().iterations;
+      return typeof iterations === "number" && Number.isFinite(iterations);
+    });
+    await Promise.all(finiteAnimations.map((animation) => animation.finished.catch(() => undefined)));
+  });
+}
+
 async function getRenderedResearchExplainers(page: Page): Promise<Locator[]> {
   const explainers = page.locator("[data-research-explainer]");
   return Array.from({ length: await explainers.count() }, (_, index) =>
@@ -2112,16 +2127,14 @@ test.describe("Research showcase", () => {
     await expect(bottomControls).toHaveAttribute("aria-hidden", "true");
     await expect(centerControl).toHaveCSS("opacity", "0");
     await expect(centerControl).toHaveCSS("pointer-events", "none");
-    await player.hover();
-    await expect(player).toHaveAttribute("data-controls-visible", "true");
+    await wakeVideoControlsWithPointer(player);
     await expect(bottomControls).toHaveCSS("opacity", "1");
     await expect(centerControl).toHaveCSS("opacity", "1");
     await page.waitForTimeout(4_150);
     await expect(player).toHaveAttribute("data-controls-visible", "false");
     await expect(bottomControls).toHaveCSS("opacity", "0");
     await expect(centerControl).toHaveCSS("opacity", "0");
-    await player.hover();
-    await expect(player).toHaveAttribute("data-controls-visible", "true");
+    await wakeVideoControlsWithPointer(player);
     await expect(bottomControls).toHaveCSS("opacity", "1");
     await expect(centerControl).toHaveCSS("opacity", "1");
     await page.mouse.move(0, 0);
@@ -2165,8 +2178,7 @@ test.describe("Research showcase", () => {
     const raisedCaptions = player.getByTestId("research-video-captions");
     const lowerCaptions = player.locator(".research-video-player__captions--lower");
     await expect(raisedCaptions).toBeVisible();
-    await player.hover();
-    await expect(player).toHaveAttribute("data-controls-visible", "true");
+    await wakeVideoControlsWithPointer(player);
     await expect(raisedCaptions).toHaveCSS("opacity", "1");
     await expect(lowerCaptions).toHaveCSS("opacity", "0");
     const raisedCaptionGeometry = await player.evaluate((playerElement) => {
@@ -2225,19 +2237,29 @@ test.describe("Research showcase", () => {
     await expect.poll(() => video.evaluate((element) => (element as HTMLVideoElement).currentTime)).toBeCloseTo(5, 0);
     await expect(player.getByTestId("research-video-time")).toContainText("0:05");
 
-    await player.hover();
+    await wakeVideoControlsWithPointer(player);
     await player.getByRole("button", { name: "Disable captions" }).click();
     await expect(player).toHaveAttribute("data-caption-exiting", "true");
     await expect(player).toHaveAttribute("data-caption-exiting", "false");
     await expect(player).toHaveAttribute("data-caption-visible", "false");
     await expect(player.getByTestId("research-video-captions")).toHaveCSS("opacity", "0");
-    await player.hover();
-    await expect(player.getByRole("button", { name: "Enable captions" })).toHaveAttribute("aria-pressed", "false");
-    await player.getByRole("button", { name: "Enable captions" }).click();
+    const enableCaptionsButton = player.locator('button[aria-label="Enable captions"]');
+    await expect(enableCaptionsButton).toHaveAttribute("aria-pressed", "false");
+    await wakeVideoControlsWithPointer(player);
+    await enableCaptionsButton.focus();
+    await page.keyboard.press("Enter");
     await expect(player).toHaveAttribute("data-caption-visible", "true");
-    await expect(player.getByTestId("research-video-captions")).toHaveCSS("opacity", "1");
+    await expect.poll(() => player.evaluate((playerElement) => {
+      const lower = playerElement.querySelector<HTMLElement>(".research-video-player__captions--lower");
+      const raised = playerElement.querySelector<HTMLElement>("[data-testid='research-video-captions']");
+      if (!lower || !raised) return false;
+
+      const controlsVisible = playerElement.getAttribute("data-controls-visible") === "true";
+      const lowerOpacity = getComputedStyle(lower).opacity;
+      const raisedOpacity = getComputedStyle(raised).opacity;
+      return controlsVisible ? raisedOpacity === "1" && lowerOpacity === "0" : lowerOpacity === "1" && raisedOpacity === "0";
+    })).toBe(true);
     await player.scrollIntoViewIfNeeded();
-    await player.hover();
     await video.evaluate((element) => {
       const media = element as HTMLVideoElement;
       media.playbackRate = 1.75;
@@ -2247,6 +2269,7 @@ test.describe("Research showcase", () => {
     const settings = player.getByTestId("video-settings");
     const speedRow = settings.getByRole("button", { name: /^Playback speed:/ });
 
+    await wakeVideoControlsWithPointer(player);
     await expandButton.click();
     await expect(settings).toHaveAttribute("data-open", "true");
     await settings.evaluate(async (menu) => {
@@ -2605,7 +2628,7 @@ test.describe("Research showcase", () => {
         await expect(player).toHaveAttribute("data-controls-visible", "false");
         const centerControl = player.locator("button.research-video-player__center-control");
         await expect(centerControl).toHaveCSS("opacity", "0");
-        await player.hover();
+        await wakeVideoControlsWithPointer(player);
         const bottomControls = player.getByTestId("research-video-bottom-controls");
         await expect(bottomControls).toHaveCSS("opacity", "1");
         await expect(centerControl).toHaveCSS("opacity", "1");
