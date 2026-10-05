@@ -76,7 +76,7 @@ function statusMessage(status: VideoStatus): string | null {
   if (status === "loading") return "Loading video metadata.";
   if (status === "buffering") return "Video is buffering.";
   if (status === "ended") return "Video ended. Use Play video to replay it.";
-  if (status === "error") return "Video playback is unavailable. Read the transcript for the narrated workflow.";
+  if (status === "error") return "Video playback is unavailable.";
   return null;
 }
 
@@ -927,7 +927,7 @@ export function ResearchVideoPlayer({
       >
         <source src={video.src} type={video.mimeType} />
         <track default kind="captions" label="English" src={video.captionsSrc} srcLang="en" />
-        Your browser cannot play this video. Read the transcript below.
+        Your browser cannot play this video.
       </video>
 
       {visibleCaption ? (

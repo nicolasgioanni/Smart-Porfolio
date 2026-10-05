@@ -130,420 +130,13 @@ async function expectNoHorizontalOverflow(page: Page) {
     .toBe(true);
 }
 
-async function getRenderedResearchExplainers(page: Page): Promise<Locator[]> {
-  const explainers = page.locator("[data-research-explainer]");
-  return Array.from({ length: await explainers.count() }, (_, index) =>
-    explainers.nth(index),
-  );
-}
-
-type ExplainerCinematicContract = {
-  labels: readonly string[];
-  phaseSubjects: readonly string[];
-  title: string;
-};
-
-const explainerCinematicContracts = {
-  aml: {
-    labels: [
-      "Clean image",
-      "Altered copy",
-      "Train with both",
-      "Binary detector",
-      "Test image",
-      "Clean or manipulated?",
-    ],
-    phaseSubjects: [
-      ".research-explainer__pixel-patches",
-      ".research-explainer__data-token",
-      ".research-explainer__detector-ring",
-      ".research-explainer__test-token",
-    ],
-    title: "Can AI spot an altered image?",
-  },
-  "guide-donor": {
-    labels: [
-      "Target DNA",
-      "A → G",
-      "Guide site",
-      "Donor design",
-      "Export designs",
-      "Guide",
-      "Donor",
-    ],
-    phaseSubjects: [
-      ".research-explainer__change-marker--requested",
-      ".research-explainer__guide-bracket",
-      ".research-explainer__donor-token",
-      ".research-explainer__export-token",
-    ],
-    title: "Design a DNA change",
-  },
-} as const satisfies Record<string, ExplainerCinematicContract>;
-
-function getExplainerCinematicContract(
-  variant: string | null,
-): ExplainerCinematicContract {
-  const contract = variant
-    ? explainerCinematicContracts[
-        variant as keyof typeof explainerCinematicContracts
-      ]
-    : undefined;
-  if (!contract) {
-    throw new Error(`Unexpected Research explainer variant: ${variant}`);
-  }
-  return contract;
-}
-
-async function expectResearchExplainerStaticContent(
-  explainer: Locator,
-): Promise<ExplainerCinematicContract> {
-  const variant = await explainer.getAttribute("data-research-explainer");
-  const contract = getExplainerCinematicContract(variant);
-  await expect(explainer).toHaveAttribute("data-research-explainer", variant!);
-  await expect(explainer.locator(".research-explainer__title")).toHaveText(
-    contract.title,
-  );
-  await expect(explainer.locator(".research-explainer__scene")).toHaveCount(1);
-  await expect(explainer.locator(".research-explainer__scene")).toBeVisible();
-  await expect(
-    explainer.locator("svg.research-explainer__diagram"),
-  ).toHaveCount(1);
-  await expect(
-    explainer.locator("svg.research-explainer__diagram"),
-  ).toBeVisible();
-  await expect(explainer.locator(".research-explainer__caption")).toBeVisible();
-  await expect(
-    explainer.locator(".research-explainer__caption"),
-  ).not.toBeEmpty();
-  const sceneLabels = explainer.locator(
-    ".research-explainer__scene-labels",
-  );
-  await expect(
-    sceneLabels.locator(".research-explainer__scene-label"),
-  ).toHaveCount(contract.labels.length);
-  const labelText = await sceneLabels
-    .locator(".research-explainer__scene-label")
-    .evaluateAll((labels) =>
-      labels.map((label) =>
-        (label instanceof HTMLElement ? label.innerText : label.textContent ?? "")
-          .replace(/\s+/g, " ")
-          .trim(),
-      ),
-    );
-  expect(labelText).toEqual(contract.labels);
-
-  const phases = await explainer
-    .locator(".research-explainer__phase")
-    .evaluateAll((elements) =>
-      elements.map((element) => ({
-        className: element.getAttribute("class") ?? "",
-        opacity: Number.parseFloat(getComputedStyle(element).opacity),
-        visibility: getComputedStyle(element).visibility,
-      })),
-    );
-  expect(phases).toHaveLength(4);
-  expect(phases.map((phase) => phase.className)).toEqual(
-    expect.arrayContaining([
-      expect.stringContaining("research-explainer__phase--one"),
-      expect.stringContaining("research-explainer__phase--two"),
-      expect.stringContaining("research-explainer__phase--three"),
-      expect.stringContaining("research-explainer__phase--four"),
-    ]),
-  );
-  for (const phase of phases) {
-    expect(phase.visibility).toBe("visible");
-    expect(phase.opacity).toBeGreaterThan(0);
-  }
-
-  return contract;
-}
-
-async function expectExplainerSceneVisibleAtEveryPhase(
-  explainer: Locator,
-  contract: ExplainerCinematicContract,
-) {
-  const samples = await explainer.evaluate((root, options) => {
-    const phases = Array.from(
-      root.querySelectorAll<HTMLElement>(".research-explainer__phase"),
-    );
-    const labels = Array.from(
-      root.querySelectorAll<HTMLElement>(".research-explainer__scene-label"),
-    );
-    const scene = root.querySelector<HTMLElement>(".research-explainer__scene");
-    const animations = root
-      .getAnimations({ subtree: true })
-      .filter((animation) => {
-        const target = (animation.effect as KeyframeEffect | null)?.target;
-        return (
-          target instanceof Element &&
-          (target.matches(options.subjectSelector) ||
-            Boolean(target.closest(options.subjectSelector)))
-        );
-      });
-    const animationsByPhase = options.phaseSubjects.map((selector) =>
-      animations.filter((animation) => {
-        const target = (animation.effect as KeyframeEffect | null)?.target;
-        return (
-          target instanceof Element &&
-          (target.matches(selector) || Boolean(target.closest(selector)))
-        );
-      }),
-    );
-    if (
-      phases.length !== 4 ||
-      !scene ||
-      labels.length !== options.labelCount ||
-      animationsByPhase.some((phaseAnimations) => phaseAnimations.length === 0)
-    ) {
-      throw new Error(
-        "Research explainer must keep four persistent phases, its connected scene, visible HTML labels, and an animated subject for each phase.",
-      );
-    }
-
-    const snapshots = [1_500, 4_600, 7_500, 10_200, 11_500].map((time) => {
-      for (const animation of animations) {
-        animation.pause();
-        animation.currentTime = time;
-      }
-      return {
-        animationCounts: animationsByPhase.map(
-          (phaseAnimations) => phaseAnimations.length,
-        ),
-        animationDurations: animations.map((animation) => {
-          const target = (animation.effect as KeyframeEffect).target as Element;
-          return getComputedStyle(target).animationDuration;
-        }),
-        animationTimes: animations.map((animation) =>
-          Number(animation.currentTime ?? -1),
-        ),
-        labels: labels.map((label) => {
-          const style = getComputedStyle(label);
-          const box = label.getBoundingClientRect();
-          return {
-            height: box.height,
-            opacity: Number.parseFloat(style.opacity),
-            visibility: style.visibility,
-            width: box.width,
-          };
-        }),
-        phases: phases.map((phase) => {
-          const style = getComputedStyle(phase);
-          return {
-            opacity: Number.parseFloat(style.opacity),
-            visibility: style.visibility,
-          };
-        }),
-        subjects: options.phaseSubjects.map((selector) =>
-          Array.from(root.querySelectorAll<HTMLElement>(selector)).map(
-            (subject) => {
-              const style = getComputedStyle(subject);
-              const box = subject.getBoundingClientRect();
-              return {
-                height: box.height,
-                opacity: Number.parseFloat(style.opacity),
-                transform: style.transform,
-                visibility: style.visibility,
-                width: box.width,
-              };
-            },
-          ),
-        ),
-      };
-    });
-    let guideExportPathSample: {
-      closestPathDistance: number;
-      opacity: number;
-      visibility: string;
-    } | undefined;
-    if (options.variant === "guide-donor") {
-      for (const animation of animations) {
-        animation.pause();
-        animation.currentTime = 9_720;
-      }
-      const svg = root.querySelector<SVGSVGElement>(
-        "svg.research-explainer__diagram",
-      );
-      const guideToken = root.querySelector<SVGCircleElement>(
-        ".research-explainer__export-token--guide",
-      );
-      const guidePath = root.querySelector<SVGPathElement>(
-        ".research-explainer__export-path",
-      );
-      if (!svg || !guideToken || !guidePath) {
-        throw new Error(
-          "GuideDonorScheduler needs a guide export token and visible path.",
-        );
-      }
-      const svgBox = svg.getBoundingClientRect();
-      const tokenBox = guideToken.getBoundingClientRect();
-      const viewBox = svg.viewBox.baseVal;
-      const tokenCenter = {
-        x:
-          viewBox.x +
-          ((tokenBox.left + tokenBox.width / 2 - svgBox.left) / svgBox.width) *
-            viewBox.width,
-        y:
-          viewBox.y +
-          ((tokenBox.top + tokenBox.height / 2 - svgBox.top) / svgBox.height) *
-            viewBox.height,
-      };
-      const totalLength = guidePath.getTotalLength();
-      let closestPathDistance = Number.POSITIVE_INFINITY;
-      for (let step = 0; step <= 200; step += 1) {
-        const point = guidePath.getPointAtLength((totalLength * step) / 200);
-        closestPathDistance = Math.min(
-          closestPathDistance,
-          Math.hypot(point.x - tokenCenter.x, point.y - tokenCenter.y),
-        );
-      }
-      const style = getComputedStyle(guideToken);
-      guideExportPathSample = {
-        closestPathDistance,
-        opacity: Number.parseFloat(style.opacity),
-        visibility: style.visibility,
-      };
-    }
-    for (const animation of animations) animation.play();
-    return { guideExportPathSample, snapshots };
-  }, {
-    labelCount: contract.labels.length,
-    phaseSubjects: contract.phaseSubjects,
-    subjectSelector: contract.phaseSubjects.join(", "),
-    variant: await explainer.getAttribute("data-research-explainer"),
-  });
-
-  expect(samples.snapshots).toHaveLength(5);
-  for (const [sampleIndex, sample] of samples.snapshots.entries()) {
-    expect(sample.phases).toHaveLength(4);
-    expect(sample.labels).toHaveLength(contract.labels.length);
-    expect(sample.animationCounts).toHaveLength(4);
-    expect(sample.animationCounts.every((count) => count > 0)).toBe(true);
-    expect(sample.animationDurations.every((duration) => duration === "12s")).toBe(
-      true,
-    );
-    expect(
-      sample.animationTimes.every(
-        (time) => Math.abs(time - [1_500, 4_600, 7_500, 10_200, 11_500][sampleIndex]!) <= 1,
-      ),
-    ).toBe(true);
-    for (const phase of sample.phases) {
-      expect(phase.visibility).toBe("visible");
-      expect(phase.opacity).toBeGreaterThan(0);
-    }
-    for (const label of sample.labels) {
-      expect(label.visibility).toBe("visible");
-      expect(label.opacity).toBeGreaterThan(0);
-      expect(label.width).toBeGreaterThan(0);
-      expect(label.height).toBeGreaterThan(0);
-    }
-    for (const phaseSubjects of sample.subjects) {
-      expect(phaseSubjects.length).toBeGreaterThan(0);
-      for (const subject of phaseSubjects) {
-        expect(subject.visibility).toBe("visible");
-        expect(subject.width).toBeGreaterThan(0);
-        expect(subject.height).toBeGreaterThan(0);
-      }
-    }
-    if (sampleIndex < 4) {
-      const emphasizedSubject = sample.subjects[sampleIndex]!;
-      expect(
-        emphasizedSubject.some(
-          (subject) => subject.opacity > 0,
-        ),
-      ).toBe(true);
-      expect(
-        emphasizedSubject.some(
-          (subject) => subject.transform !== "none" || subject.opacity < 0.99,
-        ),
-      ).toBe(true);
-    }
-  }
-  if (samples.guideExportPathSample) {
-    expect(samples.guideExportPathSample.visibility).toBe("visible");
-    expect(samples.guideExportPathSample.opacity).toBeGreaterThan(0);
-    expect(samples.guideExportPathSample.closestPathDistance).toBeLessThanOrEqual(
-      6,
-    );
-  }
-}
-
-async function sampleExplainerTimeline(
-  explainer: Locator,
-  selector: string,
-  frames = 0,
-): Promise<number[]> {
-  return explainer.evaluate(async (root, options) => {
-    for (let frame = 0; frame < options.frames; frame += 1) {
-      await new Promise<void>((resolve) =>
-        window.requestAnimationFrame(() => resolve()),
-      );
-    }
-    return root
-      .getAnimations({ subtree: true })
-      .filter((animation) => {
-        const target = (animation.effect as KeyframeEffect | null)?.target;
-        return (
-          target instanceof Element &&
-          (target.matches(options.selector) ||
-            Boolean(target.closest(options.selector)))
-        );
-      })
-      .map((animation) => Number.parseFloat(String(animation.currentTime ?? -1)));
-  }, { frames, selector });
-}
-
-async function getExplainerAnimationStyles(
-  explainer: Locator,
-  selector: string,
-) {
-  return explainer.evaluate((root, targetSelector) =>
-    root
-      .getAnimations({ subtree: true })
-      .filter((animation) => {
-        const target = (animation.effect as KeyframeEffect | null)?.target;
-        return (
-          target instanceof Element &&
-          (target.matches(targetSelector) ||
-            Boolean(target.closest(targetSelector)))
-        );
-      })
-      .map((animation) => {
-        const target = (animation.effect as KeyframeEffect).target as Element;
-        const style = getComputedStyle(target);
-        return {
-          animationDuration: style.animationDuration,
-          animationName: style.animationName,
-          playState: style.animationPlayState,
-        };
-      }),
-  selector);
-}
-
-async function waitForExplainerTimelineToFreeze(explainer: Locator, selector: string) {
-  await expect.poll(async () => {
-    const start = await sampleExplainerTimeline(explainer, selector);
-    const next = await sampleExplainerTimeline(explainer, selector, 2);
-    return next.every((time, index) => Math.abs(time - start[index]!) <= 1);
-  }).toBe(true);
-}
-
-async function setDocumentVisibilityForTest(page: Page, hidden: boolean) {
-  await page.evaluate((nextHidden) => {
-    Object.defineProperty(document, "hidden", {
-      configurable: true,
-      get: () => nextHidden,
-    });
-    document.dispatchEvent(new Event("visibilitychange"));
-  }, hidden);
-}
 
 async function expectAbstractFrameGeometry(trigger: Locator) {
   await trigger.scrollIntoViewIfNeeded();
   const geometry = await trigger.evaluate((triggerElement) => {
     const abstract = triggerElement.closest<HTMLElement>(".research-abstract");
     const row = abstract?.closest<HTMLElement>(
-      ".research-project__media-row--abstract",
+      ".research-project__media-row--abstract, .research-project__single-media",
     );
     const title = abstract?.querySelector<HTMLElement>(
       ".research-abstract__title",
@@ -553,7 +146,7 @@ async function expectAbstractFrameGeometry(trigger: Locator) {
     );
     if (!abstract || !row || !title || !thumbnail)
       throw new Error(
-        "The graphical abstract is missing its titled frame, media row, or thumbnail.",
+        "The graphical abstract is missing its titled frame, media wrapper, or thumbnail.",
       );
 
     const abstractBox = abstract.getBoundingClientRect();
@@ -1115,13 +708,13 @@ test.describe("Research showcase", () => {
           /research-project__media-row--abstract/,
         );
         await expect(rows.nth(1)).toHaveClass(
-          /research-project__media-row--explainer/,
+          /research-project__media-row--video/,
         );
         await expect(rows.nth(0).locator(".research-abstract")).toHaveCount(1);
         await expect(
           rows
             .nth(1)
-            .locator(":is(.research-video, [data-research-explainer])"),
+            .locator(".research-video"),
         ).toHaveCount(1);
 
         const geometry = await stack.evaluate((stackElement) => {
@@ -1151,7 +744,7 @@ test.describe("Research showcase", () => {
             rows: rows.map((row) => {
               const box = row.getBoundingClientRect();
               const medium = row.querySelector<HTMLElement>(
-                ":scope > .research-abstract, :scope > .research-video, :scope > .research-explainer",
+                ":scope > .research-abstract, :scope > .research-video",
               );
               const mediumBox = medium?.getBoundingClientRect();
               const style = getComputedStyle(row);
@@ -1196,193 +789,103 @@ test.describe("Research showcase", () => {
     }
   });
 
-  test("keeps complete connected explainer scenes visible through every cinematic phase", async ({ page }) => {
-    await page.setViewportSize({ width: 1280, height: 900 });
-    await page.goto("/research");
-    await settleLayout(page);
-
-    for (const explainer of await getRenderedResearchExplainers(page)) {
-      await explainer.scrollIntoViewIfNeeded();
-      const contract = await expectResearchExplainerStaticContent(explainer);
-      await expectExplainerSceneVisibleAtEveryPhase(explainer, contract);
-    }
-  });
-
-  test("runs rendered diagram explainers only while eligible and retains a manual pause", async ({
+  test("centers each abstract-only media group within its desktop visual column", async ({
     page,
   }) => {
     test.slow();
     await page.setViewportSize({ width: 1280, height: 900 });
-    await page.goto("/research");
-    await settleLayout(page);
-
-    const explainers = await getRenderedResearchExplainers(page);
-    if (explainers.length === 0) return;
-
-    for (const explainer of explainers) {
-      await explainer.scrollIntoViewIfNeeded();
-      const contract = await expectResearchExplainerStaticContent(explainer);
-      const subjectSelector = contract.phaseSubjects.join(", ");
-      const control = explainer.locator(
-        "button.research-explainer__playback-control",
-      );
-      await expect(control).toHaveCount(1);
-      await expect(explainer).toHaveAttribute("data-playback", "playing");
-      await expect(control).toHaveAccessibleName(/^Pause\b/);
-
-      const controlBox = await control.boundingBox();
-      expect(controlBox).not.toBeNull();
-      expect(controlBox!.width).toBeGreaterThanOrEqual(44);
-      expect(controlBox!.height).toBeGreaterThanOrEqual(44);
-      const subjectAnimations = await getExplainerAnimationStyles(
-        explainer,
-        subjectSelector,
-      );
-      expect(subjectAnimations.length).toBeGreaterThanOrEqual(4);
-      for (const animation of subjectAnimations) {
-        expect(animation.animationName).not.toBe("none");
-        expect(animation.animationDuration).toBe("12s");
-        expect(animation.playState).toBe("running");
-      }
-
-      const runningSubjectStart = await sampleExplainerTimeline(explainer, subjectSelector);
-      const runningSubjectNextFrame = await sampleExplainerTimeline(explainer, subjectSelector, 2);
-      expect(runningSubjectNextFrame.some((time, index) => time > runningSubjectStart[index]!)).toBe(true);
-
-      await page.evaluate(() => window.scrollTo(0, 0));
-      await expect(explainer).toHaveAttribute("data-playback", "waiting");
-      await expect(control).toHaveAccessibleName(/^Pause\b/);
-      await expect
-        .poll(async () =>
-          (await getExplainerAnimationStyles(explainer, subjectSelector)).every(
-            (animation) => animation.playState === "paused",
-          ),
-        )
-        .toBe(true);
-      await waitForExplainerTimelineToFreeze(explainer, subjectSelector);
-      const heldSubjectStart = await sampleExplainerTimeline(explainer, subjectSelector);
-      const heldSubjectNextFrame = await sampleExplainerTimeline(explainer, subjectSelector, 2);
-      for (const [index, time] of heldSubjectNextFrame.entries()) {
-        expect(Math.abs(time - heldSubjectStart[index]!)).toBeLessThanOrEqual(1);
-      }
-
-      await explainer.scrollIntoViewIfNeeded();
-      await expect(explainer).toHaveAttribute("data-playback", "playing");
-      const resumedTimeline = await sampleExplainerTimeline(explainer, subjectSelector, 2);
-      expect(
-        resumedTimeline.some(
-          (time, index) => time > heldSubjectNextFrame[index]!,
-        ),
-      ).toBe(true);
-
-      await setDocumentVisibilityForTest(page, true);
-      await expect(explainer).toHaveAttribute("data-playback", "waiting");
-      await expect(control).toHaveAccessibleName(/^Pause\b/);
-      await setDocumentVisibilityForTest(page, false);
-      await expect(explainer).toHaveAttribute("data-playback", "playing");
-
-      await control.click();
-      await expect(explainer).toHaveAttribute("data-playback", "paused");
-      await expect(control).toHaveAccessibleName(/^Resume\b/);
-      await page.evaluate(() => window.scrollTo(0, 0));
-      await expect(explainer).toHaveAttribute("data-playback", "paused");
-      await explainer.scrollIntoViewIfNeeded();
-      await expect(explainer).toHaveAttribute("data-playback", "paused");
-      await setDocumentVisibilityForTest(page, true);
-      await setDocumentVisibilityForTest(page, false);
-      await expect(explainer).toHaveAttribute("data-playback", "paused");
-      await expect(control).toHaveAccessibleName(/^Resume\b/);
-
-      await control.click();
-      await expect(explainer).toHaveAttribute("data-playback", "playing");
-      await expect(control).toHaveAccessibleName(/^Pause\b/);
-    }
-  });
-
-  test("keeps cinematic scene labels readable inside each scene at 320px in every palette", async ({
-    page,
-  }) => {
-    test.slow();
-    await page.setViewportSize({ width: 320, height: 844 });
     await page.goto("/research");
     await settleLayout(page);
 
     for (const theme of ["navy", "light", "dark"] as const) {
       await reloadWithStoredTheme(page, theme);
-      const explainers = await getRenderedResearchExplainers(page);
-      for (const explainer of explainers) {
-        await explainer.scrollIntoViewIfNeeded();
-        const contract = await expectResearchExplainerStaticContent(explainer);
-        const labelGeometry = await explainer
-          .locator(".research-explainer__scene-label")
-          .evaluateAll((labels) =>
-            labels.map((label) => {
-              const scene = label.closest<HTMLElement>(
-                ".research-explainer__scene",
-              );
-              if (!scene) {
-                throw new Error("Research explainer label is outside its scene.");
-              }
-              const labelBox = label.getBoundingClientRect();
-              const sceneBox = scene.getBoundingClientRect();
-              const style = getComputedStyle(label);
-              return {
-                bottom: labelBox.bottom,
-                fontSize: Number.parseFloat(style.fontSize),
-                height: labelBox.height,
-                left: labelBox.left,
-                right: labelBox.right,
-                sceneBottom: sceneBox.bottom,
-                sceneLeft: sceneBox.left,
-                sceneRight: sceneBox.right,
-                sceneTop: sceneBox.top,
-                top: labelBox.top,
-                visibility: style.visibility,
-                width: labelBox.width,
-              };
-            }),
+      await settleLayout(page);
+      const projects = await expectResearchProjectsOrEmptyState(page);
+      if (!projects) continue;
+
+      const wrappers = projects.locator(".research-project__single-media");
+      for (let index = 0; index < (await wrappers.count()); index += 1) {
+        const wrapper = wrappers.nth(index);
+        await expect(wrapper.locator(":scope > .research-abstract")).toHaveCount(
+          1,
+        );
+        await expect(wrapper.locator(".research-video")).toHaveCount(0);
+        await expect(wrapper.locator(".research-project__media-row")).toHaveCount(
+          0,
+        );
+        await expect(
+          wrapper.locator(".research-project__media-divider"),
+        ).toHaveCount(0);
+
+        const geometry = await wrapper.evaluate((wrapperElement) => {
+          const abstract = wrapperElement.querySelector<HTMLElement>(
+            ":scope > .research-abstract",
           );
-        expect(labelGeometry).toHaveLength(contract.labels.length);
-        for (const label of labelGeometry) {
-          expect(label.visibility).toBe("visible");
-          expect(label.fontSize).toBeGreaterThanOrEqual(13);
-          expect(label.width).toBeGreaterThan(0);
-          expect(label.height).toBeGreaterThan(0);
-          expect(label.left).toBeGreaterThanOrEqual(label.sceneLeft - 1);
-          expect(label.right).toBeLessThanOrEqual(label.sceneRight + 1);
-          expect(label.top).toBeGreaterThanOrEqual(label.sceneTop - 1);
-          expect(label.bottom).toBeLessThanOrEqual(label.sceneBottom + 1);
-        }
+          const visual = wrapperElement.closest<HTMLElement>(
+            ".research-project__visual",
+          );
+          if (!abstract || !visual)
+            throw new Error(
+              "Research abstract-only media is missing its abstract or visual column.",
+            );
+
+          const wrapperBox = wrapperElement.getBoundingClientRect();
+          const abstractBox = abstract.getBoundingClientRect();
+          const visualBox = visual.getBoundingClientRect();
+          const styles = getComputedStyle(wrapperElement);
+          return {
+            abstract: {
+              height: abstractBox.height,
+              left: abstractBox.left - wrapperBox.left,
+              right: wrapperBox.right - abstractBox.right,
+              top: abstractBox.top - wrapperBox.top,
+              bottom: wrapperBox.bottom - abstractBox.bottom,
+              width: abstractBox.width,
+            },
+            alignContent: styles.alignContent,
+            justifyItems: styles.justifyItems,
+            paddingLeft: styles.paddingLeft,
+            paddingRight: styles.paddingRight,
+            wrapper: {
+              height: wrapperBox.height,
+              top: wrapperBox.top,
+              width: wrapperBox.width,
+            },
+            visual: {
+              height: visualBox.height,
+              top: visualBox.top,
+              width: visualBox.width,
+            },
+          };
+        });
+
+        expect(geometry.alignContent).toBe("center");
+        expect(geometry.justifyItems).toBe("center");
+        expect(geometry.paddingLeft).toBe("16px");
+        expect(geometry.paddingRight).toBe("16px");
+        expect(geometry.abstract.width).toBeLessThanOrEqual(512);
+        expect(
+          Math.abs(geometry.abstract.left - geometry.abstract.right),
+        ).toBeLessThanOrEqual(1);
+        expect(
+          Math.abs(geometry.abstract.top - geometry.abstract.bottom),
+        ).toBeLessThanOrEqual(1);
+        expect(geometry.wrapper.height).toBeCloseTo(geometry.visual.height, 0);
+        expect(geometry.wrapper.top).toBeCloseTo(geometry.visual.top, 0);
+        expect(
+          Math.abs(geometry.wrapper.width - geometry.visual.width),
+        ).toBeLessThanOrEqual(1);
+        expect(geometry.wrapper.height).toBeGreaterThan(
+          geometry.abstract.height + 31,
+        );
+
+        await expectAbstractFrameGeometry(
+          wrapper.locator(".research-abstract__trigger"),
+        );
       }
+
       await expectNoHorizontalOverflow(page);
     }
-  });
-
-  test("keeps diagram explainers complete and noninteractive when reduced motion is requested", async ({ page }) => {
-    await page.emulateMedia({ reducedMotion: "reduce" });
-    await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto("/research");
-    await settleLayout(page);
-
-    const reducedExplainers = await getRenderedResearchExplainers(page);
-    for (const explainer of reducedExplainers) {
-      await explainer.scrollIntoViewIfNeeded();
-      const contract = await expectResearchExplainerStaticContent(explainer);
-      await expect(explainer).toHaveAttribute("data-playback", "complete");
-      await expect(
-        explainer.locator("button.research-explainer__playback-control"),
-      ).toHaveCount(0);
-      await expect(
-        explainer.locator(".research-explainer__control-slot"),
-      ).toBeEmpty();
-      expect(
-        await getExplainerAnimationStyles(
-          explainer,
-          contract.phaseSubjects.join(", "),
-        ),
-      ).toHaveLength(0);
-    }
-    await expectNoHorizontalOverflow(page);
   });
 
   test("keeps a long desktop evidence body keyboard-scrollable before Escape restores its summary", async ({ page }) => {
@@ -1609,6 +1112,34 @@ test.describe("Research showcase", () => {
       await expect(dialog).toBeHidden();
       await expectNoHorizontalOverflow(page);
     }
+
+    const singleMediaGroups = projects.locator(
+      ".research-project__single-media",
+    );
+    for (let index = 0; index < (await singleMediaGroups.count()); index += 1) {
+      const geometry = await singleMediaGroups.nth(index).evaluate((wrapper) => {
+        const abstract = wrapper.querySelector<HTMLElement>(
+          ":scope > .research-abstract",
+        );
+        if (!abstract)
+          throw new Error(
+            "Research abstract-only media is missing its abstract.",
+          );
+        const wrapperBox = wrapper.getBoundingClientRect();
+        const abstractBox = abstract.getBoundingClientRect();
+        return {
+          abstractHeight: abstractBox.height,
+          bottom: wrapperBox.bottom - abstractBox.bottom,
+          height: wrapperBox.height,
+          minHeight: getComputedStyle(wrapper).minHeight,
+          top: abstractBox.top - wrapperBox.top,
+        };
+      });
+      expect(geometry.minHeight).toBe("0px");
+      expect(geometry.top).toBeCloseTo(16, 0);
+      expect(geometry.bottom).toBeCloseTo(16, 0);
+      expect(geometry.height).toBeCloseTo(geometry.abstractHeight + 32, 0);
+    }
   });
 
   test("contains every abstract dialog in short desktop and mobile viewports", async ({ page }) => {
@@ -1690,7 +1221,9 @@ test.describe("Research showcase", () => {
       if (!themedProjects) throw new Error("Research projects disappeared after selecting a stored palette.");
 
       const visualSurfaces = await themedProjects
-        .locator(".research-project__visual > :is(.research-visual, .research-abstract, .research-media-stack)")
+        .locator(
+          ".research-project__visual > :is(.research-visual, .research-abstract, .research-media-stack, .research-project__single-media)",
+        )
         .evaluateAll((visuals) => {
         return visuals.map((visual) => {
           const styles = getComputedStyle(visual);
@@ -2096,10 +1629,7 @@ test.describe("Research showcase", () => {
     await expect(video).toHaveAttribute("playsinline", "");
     await expect(video).not.toHaveAttribute("autoplay");
     await expect(video).not.toHaveAttribute("controls");
-    await expect(project.getByRole("link", { name: "Read transcript" })).toHaveAttribute(
-      "href",
-      "/images/research/cytocv-supplementary-video-s1-transcript.txt"
-    );
+    await expect(project.getByRole("link", { name: /transcript/i })).toHaveCount(0);
     await expect(project.getByRole("link", { name: "Download MP4" })).toHaveCount(0);
     await expect
       .poll(() => video.evaluate((element) => (element as HTMLVideoElement).readyState >= HTMLMediaElement.HAVE_METADATA))

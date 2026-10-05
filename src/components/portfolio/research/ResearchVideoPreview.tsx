@@ -104,9 +104,6 @@ export function ResearchVideoPreview({ poster, title, video }: ResearchVideoPrev
           video={video}
           videoRef={inlineVideoRef}
         />
-        <a className="research-video__transcript" data-testid="read-transcript" href={video.transcriptSrc} rel="noreferrer" target="_blank">
-          Read transcript
-        </a>
       </section>
 
       <ResearchMediaDialog

@@ -59,40 +59,15 @@ describe("research showcase styles", () => {
     expect(thumbnailRule).toMatch(/object-fit:\s*contain/);
   });
 
-  it("keeps connected explainer scenes complete while twelve-second timelines animate actual subjects", () => {
-    const sceneRule = researchStyles.match(/\.research-explainer__scene\s*\{[^}]*}/s)?.[0] ?? "";
-    const labelRule = researchStyles.match(/\.research-explainer__scene-label\s*\{[^}]*}/s)?.[0] ?? "";
-    const guideDonorLabelRule = researchStyles.match(/\.research-explainer__scene-label--guide-row,[\s\S]*?\.research-explainer__scene-label--donor-row\s*\{[^}]*}/s)?.[0] ?? "";
-    const controlRule = rule("\\.research-explainer__playback-control");
-    const diagramSymbolRule = rule("\\.research-explainer__base-letter");
-    const subjectSetupRule = researchStyles.match(/\.research-explainer\[data-animation-ready="true"\] \.research-explainer__pixel-patches,[\s\S]*?\.research-explainer\[data-animation-ready="true"\] \.research-explainer__export-token\s*\{[^}]*}/s)?.[0] ?? "";
-    const subjectRunRule = researchStyles.match(/\.research-explainer\[data-animation-ready="true"\]\[data-playback="playing"\] \.research-explainer__pixel-patches,[\s\S]*?\.research-explainer\[data-animation-ready="true"\]\[data-playback="playing"\] \.research-explainer__export-token\s*\{[^}]*}/s)?.[0] ?? "";
+  it("uses a centered single-media wrapper for abstract-only projects", () => {
+    const singleMediaRule = rule("\\.research-project__single-media");
+    const abstractRule = rule("\\.research-project__single-media > \\.research-abstract");
 
-    expect(sceneRule).toMatch(/overflow:\s*hidden/);
-    expect(labelRule).toMatch(/font-size:\s*var\(--font-size-small\)/);
-    expect(guideDonorLabelRule).toMatch(/font-size:\s*var\(--font-size-small\)/);
-    expect(controlRule).toMatch(/font-size:\s*var\(--font-size-control-glyph\)/);
-    expect(diagramSymbolRule).toMatch(/font-size:\s*var\(--font-size-diagram-symbol\)/);
-    expect(subjectSetupRule).toMatch(/animation-duration:\s*12s/);
-    expect(subjectSetupRule).toMatch(/animation-play-state:\s*paused/);
-    expect(subjectRunRule).toMatch(/animation-play-state:\s*running/);
-    for (const subject of [
-      "pixel-patches",
-      "data-token",
-      "detector-ring",
-      "test-token",
-      "change-marker--requested",
-      "guide-bracket",
-      "donor-token",
-      "export-token"
-    ]) {
-      expect(subjectSetupRule).toContain(`research-explainer__${subject}`);
-    }
-    expect(researchStyles).toMatch(/@keyframes research-explainer-aml-clean-flow[\s\S]*?translate3d/);
-    expect(researchStyles).toMatch(/@keyframes research-explainer-detector-outer[\s\S]*?rotate/);
-    expect(researchStyles).toMatch(/@keyframes research-explainer-export-guide[\s\S]*?translate3d/);
-    expect(researchStyles).toMatch(/@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.research-explainer\[data-animation-ready="true"\]\[data-playback\] \.research-explainer__pixel-patches[\s\S]*?\.research-explainer\[data-animation-ready="true"\]\[data-playback\] \.research-explainer__export-token\s*\{[^}]*animation:\s*none/);
-
+    expect(singleMediaRule).toMatch(/align-content:\s*center/);
+    expect(singleMediaRule).toMatch(/justify-items:\s*center/);
+    expect(singleMediaRule).toMatch(/min-height:\s*100%/);
+    expect(abstractRule).toMatch(/width:\s*min\(100%, 32rem\)/);
+    expect(researchStyles).toMatch(/@media \(max-width: 920px\)[\s\S]*?\.research-project__single-media\s*\{[^}]*min-height:\s*0/);
   });
 
   it("keeps full-card elevation exclusive to fine-pointer hover", () => {

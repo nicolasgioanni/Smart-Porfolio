@@ -133,7 +133,7 @@ describe("skeleton style contracts", () => {
       /\.research-skeleton__abstract-frame\s*\{[^}]*width: 100%[^}]*max-width: none[^}]*aspect-ratio: 16 \/ 9/s
     );
     expect(researchStyles).toMatch(
-      /\.research-skeleton__media-row > \.research-skeleton__abstract,[\s\S]*?\.research-skeleton__media-row > \.research-skeleton__explainer\s*\{[^}]*width: min\(100%, 32rem\)/s
+      /\.research-skeleton__media-row > \.research-skeleton__abstract,[\s\S]*?\.research-skeleton__media-row > \.research-skeleton__video\s*\{[^}]*width: min\(100%, 32rem\)/s
     );
     expect(researchStyles).toMatch(
       /\.research-skeleton__abstract-title\s*\{[^}]*max-width:\s*44rem[^}]*justify-self:\s*center/s
@@ -142,7 +142,7 @@ describe("skeleton style contracts", () => {
       /\.research-skeleton__video-header\s*\{[^}]*justify-items:\s*center/s
     );
     expect(researchStyles).toMatch(
-      /\.research-skeleton__explainer-title\s*\{[^}]*justify-self:\s*center/s
+      /\.research-skeleton__single-media > \.research-skeleton__abstract\s*\{[^}]*width:\s*min\(100%, 32rem\)/s
     );
     expect(researchStyles).toMatch(
       /@media \(max-width: 920px\)[\s\S]*?\.research-skeleton__media-stack\s*\{[^}]*grid-template-rows: auto 1px auto[^}]*}[\s\S]*?\.research-skeleton__media-divider\s*\{[^}]*margin-inline: var\(--space-4\)/s

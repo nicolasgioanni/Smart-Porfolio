@@ -8,13 +8,12 @@ import { getPortfolioContent } from "@/lib/content/getPortfolioContent";
 import { getResearchVisibleResources } from "@/lib/content/researchNarratives";
 import { selectResearchDetailContent } from "@/lib/content/selectDetailContent";
 
-type ResearchSkeletonMedia = "explainer" | "video";
+type ResearchSkeletonMedia = "abstract" | "video";
 
 export type ResearchSkeletonProfile = {
   formalTitle: boolean;
   id: "cytocv-miller-lab" | "adversarial-machine-learning" | "yeast-dna-target-selection";
   impact: boolean;
-  legend: boolean;
   media: ResearchSkeletonMedia;
   organizationLogo: boolean;
   overviewRows: number;
@@ -41,7 +40,6 @@ export const researchSkeletonProfiles = [
     formalTitle: true,
     id: "cytocv-miller-lab",
     impact: true,
-    legend: false,
     media: "video",
     organizationLogo: true,
     overviewRows: 4,
@@ -51,8 +49,7 @@ export const researchSkeletonProfiles = [
     formalTitle: false,
     id: "adversarial-machine-learning",
     impact: true,
-    legend: false,
-    media: "explainer",
+    media: "abstract",
     organizationLogo: true,
     overviewRows: 3,
     resourceWidths: [132, 118, 124]
@@ -61,8 +58,7 @@ export const researchSkeletonProfiles = [
     formalTitle: true,
     id: "yeast-dna-target-selection",
     impact: true,
-    legend: true,
-    media: "explainer",
+    media: "abstract",
     organizationLogo: true,
     overviewRows: 3,
     resourceWidths: [128]
@@ -105,39 +101,6 @@ function ResearchAbstractSkeleton() {
   );
 }
 
-function ResearchExplainerSkeleton({ legend }: { legend: boolean }) {
-  const labelWidths = legend ? ["30%", "18%", "28%", "32%", "34%", "16%", "16%"] : ["34%", "36%", "30%", "32%", "36%", "24%"];
-
-  return (
-    <section className="research-skeleton__explainer">
-      <SkeletonBlock className="research-skeleton__media-title research-skeleton__explainer-title" height={14} width="52%" />
-      <div className="research-skeleton__explainer-viewport">
-        <div className="research-skeleton__explainer-scene-surface">
-          <SkeletonBlock className="research-skeleton__explainer-surface" height="100%" radius={0} />
-          <span className="research-skeleton__explainer-instrument research-skeleton__explainer-instrument--core" />
-          <span className="research-skeleton__explainer-instrument research-skeleton__explainer-instrument--ring" />
-          <div className="research-skeleton__explainer-scene-labels">
-            {labelWidths.map((width, index) => <SkeletonBlock height={14} key={index} width={width} />)}
-          </div>
-        </div>
-      </div>
-      <div className="research-skeleton__explainer-footer">
-        <SkeletonBlock height={12} width={42} />
-        <SkeletonBlock className="research-project-skeleton__media-control" height={44} radius="var(--radius-card)" width={44} />
-      </div>
-      {legend ? (
-        <div className="research-skeleton__explainer-key">
-          <SkeletonBlock height={14} radius={3} width={14} />
-          <SkeletonBlock height={12} width="34%" />
-          <SkeletonBlock height={14} radius={3} width={14} />
-          <SkeletonBlock height={12} width="38%" />
-        </div>
-      ) : null}
-      <SkeletonBlock className="research-skeleton__explainer-caption" height={14} width="88%" />
-    </section>
-  );
-}
-
 function ResearchVideoSkeleton() {
   return (
     <section className="research-skeleton__video">
@@ -164,14 +127,22 @@ function ResearchVideoSkeleton() {
 }
 
 function ResearchMediaSkeleton({ profile }: { profile: ResearchSkeletonProfile }) {
+  if (profile.media === "abstract") {
+    return (
+      <div className="research-skeleton__single-media">
+        <ResearchAbstractSkeleton />
+      </div>
+    );
+  }
+
   return (
     <div className="research-skeleton__media-stack">
       <div className="research-skeleton__media-row research-skeleton__media-row--abstract">
         <ResearchAbstractSkeleton />
       </div>
       <div aria-hidden="true" className="research-skeleton__media-divider" />
-      <div className="research-skeleton__media-row research-skeleton__media-row--explainer">
-        {profile.media === "video" ? <ResearchVideoSkeleton /> : <ResearchExplainerSkeleton legend={profile.legend} />}
+      <div className="research-skeleton__media-row research-skeleton__media-row--video">
+        <ResearchVideoSkeleton />
       </div>
     </div>
   );
