@@ -13,6 +13,7 @@ import {
   type RefObject
 } from "react";
 import { LinkIcon } from "@/components/icons/LinkIcon";
+import { useReducedMotionPreference } from "@/components/motion/useReducedMotionPreference";
 import type { ResearchGraphicalAbstract } from "@/lib/content/researchGraphicalAbstracts";
 import type { ResearchVideo } from "@/lib/content/researchVideos";
 import {
@@ -46,6 +47,18 @@ const playbackRates = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
 const soundPopoverDismissDelayMs = 160;
 const settingsTransitionPaddingPx = 12;
 const pointerControlsIdleDelayMs = 4_000;
+const captionExitDelayMs = 180;
+
+function getPlaybackRateIndex(rate: number): number {
+  const exactIndex = playbackRates.indexOf(rate as (typeof playbackRates)[number]);
+  if (exactIndex >= 0) return exactIndex;
+
+  return playbackRates.reduce(
+    (closestIndex, candidateRate, candidateIndex) =>
+      Math.abs(candidateRate - rate) < Math.abs(playbackRates[closestIndex] - rate) ? candidateIndex : closestIndex,
+    0
+  );
+}
 
 function formatDuration(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return "--:--";
@@ -162,17 +175,22 @@ export function ResearchVideoPlayer({
   const [keyboardFocusWithin, setKeyboardFocusWithin] = useState(false);
   const [touchControlsLatched, setTouchControlsLatched] = useState(false);
   const [activeCueText, setActiveCueText] = useState("");
+  const [renderedCaptionText, setRenderedCaptionText] = useState("");
+  const [captionVisible, setCaptionVisible] = useState(false);
+  const [captionTransitionActive, setCaptionTransitionActive] = useState(false);
+  const [captionExiting, setCaptionExiting] = useState(false);
   const [inPictureInPicture, setInPictureInPicture] = useState(false);
   const [pictureInPictureSupported, setPictureInPictureSupported] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [fullscreenSupported, setFullscreenSupported] = useState(false);
   const [capabilityMessage, setCapabilityMessage] = useState("");
   const [videoElement, setVideoElementState] = useState<HTMLVideoElement | null>(null);
+  const prefersReducedMotion = useReducedMotionPreference();
   const videoElementRef = useRef<HTMLVideoElement | null>(null);
   const playerRef = useRef<HTMLDivElement>(null);
   const settingsButtonRef = useRef<HTMLButtonElement>(null);
   const speedMenuButtonRef = useRef<HTMLButtonElement>(null);
-  const speedOptionsRef = useRef<HTMLDivElement>(null);
+  const speedRangeRef = useRef<HTMLInputElement>(null);
   const settingsPopoverRef = useRef<HTMLDivElement>(null);
   const soundButtonRef = useRef<HTMLButtonElement>(null);
   const volumeRangeRef = useRef<HTMLDivElement>(null);
@@ -188,6 +206,9 @@ export function ResearchVideoPlayer({
   const soundDismissTimerRef = useRef<number | undefined>(undefined);
   const soundDismissTimerGenerationRef = useRef(0);
   const pointerControlsIdleTimerRef = useRef<number | undefined>(undefined);
+  const captionExitTimerRef = useRef<number | undefined>(undefined);
+  const renderedCaptionTextRef = useRef("");
+  const captionWasToggledOffRef = useRef(false);
   const pointerInsideRef = useRef(false);
   const interactionRef = useRef<"keyboard" | "pointer" | "touch">("pointer");
   const pendingPlaybackTimeRef = useRef<number | null>(null);
@@ -203,6 +224,11 @@ export function ResearchVideoPlayer({
   const clearPointerControlsIdleTimer = useCallback(() => {
     if (pointerControlsIdleTimerRef.current !== undefined) window.clearTimeout(pointerControlsIdleTimerRef.current);
     pointerControlsIdleTimerRef.current = undefined;
+  }, []);
+
+  const clearCaptionExitTimer = useCallback(() => {
+    if (captionExitTimerRef.current !== undefined) window.clearTimeout(captionExitTimerRef.current);
+    captionExitTimerRef.current = undefined;
   }, []);
 
   const resetPointerControlsIdleTimer = useCallback(() => {
@@ -274,10 +300,8 @@ export function ResearchVideoPlayer({
   useLayoutEffect(() => {
     if (settingsView !== "speeds" || !focusSpeedMenuRef.current) return;
     focusSpeedMenuRef.current = false;
-    const selectedRate = speedOptionsRef.current?.querySelector<HTMLButtonElement>("button[aria-pressed='true']");
-    if (!selectedRate) return;
     suppressSettingsFocusRef.current = true;
-    selectedRate.focus();
+    speedRangeRef.current?.focus();
   }, [settingsView]);
 
   useEffect(() => {
@@ -295,8 +319,9 @@ export function ResearchVideoPlayer({
     () => () => {
       clearSoundDismissTimer();
       clearPointerControlsIdleTimer();
+      clearCaptionExitTimer();
     },
-    [clearPointerControlsIdleTimer, clearSoundDismissTimer]
+    [clearCaptionExitTimer, clearPointerControlsIdleTimer, clearSoundDismissTimer]
   );
 
   useEffect(() => {
@@ -340,6 +365,76 @@ export function ResearchVideoPlayer({
     captionTrack?.addEventListener("cuechange", updateCues);
     return () => captionTrack?.removeEventListener("cuechange", updateCues);
   }, [captionsEnabled, enhanced, inPictureInPicture, videoElement]);
+
+  useEffect(() => {
+    const useEnhancedCaptions = enhanced && !inPictureInPicture;
+    if (!useEnhancedCaptions) {
+      clearCaptionExitTimer();
+      captionWasToggledOffRef.current = false;
+      renderedCaptionTextRef.current = "";
+      setCaptionExiting(false);
+      setCaptionTransitionActive(false);
+      setCaptionVisible(false);
+      setRenderedCaptionText("");
+      return;
+    }
+
+    if (!captionsEnabled) {
+      if (!renderedCaptionTextRef.current) {
+        setCaptionExiting(false);
+        setCaptionTransitionActive(false);
+        setCaptionVisible(false);
+        return;
+      }
+
+      clearCaptionExitTimer();
+      captionWasToggledOffRef.current = true;
+      setCaptionVisible(false);
+      if (prefersReducedMotion) {
+        setCaptionExiting(false);
+        setCaptionTransitionActive(false);
+        return;
+      }
+
+      setCaptionExiting(true);
+      setCaptionTransitionActive(true);
+      captionExitTimerRef.current = window.setTimeout(() => {
+        captionExitTimerRef.current = undefined;
+        setCaptionExiting(false);
+        setCaptionTransitionActive(false);
+      }, captionExitDelayMs);
+      return;
+    }
+
+    const reenteringAfterToggle = captionWasToggledOffRef.current;
+    if (!activeCueText) {
+      clearCaptionExitTimer();
+      captionWasToggledOffRef.current = false;
+      setCaptionExiting(false);
+      setCaptionTransitionActive(false);
+      setCaptionVisible(false);
+      return;
+    }
+
+    if (activeCueText) {
+      renderedCaptionTextRef.current = activeCueText;
+      setRenderedCaptionText(activeCueText);
+    }
+
+    clearCaptionExitTimer();
+    captionWasToggledOffRef.current = false;
+    setCaptionExiting(false);
+    setCaptionVisible(true);
+    if (reenteringAfterToggle && !prefersReducedMotion) {
+      setCaptionTransitionActive(true);
+      captionExitTimerRef.current = window.setTimeout(() => {
+        captionExitTimerRef.current = undefined;
+        setCaptionTransitionActive(false);
+      }, captionExitDelayMs);
+    } else {
+      setCaptionTransitionActive(false);
+    }
+  }, [activeCueText, captionsEnabled, clearCaptionExitTimer, enhanced, inPictureInPicture, prefersReducedMotion]);
 
   useEffect(() => {
     if (!videoElement) return;
@@ -756,12 +851,13 @@ export function ResearchVideoPlayer({
     setMuted(safeVolume === 0);
   }
 
-  function changePlaybackRate(nextRate: number) {
+  function changePlaybackRate(nextIndex: number) {
     const player = videoElementRef.current;
     if (!player) return;
+    const nextRate = playbackRates[nextIndex];
+    if (nextRate === undefined) return;
     player.playbackRate = nextRate;
     setPlaybackRate(nextRate);
-    closeSpeedMenu(true);
   }
 
   async function togglePictureInPicture() {
@@ -838,13 +934,18 @@ export function ResearchVideoPlayer({
   }
 
   const safeDuration = Number.isFinite(duration) && duration > 0 ? duration : 0;
-  const visibleCaption = enhanced && captionsEnabled && !inPictureInPicture ? activeCueText : "";
+  const playbackRateIndex = getPlaybackRateIndex(playbackRate);
+  const playbackRateText = `${playbackRate}x`;
+  const hasEnhancedCaptionLayers = enhanced && !inPictureInPicture && Boolean(renderedCaptionText);
   const message = statusMessage(status);
 
   return (
     <div
       aria-label={label}
       className={["research-video-player", className].filter(Boolean).join(" ")}
+      data-caption-exiting={captionExiting ? "true" : "false"}
+      data-caption-transition={captionTransitionActive ? "true" : "false"}
+      data-caption-visible={captionVisible ? "true" : "false"}
       data-controls-visible={controlsVisible ? "true" : "false"}
       data-enhanced={enhanced ? "true" : "false"}
       data-settings-open={settingsOpen ? "true" : "false"}
@@ -930,13 +1031,13 @@ export function ResearchVideoPlayer({
         Your browser cannot play this video. Read the transcript below.
       </video>
 
-      {visibleCaption ? (
+      {hasEnhancedCaptionLayers ? (
         <>
           <p aria-hidden="true" className="research-video-player__captions research-video-player__captions--lower">
-            {visibleCaption}
+            {renderedCaptionText}
           </p>
           <p aria-hidden="true" className="research-video-player__captions research-video-player__captions--raised" data-testid="research-video-captions">
-            {visibleCaption}
+            {renderedCaptionText}
           </p>
         </>
       ) : null}
@@ -1120,7 +1221,7 @@ export function ResearchVideoPlayer({
                 ref={speedMenuButtonRef}
                 type="button"
               >
-                Playback speed — {playbackRate}×
+                Playback speed: {playbackRateText}
               </button>
               <div className="research-video-player__settings-secondary">
                 {pictureInPictureSupported ? (
@@ -1142,20 +1243,33 @@ export function ResearchVideoPlayer({
               id={`${settingsId}-speeds`}
               inert={settingsView !== "speeds"}
             >
-              <button className="research-video-player__settings-back" onClick={() => closeSpeedMenu(true)} type="button">
-                Back to settings
+              <button
+                aria-label="Back to video settings"
+                className="research-video-player__settings-back"
+                onClick={() => closeSpeedMenu(true)}
+                title="Back to video settings"
+                type="button"
+              >
+                <LinkIcon kind="back" />
               </button>
-              <div className="research-video-player__speed-options" ref={speedOptionsRef} role="group" aria-label="Playback speed">
-                {playbackRates.map((rate) => (
-                  <button
-                    aria-pressed={playbackRate === rate}
-                    key={rate}
-                    onClick={() => changePlaybackRate(rate)}
-                    type="button"
-                  >
-                    {rate}×
-                  </button>
-                ))}
+              <div className="research-video-player__speed-control">
+                <p className="research-video-player__speed-rate">{playbackRateText}</p>
+                <input
+                  aria-label="Playback speed"
+                  aria-valuetext={playbackRateText}
+                  className="research-video-player__speed-range"
+                  max="5"
+                  min="0"
+                  onChange={(event) => changePlaybackRate(Number(event.target.value))}
+                  ref={speedRangeRef}
+                  step="1"
+                  type="range"
+                  value={playbackRateIndex}
+                />
+                <div aria-hidden="true" className="research-video-player__speed-endpoints">
+                  <span>0.5x</span>
+                  <span>2x</span>
+                </div>
               </div>
             </div>
           </div>

@@ -77,6 +77,14 @@ export function LinkIcon({ kind = "external", ...props }: IconProps) {
     );
   }
 
+  if (normalizedKind === "back") {
+    return (
+      <BaseIcon {...props}>
+        <path d="m14.5 5.5-6.5 6.5 6.5 6.5M8.5 12h8" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+      </BaseIcon>
+    );
+  }
+
   if (normalizedKind === "expand") {
     return (
       <BaseIcon {...props}>

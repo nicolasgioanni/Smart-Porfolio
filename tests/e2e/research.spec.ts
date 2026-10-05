@@ -2138,7 +2138,7 @@ test.describe("Research showcase", () => {
     const volumeRange = player.getByTestId("video-volume-range");
     await soundButton.click();
     await expect(volumeRange).toHaveAttribute("data-open", "true");
-    await expect(volumeRange).toHaveCSS("width", "68px");
+    await expect(volumeRange).toHaveCSS("width", "100px");
     const [inlinePlayerBox, inlineSoundBox, inlineVolumeBox] = await Promise.all([
       player.boundingBox(),
       soundButton.boundingBox(),
@@ -2147,8 +2147,8 @@ test.describe("Research showcase", () => {
     expect(inlinePlayerBox).not.toBeNull();
     expect(inlineSoundBox).not.toBeNull();
     expect(inlineVolumeBox).not.toBeNull();
-    expect(inlineVolumeBox!.width).toBeGreaterThanOrEqual(56);
-    expect(inlineVolumeBox!.width).toBeLessThanOrEqual(72);
+    expect(inlineVolumeBox!.width).toBeGreaterThanOrEqual(96);
+    expect(inlineVolumeBox!.width).toBeLessThanOrEqual(104);
     expect(inlineVolumeBox!.x).toBeGreaterThanOrEqual(inlineSoundBox!.x + inlineSoundBox!.width - 1);
     expect(inlineVolumeBox!.x + inlineVolumeBox!.width).toBeLessThanOrEqual(inlinePlayerBox!.x + inlinePlayerBox!.width + 1);
     await volumeRange.locator('input[aria-label="Volume"]').fill("0.5");
@@ -2227,15 +2227,25 @@ test.describe("Research showcase", () => {
 
     await player.hover();
     await player.getByRole("button", { name: "Disable captions" }).click();
-    await expect(player.getByTestId("research-video-captions")).toHaveCount(0);
+    await expect(player).toHaveAttribute("data-caption-exiting", "true");
+    await expect(player).toHaveAttribute("data-caption-exiting", "false");
+    await expect(player).toHaveAttribute("data-caption-visible", "false");
+    await expect(player.getByTestId("research-video-captions")).toHaveCSS("opacity", "0");
+    await player.hover();
     await expect(player.getByRole("button", { name: "Enable captions" })).toHaveAttribute("aria-pressed", "false");
     await player.getByRole("button", { name: "Enable captions" }).click();
-    await expect(player.getByTestId("research-video-captions")).toBeVisible();
+    await expect(player).toHaveAttribute("data-caption-visible", "true");
+    await expect(player.getByTestId("research-video-captions")).toHaveCSS("opacity", "1");
     await player.scrollIntoViewIfNeeded();
     await player.hover();
+    await video.evaluate((element) => {
+      const media = element as HTMLVideoElement;
+      media.playbackRate = 1.75;
+      media.dispatchEvent(new Event("ratechange"));
+    });
     const expandButton = player.getByRole("button", { name: "Open video settings" });
     const settings = player.getByTestId("video-settings");
-    const speedRow = settings.getByRole("button", { name: /Playback speed/ });
+    const speedRow = settings.getByRole("button", { name: /^Playback speed:/ });
 
     await expandButton.click();
     await expect(settings).toHaveAttribute("data-open", "true");
@@ -2243,16 +2253,43 @@ test.describe("Research showcase", () => {
       await Promise.all(menu.getAnimations().map((animation) => animation.finished.catch(() => undefined)));
     });
     await expect(speedRow).toBeVisible();
+    await expect(speedRow).toHaveAccessibleName("Playback speed: 1.75x");
     const [gearBox, speedRowBox] = await Promise.all([expandButton.boundingBox(), speedRow.boundingBox()]);
     expect(gearBox).not.toBeNull();
     expect(speedRowBox).not.toBeNull();
     await page.mouse.move(gearBox!.x + gearBox!.width / 2, gearBox!.y + gearBox!.height / 2);
     await page.mouse.move(speedRowBox!.x + speedRowBox!.width / 2, speedRowBox!.y + speedRowBox!.height / 2, { steps: 10 });
     await expect(settings).toHaveAttribute("data-open", "true");
+    const rootSettingsBox = await settings.boundingBox();
+    expect(rootSettingsBox).not.toBeNull();
     await speedRow.click();
+    await expect(settings).toHaveAttribute("data-view", "speeds");
+    await expect(settings.getByRole("button", { name: "Back to video settings" })).toBeVisible();
+    const speedRange = settings.getByRole("slider", { name: "Playback speed" });
+    await expect(speedRange).toHaveAttribute("min", "0");
+    await expect(speedRange).toHaveAttribute("max", "5");
+    await expect(speedRange).toHaveAttribute("step", "1");
+    await expect(speedRange).toHaveValue("4");
+    await expect(speedRange).toHaveAttribute("aria-valuetext", "1.75x");
+    await expect(settings.locator(".research-video-player__speed-rate")).toHaveText("1.75x");
+    await expect(speedRange).toBeFocused();
+    const speedSettingsBox = await settings.boundingBox();
+    expect(speedSettingsBox).not.toBeNull();
+    expect(speedSettingsBox!.width).toBeCloseTo(rootSettingsBox!.width, 3);
+    expect(speedSettingsBox!.height).toBeCloseTo(rootSettingsBox!.height, 3);
+    await speedRange.press("Home");
+    await expect(speedRange).toHaveAttribute("aria-valuetext", "0.5x");
+    await expect.poll(() => video.evaluate((element) => (element as HTMLVideoElement).playbackRate)).toBe(0.5);
+    await speedRange.press("ArrowRight");
+    await expect(speedRange).toHaveAttribute("aria-valuetext", "0.75x");
+    await speedRange.press("End");
+    await expect(speedRange).toHaveAttribute("aria-valuetext", "2x");
+    await expect(settings).toHaveAttribute("data-open", "true");
     await expect(settings).toHaveAttribute("data-view", "speeds");
     await page.keyboard.press("Escape");
     await expect(settings).toHaveAttribute("data-view", "root");
+    await expect(speedRow).toHaveAccessibleName("Playback speed: 2x");
+    await expect(speedRow).toBeFocused();
     await page.keyboard.press("Escape");
     await expect(settings).toHaveAttribute("data-open", "false");
 
@@ -2264,8 +2301,8 @@ test.describe("Research showcase", () => {
     await speedRow.focus();
     await page.keyboard.press("Enter");
     await expect(settings).toHaveAttribute("data-view", "speeds");
-    const selectedRate = settings.locator('button[aria-pressed="true"]');
-    await expect.poll(() => selectedRate.evaluate((element) => document.activeElement === element)).toBe(true);
+    const focusedSpeedRange = settings.getByRole("slider", { name: "Playback speed" });
+    await expect(focusedSpeedRange).toBeFocused();
     await page.keyboard.press("Escape");
     await expect(settings).toHaveAttribute("data-view", "root");
     await expect(speedRow).toBeFocused();
@@ -2314,7 +2351,7 @@ test.describe("Research showcase", () => {
     expect(playerBox!.x + playerBox!.width).toBeLessThanOrEqual(dialogBox!.x + dialogBox!.width + 1);
     expect(playerBox!.y).toBeGreaterThanOrEqual(closeBox!.y + closeBox!.height - 1);
     expect(playerBox!.y + playerBox!.height).toBeLessThanOrEqual(dialogBox!.y + dialogBox!.height + 1);
-    expect(Math.abs(dialogBarBox!.width - playerBox!.width / 3)).toBeLessThanOrEqual(1);
+    expect(dialogBarBox!.width).toBeCloseTo(Math.max(352, playerBox!.width / 3), 0);
     expect(dialogBarBox!.x + dialogBarBox!.width / 2).toBeCloseTo(playerBox!.x + playerBox!.width / 2, 0);
 
     await dialogPlayer.scrollIntoViewIfNeeded();
@@ -2402,14 +2439,17 @@ test.describe("Research showcase", () => {
       expect(centerBox!.y + centerBox!.height / 2).toBeCloseTo(playerBox!.y + playerBox!.height / 2, 0);
       expect(centerBox!.y + centerBox!.height).toBeLessThanOrEqual(bottomBarBox!.y + 1);
       expect(seekBox!.y + seekBox!.height).toBeLessThanOrEqual(firstActionBox!.y + 1);
-      await player.getByRole("button", { name: "Mute video" }).click();
+      await player.getByRole("button", { name: "Mute video" }).tap();
       const volumeRange = player.getByTestId("video-volume-range");
       await expect(volumeRange).toHaveAttribute("data-open", "true");
-      await expect(volumeRange).toHaveCSS("width", "68px");
+      await volumeRange.evaluate(async (range) => {
+        await Promise.all(range.getAnimations().map((animation) => animation.finished.catch(() => undefined)));
+      });
+      await expect(volumeRange).toHaveCSS("width", "100px");
       const soundBox = await volumeRange.boundingBox();
       expect(soundBox).not.toBeNull();
-      expect(soundBox!.width).toBeGreaterThanOrEqual(56);
-      expect(soundBox!.width).toBeLessThanOrEqual(72);
+      expect(soundBox!.width).toBeGreaterThanOrEqual(96);
+      expect(soundBox!.width).toBeLessThanOrEqual(104);
       expect(soundBox!.x).toBeGreaterThanOrEqual(playerBox!.x - 1);
       expect(soundBox!.x + soundBox!.width).toBeLessThanOrEqual(playerBox!.x + playerBox!.width + 1);
       const [expandedCenterBox, expandedBottomBarBox] = await Promise.all([
@@ -2445,8 +2485,11 @@ test.describe("Research showcase", () => {
       expect(captionBox!.y).toBeGreaterThanOrEqual(activePlayerBox!.y + 4);
       expect(captionBox!.y + captionBox!.height).toBeLessThanOrEqual(activeCenterBox!.y + 1);
       expect(captionBox!.y + captionBox!.height).toBeLessThanOrEqual(activeBottomBarBox!.y + 1);
-      await player.getByRole("button", { name: "Mute video" }).click();
+      await player.getByRole("button", { name: "Mute video" }).tap();
       await expect(volumeRange).toHaveAttribute("data-open", "true");
+      await volumeRange.evaluate(async (range) => {
+        await Promise.all(range.getAnimations().map((animation) => animation.finished.catch(() => undefined)));
+      });
       const [captionWithVolumeBox, volumeCenterBox, volumePlayerBox] = await Promise.all([
         captions.boundingBox(),
         player.locator("button.research-video-player__center-control").boundingBox(),
@@ -2492,11 +2535,11 @@ test.describe("Research showcase", () => {
     }
   });
 
-  test("wraps the expanded inline volume controls before grouped actions collide at the 321–350px player boundary", async ({ browser }) => {
+  test("wraps the expanded inline volume controls before grouped actions collide at the 351–384px player boundary", async ({ browser }) => {
     const context = await browser.newContext({
       hasTouch: true,
       isMobile: true,
-      viewport: { height: 568, width: 390 }
+      viewport: { height: 568, width: 430 }
     });
 
     try {
@@ -2505,9 +2548,13 @@ test.describe("Research showcase", () => {
       await settleLayout(page);
       const player = page.locator('article.research-project[id="cytocv-miller-lab"]').getByTestId("research-video-player");
       await player.locator("video.research-video-player__media").tap({ position: { x: 12, y: 12 } });
-      await player.getByRole("button", { name: "Mute video" }).click();
+      await player.getByRole("button", { name: "Mute video" }).tap();
       const volumeRange = player.getByTestId("video-volume-range");
-      await expect(volumeRange).toHaveCSS("width", "68px");
+      await expect(volumeRange).toHaveAttribute("data-open", "true");
+      await volumeRange.evaluate(async (range) => {
+        await Promise.all(range.getAnimations().map((animation) => animation.finished.catch(() => undefined)));
+      });
+      await expect(volumeRange).toHaveCSS("width", "100px");
       const geometry = await player.evaluate((playerElement) => {
         const rect = (selector: string) => {
           const element = playerElement.querySelector<HTMLElement>(selector);
@@ -2526,8 +2573,8 @@ test.describe("Research showcase", () => {
         };
       });
 
-      expect(geometry.player.width).toBeGreaterThanOrEqual(321);
-      expect(geometry.player.width).toBeLessThanOrEqual(350);
+      expect(geometry.player.width).toBeGreaterThanOrEqual(351);
+      expect(geometry.player.width).toBeLessThanOrEqual(384);
       expect(geometry.actionsRight.top).toBeGreaterThanOrEqual(geometry.actionsLeft.top + 43);
       expect(geometry.actionsLeft.left).toBeGreaterThanOrEqual(geometry.player.left - 1);
       expect(geometry.actionsRight.right).toBeLessThanOrEqual(geometry.player.right + 1);
@@ -2574,14 +2621,20 @@ test.describe("Research showcase", () => {
           return {
             barBackdrop: getComputedStyle(bar).backdropFilter,
             barBackground: getComputedStyle(bar).backgroundColor,
+            barBorder: getComputedStyle(bar).borderTopWidth,
+            barRadius: getComputedStyle(bar).borderTopLeftRadius,
+            barShadow: getComputedStyle(bar).boxShadow,
             barColor: getComputedStyle(bar).color,
             controlBackground: getComputedStyle(control, "::before").backgroundColor,
             controlColor: getComputedStyle(control).color,
             iconColor: getComputedStyle(icon).color
           };
         });
-        expect(glassSurface.barBackdrop).toContain("blur");
-        expect(glassSurface.barBackground).toMatch(/rgba\([^)]*,\s*0\.\d+\)|\/\s*0\.\d+\)/);
+        expect(glassSurface.barBackdrop).toBe("none");
+        expect(glassSurface.barBackground).toMatch(/transparent|rgba\(0,\s*0,\s*0,\s*0\)/);
+        expect(glassSurface.barBorder).toBe("0px");
+        expect(glassSurface.barRadius).toBe("0px");
+        expect(glassSurface.barShadow).toBe("none");
         expect(glassSurface.controlBackground).toMatch(/rgba\([^)]*,\s*0\.\d+\)|\/\s*0\.\d+\)/);
         expect(glassSurface.barColor).toMatch(/^rgb\(/);
         expect(glassSurface.controlColor).toMatch(/^rgb\(/);
@@ -2590,6 +2643,10 @@ test.describe("Research showcase", () => {
         const settings = player.getByTestId("video-settings");
         const expandFromSettings = settings.getByRole("button", { name: "Open enlarged player" });
         await expect(settings).toHaveCSS("opacity", "1");
+        await settings.getByRole("button", { name: /Playback speed:/ }).click();
+        await expect(settings.locator('.research-video-player__settings-speeds[data-open="true"]')).toHaveCSS("transition-duration", "0s");
+        await page.keyboard.press("Escape");
+        await expect(settings).toHaveAttribute("data-view", "root");
         await settings.evaluate((menu) => menu.scrollTo({ top: menu.scrollHeight }));
         await expect(expandFromSettings).toBeVisible();
         await expandFromSettings.click();
