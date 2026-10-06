@@ -94,6 +94,43 @@ describe("ExperienceShowcase", () => {
     expect(container.querySelector(".experience-timeline")).not.toBeInTheDocument();
   });
 
+  it("renders valid date-only and location-only metadata without inventing a second row", () => {
+    const dateOnlyExperience: ExperienceItem = {
+      ...treasuryExperience,
+      id: "date-only-experience",
+      title: "Date Only Engineer",
+      location: undefined
+    };
+    const locationOnlyExperience: ExperienceItem = {
+      ...treasuryExperience,
+      id: "location-only-experience",
+      title: "Location Only Engineer",
+      startDate: undefined,
+      endDate: undefined,
+      location: "Remote"
+    };
+
+    render(
+      <ExperienceShowcase
+        items={[dateOnlyExperience, locationOnlyExperience]}
+        motionEnabled={false}
+        summary={experienceSummary}
+      />
+    );
+
+    const dateOnlyCard = screen.getByRole("heading", { level: 2, name: "Date Only Engineer" }).closest("article");
+    const locationOnlyCard = screen.getByRole("heading", { level: 2, name: "Location Only Engineer" }).closest("article");
+
+    expect(dateOnlyCard).not.toBeNull();
+    expect(locationOnlyCard).not.toBeNull();
+    expect(Array.from(dateOnlyCard!.querySelectorAll(".experience-card__metadata-line")).map((line) => line.textContent)).toEqual([
+      "Aug 2026 – Oct 2026 · 3 mos"
+    ]);
+    expect(Array.from(locationOnlyCard!.querySelectorAll(".experience-card__metadata-line")).map((line) => line.textContent)).toEqual([
+      "Remote"
+    ]);
+  });
+
   it("switches the full page to technical copy and scopes tools to expandable chapters", () => {
     render(<ExperienceShowcase items={[cytocvExperience]} motionEnabled={false} summary={experienceSummary} />);
 

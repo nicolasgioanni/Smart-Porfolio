@@ -24,8 +24,11 @@ import {
   expectReducedMotionConnectedDetailSurface
 } from "./detailConnectedSurface";
 import { expectDetailOutlineMotion, expectReducedMotionDetailOutline } from "./detailOutline";
+import { readGeneratedPortfolioContent } from "./generatedContent";
 import { settleLayout, settlePageEntryMotion } from "./settleLayout";
 import { selectThemeWithChooser } from "./themePreference";
+import { formatProfileOverviewDateRange } from "../../src/lib/content/profileOverview";
+import { selectExperienceDetailContent } from "../../src/lib/content/selectDetailContent";
 
 test.beforeEach(async ({ page }) => {
   captureBrowserConsole(page);
@@ -93,8 +96,31 @@ async function getExpandableExperienceCardIndexes(cards: Locator): Promise<numbe
 
   return indexes;
 }
+
+async function expectRenderedExperienceMetadata(page: Page) {
+  const cards = page.locator("article.experience-card");
+  const items = selectExperienceDetailContent(readGeneratedPortfolioContent());
+
+  await expect(cards).toHaveCount(items.length);
+
+  for (const [index, item] of items.entries()) {
+    const card = cards.nth(index);
+    const dateLabel = formatProfileOverviewDateRange(item.startDate, item.endDate);
+    const metadata = card.locator(".experience-card__metadata-line");
+    const metadataCount = Number(Boolean(dateLabel)) + Number(Boolean(item.location));
+
+    await expect(card.locator(".experience-card__title")).toHaveText(item.title);
+    await expect(card.locator(".experience-card__organization")).toHaveText(item.organization);
+    await expect(metadata).toHaveCount(metadataCount);
+
+    if (dateLabel) await expect(metadata.nth(0)).toContainText(dateLabel);
+    if (item.location) await expect(metadata.nth(metadataCount - 1)).toHaveText(item.location);
+    if (dateLabel && item.location) await expectMetadataStackWithin(card, metadata.nth(0), metadata.nth(1));
+  }
+}
+
 test.describe("Experience showcase", () => {
-  test("stacks CDAO and Treasury date metadata above location without overflow", async ({ page }) => {
+  test("stacks each rendered date above its location without overflow", async ({ page }) => {
     await page.clock.install({ time: new Date("2026-10-15T12:00:00") });
 
     for (const width of [1280, 390]) {
@@ -103,18 +129,7 @@ test.describe("Experience showcase", () => {
       await settleLayout(page);
       await settlePageEntryMotion(page);
 
-      const cdaoCard = page.getByRole("heading", { level: 2, name: "Some Kinda Engineer" }).locator("xpath=ancestor::article");
-      const treasuryCard = page.getByRole("heading", { level: 2, name: "AI Engineer" }).locator("xpath=ancestor::article");
-      const cdaoMetadata = cdaoCard.locator(".experience-card__metadata-line");
-      const treasuryMetadata = treasuryCard.locator(".experience-card__metadata-line");
-
-      await expect(cdaoCard).toBeVisible();
-      await expect(treasuryCard).toBeVisible();
-      await expect(cdaoMetadata).toHaveCount(2);
-      await expect(treasuryMetadata).toHaveCount(2);
-      await expect(cdaoCard.locator(".experience-duration")).toHaveText(" · 1 mo");
-      await expectMetadataStackWithin(cdaoCard, cdaoMetadata.nth(0), cdaoMetadata.nth(1));
-      await expectMetadataStackWithin(treasuryCard, treasuryMetadata.nth(0), treasuryMetadata.nth(1));
+      await expectRenderedExperienceMetadata(page);
       await expectNoHorizontalOverflow(page);
     }
   });
