@@ -70,7 +70,7 @@ Core pages do not require a runtime Next.js server, database, authentication ser
 | --- | --- | --- |
 | Routes and metadata | `src/app/` | Static route composition, page metadata, loading files, and legal content. |
 | Layout and navigation | `src/components/layout/`, `src/components/navigation/` | Shared shell, desktop header, active routes, mobile bottom dock and rail, footer, and profile preview. |
-| Overlay primitives | `src/components/overlay/` | Portal rendering, modal lifecycle and topmost stack, focus containment, scroll locking, dismissal, and trigger-focus restoration shared by media and evidence dialogs. |
+| Overlay primitives | `src/components/overlay/` | Default portal and optional persistent in-place native-dialog rendering, modal lifecycle and topmost stack, focus containment, scroll locking, dismissal, and trigger-focus restoration shared by media and evidence dialogs. |
 | Portfolio UI | `src/components/portfolio/` | Home overview, evidence pages, cards, skills, recommendations, and route-specific presentation. |
 | Theme and interaction | `src/components/theme/`, `src/components/motion/`, `src/lib/theme/` | System preference resolution, manual theme persistence, role and scroll motion, reduced-motion behavior, and hydrated state. |
 | Content contracts | `src/content/types.ts` | Generated and UI-facing TypeScript shapes. |
