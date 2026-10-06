@@ -180,6 +180,7 @@ describe("research showcase styles", () => {
     expect(researchStyles).toMatch(/\[data-caption-raised-position="upper"\][\s\S]*?top:\s*var\(--research-video-caption-upper-top/);
     expect(researchStyles).toMatch(/\.research-video-player__captions--lower\s*\{[^}]*bottom:\s*var\(--research-video-caption-lower-bottom/);
     expect(researchStyles).toMatch(/@media \(max-width: 420px\)[\s\S]*?\.research-video-player__captions\s*\{[^}]*font-size:\s*var\(--font-size-caption\)/);
+    expect(researchStyles).toMatch(/@media \(max-width: 480px\)[\s\S]*?research-video-player__settings\s*\{[^}]*width:\s*min\(6rem/);
     expect(researchStyles).toMatch(/research-video-player__captions--lower[\s\S]*?opacity:\s*0/);
     expect(researchStyles).toMatch(/\.research-video-player__captions\s*\{[^}]*font-family:\s*var\(--font-sans\)[^}]*font-weight:\s*var\(--font-weight-regular\)[^}]*transition:\s*opacity 200ms ease, transform 200ms ease/);
     expect(researchStyles).toMatch(/--research-video-caption-opacity:\s*0/);

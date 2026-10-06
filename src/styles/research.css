@@ -1951,12 +1951,17 @@ button.research-video-player__center-control::before {
     left: 10px;
   }
 
-  .research-video-player[data-caption-adaptive="true"] .research-video-player__settings {
-    width: min(6rem, calc(100% - 24px));
-  }
-
   .research-video-player__captions {
     font-size: var(--font-size-caption);
+  }
+}
+
+/* Fitted popups remain narrow above the 420px typography breakpoint. Keep the
+ * settings column compact through the whole phone range so long cues remain
+ * clear of the transport across platform font metrics. */
+@media (max-width: 480px) {
+  .research-video-player[data-caption-adaptive="true"] .research-video-player__settings {
+    width: min(6rem, calc(100% - 24px));
   }
 }
 
