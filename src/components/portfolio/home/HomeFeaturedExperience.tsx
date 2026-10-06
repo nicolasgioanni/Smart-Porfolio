@@ -1,5 +1,6 @@
 import type { ExperienceItem } from "@/content/types";
 import { EmptyState } from "@/components/portfolio/shared/EmptyState";
+import { ExperienceDuration } from "@/components/portfolio/experience/ExperienceDuration";
 import { formatProfileOverviewDateRange } from "@/lib/content/profileOverview";
 
 const initialsStopWords = new Set(["and", "at", "for", "of", "on", "the"]);
@@ -103,7 +104,12 @@ export function HomeFeaturedExperience({ items }: { items: ExperienceItem[] }) {
                   <article className="home-experience-role" key={item.id}>
                     <div className="home-experience-role__body">
                       <h4 className="home-experience-role__title">{item.title}</h4>
-                      {dateLabel ? <p className="home-experience-role__dates">{dateLabel}</p> : null}
+                      {dateLabel ? (
+                        <p className="home-experience-role__dates">
+                          {dateLabel}
+                          <ExperienceDuration endDate={item.endDate} startDate={item.startDate} />
+                        </p>
+                      ) : null}
                       {item.location ? <p className="home-experience-role__location">{item.location}</p> : null}
                     </div>
                   </article>

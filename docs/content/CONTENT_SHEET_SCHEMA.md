@@ -65,7 +65,7 @@ Each item is trimmed and empty items are removed. Duplicate list values are not 
 
 ### Link lists
 
-Research and project `links` fields accept bare URLs or `label=url` pairs separated by pipes:
+Research, project, and Experience `links` fields accept bare URLs or `label=url` pairs separated by pipes:
 
 ```text
 https://example.com|Source code=https://github.com/example/project|Live site=https://example.com/demo
@@ -262,7 +262,7 @@ For each numbered position, summary and details must both be present or both bla
 Canonical header:
 
 ```csv
-id,title,organization,organization_logo,organization_logo_alt,type,location,start_date,end_date,home_summary,detail_summary,bullets,skills,featured,show_on_home,home_order,detail_order
+id,title,organization,organization_logo,organization_logo_alt,type,location,start_date,end_date,home_summary,detail_summary,bullets,skills,links,featured,show_on_home,home_order,detail_order
 ```
 
 | Field | Required | Rule |
@@ -280,12 +280,15 @@ id,title,organization,organization_logo,organization_logo_alt,type,location,star
 | `detail_summary` | No | Detail summary. |
 | `bullets` | No | Pipe-delimited detail bullets. |
 | `skills` | No | Pipe-delimited detail skill chips. |
+| `links` | No | Pipe-delimited verified resources. Each entry uses the shared `label=url` syntax and safe URL policy. |
 | `featured` | No | Boolean selection and sort priority. |
 | `show_on_home` | No | Boolean Home eligibility. |
 | `home_order` | No | Numeric Home order. |
 | `detail_order` | No | Numeric detail order. |
 
 An experience is considered current only when `end_date` is blank, `Present`, or `Current`, after trim and case normalization.
+
+Until the production workbook is migrated, generation also accepts only the exact prior Experience header without `links`; that compatibility path normalizes `links` to an empty list. Migrate the public workbook to the canonical header before adding Experience resources, and do not rely on hybrid headers.
 
 ## `recommendations`
 

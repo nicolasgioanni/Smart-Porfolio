@@ -13,6 +13,7 @@ import type {
   ResearchItem
 } from "@/content/types";
 import { getLinkKind } from "@/lib/content/displayHelpers";
+import { isCurrentExperienceEndDate } from "@/lib/content/experienceDuration";
 import { sortForHome } from "@/lib/content/sortPortfolioContent";
 import { isSupportedUrl } from "@/lib/content/validatePortfolioContent";
 import { formatSingleDate } from "@/lib/formatting/formatDateRange";
@@ -157,11 +158,6 @@ type ProfileOverviewSelectableItem = {
   endDate?: string;
 };
 
-function isCurrentItem(item: ProfileOverviewSelectableItem): boolean {
-  const endDate = clean(item.endDate)?.toLowerCase();
-  return !endDate || endDate === "present" || endDate === "current";
-}
-
 function selectHomeCandidate<TItem extends ProfileOverviewSelectableItem>(items: TItem[]): TItem | undefined {
   const homeItems = items.filter((item) => item.showOnHome);
   const featuredItems = items.filter((item) => item.featured);
@@ -171,7 +167,7 @@ function selectHomeCandidate<TItem extends ProfileOverviewSelectableItem>(items:
 }
 
 export function getCurrentExperience(experience: ExperienceItem[] = [], preferredId?: string): ExperienceItem | undefined {
-  const currentExperience = experience.filter(isCurrentItem);
+  const currentExperience = experience.filter((item) => isCurrentExperienceEndDate(item.endDate));
   const cleanPreferredId = clean(preferredId);
   const explicitlySelectedExperience = cleanPreferredId
     ? currentExperience.find((item) => item.id === cleanPreferredId)
@@ -235,6 +231,7 @@ function createWorkOverview(
     startDate: clean(selectedExperience?.startDate),
     endDate: clean(selectedExperience?.endDate),
     dateLabel: formatProfileOverviewDateRange(selectedExperience?.startDate, selectedExperience?.endDate),
+    location: clean(selectedExperience?.location),
     summary: clean(selectedExperience?.homeSummary),
     logo: createOverviewLogo(
       selectedExperience?.organizationLogo,

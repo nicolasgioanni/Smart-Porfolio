@@ -75,6 +75,7 @@ function expectPartialOpening(frames: OutlineFrame[]) {
   expectOutlineGeometry(frames, 1);
   expectComplementaryOpacity(frames);
   expect(frames.some((frame) => frame.topOpacity > 0.02 && frame.topOpacity < 0.98)).toBe(true);
+  expect(frames.some((frame) => frame.sideOpacity > 0.02 && frame.sideOpacity < 0.98)).toBe(true);
   expect(frames.some((frame) => frame.sideScale > 0.02 && frame.sideScale < 0.98)).toBe(true);
 }
 
@@ -207,7 +208,17 @@ async function sampleEarlyClose(trigger: Locator, duration = 380): Promise<Early
           if (closeStartedAt === undefined) {
             opening.push(frame);
             openingFrames += 1;
-            if (frame.topOpacity > 0.02 && frame.topOpacity < 0.98 && frame.sideScale > 0.02 && frame.sideScale < 0.98) {
+            if (
+              frame.topOpacity > 0.02 &&
+              frame.topOpacity < 0.98 &&
+              frame.sideOpacity > 0.02 &&
+              frame.sideOpacity < 0.98 &&
+              frame.sideScale > 0.02 &&
+              frame.sideScale < 0.98
+            ) {
+              // The reversal starts at this same partial frame; a busy runner
+              // can finish the short reverse before the next animation frame.
+              closing.push(frame);
               button.click();
               window.requestAnimationFrame((closeStartTimestamp) => {
                 closeStartedAt = closeStartTimestamp;

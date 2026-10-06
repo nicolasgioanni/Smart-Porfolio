@@ -46,6 +46,8 @@ See [Content Pipeline: Source modes](CONTENT_PIPELINE.md#source-modes) for the c
 5. Keep only content and destinations approved for anonymous publication.
 6. Regenerate immediately so normalization and validation catch mistakes close to the edit.
 
+The canonical `experience.csv` header includes `links`. The production workbook may temporarily use the exact preceding Experience header without that column; it generates an empty links list only. Remote generation from main or develop therefore drops Experience resources under that legacy header. Before deployment, migrate the production worksheet to the canonical header, add the CDAO and Treasury rows with their `links` values, retain every canonical header exactly once, and test its anonymous XLSX export.
+
 Do not add a fixed number of rows merely to match the current snapshot. The schema does not require fixed counts for collections, skill categories, or Home cards. Use selection flags, ordering fields, and positive Home limits to control presentation.
 
 ## Regenerate
@@ -165,6 +167,8 @@ Store only anonymously publishable assets under `public/`. Common locations are:
 - `public/favicon/`
 
 Reference them from content with a safe root-relative path such as `/images/projects/example.png`. A file in `public/` is copied into the static export and is reachable without authentication.
+
+Record the source, publication status, transformations, and review facts for a new third-party or government mark in [Asset provenance](ASSET_PROVENANCE.md) before publishing it.
 
 Research graphical abstracts and self-hosted videos belong in `public/images/research/`. Pair every `graphical_abstract` path with specific `graphical_abstract_alt` text. Use `.avif`, `.jpg`, `.jpeg`, `.png`, or `.webp` for an abstract and `.mp4` or `.webm` for optional video; video rows must also provide an abstract for the poster. For narrated media, publish reviewed synchronized WebVTT captions and a readable transcript at the same time, then register and hash-lock the full set in the media resolver and contract test. Leave the fields blank until the reviewed public files are present.
 

@@ -441,7 +441,7 @@ test("keeps canonical Home loader within each responsive header matrix width", a
     const { fixturePage, skeleton } = await mountStaticRouteSkeleton(page, siteRoutes.home, viewport);
     try {
       await expect(skeleton.locator(".home-skeleton__identity-list > .skeleton-block")).toHaveCount(5);
-      await expect(skeleton.locator(".home-skeleton__experience-group")).toHaveCount(3);
+      await expect(skeleton.locator(".home-skeleton__experience-group")).toHaveCount(4);
       await assertViewportHasNoOverflow(fixturePage, `Home skeleton does not overflow at ${viewport.name}`);
     } finally {
       await fixturePage.close();

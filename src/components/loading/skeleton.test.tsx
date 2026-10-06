@@ -112,7 +112,7 @@ describe("skeleton components", () => {
       Array.from(container.querySelectorAll(".home-skeleton__experience-group")).map(
         (group) => group.querySelectorAll(".home-skeleton__experience-role").length
       )
-    ).toEqual([1, 2, 2]);
+    ).toEqual([1, 1, 2, 2]);
   });
 
   it("renders one combined Experience intro skeleton without a separate page header", () => {
@@ -122,14 +122,21 @@ describe("skeleton components", () => {
     expect(container.querySelector(".experience-skeleton__intro-copy")).toBeInTheDocument();
     expect(container.querySelector(".experience-skeleton__intro-control")).toBeInTheDocument();
     expect(container.querySelector(".experience-skeleton__intro-copy .route-header-skeleton__title")).toBeInTheDocument();
-    expect(container.querySelectorAll(".experience-skeleton__card")).toHaveLength(5);
-    expect(container.querySelectorAll(".experience-skeleton__chapters")).toHaveLength(5);
+    expect(container.querySelectorAll(".experience-skeleton__card")).toHaveLength(6);
+    expect(container.querySelectorAll(".experience-skeleton__chapters")).toHaveLength(6);
     expect(
       Array.from(container.querySelectorAll(".experience-skeleton__chapters")).map(
         (chapters) => chapters.querySelectorAll(":scope > .skeleton-block").length
       )
-    ).toEqual([0, 4, 4, 4, 4]);
-    expect(experienceSkeletonProfiles.map((profile) => profile.overviewRows)).toEqual([0, 4, 4, 4, 4]);
+    ).toEqual([0, 0, 4, 4, 4, 4]);
+    expect(experienceSkeletonProfiles.map((profile) => profile.overviewRows)).toEqual([0, 0, 4, 4, 4, 4]);
+    expect(experienceSkeletonProfiles.map((profile) => profile.metadataLines)).toEqual([2, 2, 2, 2, 2, 2]);
+    expect(experienceSkeletonProfiles.map((profile) => profile.summaryLines)).toEqual([1, 0, 2, 2, 2, 2]);
+    expect(experienceSkeletonProfiles.map((profile) => profile.resourceCount)).toEqual([0, 1, 0, 0, 0, 0]);
+    expect(container.querySelectorAll(".experience-skeleton__resources > .skeleton-block")).toHaveLength(1);
+    expect(container.querySelector<HTMLElement>(".experience-skeleton__resources > .skeleton-block")).toHaveStyle({
+      height: "44px"
+    });
     expect(container.querySelector(".skeleton-page__header")).not.toBeInTheDocument();
   });
 

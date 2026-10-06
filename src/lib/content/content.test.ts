@@ -170,6 +170,7 @@ function createSheets(overrides: Partial<RawPortfolioSheets> = {}): RawPortfolio
         detail_summary: "Detail experience.",
         bullets: "Built feature|Wrote tests",
         skills: "React|Testing",
+        links: "Docs=https://example.com/docs",
         featured: "true",
         show_on_home: "true",
         home_order: "1",
@@ -682,6 +683,12 @@ describe("portfolio normalization", () => {
     expect(() => normalizePortfolioContent(createSheets({ links: [{ id: "bad", label: "Bad", url: "not valid", kind: "external" }] }), metadata)).toThrow(/invalid url/);
     expect(() =>
       normalizePortfolioContent(
+        createSheets({ experience: [{ ...(createSheets().experience[0] as Record<string, string>), links: "Bad=https://example.com/ bad" }] }),
+        metadata
+      )
+    ).toThrow(/Invalid link URL for experience row 2\.links/);
+    expect(() =>
+      normalizePortfolioContent(
         createSheets({
           recommendations: [
             { id: "recommendation-a", recommender_name: "Alex Manager", full_quote: "Good work.", featured: "true", show_on_home: "true" },
@@ -971,10 +978,11 @@ describe("portfolio normalization", () => {
     );
   });
 
-  it("publishes Treasury as current work and closes the prior research role in August 2026", () => {
+  it("publishes CDAO as current work and preserves Treasury as the prior link-only role", () => {
     const content = normalizePortfolioContent(readTemplateSheets(), metadata);
     const overview = createProfileOverviewContent(content);
     const homeContent = selectHomeContent(content);
+    const cdaoRole = content.experience.find((item) => item.id === "cdao-some-kinda-engineer");
     const treasuryRole = content.experience.find((item) => item.id === "us-treasury-ai-engineer");
     const priorResearchRole = content.experience.find(
       (item) => item.id === "research-assistant-software-engineering"
@@ -982,10 +990,22 @@ describe("portfolio normalization", () => {
     const cytocvResearch = content.research.find((item) => item.id === "cytocv-miller-lab");
 
     expect(content.profile).toMatchObject({
-      currentTitle: "AI Engineer",
-      currentCompany: "U.S. Department of the Treasury",
-      currentExperienceId: "us-treasury-ai-engineer",
-      previousExperienceId: "research-assistant-software-engineering"
+      currentTitle: "Some Kinda Engineer",
+      currentCompany: "Chief Digital & Artificial Intelligence Office",
+      currentExperienceId: "cdao-some-kinda-engineer",
+      previousExperienceId: "us-treasury-ai-engineer"
+    });
+    expect(cdaoRole).toMatchObject({
+      title: "Some Kinda Engineer",
+      organization: "Chief Digital & Artificial Intelligence Office",
+      organizationLogo: "/images/organizations/cdao_logo.webp",
+      organizationLogoAlt: "Chief Digital & Artificial Intelligence Office emblem",
+      location: "Washington, DC",
+      startDate: "2026-10",
+      endDate: "Present",
+      homeOrder: 1,
+      detailOrder: 1,
+      links: []
     });
     expect(treasuryRole).toMatchObject({
       title: "AI Engineer",
@@ -993,25 +1013,29 @@ describe("portfolio normalization", () => {
       organizationLogo: "/images/organizations/us_treasury_logo.webp",
       organizationLogoAlt: "U.S. Department of the Treasury logo",
       startDate: "2026-08",
-      endDate: "Present",
-      homeOrder: 1,
-      detailOrder: 1
+      location: "Washington, DC",
+      endDate: "2026-10",
+      homeOrder: 2,
+      detailOrder: 2,
+      links: [{ label: "Tech.Treasury.Gov", url: "https://tech.treasury.gov" }]
     });
     expect(treasuryRole?.homeSummary).toBeUndefined();
-    expect(homeContent.experience[0]?.id).toBe("us-treasury-ai-engineer");
+    expect(homeContent.experience[0]?.id).toBe("cdao-some-kinda-engineer");
     expect(overview.currentWork).toMatchObject({
-      id: "us-treasury-ai-engineer",
-      title: "AI Engineer",
-      organization: "U.S. Department of the Treasury",
-      startDate: "2026-08",
+      id: "cdao-some-kinda-engineer",
+      title: "Some Kinda Engineer",
+      organization: "Chief Digital & Artificial Intelligence Office",
+      startDate: "2026-10",
       endDate: "Present",
-      dateLabel: "Aug 2026 – Present",
+      dateLabel: "Oct 2026 – Present",
+      location: "Washington, DC",
       logo: {
-        src: "/images/organizations/us_treasury_logo.webp",
-        alt: "U.S. Department of the Treasury logo"
+        src: "/images/organizations/cdao_logo.webp",
+        alt: "Chief Digital & Artificial Intelligence Office emblem"
       }
     });
     expect(overview.currentWork?.summary).toBeUndefined();
+    expect(treasuryRole?.endDate).toBe("2026-10");
     expect(priorResearchRole?.endDate).toBe("2026-08");
     expect(formatDateRange(priorResearchRole?.startDate, priorResearchRole?.endDate)).toBe(
       "Aug 2024 to Aug 2026"
@@ -1019,7 +1043,7 @@ describe("portfolio normalization", () => {
     expect(cytocvResearch?.endDate).toBe("2026-08");
   });
 
-  it("associates the approved university logos through template content", () => {
+  it("associates the approved organization and university marks through template content", () => {
     const content = normalizePortfolioContent(readTemplateSheets(), metadata);
     const expectedOrganizationLogos = new Map([
       [
@@ -1035,6 +1059,13 @@ describe("portfolio normalization", () => {
         {
           organizationLogo: "/images/organizations/us_treasury_logo.webp",
           organizationLogoAlt: "U.S. Department of the Treasury logo"
+        }
+      ],
+      [
+        "Chief Digital & Artificial Intelligence Office",
+        {
+          organizationLogo: "/images/organizations/cdao_logo.webp",
+          organizationLogoAlt: "Chief Digital & Artificial Intelligence Office emblem"
         }
       ]
     ]);
@@ -1303,6 +1334,7 @@ describe("profile overview helpers", () => {
     endDate: "Present",
     bullets: [],
     skills: [],
+    links: [],
     featured: true,
     showOnHome: true
   };
@@ -1538,6 +1570,7 @@ describe("profile overview helpers", () => {
       startDate: baseExperience.startDate,
       endDate: "Present",
       dateLabel: "Jun 2025 \u2013 Present",
+      location: "Remote",
       summary: baseExperience.homeSummary,
       logo: { src: "/images/experience/company.svg", alt: "Company mark" }
     });

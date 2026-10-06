@@ -401,6 +401,7 @@ function normalizeExperience(rows: CsvRow[]): ExperienceItem[] {
       detailSummary: text(row, "detail_summary"),
       bullets: normalizePipeDelimitedList(row.bullets),
       skills: normalizePipeDelimitedList(row.skills),
+      links: normalizeLinkList(row.links, `${location}.links`),
       featured: normalizeBoolean(row.featured, `${location}.featured`),
       showOnHome: normalizeBoolean(row.show_on_home, `${location}.show_on_home`),
       homeOrder: normalizeNumber(row.home_order, `${location}.home_order`),

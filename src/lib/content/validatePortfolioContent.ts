@@ -294,6 +294,8 @@ function validateExperience(items: ExperienceItem[], errors: string[]): void {
     if (item.organizationLogo && !isSupportedUrl(item.organizationLogo, { allowMailto: false })) {
       errors.push(`experience.${item.id} has an invalid organizationLogo URL: ${item.organizationLogo}`);
     }
+
+    collectContentLinks(item.links, `experience.${item.id}`, errors);
   }
 }
 

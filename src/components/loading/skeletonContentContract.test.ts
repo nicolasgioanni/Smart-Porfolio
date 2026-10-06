@@ -58,6 +58,7 @@ const projectContentFixture: ProjectItem[] = [
 ];
 
 const experienceContentFixture: ExperienceItem[] = [
+  "cdao-some-kinda-engineer",
   "us-treasury-ai-engineer",
   "research-assistant-software-engineering",
   "teaching-assistant",
@@ -66,9 +67,17 @@ const experienceContentFixture: ExperienceItem[] = [
 ].map((id, index) => ({
   id,
   title: `Experience ${index + 1}`,
-  organization: index === 0 ? "Treasury" : index < 3 ? "University" : "Research lab",
+  organization:
+    index === 0
+      ? "Chief Digital & Artificial Intelligence Office"
+      : index === 1
+        ? "Treasury"
+        : index < 4
+          ? "University"
+          : "Research lab",
   bullets: [],
   skills: [],
+  links: index === 1 ? [{ label: "Tech.Treasury.Gov", url: "https://tech.treasury.gov" }] : [],
   featured: true,
   showOnHome: true,
   detailOrder: index + 1
@@ -163,14 +172,17 @@ describe("skeleton source contracts", () => {
     expect(projects.map((project) => project.links.length)).toEqual([2, 1, 1]);
   });
 
-  it("keeps the five Experience card silhouettes aligned with fixture overview rows", () => {
+  it("keeps the six Experience card silhouettes aligned with fixture overview rows", () => {
     const experience = selectExperienceDetailContent({ experience: experienceContentFixture } as GeneratedPortfolioContent);
 
-    expect(experience).toHaveLength(5);
+    expect(experience).toHaveLength(6);
     expect(experienceSkeletonProfiles.map((profile) => profile.id)).toEqual(experience.map((item) => item.id));
     expect(experienceSkeletonProfiles.map((profile) => profile.overviewRows)).toEqual(
       experience.map((item) => getExperienceModeContent(item, "overview").sections.length)
     );
+    expect(experienceSkeletonProfiles.map((profile) => profile.metadataLines)).toEqual([2, 2, 2, 2, 2, 2]);
+    expect(experienceSkeletonProfiles.map((profile) => profile.summaryLines)).toEqual([1, 0, 2, 2, 2, 2]);
+    expect(experienceSkeletonProfiles.map((profile) => profile.resourceCount)).toEqual([0, 1, 0, 0, 0, 0]);
   });
 
   it("matches the visible Home identity rows and organization-group role silhouettes from fixture content", () => {
@@ -184,7 +196,7 @@ describe("skeleton source contracts", () => {
     );
 
     expect(identityItems.map((item) => item.id)).toEqual(["location", "timezone", "email", "linkedin", "github"]);
-    expect(organizationCounts).toEqual([1, 2, 2]);
+    expect(organizationCounts).toEqual([1, 1, 2, 2]);
   });
 
   it("keeps research card geometry literal while resolving supported resource fixtures", () => {

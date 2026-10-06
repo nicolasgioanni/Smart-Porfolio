@@ -1,6 +1,9 @@
 import { expect, test, type Locator, type Page } from "./browserTest";
 import { siteRoutePaths } from "../../src/lib/routing/siteRoutes";
+import { formatProfileOverviewDateRange } from "../../src/lib/content/profileOverview";
+import { selectHomeContent } from "../../src/lib/content/selectHomeContent";
 import { captureBrowserConsole, expectNoBrowserConsoleIssues } from "./browserConsole";
+import { readGeneratedPortfolioContent } from "./generatedContent";
 import { reloadWithStoredTheme } from "./themePreference";
 
 const mobileWidths = [320, 390, 768] as const;
@@ -61,6 +64,80 @@ function findVisibleZeroOffsetShadow(boxShadow: string) {
     return alpha > 0 && Number.parseFloat(match[2]!) === 0 && Number.parseFloat(match[3]!) === 0;
   })?.[0] ?? null;
 }
+
+async function expectDateLocationStackWithin(container: Locator, dateLine: Locator, locationLine: Locator) {
+  const [containerBox, dateBox, locationBox] = await Promise.all([
+    container.boundingBox(),
+    dateLine.boundingBox(),
+    locationLine.boundingBox()
+  ]);
+
+  expect(containerBox).not.toBeNull();
+  expect(dateBox).not.toBeNull();
+  expect(locationBox).not.toBeNull();
+  expect(dateBox!.y + dateBox!.height).toBeLessThanOrEqual(locationBox!.y + 1);
+
+  for (const box of [dateBox!, locationBox!]) {
+    expect(box.x).toBeGreaterThanOrEqual(containerBox!.x - 1);
+    expect(box.x + box.width).toBeLessThanOrEqual(containerBox!.x + containerBox!.width + 1);
+  }
+}
+
+test("stacks rendered Home date metadata above location at desktop and phone widths", async ({ page }) => {
+  const homeContent = selectHomeContent(readGeneratedPortfolioContent());
+  const currentWork = homeContent.profileOverview.currentWork;
+  const firstExperience = homeContent.experience[0];
+
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({ width, height: viewportHeight });
+    await page.goto("/");
+
+    const currentWorkPanel = page.locator(".profile-overview__current-work");
+    const currentWorkMetadata = currentWorkPanel.locator(".profile-overview__metadata");
+    const firstExperienceRole = page.locator("article.home-experience-role").first();
+    const experienceDate = firstExperienceRole.locator(".home-experience-role__dates");
+    const experienceLocation = firstExperienceRole.locator(".home-experience-role__location");
+
+    await expect(currentWorkPanel).toHaveCount(currentWork ? 1 : 0);
+    if (currentWork) {
+      const currentWorkMetadataCount = Number(Boolean(currentWork.dateLabel)) + Number(Boolean(currentWork.location));
+      const currentWorkTitle = currentWork.organization ?? currentWork.title;
+      await expect(currentWorkPanel).toBeVisible();
+      if (currentWorkTitle) {
+        await expect(currentWorkPanel.locator(".profile-overview__entity-title")).toHaveText(currentWorkTitle);
+      }
+      await expect(currentWorkPanel.locator(".profile-overview__entity-subtitle")).toHaveCount(
+        currentWork.organization && currentWork.title ? 1 : 0
+      );
+      if (currentWork.organization && currentWork.title) {
+        await expect(currentWorkPanel.locator(".profile-overview__entity-subtitle")).toHaveText(currentWork.title);
+      }
+      await expect(currentWorkMetadata).toHaveCount(currentWorkMetadataCount);
+      if (currentWork.dateLabel) await expect(currentWorkMetadata.nth(0)).toContainText(currentWork.dateLabel);
+      if (currentWork.location) await expect(currentWorkMetadata.nth(currentWorkMetadataCount - 1)).toHaveText(currentWork.location);
+      if (currentWork.dateLabel && currentWork.location) {
+        await expectDateLocationStackWithin(currentWorkPanel, currentWorkMetadata.nth(0), currentWorkMetadata.nth(1));
+      }
+    }
+
+    await expect(page.locator("article.home-experience-role")).toHaveCount(homeContent.experience.length);
+    if (firstExperience) {
+      const dateLabel = formatProfileOverviewDateRange(firstExperience.startDate, firstExperience.endDate);
+      await expect(firstExperienceRole).toBeVisible();
+      await expect(experienceDate).toHaveCount(dateLabel ? 1 : 0);
+      await expect(experienceLocation).toHaveCount(firstExperience.location ? 1 : 0);
+      if (dateLabel) await expect(experienceDate).toContainText(dateLabel);
+      if (firstExperience.location) await expect(experienceLocation).toHaveText(firstExperience.location);
+      if (dateLabel && firstExperience.location) {
+        await expectDateLocationStackWithin(firstExperienceRole, experienceDate, experienceLocation);
+      }
+    }
+
+    await expect.poll(() => page.evaluate(
+      () => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1
+    )).toBe(true);
+  }
+});
 
 for (const width of mobileWidths) {
   test(`keeps the complete mobile dock available without automatic motion at ${width}px`, async ({ page }) => {

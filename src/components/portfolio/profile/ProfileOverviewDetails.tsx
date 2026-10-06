@@ -4,6 +4,7 @@ import { siteRoutes } from "@/lib/routing/siteRoutes";
 import { AnimatedRole } from "@/components/portfolio/profile/AnimatedRole";
 import { DisabledResourceButton } from "@/components/portfolio/shared/DisabledResourceButton";
 import { formatEducationProgram } from "@/lib/content/profileOverview";
+import { ExperienceDuration } from "@/components/portfolio/experience/ExperienceDuration";
 
 const profileResearchResourceClassName =
   "profile-overview__research-link hover-base-1 hover-base-1--compact hover-base-1--inline";
@@ -123,7 +124,16 @@ export function ProfileOverviewDetails({ overview }: ProfileOverviewDetailsProps
               {currentWorkTitle ? <h3 className="profile-overview__entity-title">{currentWorkTitle}</h3> : null}
               {currentWorkRole ? <p className="profile-overview__entity-subtitle">{currentWorkRole}</p> : null}
               {overview.currentWork.dateLabel ? (
-                <p className="profile-overview__metadata">{overview.currentWork.dateLabel}</p>
+                <p className="profile-overview__metadata">
+                  {overview.currentWork.dateLabel}
+                  <ExperienceDuration
+                    endDate={overview.currentWork.endDate}
+                    startDate={overview.currentWork.startDate}
+                  />
+                </p>
+              ) : null}
+              {overview.currentWork.location ? (
+                <p className="profile-overview__metadata">{overview.currentWork.location}</p>
               ) : null}
               {overview.currentWork.summary ? (
                 <p className="profile-overview__summary">{overview.currentWork.summary}</p>
