@@ -72,6 +72,18 @@ async function expectMetadataStackWithin(card: Locator, dateLine: Locator, locat
   }
 }
 
+async function settleExperienceCardEntryMotion(cards: Locator) {
+  await cards.evaluateAll(async (elements) => {
+    const entryAnimations = elements.flatMap((element) =>
+      Array.from(element.closest(".experience-card-wrap")?.getAnimations() ?? []).filter(
+        (animation) => animation instanceof CSSAnimation && animation.animationName === "experience-card-arrive"
+      )
+    );
+
+    await Promise.all(entryAnimations.map((animation) => animation.finished.catch(() => undefined)));
+  });
+}
+
 async function getExpandableExperienceCardIndexes(cards: Locator): Promise<number[]> {
   const indexes: number[] = [];
 
@@ -574,6 +586,10 @@ test.describe("Experience showcase", () => {
       const cards = await expectExperienceCardsOrEmptyState(page);
       if (!cards) continue;
 
+      await settleExperienceCardEntryMotion(cards);
+      // The current CDAO duration is intentionally client-enhanced; sample only after that bounded layout update.
+      await expect(cards.first().locator(".experience-duration")).not.toBeEmpty();
+
       const expandableIndexes = await getExpandableExperienceCardIndexes(cards);
       const cardCount = await cards.count();
       const activeIndex = expandableIndexes.find((index) => index < cardCount - 1);
@@ -583,11 +599,21 @@ test.describe("Experience showcase", () => {
       const trigger = activeCard.locator("button.detail-section__trigger").first();
       const panel = page.locator(`#${await trigger.getAttribute("aria-controls")}`);
       const followingCard = cards.nth(activeIndex + 1);
-      const followingTop = await followingCard.evaluate((card) => card.getBoundingClientRect().top + window.scrollY);
+      // Compare inside the route body so sticky-header motion cannot affect this overlay-only contract.
+      const followingTop = await followingCard.evaluate((card) => {
+        const root = card.closest(".experience-showcase");
+        if (!root) throw new Error("Experience card is missing its showcase root.");
+        return card.getBoundingClientRect().top - root.getBoundingClientRect().top;
+      });
 
       await trigger.click();
       await expect(panel).toHaveCSS("position", width === 981 ? "absolute" : "static");
-      const nextFollowingTop = await followingCard.evaluate((card) => card.getBoundingClientRect().top + window.scrollY);
+      await settleDetailPanelMotion(panel);
+      const nextFollowingTop = await followingCard.evaluate((card) => {
+        const root = card.closest(".experience-showcase");
+        if (!root) throw new Error("Experience card is missing its showcase root.");
+        return card.getBoundingClientRect().top - root.getBoundingClientRect().top;
+      });
 
       if (width === 981) {
         expect(Math.abs(nextFollowingTop - followingTop)).toBeLessThanOrEqual(1);
