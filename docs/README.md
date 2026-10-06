@@ -45,6 +45,7 @@ This is an npm repository: `package.json`, `package-lock.json`, and `.nvmrc` are
 | [Content mapping](content/CONTENT_MAPPING.md) | Mapping from source fields through generated types and selectors to routes and components. |
 | [Local content editing](content/LOCAL_CONTENT_EDITING.md) | Owner-focused procedure for editing local templates, assets, and workbook-backed content. |
 | [Content replacement checklist](content/CONTENT_REPLACEMENT_CHECKLIST.md) | Short publication checklist for replacing portfolio content safely. |
+| [Asset provenance](content/ASSET_PROVENANCE.md) | Source, publication status, and transformation record for externally sourced public assets. |
 | [Research media](content/RESEARCH_MEDIA.md) | Publication facts, accessibility artifacts, and integrity contracts for self-hosted Research media. |
 
 ## Design and user experience

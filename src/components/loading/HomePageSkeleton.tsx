@@ -35,6 +35,7 @@ export function HomePageSkeleton() {
                   <SkeletonBlock height={22} width="72%" />
                   <SkeletonBlock height={16} width="52%" />
                   <SkeletonBlock height={14} width="42%" />
+                  <SkeletonBlock height={14} width="38%" />
                 </div>
               </div>
             </section>
@@ -62,7 +63,7 @@ export function HomePageSkeleton() {
               <SkeletonBlock height={28} width="26%" />
               <SkeletonBlock height={36} radius={12} width={58} />
             </div>
-            {[1, 2, 2].map((roleCount, index) => (
+            {[1, 1, 2, 2].map((roleCount, index) => (
               <div className="home-skeleton__experience-group" key={index}>
                 <SkeletonBlock height={48} radius="999px" width={48} />
                 <div>
@@ -71,6 +72,7 @@ export function HomePageSkeleton() {
                     <div className="home-skeleton__experience-role" key={roleIndex}>
                       <SkeletonBlock height={14} width={roleIndex === 0 ? "72%" : "60%"} />
                       <SkeletonBlock height={14} width={roleIndex === 0 ? "42%" : "48%"} />
+                      <SkeletonBlock height={14} width={roleIndex === 0 ? "36%" : "44%"} />
                     </div>
                   ))}
                 </div>

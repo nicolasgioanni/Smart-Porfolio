@@ -17,7 +17,9 @@
 
 .experience-card__organization,
 .experience-card__title,
-.experience-card__summary {
+.experience-card__summary,
+.experience-card__metadata-line,
+.experience-card__resources {
   margin: 0;
 }
 
@@ -120,24 +122,29 @@
 }
 
 .experience-card__metadata {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2) var(--space-3);
+  display: grid;
+  gap: 0.14rem;
   align-items: center;
   color: var(--color-subtle);
   font-size: var(--font-size-small);
   line-height: var(--line-height-heading);
 }
 
-.experience-card__metadata > span {
+.experience-card__metadata-line {
   min-width: 0;
   overflow-wrap: anywhere;
 }
 
-.experience-card__metadata > span:not(.experience-card__badge) + span:not(.experience-card__badge)::before {
-  margin-inline-end: var(--space-3);
-  color: var(--color-line-strong);
-  content: "·";
+.experience-card__badges,
+.experience-card__resources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.experience-card__badges {
+  margin-top: var(--space-2);
 }
 
 .experience-card__badge {
@@ -179,6 +186,14 @@
   font-size: var(--font-size-body-large);
   line-height: var(--line-height-relaxed);
   overflow-wrap: anywhere;
+}
+
+.experience-card__resources {
+  padding-top: var(--space-4);
+}
+
+.experience-card__resource {
+  min-height: 44px;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -306,13 +321,17 @@
 .experience-skeleton__intro-copy,
 .experience-skeleton__intro-control,
 .experience-skeleton__identity,
+.experience-skeleton__metadata,
+.experience-skeleton__badges,
 .experience-skeleton__body,
-.experience-skeleton__chapters {
+.experience-skeleton__chapters,
+.experience-skeleton__resources {
   display: grid;
 }
 
 .experience-skeleton__intro-copy,
-.experience-skeleton__identity {
+.experience-skeleton__identity,
+.experience-skeleton__metadata {
   gap: var(--space-2);
 }
 
@@ -346,6 +365,13 @@
   gap: var(--space-5);
   margin-inline-start: calc(64px + var(--space-6));
   padding-top: var(--space-6);
+}
+
+.experience-skeleton__badges,
+.experience-skeleton__resources {
+  grid-auto-flow: column;
+  justify-content: start;
+  gap: var(--space-2);
 }
 
 .experience-skeleton__chapters {

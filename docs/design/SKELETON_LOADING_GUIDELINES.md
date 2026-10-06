@@ -34,7 +34,7 @@ Reusable primitives and compositions include:
 | Home | Profile shell, core content sections, three skills cards, and recommendation footprint. |
 | Research | Page introduction, compact audience selector, and three alternating visualization-and-evidence modules, each with abstract and explainer-row footprints. |
 | Projects | Page introduction and card grid shaped like the evidence route. |
-| Experience | Page introduction, compact audience selector, and logo-led role cards with evidence-row footprints. |
+| Experience | Page introduction, compact audience selector, and six logo-led template role cards with evidence-row footprints. |
 | Recommendations | Page introduction and recommendation cards. |
 | Resume | Page introduction and private-resume request panel. |
 | Contact | Page introduction and form-shell footprint while the static contact route resolves. |
@@ -47,6 +47,7 @@ Each route `loading.tsx` calls `shouldRenderSkeletons()` before returning the pa
 - Use the same grids, radii, spacing tokens, and approximate block heights as the destination.
 - Reserve body image, paragraph, metadata, and action geometry without inventing or imitating prose. Canonical page-header ink is the intentional exception described below.
 - Update a skeleton when its route changes enough to create a noticeable layout jump.
+- Keep the Home Current Work and Experience footprints aligned with their date-range/duration first line and separate location line; the current template uses four organization groups across six roles.
 - Keep responsive column changes aligned with the destination style sheet.
 - For the Home hero, preserve the established desktop and phone geometries. At `721–980px`, mirror the resolved greeting → compact profile/contact row → details order, its two-column `minmax(160px, 0.8fr)` / `minmax(280px, 1.2fr)` profile geometry, `var(--space-6)` rhythm, and `clamp(150px, 20vw, 184px)` portrait. Do not add viewport-specific markup or change the visual viewport matrix solely for this intermediate geometry.
 

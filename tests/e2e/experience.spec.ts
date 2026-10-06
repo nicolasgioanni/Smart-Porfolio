@@ -54,6 +54,36 @@ async function expectNoHorizontalOverflow(page: Page) {
     .toBe(true);
 }
 
+async function expectMetadataStackWithin(card: Locator, dateLine: Locator, locationLine: Locator) {
+  const [cardBox, dateBox, locationBox] = await Promise.all([
+    card.boundingBox(),
+    dateLine.boundingBox(),
+    locationLine.boundingBox()
+  ]);
+
+  expect(cardBox).not.toBeNull();
+  expect(dateBox).not.toBeNull();
+  expect(locationBox).not.toBeNull();
+  expect(dateBox!.y + dateBox!.height).toBeLessThanOrEqual(locationBox!.y + 1);
+
+  for (const box of [dateBox!, locationBox!]) {
+    expect(box.x).toBeGreaterThanOrEqual(cardBox!.x - 1);
+    expect(box.x + box.width).toBeLessThanOrEqual(cardBox!.x + cardBox!.width + 1);
+  }
+}
+
+async function settleExperienceCardEntryMotion(cards: Locator) {
+  await cards.evaluateAll(async (elements) => {
+    const entryAnimations = elements.flatMap((element) =>
+      Array.from(element.closest(".experience-card-wrap")?.getAnimations() ?? []).filter(
+        (animation) => animation instanceof CSSAnimation && animation.animationName === "experience-card-arrive"
+      )
+    );
+
+    await Promise.all(entryAnimations.map((animation) => animation.finished.catch(() => undefined)));
+  });
+}
+
 async function getExpandableExperienceCardIndexes(cards: Locator): Promise<number[]> {
   const indexes: number[] = [];
 
@@ -64,6 +94,31 @@ async function getExpandableExperienceCardIndexes(cards: Locator): Promise<numbe
   return indexes;
 }
 test.describe("Experience showcase", () => {
+  test("stacks CDAO and Treasury date metadata above location without overflow", async ({ page }) => {
+    await page.clock.install({ time: new Date("2026-10-15T12:00:00") });
+
+    for (const width of [1280, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto("/experience");
+      await settleLayout(page);
+      await settlePageEntryMotion(page);
+
+      const cdaoCard = page.getByRole("heading", { level: 2, name: "Some Kinda Engineer" }).locator("xpath=ancestor::article");
+      const treasuryCard = page.getByRole("heading", { level: 2, name: "AI Engineer" }).locator("xpath=ancestor::article");
+      const cdaoMetadata = cdaoCard.locator(".experience-card__metadata-line");
+      const treasuryMetadata = treasuryCard.locator(".experience-card__metadata-line");
+
+      await expect(cdaoCard).toBeVisible();
+      await expect(treasuryCard).toBeVisible();
+      await expect(cdaoMetadata).toHaveCount(2);
+      await expect(treasuryMetadata).toHaveCount(2);
+      await expect(cdaoCard.locator(".experience-duration")).toHaveText(" · 1 mo");
+      await expectMetadataStackWithin(cdaoCard, cdaoMetadata.nth(0), cdaoMetadata.nth(1));
+      await expectMetadataStackWithin(treasuryCard, treasuryMetadata.nth(0), treasuryMetadata.nth(1));
+      await expectNoHorizontalOverflow(page);
+    }
+  });
+
   test("switches audience depth and keeps available chapters accessible", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto("/experience");
@@ -526,9 +581,14 @@ test.describe("Experience showcase", () => {
       await page.setViewportSize({ width, height: 900 });
       await page.goto("/experience");
       await settleLayout(page);
+      await settlePageEntryMotion(page);
 
       const cards = await expectExperienceCardsOrEmptyState(page);
       if (!cards) continue;
+
+      await settleExperienceCardEntryMotion(cards);
+      // The current CDAO duration is intentionally client-enhanced; sample only after that bounded layout update.
+      await expect(cards.first().locator(".experience-duration")).not.toBeEmpty();
 
       const expandableIndexes = await getExpandableExperienceCardIndexes(cards);
       const cardCount = await cards.count();
@@ -539,11 +599,21 @@ test.describe("Experience showcase", () => {
       const trigger = activeCard.locator("button.detail-section__trigger").first();
       const panel = page.locator(`#${await trigger.getAttribute("aria-controls")}`);
       const followingCard = cards.nth(activeIndex + 1);
-      const followingTop = await followingCard.evaluate((card) => card.getBoundingClientRect().top + window.scrollY);
+      // Compare inside the route body so sticky-header motion cannot affect this overlay-only contract.
+      const followingTop = await followingCard.evaluate((card) => {
+        const root = card.closest(".experience-showcase");
+        if (!root) throw new Error("Experience card is missing its showcase root.");
+        return card.getBoundingClientRect().top - root.getBoundingClientRect().top;
+      });
 
       await trigger.click();
       await expect(panel).toHaveCSS("position", width === 981 ? "absolute" : "static");
-      const nextFollowingTop = await followingCard.evaluate((card) => card.getBoundingClientRect().top + window.scrollY);
+      await settleDetailPanelMotion(panel);
+      const nextFollowingTop = await followingCard.evaluate((card) => {
+        const root = card.closest(".experience-showcase");
+        if (!root) throw new Error("Experience card is missing its showcase root.");
+        return card.getBoundingClientRect().top - root.getBoundingClientRect().top;
+      });
 
       if (width === 981) {
         expect(Math.abs(nextFollowingTop - followingTop)).toBeLessThanOrEqual(1);

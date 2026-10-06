@@ -84,4 +84,10 @@ describe("shared detail styles", () => {
     expect(hoverElevationRule).not.toMatch(/glow|gradient/);
     expect(hoverElevationRule).toMatch(/transform:\s*translate3d\(0, -2px, 0\)/);
   });
+
+  it("keeps Experience resource links touch-safe", () => {
+    const resourceRule = experienceStyles.match(/\.experience-card__resource\s*\{[^}]*}/s)?.[0] ?? "";
+
+    expect(resourceRule).toMatch(/min-height:\s*44px/);
+  });
 });

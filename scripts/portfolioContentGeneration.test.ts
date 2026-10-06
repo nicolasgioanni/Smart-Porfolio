@@ -114,6 +114,11 @@ function setLegacyResearchHeaders(worksheet: Worksheet): void {
   worksheet.getCell(1, graphicalAbstractColumn).value = "image";
 }
 
+function setLegacyExperienceHeaders(worksheet: Worksheet): void {
+  const linksColumn = findColumn(worksheet, "links");
+  worksheet.spliceColumns(linksColumn, 1);
+}
+
 function findKeyValueCell(worksheet: Worksheet, key: string) {
   for (let rowIndex = 2; rowIndex <= worksheet.rowCount; rowIndex += 1) {
     if (worksheet.getCell(rowIndex, 1).text.trim() === key) return worksheet.getCell(rowIndex, 2);
@@ -376,7 +381,7 @@ describe("strict XLSX download boundary", () => {
     expect(requestHeaders.has("cookie")).toBe(false);
     expect(generated.metadata.sourceMode).toBe("remote");
     expect(generated.profile.experienceSummary).toBe(
-      "My experience spans AI engineering at the U.S. Treasury, research software and machine learning at the University of Washington, and teaching core computer science courses."
+      "My experience spans engineering with the Chief Digital & Artificial Intelligence Office and the U.S. Treasury, research software and machine learning at the University of Washington, and teaching core computer science courses."
     );
     expect(generated.metadata.sources.resume).toBe("template");
     expect(logs.join("\n")).not.toContain(workbookUrl);
@@ -985,6 +990,45 @@ describe("XLSX workbook structure and cells", () => {
     );
     expect(sheets.research[0]).toHaveProperty("video", "");
     expect(sheets.research[0]).not.toHaveProperty("image");
+  });
+
+  it("accepts the canonical Experience schema with validated links", async () => {
+    const sheets = await parsePortfolioWorkbook(await createWorkbookBytes());
+
+    expect(sheets.experience[1]).toHaveProperty("links", "Tech.Treasury.Gov=https://tech.treasury.gov");
+  });
+
+  it("accepts the temporary exact legacy Experience schema without links", async () => {
+    const bytes = await createWorkbookBytes({
+      mutate: (workbook) => setLegacyExperienceHeaders(getWorksheet(workbook, "experience"))
+    });
+
+    const sheets = await parsePortfolioWorkbook(bytes);
+
+    expect(sheets.experience[0]).not.toHaveProperty("links");
+  });
+
+  it("normalizes legacy Experience rows to an empty links list", async () => {
+    const bytes = await createWorkbookBytes({
+      mutate: (workbook) => setLegacyExperienceHeaders(getWorksheet(workbook, "experience"))
+    });
+    const { outputFile } = await createTemporaryPaths();
+
+    await generateFromWorkbook(bytes, { outputFile });
+
+    const generated = JSON.parse(await readFile(outputFile, "utf8")) as GeneratedPortfolioContent;
+    expect(generated.experience.every((item) => item.links.length === 0)).toBe(true);
+  });
+
+  it("rejects hybrid Experience header schemas during the temporary compatibility window", async () => {
+    const bytes = await createWorkbookBytes({
+      mutate: (workbook) => {
+        const worksheet = getWorksheet(workbook, "experience");
+        worksheet.getCell(1, findColumn(worksheet, "links")).value = "legacy_links";
+      }
+    });
+
+    await expect(parsePortfolioWorkbook(bytes)).rejects.toThrow(/invalid header schema/);
   });
 
   it("accepts the temporary exact legacy research schema without inventing staged media", async () => {

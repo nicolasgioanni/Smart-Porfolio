@@ -106,7 +106,7 @@ const expectedHeaders: Record<PortfolioSheetName, readonly string[]> = {
   ],
   experience: [
     "id", "title", "organization", "organization_logo", "organization_logo_alt", "type", "location", "start_date",
-    "end_date", "home_summary", "detail_summary", "bullets", "skills", "featured", "show_on_home", "home_order",
+    "end_date", "home_summary", "detail_summary", "bullets", "skills", "links", "featured", "show_on_home", "home_order",
     "detail_order"
   ],
   recommendations: [
@@ -135,10 +135,16 @@ const legacyResearchHeaders = [
   "show_on_home", "home_order", "detail_order"
 ] as const;
 
+const legacyExperienceHeaders = [
+  "id", "title", "organization", "organization_logo", "organization_logo_alt", "type", "location", "start_date",
+  "end_date", "home_summary", "detail_summary", "bullets", "skills", "featured", "show_on_home", "home_order",
+  "detail_order"
+] as const;
+
 function acceptedHeaderSets(sheetName: PortfolioSheetName): readonly (readonly string[])[] {
-  return sheetName === "research"
-    ? [expectedHeaders.research, legacyResearchHeaders]
-    : [expectedHeaders[sheetName]];
+  if (sheetName === "research") return [expectedHeaders.research, legacyResearchHeaders];
+  if (sheetName === "experience") return [expectedHeaders.experience, legacyExperienceHeaders];
+  return [expectedHeaders[sheetName]];
 }
 
 function matchesExactHeaderSet(headers: readonly string[], expected: readonly string[]): boolean {

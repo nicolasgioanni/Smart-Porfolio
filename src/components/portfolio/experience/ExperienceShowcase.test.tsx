@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, it, vi } from "vitest";
 import type { ExperienceItem } from "@/content/types";
 import { ExperienceShowcase } from "@/components/portfolio/experience/ExperienceShowcase";
 
@@ -17,6 +18,7 @@ const cytocvExperience: ExperienceItem = {
   detailSummary: "Architected a Django application with JSON endpoints and a JavaScript frontend.",
   bullets: ["Built DIC-guided Mask R-CNN analysis workflows"],
   skills: ["Python", "Django"],
+  links: [],
   featured: true,
   showOnHome: true
 };
@@ -27,10 +29,28 @@ const treasuryExperience: ExperienceItem = {
   organization: "U.S. Department of the Treasury",
   organizationLogo: "/images/organizations/us_treasury_logo.webp",
   organizationLogoAlt: "U.S. Department of the Treasury logo",
+  location: "Washington, DC",
   startDate: "2026-08",
+  endDate: "2026-10",
+  bullets: [],
+  skills: [],
+  links: [{ label: "Tech.Treasury.Gov", url: "https://tech.treasury.gov" }],
+  featured: true,
+  showOnHome: true
+};
+
+const cdaoExperience: ExperienceItem = {
+  id: "cdao-some-kinda-engineer",
+  title: "Some Kinda Engineer",
+  organization: "Chief Digital & Artificial Intelligence Office",
+  organizationLogo: "/images/organizations/cdao_logo.webp",
+  organizationLogoAlt: "Chief Digital & Artificial Intelligence Office emblem",
+  location: "Washington, DC",
+  startDate: "2026-10",
   endDate: "Present",
   bullets: [],
   skills: [],
+  links: [],
   featured: true,
   showOnHome: true
 };
@@ -61,6 +81,8 @@ describe("ExperienceShowcase", () => {
     expect(screen.getByRole("heading", { level: 2, name: "Research Assistant (Software Engineering)" })).toBeInTheDocument();
     expect(screen.getByText("UW Bothell School of STEM")).toBeInTheDocument();
     expect(screen.getByText("Aug 2024 – Aug 2026")).toBeInTheDocument();
+    const metadataLines = Array.from(container.querySelectorAll(".experience-card__metadata-line"));
+    expect(metadataLines.map((line) => line.textContent)).toEqual(["Aug 2024 – Aug 2026 · 2 yrs 1 mo", "Bothell, WA"]);
     expect(screen.getByText("Bothell, WA")).toBeInTheDocument();
     expect(screen.getByText(/Built and deployed CytoCV/)).toBeInTheDocument();
     expect(screen.getByText("Research")).toBeInTheDocument();
@@ -150,17 +172,78 @@ describe("ExperienceShowcase", () => {
     expect(trigger).toHaveAttribute("aria-expanded", "true");
   });
 
-  it("shows verified identity only when a role has no published details", () => {
+  it("renders link-only roles without an unavailable-details placeholder", () => {
     render(<ExperienceShowcase items={[treasuryExperience]} motionEnabled={false} summary={experienceSummary} />);
 
     const roleCard = screen.getByRole("heading", { level: 2, name: "AI Engineer" }).closest("article");
 
     expect(roleCard).not.toBeNull();
     expect(within(roleCard!).getByText("U.S. Department of the Treasury")).toBeInTheDocument();
-    expect(within(roleCard!).getByText("Aug 2026 – Present")).toBeInTheDocument();
-    expect(within(roleCard!).getByText("Current")).toBeInTheDocument();
-    expect(within(roleCard!).getByText("Details not yet available.")).toBeInTheDocument();
+    expect(within(roleCard!).getByText("Washington, DC")).toBeInTheDocument();
+    expect(within(roleCard!).getByText("Tech.Treasury.Gov")).toBeInTheDocument();
+    const treasuryResource = within(roleCard!).getByRole("link", { name: "Tech.Treasury.Gov" });
+    expect(treasuryResource).toHaveAttribute(
+      "href",
+      "https://tech.treasury.gov"
+    );
+    expect(treasuryResource).toHaveAttribute("target", "_blank");
+    expect(treasuryResource).toHaveAttribute("rel", "noopener noreferrer");
+    expect(treasuryResource).toHaveClass("experience-card__resource");
+    expect(within(roleCard!).queryByText("Current")).not.toBeInTheDocument();
+    expect(within(roleCard!).queryByText("Details not yet available.")).not.toBeInTheDocument();
     expect(within(roleCard!).queryByRole("button")).not.toBeInTheDocument();
+    expect(Array.from(roleCard!.querySelectorAll(".experience-card__metadata-line")).map((line) => line.textContent)).toEqual([
+      "Aug 2026 – Oct 2026 · 3 mos",
+      "Washington, DC"
+    ]);
+  });
+
+  it("shows the unavailable-details placeholder for roles without authored details or links", () => {
+    const visibilityDescriptor = Object.getOwnPropertyDescriptor(document, "visibilityState");
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-15T12:00:00"));
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
+
+    try {
+      const { container } = render(
+        <ExperienceShowcase items={[cdaoExperience]} motionEnabled={false} summary={experienceSummary} />
+      );
+
+      expect(screen.getByText("Details not yet available.")).toBeInTheDocument();
+      expect(screen.getByText("Current")).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Some Kinda Engineer" })).toBeInTheDocument();
+      expect(container.querySelector(".experience-card__logo")).toHaveAttribute("src", "/images/organizations/cdao_logo.webp");
+      expect(screen.getByText("Oct 2026 – Present")).toBeInTheDocument();
+      expect(screen.getByText("Washington, DC")).toBeInTheDocument();
+      expect(
+        Array.from(container.querySelectorAll(".experience-card__metadata-line")).map((line) => line.textContent)
+      ).toEqual(["Oct 2026 – Present · 1 mo", "Washington, DC"]);
+
+      vi.setSystemTime(new Date("2026-11-01T12:00:00"));
+      Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });
+      fireEvent(document, new Event("visibilitychange"));
+      expect(container.querySelector(".experience-card__metadata-line")?.textContent).toBe("Oct 2026 – Present · 1 mo");
+
+      Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
+      fireEvent(document, new Event("visibilitychange"));
+      expect(container.querySelector(".experience-card__metadata-line")?.textContent).toBe("Oct 2026 – Present · 2 mos");
+    } finally {
+      if (visibilityDescriptor) {
+        Object.defineProperty(document, "visibilityState", visibilityDescriptor);
+      } else {
+        Reflect.deleteProperty(document, "visibilityState");
+      }
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps current-role static HTML readable without a clock-dependent duration", () => {
+    const markup = renderToStaticMarkup(
+      <ExperienceShowcase items={[cdaoExperience]} motionEnabled={false} summary={experienceSummary} />
+    );
+
+    expect(markup).toContain("Oct 2026 – Present");
+    expect(markup).not.toContain("1 mo");
   });
 
   it("keeps the combined page heading and summary when there are no roles", () => {

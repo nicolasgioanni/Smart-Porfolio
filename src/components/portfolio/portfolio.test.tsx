@@ -355,6 +355,7 @@ describe("portfolio UI helpers", () => {
         homeSummary: "Summary that should stay hidden.",
         bullets: ["Bullet that should stay hidden."],
         skills: ["Python"],
+        links: [],
         featured: true,
         showOnHome: true
       },
@@ -367,6 +368,7 @@ describe("portfolio UI helpers", () => {
         endDate: "2024-12",
         bullets: [],
         skills: [],
+        links: [],
         featured: false,
         showOnHome: true
       },
@@ -379,6 +381,7 @@ describe("portfolio UI helpers", () => {
         endDate: "2024-06",
         bullets: [],
         skills: [],
+        links: [],
         featured: false,
         showOnHome: true
       }
@@ -408,6 +411,13 @@ describe("portfolio UI helpers", () => {
     expect(screen.getByText("Jan 2025 \u2013 Present")).toBeInTheDocument();
     expect(screen.getByText("Sep 2024 \u2013 Dec 2024")).toBeInTheDocument();
     expect(screen.getAllByText("Bothell, WA")).toHaveLength(2);
+    const firstRole = screen.getByRole("heading", { level: 4, name: "Research Assistant" }).closest("article");
+    expect(firstRole).not.toBeNull();
+    const firstRoleMetadata = Array.from(
+      firstRole!.querySelectorAll(".home-experience-role__dates, .home-experience-role__location")
+    ).map((element) => element.textContent);
+    expect(firstRoleMetadata[0]).toMatch(/^Jan 2025 – Present/);
+    expect(firstRoleMetadata[1]).toBe("Seattle, WA");
     expect(screen.queryByText("research", { exact: true })).not.toBeInTheDocument();
     expect(screen.queryByText("Featured", { exact: true })).not.toBeInTheDocument();
     expect(screen.queryByText("Summary that should stay hidden.")).not.toBeInTheDocument();
@@ -829,6 +839,7 @@ describe("portfolio UI helpers", () => {
         startDate: "2024-08",
         endDate: "Present",
         dateLabel: "Aug 2024 \u2013 Present",
+        location: "Current Work Location Sentinel",
         summary: "Current work summary supplied through the overview prop.",
         logo: { src: "/images/organizations/current-sentinel.svg", alt: "Current Organization Sentinel mark" }
       },
@@ -929,6 +940,12 @@ describe("portfolio UI helpers", () => {
     expect(currentWork.getByRole("heading", { level: 3, name: "Current Organization Sentinel" })).toBeInTheDocument();
     expect(currentWork.getByText("Current Role Sentinel")).toBeInTheDocument();
     expect(currentWork.getByText("Aug 2024 \u2013 Present")).toBeInTheDocument();
+    expect(currentWork.getByText("Current Work Location Sentinel")).toBeInTheDocument();
+    const currentWorkMetadata = Array.from(
+      currentWorkSection!.querySelectorAll(".profile-overview__metadata")
+    ).map((element) => element.textContent);
+    expect(currentWorkMetadata[0]).toMatch(/^Aug 2024 – Present/);
+    expect(currentWorkMetadata[1]).toBe("Current Work Location Sentinel");
     expect(currentWork.getByText("Current work summary supplied through the overview prop.")).toBeInTheDocument();
     const experienceLink = currentWork.getByRole("link", { name: "View experience" });
     expect(experienceLink).toHaveAttribute("href", "/experience");
