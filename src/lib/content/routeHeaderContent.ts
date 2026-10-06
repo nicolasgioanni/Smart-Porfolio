@@ -25,7 +25,7 @@ export const routeHeaderContent = {
   [siteRoutes.experience]: {
     accessory: "detail-level",
     description:
-      "My experience spans AI engineering at the U.S. Treasury, research software and machine learning at the University of Washington, and teaching core computer science courses.",
+      "My experience spans engineering with the Chief Digital & Artificial Intelligence Office and the U.S. Treasury, research software and machine learning at the University of Washington, and teaching core computer science courses.",
     placement: "embedded",
     title: "Experience"
   },

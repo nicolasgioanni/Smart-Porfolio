@@ -62,6 +62,48 @@ function findVisibleZeroOffsetShadow(boxShadow: string) {
   })?.[0] ?? null;
 }
 
+async function expectDateLocationStackWithin(container: Locator, dateLine: Locator, locationLine: Locator) {
+  const [containerBox, dateBox, locationBox] = await Promise.all([
+    container.boundingBox(),
+    dateLine.boundingBox(),
+    locationLine.boundingBox()
+  ]);
+
+  expect(containerBox).not.toBeNull();
+  expect(dateBox).not.toBeNull();
+  expect(locationBox).not.toBeNull();
+  expect(dateBox!.y + dateBox!.height).toBeLessThanOrEqual(locationBox!.y + 1);
+
+  for (const box of [dateBox!, locationBox!]) {
+    expect(box.x).toBeGreaterThanOrEqual(containerBox!.x - 1);
+    expect(box.x + box.width).toBeLessThanOrEqual(containerBox!.x + containerBox!.width + 1);
+  }
+}
+
+test("stacks Home Current Work and first Experience date metadata above location at desktop and phone widths", async ({ page }) => {
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({ width, height: viewportHeight });
+    await page.goto("/");
+
+    const currentWork = page.locator(".profile-overview__current-work");
+    const currentWorkMetadata = currentWork.locator(".profile-overview__metadata");
+    const firstExperienceRole = page.locator("article.home-experience-role").first();
+    const experienceDate = firstExperienceRole.locator(".home-experience-role__dates");
+    const experienceLocation = firstExperienceRole.locator(".home-experience-role__location");
+
+    await expect(currentWork).toBeVisible();
+    await expect(currentWorkMetadata).toHaveCount(2);
+    await expect(firstExperienceRole).toBeVisible();
+    await expect(experienceDate).toBeVisible();
+    await expect(experienceLocation).toBeVisible();
+    await expectDateLocationStackWithin(currentWork, currentWorkMetadata.nth(0), currentWorkMetadata.nth(1));
+    await expectDateLocationStackWithin(firstExperienceRole, experienceDate, experienceLocation);
+    await expect.poll(() => page.evaluate(
+      () => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1
+    )).toBe(true);
+  }
+});
+
 for (const width of mobileWidths) {
   test(`keeps the complete mobile dock available without automatic motion at ${width}px`, async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });

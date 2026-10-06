@@ -64,7 +64,7 @@ Only experience rows whose `end_date` is blank, `Present`, or `Current`, case-in
 2. Otherwise current rows use the shared Home candidate and ordering rule.
 3. If no current row exists, `current_title` and `current_company` provide the compact fallback.
 
-The selected row supplies title, organization, dates, `home_summary`, and organization logo. `previous_experience_id` is validated compatibility data and has no current UI consumer.
+The selected row supplies title, organization, dates, `location`, `home_summary`, and organization logo. Current Work renders the date range and inclusive duration on its first metadata line, then location on the next line. A current-role duration is added after hydration from the browser-local calendar month and refreshed whenever the page becomes visible again; static HTML retains the readable date range. `previous_experience_id` is validated compatibility data and has no current UI consumer.
 
 ### Education overview
 
@@ -111,11 +111,11 @@ The page introduction uses the optional profile `experience_summary` value, with
 
 Home shows the complete selected experience set and groups it by `organization.trim().toLowerCase()`. Organization capitalization and surrounding whitespace therefore do not create separate groups. The first available logo in a group is reused for the group, with generated initials as the no-logo fallback.
 
-Home displays organization, title, date range, location, and organization logo. It does not display type, summaries, bullets, or skills.
+Home displays organization, title, date range with an inclusive month duration, location on the line directly below, and organization logo. Current-role durations are enhanced after hydration from the browser-local calendar month and refreshed whenever the page becomes visible again; static HTML keeps the readable date range. It does not display type, summaries, bullets, skills, or role resources.
 
-The Experience route displays every row as its own logo-led card with title, organization, date range, location, type, and current-role state. It does not render the Home grouping or the internal `featured` flag.
+The Experience route displays every row as its own logo-led card with title, organization, date range with an inclusive month duration, location directly below it, type, current-role state, and every safe authored resource through `GlassIconLink` in a labelled resource group. Closed durations are deterministic; malformed or reversed monthly ranges omit duration. It does not render the Home grouping or the internal `featured` flag.
 
-Known role IDs use the curated plain-language and technical narratives in `src/lib/content/experienceNarratives.ts`. Each view supplies a summary plus role-specific evidence chapters; technical tools are attached to the chapter where they were used instead of appearing as one undifferentiated stack. The page-level selector changes every card together. Unknown IDs fall back to the row's Home/detail summaries, bullets, and skills, while rows with no published detail render identity metadata and `Details not yet available.`
+Known role IDs use the curated plain-language and technical narratives in `src/lib/content/experienceNarratives.ts`. Each view supplies a summary plus role-specific evidence chapters; technical tools are attached to the chapter where they were used instead of appearing as one undifferentiated stack. The page-level selector changes every card together. Unknown IDs fall back to the row's Home/detail summaries, bullets, and skills. Rows with no published detail and no resources render identity metadata and `Details not yet available.`; a link-only row renders only its safe resources instead of that placeholder.
 
 ## Education
 

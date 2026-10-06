@@ -3,14 +3,19 @@
 import type { CSSProperties } from "react";
 import { useRef, useState } from "react";
 import type { ExperienceItem } from "@/content/types";
+import { GlassIconLink } from "@/components/glass/GlassIconLink";
 import { GlassSurface } from "@/components/glass/GlassSurface";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { DetailDisclosureList } from "@/components/portfolio/shared/DetailDisclosureList";
 import { DetailLevelControl } from "@/components/portfolio/shared/DetailLevelControl";
 import { EmptyState } from "@/components/portfolio/shared/EmptyState";
+import { ExperienceDuration } from "@/components/portfolio/experience/ExperienceDuration";
 import { useDetailDisclosure } from "@/components/portfolio/shared/useDetailDisclosure";
 import type { DetailMode } from "@/lib/content/detailNarratives";
 import { getExperienceModeContent } from "@/lib/content/experienceNarratives";
+import { EXPERIENCE_DETAILS_UNAVAILABLE } from "@/lib/content/experienceNarratives";
+import { getLinkKind } from "@/lib/content/displayHelpers";
+import { isCurrentExperienceEndDate } from "@/lib/content/experienceDuration";
 import { formatProfileOverviewDateRange } from "@/lib/content/profileOverview";
 import { routeHeaderContent } from "@/lib/content/routeHeaderContent";
 
@@ -48,11 +53,6 @@ function formatRoleType(value: string): string {
     .join(" ");
 }
 
-function isCurrentRole(item: ExperienceItem): boolean {
-  const normalizedEndDate = item.endDate?.trim().toLowerCase();
-  return !normalizedEndDate || normalizedEndDate === "present" || normalizedEndDate === "current";
-}
-
 export function ExperienceShowcase({ items, motionEnabled = true, summary }: ExperienceShowcaseProps) {
   const [mode, setMode] = useState<DetailMode>("overview");
   const showcaseRef = useRef<HTMLDivElement>(null);
@@ -87,7 +87,8 @@ export function ExperienceShowcase({ items, motionEnabled = true, summary }: Exp
             {items.map((item, itemIndex) => {
               const modeContent = getExperienceModeContent(item, mode);
               const dateLabel = formatProfileOverviewDateRange(item.startDate, item.endDate);
-              const current = isCurrentRole(item);
+              const current = isCurrentExperienceEndDate(item.endDate);
+              const detailsUnavailable = modeContent.summary === EXPERIENCE_DETAILS_UNAVAILABLE && modeContent.sections.length === 0;
               const roleStyle = { "--experience-order": itemIndex } as CSSProperties;
 
               return (
@@ -129,21 +130,32 @@ export function ExperienceShowcase({ items, motionEnabled = true, summary }: Exp
                         </div>
                         <h2 className="experience-card__title">{item.title}</h2>
                         <div className="experience-card__metadata">
-                          {dateLabel ? <span>{dateLabel}</span> : null}
-                          {item.location ? <span>{item.location}</span> : null}
-                          {item.type ? <span className="experience-card__badge">{formatRoleType(item.type)}</span> : null}
-                          {current ? (
-                            <span className="experience-card__badge experience-card__badge--current">
-                              <span aria-hidden="true" className="experience-card__status-dot" />
-                              Current
-                            </span>
+                          {dateLabel ? (
+                            <p className="experience-card__metadata-line">
+                              {dateLabel}
+                              <ExperienceDuration endDate={item.endDate} startDate={item.startDate} />
+                            </p>
+                          ) : null}
+                          {item.location ? <p className="experience-card__metadata-line">{item.location}</p> : null}
+                          {item.type || current ? (
+                            <div className="experience-card__badges">
+                              {item.type ? <span className="experience-card__badge">{formatRoleType(item.type)}</span> : null}
+                              {current ? (
+                                <span className="experience-card__badge experience-card__badge--current">
+                                  <span aria-hidden="true" className="experience-card__status-dot" />
+                                  Current
+                                </span>
+                              ) : null}
+                            </div>
                           ) : null}
                         </div>
                       </div>
                     </header>
 
                     <div className="experience-card__body" key={mode}>
-                      <p className="experience-card__summary">{modeContent.summary}</p>
+                      {!detailsUnavailable || item.links.length === 0 ? (
+                        <p className="experience-card__summary">{modeContent.summary}</p>
+                      ) : null}
                       <DetailDisclosureList
                         idPrefix="experience"
                         itemId={item.id}
@@ -153,6 +165,19 @@ export function ExperienceShowcase({ items, motionEnabled = true, summary }: Exp
                         overlayEnabled={!usesNaturalFlow}
                         sections={modeContent.sections}
                       />
+                      {item.links.length > 0 ? (
+                        <div aria-label={`${item.title} resources`} className="experience-card__resources" role="group">
+                          {item.links.map((link) => (
+                            <GlassIconLink
+                              className="experience-card__resource"
+                              key={`${link.label}-${link.url}`}
+                              kind={getLinkKind(link)}
+                              label={link.label}
+                              url={link.url}
+                            />
+                          ))}
+                        </div>
+                      ) : null}
                     </div>
                   </GlassSurface>
                 </div>

@@ -54,6 +54,24 @@ async function expectNoHorizontalOverflow(page: Page) {
     .toBe(true);
 }
 
+async function expectMetadataStackWithin(card: Locator, dateLine: Locator, locationLine: Locator) {
+  const [cardBox, dateBox, locationBox] = await Promise.all([
+    card.boundingBox(),
+    dateLine.boundingBox(),
+    locationLine.boundingBox()
+  ]);
+
+  expect(cardBox).not.toBeNull();
+  expect(dateBox).not.toBeNull();
+  expect(locationBox).not.toBeNull();
+  expect(dateBox!.y + dateBox!.height).toBeLessThanOrEqual(locationBox!.y + 1);
+
+  for (const box of [dateBox!, locationBox!]) {
+    expect(box.x).toBeGreaterThanOrEqual(cardBox!.x - 1);
+    expect(box.x + box.width).toBeLessThanOrEqual(cardBox!.x + cardBox!.width + 1);
+  }
+}
+
 async function getExpandableExperienceCardIndexes(cards: Locator): Promise<number[]> {
   const indexes: number[] = [];
 
@@ -64,6 +82,31 @@ async function getExpandableExperienceCardIndexes(cards: Locator): Promise<numbe
   return indexes;
 }
 test.describe("Experience showcase", () => {
+  test("stacks CDAO and Treasury date metadata above location without overflow", async ({ page }) => {
+    await page.clock.install({ time: new Date("2026-10-15T12:00:00") });
+
+    for (const width of [1280, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto("/experience");
+      await settleLayout(page);
+      await settlePageEntryMotion(page);
+
+      const cdaoCard = page.getByRole("heading", { level: 2, name: "Some Kinda Engineer" }).locator("xpath=ancestor::article");
+      const treasuryCard = page.getByRole("heading", { level: 2, name: "AI Engineer" }).locator("xpath=ancestor::article");
+      const cdaoMetadata = cdaoCard.locator(".experience-card__metadata-line");
+      const treasuryMetadata = treasuryCard.locator(".experience-card__metadata-line");
+
+      await expect(cdaoCard).toBeVisible();
+      await expect(treasuryCard).toBeVisible();
+      await expect(cdaoMetadata).toHaveCount(2);
+      await expect(treasuryMetadata).toHaveCount(2);
+      await expect(cdaoCard.locator(".experience-duration")).toHaveText(" · 1 mo");
+      await expectMetadataStackWithin(cdaoCard, cdaoMetadata.nth(0), cdaoMetadata.nth(1));
+      await expectMetadataStackWithin(treasuryCard, treasuryMetadata.nth(0), treasuryMetadata.nth(1));
+      await expectNoHorizontalOverflow(page);
+    }
+  });
+
   test("switches audience depth and keeps available chapters accessible", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto("/experience");
@@ -526,6 +569,7 @@ test.describe("Experience showcase", () => {
       await page.setViewportSize({ width, height: 900 });
       await page.goto("/experience");
       await settleLayout(page);
+      await settlePageEntryMotion(page);
 
       const cards = await expectExperienceCardsOrEmptyState(page);
       if (!cards) continue;
