@@ -395,7 +395,7 @@ describe("static portfolio security contracts", () => {
     const projectSkillDialogFrameRule =
       portfolioCss.match(/\.project-skill-dialog__frame\s*{[^}]*}/s)?.[0] ?? "";
     const modalDialogRule = dialogCss.match(/\.modal-dialog\s*{[^}]*}/s)?.[0] ?? "";
-    const modalDialogFrameRule = dialogCss.match(/\.modal-dialog__frame\s*{[^}]*}/s)?.[0] ?? "";
+    const modalDialogFrameRule = dialogCss.match(/(?:^|\n)\.modal-dialog__frame\s*{[^}]*}/s)?.[0] ?? "";
     const recommendationViewportRule =
       portfolioCss.match(/\.recommendation-expandable__viewport\s*{[^}]*}/s)?.[0] ?? "";
     const recommendationGridRule = portfolioCss.match(/\.home-recommendations__grid\s*{[^}]*}/s)?.[0] ?? "";
@@ -445,7 +445,7 @@ describe("static portfolio security contracts", () => {
     expect(interactiveSkillSource).toMatch(/<ModalDialog/);
     expect(interactiveSkillSource).toMatch(/aria-haspopup="dialog"/);
     expect(interactiveSkillSource).toMatch(/interactiveSkillDialogFadeMs\s*=\s*modalDialogFadeMs/);
-    expect(modalDialogSource).toMatch(/createPortal\(dialog,\s*document\.body\)/);
+    expect(modalDialogSource).toMatch(/if\s*\(!isInPlace\)\s*return createPortal\(portalDialog,\s*document\.body\)/);
     expect(modalDialogSource).toMatch(/aria-modal=\{isTopmost \? "true" : undefined\}/);
     expect(modalDialogSource).toMatch(/"video\[controls\]"/);
     expect(modalDialogSource).toMatch(/"audio\[controls\]"/);

@@ -176,10 +176,11 @@ describe("research showcase styles", () => {
     expect(researchStyles).toMatch(/\.research-video-player__volume-range input\[aria-label="Volume"\]\s*\{[^}]*width:\s*96px[^}]*border:\s*0[^}]*background:\s*transparent[^}]*box-shadow:\s*none/);
     expect(researchStyles).toMatch(/\.research-video-player\[data-controls-visible="false"\] \.research-video-player__bottom-bar,[\s\S]*?\.research-video-player\[data-controls-visible="false"\] \.research-video-player__center-control/);
     expect(researchStyles).toMatch(/\.research-video-player__captions--lower\s*\{[^}]*display:\s*none/);
-    expect(researchStyles).toMatch(/\.research-video-player__captions--raised\s*\{[^}]*bottom:\s*82px/);
-    expect(researchStyles).toMatch(/@media \(max-width: 420px\)[\s\S]*?\.research-video-player__captions--raised\s*\{[^}]*font-size:\s*var\(--font-size-caption\)/);
-    expect(researchStyles).toMatch(/@media \(max-height: 420px\)[\s\S]*?\.research-video-player\[data-controls-visible="true"\] \.research-video-player__captions--raised\s*\{[^}]*font-size:\s*var\(--font-size-caption\)/);
-    expect(researchStyles).toMatch(/\.research-video-player:fullscreen \.research-video-player__captions--raised,[\s\S]*?bottom:\s*calc\(82px \+ var\(--space-3\)\)/);
+    expect(researchStyles).toMatch(/\.research-video-player__captions--raised\s*\{[^}]*bottom:\s*var\(--research-video-caption-raised-bottom, 82px\)/);
+    expect(researchStyles).toMatch(/\[data-caption-raised-position="upper"\][\s\S]*?top:\s*var\(--research-video-caption-upper-top/);
+    expect(researchStyles).toMatch(/\.research-video-player__captions--lower\s*\{[^}]*bottom:\s*var\(--research-video-caption-lower-bottom/);
+    expect(researchStyles).toMatch(/@media \(max-width: 420px\)[\s\S]*?\.research-video-player__captions\s*\{[^}]*font-size:\s*var\(--font-size-caption\)/);
+    expect(researchStyles).toMatch(/@media \(max-width: 480px\)[\s\S]*?research-video-player__settings\s*\{[^}]*width:\s*min\(6rem/);
     expect(researchStyles).toMatch(/research-video-player__captions--lower[\s\S]*?opacity:\s*0/);
     expect(researchStyles).toMatch(/\.research-video-player__captions\s*\{[^}]*font-family:\s*var\(--font-sans\)[^}]*font-weight:\s*var\(--font-weight-regular\)[^}]*transition:\s*opacity 200ms ease, transform 200ms ease/);
     expect(researchStyles).toMatch(/--research-video-caption-opacity:\s*0/);
@@ -218,6 +219,9 @@ describe("research showcase styles", () => {
     expect(researchStyles).not.toMatch(/\.research-video-player__settings-root\[data-open="false"\],[\s\S]*?display:\s*none/);
     expect(researchStyles).toMatch(/@media \(pointer: coarse\)[\s\S]*?\.research-video-player__settings button[\s\S]*?min-height:\s*44px/);
     expect(researchStyles).toMatch(/\.research-video-player:fullscreen,[\s\S]*?\.research-video-player:-webkit-full-screen/);
+    expect(researchStyles).toMatch(
+      /\.research-video-player:fullscreen:not\(\[data-caption-adaptive="true"\]\) \.research-video-player__captions--raised,[\s\S]*?bottom:\s*calc\(82px \+ var\(--space-3\)\)/
+    );
     expect(researchStyles).toMatch(
       /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.research-video-player__bottom-bar[\s\S]*?transition:\s*none/
     );

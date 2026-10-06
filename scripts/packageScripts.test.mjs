@@ -83,13 +83,16 @@ describe("package and CI deployment automation", () => {
       "playwright test experience.spec.ts --project=chromium"
     );
     expect(packageJson.scripts["test:e2e:research"]).toBe(
-      "playwright test research.spec.ts --project=chromium"
+      "playwright test research.spec.ts research-mobile-video.spec.ts --project=chromium"
+    );
+    expect(packageJson.scripts["test:e2e:research:webkit"]).toBe(
+      "playwright test research.spec.ts research-mobile-video.spec.ts --project=webkit-mobile --grep @mobile-video"
     );
     expect(packageJson.scripts["test:e2e:contact"]).toBe(
       "playwright test contact.spec.ts --project=chromium"
     );
     expect(packageJson.scripts["test:e2e:priority"]).toBe(
-      "playwright test skeleton-alignment.spec.ts skeletons.transition.spec.ts navigation.spec.ts footer.spec.ts contact.spec.ts recommendations.spec.ts experience.spec.ts research.spec.ts --project=chromium"
+      "playwright test skeleton-alignment.spec.ts skeletons.transition.spec.ts navigation.spec.ts footer.spec.ts contact.spec.ts recommendations.spec.ts experience.spec.ts research.spec.ts research-mobile-video.spec.ts --project=chromium"
     );
     expect(packageJson.scripts["test:e2e:full"]).toBe(
       "playwright test --project=chromium"
