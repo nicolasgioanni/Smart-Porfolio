@@ -7,7 +7,7 @@ import { useReducedMotionPreference } from "@/components/motion/useReducedMotion
 
 export const modalDialogFadeMs = 180;
 
-type DialogState = "opening" | "open" | "closing";
+type DialogState = "inactive" | "opening" | "open" | "closing";
 
 type ModalDialogAccessibleName =
   | { ariaLabel: string; ariaLabelledBy?: never }
@@ -21,8 +21,10 @@ type ModalDialogProps = ModalDialogAccessibleName & {
   frameClassName?: string;
   initialFocusRef?: RefObject<HTMLElement | null>;
   onAfterClose?: () => void;
+  onOpenError?: () => void;
   onRequestClose: () => void;
   open: boolean;
+  presentation?: "portal" | "in-place";
   restoreFocusRef?: RefObject<HTMLElement | null>;
   rootClassName?: string;
 };
@@ -45,6 +47,7 @@ let bodyOverflowBeforeLock = "";
 type ModalDialogInstanceId = symbol;
 
 const modalDialogStack: ModalDialogInstanceId[] = [];
+const modalDialogRoots = new Map<ModalDialogInstanceId, HTMLElement>();
 const modalDialogStackListeners = new Set<() => void>();
 
 function notifyModalDialogStack() {
@@ -73,7 +76,8 @@ function promoteModalDialog(instanceId: ModalDialogInstanceId) {
   notifyModalDialogStack();
 }
 
-function registerModalDialog(instanceId: ModalDialogInstanceId) {
+function registerModalDialog(instanceId: ModalDialogInstanceId, root: HTMLElement | null) {
+  if (root) modalDialogRoots.set(instanceId, root);
   promoteModalDialog(instanceId);
   let released = false;
 
@@ -85,12 +89,22 @@ function registerModalDialog(instanceId: ModalDialogInstanceId) {
     if (existingIndex < 0) return;
 
     modalDialogStack.splice(existingIndex, 1);
+    modalDialogRoots.delete(instanceId);
     notifyModalDialogStack();
   };
 }
 
 function isTopmostModalDialog(instanceId: ModalDialogInstanceId) {
   return getTopmostModalDialogId() === instanceId;
+}
+
+function containsTopmostModalDialog(instanceId: ModalDialogInstanceId) {
+  const topmostDialogId = getTopmostModalDialogId();
+  if (!topmostDialogId || topmostDialogId === instanceId) return false;
+
+  const root = modalDialogRoots.get(instanceId);
+  const topmostRoot = modalDialogRoots.get(topmostDialogId);
+  return Boolean(root && topmostRoot && root.contains(topmostRoot));
 }
 
 function acquireBodyScrollLock() {
@@ -139,20 +153,27 @@ export function ModalDialog({
   frameClassName,
   initialFocusRef,
   onAfterClose,
+  onOpenError,
   onRequestClose,
   open,
+  presentation = "portal",
   restoreFocusRef,
   rootClassName
 }: ModalDialogProps) {
-  const [dialogState, setDialogState] = useState<DialogState>("opening");
-  const [mounted, setMounted] = useState(open);
+  const isInPlace = presentation === "in-place";
+  const [dialogState, setDialogState] = useState<DialogState>(open ? "opening" : "inactive");
+  const [mounted, setMounted] = useState(open || isInPlace);
   const [portalReady, setPortalReady] = useState(false);
   const dialogFrameRef = useRef<HTMLDivElement>(null);
+  const dialogRootRef = useRef<HTMLElement>(null);
+  const nativeDialogRef = useRef<HTMLDialogElement>(null);
   const closeRequestedRef = useRef(false);
+  const failedToOpenRef = useRef(false);
   const dialogInstanceIdRef = useRef<ModalDialogInstanceId>(Symbol("modal-dialog"));
   const focusContainmentReleasedRef = useRef(false);
   const initialFocusAppliedRef = useRef(false);
   const onAfterCloseRef = useRef(onAfterClose);
+  const onOpenErrorRef = useRef(onOpenError);
   const onRequestCloseRef = useRef(onRequestClose);
   const prefersReducedMotion = useReducedMotionPreference();
   const topmostDialogId = useSyncExternalStore(
@@ -160,9 +181,32 @@ export function ModalDialog({
     getTopmostModalDialogId,
     getServerTopmostModalDialogId
   );
-  const isTopmost = mounted && topmostDialogId === dialogInstanceIdRef.current;
+  const hasModalLifecycle = mounted && (!isInPlace || dialogState !== "inactive");
+  const isTopmost = hasModalLifecycle && topmostDialogId === dialogInstanceIdRef.current;
+  const containsTopmost = hasModalLifecycle && containsTopmostModalDialog(dialogInstanceIdRef.current);
+  const isAccessible = isTopmost || containsTopmost;
+
+  const setDialogRoot = useCallback((node: HTMLElement | null) => {
+    dialogRootRef.current = node;
+    if (!node) {
+      modalDialogRoots.delete(dialogInstanceIdRef.current);
+      return;
+    }
+
+    modalDialogRoots.set(dialogInstanceIdRef.current, node);
+    notifyModalDialogStack();
+  }, []);
+
+  const setNativeDialogRoot = useCallback(
+    (node: HTMLDialogElement | null) => {
+      nativeDialogRef.current = node;
+      setDialogRoot(node);
+    },
+    [setDialogRoot]
+  );
 
   onAfterCloseRef.current = onAfterClose;
+  onOpenErrorRef.current = onOpenError;
   onRequestCloseRef.current = onRequestClose;
 
   const requestClose = useCallback(() => {
@@ -176,16 +220,17 @@ export function ModalDialog({
   }, []);
 
   useEffect(() => {
-    if (!mounted) return;
-    return registerModalDialog(dialogInstanceIdRef.current);
-  }, [mounted]);
+    if (!hasModalLifecycle) return;
+    return registerModalDialog(dialogInstanceIdRef.current, dialogRootRef.current);
+  }, [hasModalLifecycle]);
 
   useEffect(() => {
-    if (mounted && open) promoteModalDialog(dialogInstanceIdRef.current);
-  }, [mounted, open]);
+    if (hasModalLifecycle && open) promoteModalDialog(dialogInstanceIdRef.current);
+  }, [hasModalLifecycle, open]);
 
   useEffect(() => {
     if (open) {
+      if (failedToOpenRef.current) return;
       closeRequestedRef.current = false;
       focusContainmentReleasedRef.current = false;
       setMounted(true);
@@ -195,16 +240,19 @@ export function ModalDialog({
       return () => window.clearTimeout(openTimeout);
     }
 
-    if (!mounted) return;
+    failedToOpenRef.current = false;
+    if (!hasModalLifecycle) return;
 
     setDialogState("closing");
     const closeTimeout = window.setTimeout(
       () => {
         const restoreTarget = restoreFocusRef?.current;
+        const nativeDialog = nativeDialogRef.current;
 
         focusContainmentReleasedRef.current = true;
-        setMounted(false);
-        setDialogState("opening");
+        if (nativeDialog?.open) nativeDialog.close();
+        setMounted(isInPlace);
+        setDialogState(isInPlace ? "inactive" : "opening");
         onAfterCloseRef.current?.();
 
         if (isTopmostModalDialog(dialogInstanceIdRef.current) && restoreTarget?.isConnected) {
@@ -215,12 +263,38 @@ export function ModalDialog({
     );
 
     return () => window.clearTimeout(closeTimeout);
-  }, [mounted, open, prefersReducedMotion, restoreFocusRef]);
+  }, [hasModalLifecycle, isInPlace, open, prefersReducedMotion, restoreFocusRef]);
 
   useEffect(() => {
-    if (!mounted) return;
+    if (!hasModalLifecycle) return;
     return acquireBodyScrollLock();
-  }, [mounted]);
+  }, [hasModalLifecycle]);
+
+  useEffect(() => {
+    if (!isInPlace) return;
+
+    return () => {
+      const nativeDialog = nativeDialogRef.current;
+      if (nativeDialog?.open) nativeDialog.close();
+    };
+  }, [isInPlace]);
+
+  useEffect(() => {
+    if (!isInPlace || !open || !mounted || dialogState === "inactive" || failedToOpenRef.current) return;
+
+    const nativeDialog = nativeDialogRef.current;
+    if (!nativeDialog || nativeDialog.open) return;
+
+    try {
+      nativeDialog.showModal();
+    } catch {
+      if (nativeDialog.open) nativeDialog.close();
+      failedToOpenRef.current = true;
+      focusContainmentReleasedRef.current = true;
+      setDialogState("inactive");
+      onOpenErrorRef.current?.();
+    }
+  }, [dialogState, isInPlace, mounted, open]);
 
   useEffect(() => {
     if (!open) {
@@ -228,7 +302,7 @@ export function ModalDialog({
       return;
     }
 
-    if (!mounted || !isTopmost || initialFocusAppliedRef.current) return;
+    if (!hasModalLifecycle || !isTopmost || initialFocusAppliedRef.current) return;
 
     initialFocusAppliedRef.current = true;
     const focusTimeout = window.setTimeout(() => {
@@ -236,10 +310,10 @@ export function ModalDialog({
     }, 0);
 
     return () => window.clearTimeout(focusTimeout);
-  }, [initialFocusRef, isTopmost, mounted, open]);
+  }, [hasModalLifecycle, initialFocusRef, isTopmost, open]);
 
   useEffect(() => {
-    if (!mounted || !isTopmost) return;
+    if (!hasModalLifecycle || !isTopmost) return;
 
     function focusFirstDialogControl() {
       const dialogFrame = dialogFrameRef.current;
@@ -313,25 +387,31 @@ export function ModalDialog({
       document.removeEventListener("keydown", handleKeyDown);
       document.removeEventListener("focusin", handleFocusIn);
     };
-  }, [isTopmost, mounted, requestClose]);
+  }, [hasModalLifecycle, isTopmost, requestClose]);
 
-  function handleBackdropClick(event: ReactMouseEvent<HTMLDivElement>) {
+  function handleBackdropClick(event: ReactMouseEvent<HTMLElement>) {
     if (event.target === event.currentTarget && dialogState !== "closing" && isTopmost) {
       requestClose();
     }
   }
 
-  if (!portalReady || !mounted) return null;
+  function handleNativeCancel(event: { preventDefault: () => void }) {
+    event.preventDefault();
+    if (dialogState !== "closing" && isTopmost) requestClose();
+  }
 
-  const dialog = (
+  if (!mounted || (!isInPlace && !portalReady)) return null;
+
+  const portalDialog = (
     <div
-      aria-hidden={isTopmost ? undefined : "true"}
+      aria-hidden={isAccessible ? undefined : "true"}
       className={["modal-dialog", rootClassName].filter(Boolean).join(" ")}
       data-testid={dataTestId}
       data-reduced-motion={prefersReducedMotion ? "true" : "false"}
       data-state={dialogState}
       data-topmost={isTopmost ? "true" : "false"}
       onClick={handleBackdropClick}
+      ref={setDialogRoot}
     >
       <div
         aria-describedby={ariaDescribedBy}
@@ -351,5 +431,37 @@ export function ModalDialog({
     </div>
   );
 
-  return createPortal(dialog, document.body);
+  if (!isInPlace) return createPortal(portalDialog, document.body);
+
+  const isInactive = !hasModalLifecycle;
+
+  return (
+    <dialog
+      aria-describedby={isInactive ? undefined : ariaDescribedBy}
+      aria-label={isInactive ? undefined : ariaLabel}
+      aria-labelledby={isInactive ? undefined : ariaLabelledBy}
+      aria-hidden={isInactive || isAccessible ? undefined : "true"}
+      aria-modal={isInactive ? undefined : "true"}
+      className={["modal-dialog", "modal-dialog--in-place", rootClassName].filter(Boolean).join(" ")}
+      data-reduced-motion={prefersReducedMotion ? "true" : "false"}
+      data-state={dialogState}
+      data-testid={dataTestId}
+      data-topmost={isTopmost ? "true" : "false"}
+      id={dialogId}
+      onCancel={handleNativeCancel}
+      onClick={handleBackdropClick}
+      ref={setNativeDialogRoot}
+      role={isInactive ? "presentation" : "dialog"}
+      tabIndex={isInactive ? undefined : -1}
+    >
+      <div
+        className={["modal-dialog__frame", frameClassName].filter(Boolean).join(" ")}
+        data-state={dialogState}
+        onClick={(event) => event.stopPropagation()}
+        ref={dialogFrameRef}
+      >
+        {children}
+      </div>
+    </dialog>
+  );
 }

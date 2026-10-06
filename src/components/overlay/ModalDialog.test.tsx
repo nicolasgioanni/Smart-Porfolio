@@ -4,6 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ModalDialog, modalDialogFadeMs } from "@/components/overlay/ModalDialog";
 
 const motionPreference = vi.hoisted(() => ({ reduced: false }));
+const nativeDialogPrototype = HTMLDialogElement.prototype;
+const nativeShowModalDescriptor = Object.getOwnPropertyDescriptor(nativeDialogPrototype, "showModal");
+const nativeCloseDescriptor = Object.getOwnPropertyDescriptor(nativeDialogPrototype, "close");
 
 vi.mock("@/components/motion/useReducedMotionPreference", () => ({
   useReducedMotionPreference: () => motionPreference.reduced
@@ -157,15 +160,106 @@ function FullscreenDialogHarness() {
   );
 }
 
+function InPlaceDialogHarness({
+  initiallyOpen = false,
+  onOpenError
+}: {
+  initiallyOpen?: boolean;
+  onOpenError?: () => void;
+}) {
+  const [open, setOpen] = useState(initiallyOpen);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  return (
+    <div data-testid="in-place-render-root">
+      <button onClick={() => setOpen(true)} ref={triggerRef} type="button">
+        Open in-place media
+      </button>
+      <ModalDialog
+        ariaLabel="In-place media"
+        dataTestId="in-place-dialog"
+        dialogId="in-place-dialog"
+        initialFocusRef={closeButtonRef}
+        onOpenError={onOpenError}
+        onRequestClose={() => setOpen(false)}
+        open={open}
+        presentation="in-place"
+        restoreFocusRef={triggerRef}
+      >
+        <button type="button">Inline player control</button>
+        <button onClick={() => setOpen(false)} ref={closeButtonRef} type="button">
+          Close in-place media
+        </button>
+      </ModalDialog>
+    </div>
+  );
+}
+
+function NestedInPlaceDialogHarness() {
+  const [parentOpen, setParentOpen] = useState(true);
+  const [childOpen, setChildOpen] = useState(false);
+  const parentCloseRef = useRef<HTMLButtonElement>(null);
+  const childCloseRef = useRef<HTMLButtonElement>(null);
+  const childTriggerRef = useRef<HTMLButtonElement>(null);
+
+  return (
+    <ModalDialog
+      ariaLabel="Portal parent"
+      dialogId="portal-parent"
+      initialFocusRef={parentCloseRef}
+      onRequestClose={() => setParentOpen(false)}
+      open={parentOpen}
+    >
+      <button onClick={() => setChildOpen(true)} ref={childTriggerRef} type="button">
+        Open in-place child
+      </button>
+      <button onClick={() => setParentOpen(false)} ref={parentCloseRef} type="button">
+        Close portal parent
+      </button>
+      <ModalDialog
+        ariaLabel="In-place child"
+        dialogId="in-place-child"
+        initialFocusRef={childCloseRef}
+        onRequestClose={() => setChildOpen(false)}
+        open={childOpen}
+        presentation="in-place"
+        restoreFocusRef={childTriggerRef}
+      >
+        <button ref={childCloseRef} type="button">
+          Close in-place child
+        </button>
+      </ModalDialog>
+    </ModalDialog>
+  );
+}
+
 describe("ModalDialog", () => {
   beforeEach(() => {
     motionPreference.reduced = false;
     document.body.style.overflow = "";
+    Object.defineProperty(nativeDialogPrototype, "showModal", {
+      configurable: true,
+      value(this: HTMLDialogElement) {
+        if (this.open) throw new DOMException("The dialog is already open.", "InvalidStateError");
+        this.setAttribute("open", "");
+      }
+    });
+    Object.defineProperty(nativeDialogPrototype, "close", {
+      configurable: true,
+      value(this: HTMLDialogElement) {
+        this.removeAttribute("open");
+      }
+    });
   });
 
   afterEach(() => {
     vi.useRealTimers();
     document.body.style.overflow = "";
+    if (nativeShowModalDescriptor) Object.defineProperty(nativeDialogPrototype, "showModal", nativeShowModalDescriptor);
+    else Reflect.deleteProperty(nativeDialogPrototype, "showModal");
+    if (nativeCloseDescriptor) Object.defineProperty(nativeDialogPrototype, "close", nativeCloseDescriptor);
+    else Reflect.deleteProperty(nativeDialogPrototype, "close");
   });
 
   it("portals a labelled modal, locks scrolling, and focuses the requested control", async () => {
@@ -372,5 +466,103 @@ describe("ModalDialog", () => {
     fireEvent.keyDown(first, { key: "Escape" });
     expect(screen.getByRole("dialog", { name: "Fullscreen dialog" })).toBeInTheDocument();
     Object.defineProperty(document, "fullscreenElement", { configurable: true, value: null });
+  });
+
+  it("keeps in-place media inline and semantically neutral until its native dialog opens", () => {
+    vi.useFakeTimers();
+    render(<InPlaceDialogHarness />);
+
+    const nativeDialog = screen.getByTestId("in-place-dialog");
+    const inlineControl = nativeDialog.querySelector<HTMLButtonElement>("button")!;
+
+    expect(nativeDialog).toHaveAttribute("role", "presentation");
+    expect(nativeDialog).not.toHaveAttribute("aria-label");
+    expect(nativeDialog).not.toHaveAttribute("tabindex");
+    expect(nativeDialog).not.toHaveAttribute("aria-hidden");
+    expect(inlineControl).toHaveTextContent("Inline player control");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Open in-place media" }));
+    act(() => vi.runOnlyPendingTimers());
+
+    const openDialog = screen.getByRole("dialog", { name: "In-place media" });
+    const closeButton = within(openDialog).getByRole("button", { name: "Close in-place media" });
+
+    expect(openDialog).toBe(nativeDialog);
+    expect(within(openDialog).getByRole("button", { name: "Inline player control" })).toBe(inlineControl);
+    expect(openDialog).toHaveAttribute("open");
+    expect(closeButton).toHaveFocus();
+    expect(document.body.style.overflow).toBe("hidden");
+
+    fireEvent.click(closeButton);
+    act(() => vi.advanceTimersByTime(modalDialogFadeMs));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(nativeDialog.querySelector("button")).toBe(inlineControl);
+    expect(nativeDialog).not.toHaveAttribute("open");
+    expect(nativeDialog).toHaveAttribute("role", "presentation");
+    expect(nativeDialog).not.toHaveAttribute("aria-label");
+    expect(document.body.style.overflow).toBe("");
+    expect(screen.getByRole("button", { name: "Open in-place media" })).toHaveFocus();
+  });
+
+  it("uses native cancel for one shared close request and releases the top layer", () => {
+    vi.useFakeTimers();
+    render(<InPlaceDialogHarness />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Open in-place media" }));
+    act(() => vi.runOnlyPendingTimers());
+
+    const nativeDialog = screen.getByRole("dialog", { name: "In-place media" });
+    fireEvent(nativeDialog, new Event("cancel", { cancelable: true }));
+
+    expect(nativeDialog).toHaveAttribute("data-state", "closing");
+    act(() => vi.advanceTimersByTime(modalDialogFadeMs));
+
+    expect(nativeDialog).not.toHaveAttribute("open");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("cleans up a failed native showModal call and reports it to the owner", () => {
+    vi.useFakeTimers();
+    const onOpenError = vi.fn();
+    Object.defineProperty(nativeDialogPrototype, "showModal", {
+      configurable: true,
+      value() {
+        throw new DOMException("Native dialog unavailable.", "InvalidStateError");
+      }
+    });
+    render(<InPlaceDialogHarness initiallyOpen onOpenError={onOpenError} />);
+    act(() => vi.runOnlyPendingTimers());
+
+    const nativeDialog = screen.getByTestId("in-place-dialog");
+    expect(onOpenError).toHaveBeenCalledTimes(1);
+    expect(nativeDialog).not.toHaveAttribute("open");
+    expect(nativeDialog).toHaveAttribute("role", "presentation");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(document.body.style.overflow).toBe("");
+  });
+
+  it("keeps a portal ancestor exposed while its nested native dialog is topmost", () => {
+    vi.useFakeTimers();
+    render(<NestedInPlaceDialogHarness />);
+    act(() => vi.runOnlyPendingTimers());
+
+    const parentDialog = screen.getByRole("dialog", { name: "Portal parent" });
+    const parentRoot = parentDialog.parentElement as HTMLElement;
+    const childTrigger = within(parentDialog).getByRole("button", { name: "Open in-place child" });
+    fireEvent.click(childTrigger);
+    act(() => vi.runOnlyPendingTimers());
+
+    const childDialog = screen.getByRole("dialog", { name: "In-place child" });
+    expect(parentRoot).toHaveAttribute("data-topmost", "false");
+    expect(parentRoot).not.toHaveAttribute("aria-hidden");
+    expect(within(childDialog).getByRole("button", { name: "Close in-place child" })).toBeVisible();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    act(() => vi.advanceTimersByTime(modalDialogFadeMs));
+
+    expect(childTrigger).toHaveFocus();
+    expect(parentRoot).toHaveAttribute("data-topmost", "true");
   });
 });
