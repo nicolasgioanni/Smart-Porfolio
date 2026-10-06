@@ -10,7 +10,8 @@ import {
   type FocusEvent as ReactFocusEvent,
   type ReactNode,
   type Ref,
-  type RefObject
+  type RefObject,
+  type CSSProperties
 } from "react";
 import { LinkIcon } from "@/components/icons/LinkIcon";
 import { useReducedMotionPreference } from "@/components/motion/useReducedMotionPreference";
@@ -24,15 +25,31 @@ import {
 
 type VideoStatus = "buffering" | "ended" | "error" | "loading" | "ready";
 type SettingsView = "root" | "speeds";
+type CaptionRaisedPosition = "above-controls" | "upper";
+
+type CaptionGeometry = {
+  suppressCenterControl: boolean;
+  lowerBottom: number;
+  inlineEnd: number;
+  inlineStart: number;
+  raisedBottom: number;
+  raisedPosition: CaptionRaisedPosition;
+  upperTop: number;
+};
 
 type ResearchVideoPlayerProps = {
   captionsEnabled: boolean;
   className?: string;
   expandButtonRef?: RefObject<HTMLButtonElement | null>;
+  fullscreenButtonRef?: RefObject<HTMLButtonElement | null>;
+  fullscreenFallbackActive?: boolean;
+  fullscreenFallbackFailed?: boolean;
   keepControlsVisible?: boolean;
   label: string;
   onCaptionsEnabledChange: (enabled: boolean) => void;
+  onExitFullscreenFallback?: () => void;
   onPlay?: () => void;
+  onRequestFullscreenFallback?: () => void;
   onVideoElementAvailable?: (videoElement: HTMLVideoElement | null) => void;
   onRequestExpand?: () => void;
   playbackSettings?: ResearchVideoPlaybackSettings;
@@ -80,9 +97,9 @@ function getActiveCueText(track: TextTrack | undefined): string {
     .join(" ");
 }
 
-function setTrackMode(track: TextTrack | undefined, enabled: boolean, enhanced: boolean, inPictureInPicture: boolean) {
+function setTrackMode(track: TextTrack | undefined, enabled: boolean, enhanced: boolean, externalPresentation: boolean) {
   if (!track) return;
-  track.mode = enabled ? (enhanced && !inPictureInPicture ? "hidden" : "showing") : "disabled";
+  track.mode = enabled ? (enhanced && !externalPresentation ? "hidden" : "showing") : "disabled";
 }
 
 function statusMessage(status: VideoStatus): string | null {
@@ -140,10 +157,15 @@ export function ResearchVideoPlayer({
   captionsEnabled,
   className,
   expandButtonRef,
+  fullscreenButtonRef,
+  fullscreenFallbackActive = false,
+  fullscreenFallbackFailed = false,
   keepControlsVisible = false,
   label,
   onCaptionsEnabledChange,
+  onExitFullscreenFallback,
   onPlay,
+  onRequestFullscreenFallback,
   onVideoElementAvailable,
   onRequestExpand,
   playbackSettings,
@@ -180,14 +202,28 @@ export function ResearchVideoPlayer({
   const [captionTransitionActive, setCaptionTransitionActive] = useState(false);
   const [captionExiting, setCaptionExiting] = useState(false);
   const [inPictureInPicture, setInPictureInPicture] = useState(false);
+  const [nativeVideoFullscreen, setNativeVideoFullscreen] = useState(false);
   const [pictureInPictureSupported, setPictureInPictureSupported] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [fullscreenSupported, setFullscreenSupported] = useState(false);
+  const [compactPresentation, setCompactPresentation] = useState(false);
   const [capabilityMessage, setCapabilityMessage] = useState("");
   const [videoElement, setVideoElementState] = useState<HTMLVideoElement | null>(null);
+  const [captionGeometry, setCaptionGeometry] = useState<CaptionGeometry>({
+    suppressCenterControl: false,
+    lowerBottom: 12,
+    inlineEnd: 12,
+    inlineStart: 12,
+    raisedBottom: 82,
+    raisedPosition: "above-controls",
+    upperTop: 12
+  });
   const prefersReducedMotion = useReducedMotionPreference();
   const videoElementRef = useRef<HTMLVideoElement | null>(null);
   const playerRef = useRef<HTMLDivElement>(null);
+  const bottomBarRef = useRef<HTMLDivElement>(null);
+  const centerControlRef = useRef<HTMLButtonElement>(null);
+  const raisedCaptionRef = useRef<HTMLParagraphElement>(null);
   const settingsButtonRef = useRef<HTMLButtonElement>(null);
   const speedMenuButtonRef = useRef<HTMLButtonElement>(null);
   const speedRangeRef = useRef<HTMLInputElement>(null);
@@ -211,6 +247,7 @@ export function ResearchVideoPlayer({
   const captionWasToggledOffRef = useRef(false);
   const pointerInsideRef = useRef(false);
   const interactionRef = useRef<"keyboard" | "pointer" | "touch">("pointer");
+  const previousFullscreenFallbackActiveRef = useRef(fullscreenFallbackActive);
   const pendingPlaybackTimeRef = useRef<number | null>(null);
   const settingsId = `research-video-settings-${useId().replaceAll(":", "")}`;
   const soundId = `research-video-sound-${useId().replaceAll(":", "")}`;
@@ -282,7 +319,27 @@ export function ResearchVideoPlayer({
     setEnhanced(true);
     setPictureInPictureSupported(Boolean(document.pictureInPictureEnabled && document.pictureInPictureElement !== undefined));
     setFullscreenSupported(Boolean(document.fullscreenEnabled || "requestFullscreen" in HTMLElement.prototype));
+
+    if (typeof window.matchMedia !== "function") return;
+    const mediaQuery = window.matchMedia("(max-width: 480px), (pointer: coarse)");
+    const updateCompactPresentation = () => setCompactPresentation(mediaQuery.matches);
+    updateCompactPresentation();
+    mediaQuery.addEventListener("change", updateCompactPresentation);
+    return () => mediaQuery.removeEventListener("change", updateCompactPresentation);
   }, []);
+
+  useEffect(() => {
+    if (fullscreenFallbackFailed) setCapabilityMessage("Fullscreen is unavailable in this browser.");
+  }, [fullscreenFallbackFailed]);
+
+  useLayoutEffect(() => {
+    if (previousFullscreenFallbackActiveRef.current && !fullscreenFallbackActive) {
+      interactionRef.current = "keyboard";
+      setKeyboardFocusWithin(true);
+      setControlsVisible(true);
+    }
+    previousFullscreenFallbackActiveRef.current = fullscreenFallbackActive;
+  }, [fullscreenFallbackActive]);
 
   useLayoutEffect(() => {
     if (settingsOpen || !restoreSettingsFocusRef.current) return;
@@ -360,14 +417,14 @@ export function ResearchVideoPlayer({
     const captionTrack = player.textTracks[0];
     const updateCues = () => setActiveCueText(getActiveCueText(captionTrack));
 
-    setTrackMode(captionTrack, captionsEnabled, enhanced, inPictureInPicture);
+    setTrackMode(captionTrack, captionsEnabled, enhanced, inPictureInPicture || nativeVideoFullscreen);
     updateCues();
     captionTrack?.addEventListener("cuechange", updateCues);
     return () => captionTrack?.removeEventListener("cuechange", updateCues);
-  }, [captionsEnabled, enhanced, inPictureInPicture, videoElement]);
+  }, [captionsEnabled, enhanced, inPictureInPicture, nativeVideoFullscreen, videoElement]);
 
   useEffect(() => {
-    const useEnhancedCaptions = enhanced && !inPictureInPicture;
+    const useEnhancedCaptions = enhanced && !inPictureInPicture && !nativeVideoFullscreen;
     if (!useEnhancedCaptions) {
       clearCaptionExitTimer();
       captionWasToggledOffRef.current = false;
@@ -434,14 +491,14 @@ export function ResearchVideoPlayer({
     } else {
       setCaptionTransitionActive(false);
     }
-  }, [activeCueText, captionsEnabled, clearCaptionExitTimer, enhanced, inPictureInPicture, prefersReducedMotion]);
+  }, [activeCueText, captionsEnabled, clearCaptionExitTimer, enhanced, inPictureInPicture, nativeVideoFullscreen, prefersReducedMotion]);
 
   useEffect(() => {
     if (!videoElement) return;
     const onPictureInPictureEnter = () => setInPictureInPicture(true);
     const onPictureInPictureLeave = () => setInPictureInPicture(false);
-    const onNativeFullscreenEnter = () => setInPictureInPicture(true);
-    const onNativeFullscreenLeave = () => setInPictureInPicture(false);
+    const onNativeFullscreenEnter = () => setNativeVideoFullscreen(true);
+    const onNativeFullscreenLeave = () => setNativeVideoFullscreen(false);
 
     videoElement.addEventListener("enterpictureinpicture", onPictureInPictureEnter);
     videoElement.addEventListener("leavepictureinpicture", onPictureInPictureLeave);
@@ -462,6 +519,113 @@ export function ResearchVideoPlayer({
     document.addEventListener("fullscreenchange", updateFullscreen);
     return () => document.removeEventListener("fullscreenchange", updateFullscreen);
   }, []);
+
+  const inlinePresentation = className?.split(/\s+/).includes("research-video__viewport") ?? false;
+  const adaptiveCaptionLayout = compactPresentation || fullscreenFallbackActive;
+  const captionHandoff = (inlinePresentation && !fullscreen) || adaptiveCaptionLayout;
+
+  useLayoutEffect(() => {
+    if (!enhanced || !renderedCaptionText || !adaptiveCaptionLayout) return;
+
+    const player = playerRef.current;
+    const caption = raisedCaptionRef.current;
+    if (!player || !caption) return;
+
+    let frame = 0;
+    const measureCaptionGeometry = () => {
+      frame = 0;
+      const playerWidth = player.clientWidth;
+      const playerHeight = player.clientHeight;
+      const captionHeight = caption.offsetHeight;
+      if (playerWidth <= 0 || playerHeight <= 0 || captionHeight <= 0) return;
+
+      const intrinsicWidth = videoElement?.videoWidth || video.width;
+      const intrinsicHeight = videoElement?.videoHeight || video.height;
+      const scale = Math.min(playerWidth / intrinsicWidth, playerHeight / intrinsicHeight);
+      const paintedWidth = intrinsicWidth * scale;
+      const paintedHeight = intrinsicHeight * scale;
+      const paintedLeft = (playerWidth - paintedWidth) / 2;
+      const paintedTop = (playerHeight - paintedHeight) / 2;
+      const paintedBottom = paintedTop + paintedHeight;
+      const gutter = 8;
+      const lowerBottom = Math.max(gutter, playerHeight - paintedBottom + gutter);
+      const bottomBar = bottomBarRef.current;
+      const barTop = bottomBar?.offsetTop ?? playerHeight - 82;
+      const raisedBottom = Math.max(lowerBottom, playerHeight - barTop + gutter);
+      const raisedTop = playerHeight - raisedBottom - captionHeight;
+      const center = centerControlRef.current;
+      const settings = settingsOpen ? settingsPopoverRef.current : undefined;
+      const localTop = (element: HTMLElement) =>
+        element.offsetTop - (element === center ? element.offsetHeight / 2 : 0);
+      const localLeft = (element: HTMLElement) =>
+        element.offsetLeft - (element === center ? element.offsetWidth / 2 : 0);
+      const pictureUpperTop = Math.max(gutter, paintedTop + gutter);
+      const upperTop = center
+        ? Math.max(gutter, Math.min(pictureUpperTop, localTop(center) - captionHeight - gutter))
+        : pictureUpperTop;
+      const paintedInlineStart = Math.max(gutter, paintedLeft + gutter);
+      const paintedInlineEnd = Math.max(gutter, playerWidth - (paintedLeft + paintedWidth) + gutter);
+      const overlaps = (top: number, element: HTMLElement | null | undefined) => {
+        if (!element) return false;
+        const bottom = top + captionHeight;
+        return (
+          top < localTop(element) + element.offsetHeight + gutter &&
+          bottom > localTop(element) - gutter &&
+          paintedInlineStart < localLeft(element) + element.offsetWidth + gutter &&
+          playerWidth - paintedInlineEnd > localLeft(element) - gutter
+        );
+      };
+      const raisedCenterBlocked = overlaps(raisedTop, center);
+      const raisedBlocked = raisedCenterBlocked || overlaps(raisedTop, settings);
+      const raisedPosition: CaptionRaisedPosition = raisedBlocked ? "upper" : "above-controls";
+      const selectedCaptionTop = raisedPosition === "upper" ? upperTop : raisedTop;
+      // Use the full painted caption span for this decision so narrowing the
+      // rendered caption cannot make the next measurement undo itself.
+      const settingsReservesWidth = Boolean(settings && (overlaps(raisedTop, settings) || overlaps(upperTop, settings)));
+      const next = {
+        inlineEnd: Math.round(
+          Math.max(
+            paintedInlineEnd,
+            settingsReservesWidth && settings ? playerWidth - settings.offsetLeft + gutter : 0
+          )
+        ),
+        inlineStart: Math.round(paintedInlineStart),
+        lowerBottom: Math.round(lowerBottom),
+        raisedBottom: Math.round(raisedBottom),
+        raisedPosition,
+        suppressCenterControl: overlaps(selectedCaptionTop, center),
+        upperTop: Math.round(upperTop)
+      };
+
+      setCaptionGeometry((current) =>
+        current.inlineEnd === next.inlineEnd &&
+        current.inlineStart === next.inlineStart &&
+        current.lowerBottom === next.lowerBottom &&
+        current.raisedBottom === next.raisedBottom &&
+        current.raisedPosition === next.raisedPosition &&
+        current.suppressCenterControl === next.suppressCenterControl &&
+        current.upperTop === next.upperTop
+          ? current
+          : next
+      );
+    };
+    const scheduleMeasurement = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(measureCaptionGeometry);
+    };
+    const resizeObserver = typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(scheduleMeasurement);
+    [player, caption, bottomBarRef.current, centerControlRef.current, settingsPopoverRef.current, videoElement].forEach((element) => {
+      if (element) resizeObserver?.observe(element);
+    });
+    window.addEventListener("orientationchange", scheduleMeasurement);
+    scheduleMeasurement();
+
+    return () => {
+      window.removeEventListener("orientationchange", scheduleMeasurement);
+      resizeObserver?.disconnect();
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, [adaptiveCaptionLayout, controlsVisible, enhanced, fullscreenFallbackActive, renderedCaptionText, settingsOpen, video, videoElement, volumeOpen]);
 
   useEffect(() => {
     if (!settingsOpen || !settingsPointerIntentRef.current) return;
@@ -883,18 +1047,31 @@ export function ResearchVideoPlayer({
     const videoElement = videoElementRef.current;
     if (!player) return;
 
+    if (fullscreenFallbackActive) {
+      onExitFullscreenFallback?.();
+      return;
+    }
+
+    closeSettings();
+    closeVolumeRange();
+
     try {
       if (document.fullscreenElement === player) {
         await document.exitFullscreen?.();
       } else if (player.requestFullscreen) {
         await player.requestFullscreen();
+      } else if (onRequestFullscreenFallback) {
+        onRequestFullscreenFallback();
       } else if (videoElement && "webkitEnterFullscreen" in videoElement) {
         (videoElement as HTMLVideoElement & { webkitEnterFullscreen: () => void }).webkitEnterFullscreen();
       } else {
-        onRequestExpand?.();
+        setCapabilityMessage("Fullscreen is unavailable in this browser.");
       }
     } catch {
-      setCapabilityMessage("Fullscreen is unavailable in this browser.");
+      if (document.fullscreenElement === player) {
+        setCapabilityMessage("Fullscreen could not be exited. Try again.");
+      } else if (onRequestFullscreenFallback) onRequestFullscreenFallback();
+      else setCapabilityMessage("Fullscreen is unavailable in this browser.");
     }
   }
 
@@ -919,6 +1096,12 @@ export function ResearchVideoPlayer({
       return;
     }
 
+    if (fullscreenFallbackActive) {
+      event.preventDefault();
+      onExitFullscreenFallback?.();
+      return;
+    }
+
     if (fullscreen || document.fullscreenElement === playerRef.current) {
       event.preventDefault();
       void document.exitFullscreen?.();
@@ -936,7 +1119,12 @@ export function ResearchVideoPlayer({
   const safeDuration = Number.isFinite(duration) && duration > 0 ? duration : 0;
   const playbackRateIndex = getPlaybackRateIndex(playbackRate);
   const playbackRateText = `${playbackRate}x`;
-  const hasEnhancedCaptionLayers = enhanced && !inPictureInPicture && Boolean(renderedCaptionText);
+  const hasEnhancedCaptionLayers = enhanced && !inPictureInPicture && !nativeVideoFullscreen && Boolean(renderedCaptionText);
+  const centerControlSuppressed =
+    adaptiveCaptionLayout &&
+    hasEnhancedCaptionLayers &&
+    (captionVisible || captionExiting) &&
+    (captionGeometry.suppressCenterControl || settingsOpen);
   const message = statusMessage(status);
 
   return (
@@ -944,10 +1132,15 @@ export function ResearchVideoPlayer({
       aria-label={label}
       className={["research-video-player", className].filter(Boolean).join(" ")}
       data-caption-exiting={captionExiting ? "true" : "false"}
+      data-caption-adaptive={adaptiveCaptionLayout ? "true" : "false"}
+      data-caption-handoff={captionHandoff ? "true" : "false"}
+      data-caption-raised-position={captionGeometry.raisedPosition}
+      data-caption-center-conflict={centerControlSuppressed ? "true" : "false"}
       data-caption-transition={captionTransitionActive ? "true" : "false"}
       data-caption-visible={captionVisible ? "true" : "false"}
       data-controls-visible={controlsVisible ? "true" : "false"}
       data-enhanced={enhanced ? "true" : "false"}
+      data-fullscreen-fallback={fullscreenFallbackActive ? "true" : "false"}
       data-settings-open={settingsOpen ? "true" : "false"}
       data-testid="research-video-player"
       data-volume-open={volumeOpen ? "true" : "false"}
@@ -960,7 +1153,16 @@ export function ResearchVideoPlayer({
       onPointerMove={handlePointerMove}
       onPointerUp={handleTouchSurface}
       ref={playerRef}
-      tabIndex={-1}
+      style={
+        {
+          "--research-video-caption-lower-bottom": `${captionGeometry.lowerBottom}px`,
+          "--research-video-caption-inline-end": `${captionGeometry.inlineEnd}px`,
+          "--research-video-caption-inline-start": `${captionGeometry.inlineStart}px`,
+          "--research-video-caption-raised-bottom": `${captionGeometry.raisedBottom}px`,
+          "--research-video-caption-upper-top": `${captionGeometry.upperTop}px`
+        } as CSSProperties
+      }
+      tabIndex={centerControlSuppressed ? 0 : -1}
     >
       <video
         aria-label={label}
@@ -1036,7 +1238,12 @@ export function ResearchVideoPlayer({
           <p aria-hidden="true" className="research-video-player__captions research-video-player__captions--lower">
             {renderedCaptionText}
           </p>
-          <p aria-hidden="true" className="research-video-player__captions research-video-player__captions--raised" data-testid="research-video-captions">
+          <p
+            aria-hidden="true"
+            className="research-video-player__captions research-video-player__captions--raised"
+            data-testid="research-video-captions"
+            ref={raisedCaptionRef}
+          >
             {renderedCaptionText}
           </p>
         </>
@@ -1045,6 +1252,7 @@ export function ResearchVideoPlayer({
       {enhanced ? (
         <>
           <VideoButton
+            buttonRef={centerControlRef}
             className="research-video-player__center-control"
             label={paused || ended ? "Play video" : "Pause video"}
             onClick={togglePlayback}
@@ -1057,6 +1265,7 @@ export function ResearchVideoPlayer({
             className="research-video-player__bottom-bar"
             data-testid="research-video-bottom-controls"
             inert={!controlsVisible}
+            ref={bottomBarRef}
           >
             <div className="research-video-player__timeline-row">
               <input
@@ -1174,12 +1383,13 @@ export function ResearchVideoPlayer({
                 >
                   <LinkIcon kind="settings" />
                 </VideoButton>
-                {fullscreenSupported || onRequestExpand ? (
+                {fullscreenSupported || onRequestFullscreenFallback || onRequestExpand ? (
                   <VideoButton
-                    label={fullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+                    buttonRef={fullscreenButtonRef}
+                    label={fullscreen || fullscreenFallbackActive ? "Exit fullscreen" : "Enter fullscreen"}
                     onClick={toggleFullscreen}
                   >
-                    <LinkIcon kind={fullscreen ? "exit-fullscreen" : "fullscreen"} />
+                    <LinkIcon kind={fullscreen || fullscreenFallbackActive ? "exit-fullscreen" : "fullscreen"} />
                   </VideoButton>
                 ) : null}
               </div>
@@ -1229,7 +1439,7 @@ export function ResearchVideoPlayer({
                     {inPictureInPicture ? "Exit picture in picture" : "Picture in picture"}
                   </button>
                 ) : null}
-                {showExpandControl && onRequestExpand && !fullscreen ? (
+                {showExpandControl && onRequestExpand && !fullscreen && !fullscreenFallbackActive ? (
                   <button className="research-video-player__settings-item" onClick={requestExpandedPlayer} type="button">
                     Open enlarged player
                   </button>

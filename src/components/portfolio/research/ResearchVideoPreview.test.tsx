@@ -4,6 +4,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ResearchVideoPreview } from "@/components/portfolio/research/ResearchVideoPreview";
 
 const motionPreference = vi.hoisted(() => ({ reduced: false }));
+const nativeDialogPrototype = HTMLDialogElement.prototype;
+const nativeShowModalDescriptor = Object.getOwnPropertyDescriptor(nativeDialogPrototype, "showModal");
+const nativeCloseDescriptor = Object.getOwnPropertyDescriptor(nativeDialogPrototype, "close");
+const dialogStylesTestId = "modal-dialog-test-styles";
 
 vi.mock("@/components/motion/useReducedMotionPreference", () => ({
   useReducedMotionPreference: () => motionPreference.reduced
@@ -91,6 +95,26 @@ describe("ResearchVideoPreview", () => {
   beforeEach(() => {
     vi.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(() => undefined);
     vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue(undefined);
+    Object.defineProperty(nativeDialogPrototype, "showModal", {
+      configurable: true,
+      value(this: HTMLDialogElement) {
+        if (this.open) throw new DOMException("The dialog is already open.", "InvalidStateError");
+        this.setAttribute("open", "");
+      }
+    });
+    Object.defineProperty(nativeDialogPrototype, "close", {
+      configurable: true,
+      value(this: HTMLDialogElement) {
+        this.removeAttribute("open");
+      }
+    });
+    const dialogStyles = document.createElement("style");
+    dialogStyles.id = dialogStylesTestId;
+    dialogStyles.textContent = `
+      dialog.modal-dialog--in-place:not([open]) { display: contents; }
+      .modal-dialog--in-place[data-state="inactive"] .modal-dialog__frame { opacity: 1; pointer-events: auto; transform: none; }
+    `;
+    document.head.append(dialogStyles);
   });
 
   afterEach(() => {
@@ -98,6 +122,11 @@ describe("ResearchVideoPreview", () => {
     vi.restoreAllMocks();
     motionPreference.reduced = false;
     document.body.style.overflow = originalBodyOverflow;
+    if (nativeShowModalDescriptor) Object.defineProperty(nativeDialogPrototype, "showModal", nativeShowModalDescriptor);
+    else Reflect.deleteProperty(nativeDialogPrototype, "showModal");
+    if (nativeCloseDescriptor) Object.defineProperty(nativeDialogPrototype, "close", nativeCloseDescriptor);
+    else Reflect.deleteProperty(nativeDialogPrototype, "close");
+    document.getElementById(dialogStylesTestId)?.remove();
   });
 
   it("server-renders a native, captioned fallback before custom controls hydrate", () => {
@@ -143,6 +172,136 @@ describe("ResearchVideoPreview", () => {
     expect(screen.getByTestId("video-volume-range")).toHaveAttribute("data-open", "false");
     expect(playerRoot.querySelector(".research-video-player__actions-left")).not.toBeNull();
     expect(playerRoot.querySelector(".research-video-player__actions-right")).not.toBeNull();
+  });
+
+  it("uses one inline player for missing and rejected native fullscreen requests", async () => {
+    vi.useFakeTimers();
+    const { container } = render(<ResearchVideoPreview poster={graphicalAbstract} title="Example Research" video={video} />);
+    const player = getInlineVideo(container);
+    const playerRoot = getInlinePlayer(container);
+    const fullscreenDialog = container.querySelector<HTMLDialogElement>("[data-testid='research-video-fullscreen']")!;
+
+    setMediaTimeline(player, 42.5);
+    player.volume = 0.35;
+    player.playbackRate = 1.5;
+    revealPlayerControls(playerRoot);
+    const fullscreenButton = screen.getByRole("button", { name: "Enter fullscreen" });
+    fireEvent.click(screen.getByRole("button", { name: "Open video settings" }));
+
+    expect(fullscreenDialog).toHaveAttribute("role", "presentation");
+    expect(fullscreenDialog).not.toHaveAttribute("aria-label");
+    expect(fullscreenDialog).not.toHaveAttribute("aria-modal");
+    expect(fullscreenDialog).not.toHaveAttribute("tabindex");
+    expect(fullscreenDialog).not.toHaveAttribute("open");
+    expect(fullscreenDialog).toContainElement(player);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    Object.defineProperty(playerRoot, "requestFullscreen", { configurable: true, value: undefined });
+    fireEvent.click(fullscreenButton);
+    act(() => vi.advanceTimersByTime(0));
+
+    const firstFallbackDialog = screen.getByRole("dialog", { name: "Example Research supplementary workflow video fullscreen" });
+    expect(firstFallbackDialog).toBe(fullscreenDialog);
+    expect(firstFallbackDialog).toContainElement(player);
+    expect(player.currentTime).toBe(42.5);
+    expect(player.volume).toBe(0.35);
+    expect(player.playbackRate).toBe(1.5);
+    expect(within(firstFallbackDialog).getByTestId("video-settings")).toHaveAttribute("data-open", "false");
+
+    fireEvent.click(within(firstFallbackDialog).getAllByRole("button", { name: "Exit fullscreen" })[1]!);
+    act(() => vi.advanceTimersByTime(180));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(fullscreenButton).toHaveFocus();
+    expect(fullscreenDialog).toContainElement(player);
+
+    Object.defineProperty(playerRoot, "requestFullscreen", {
+      configurable: true,
+      value: vi.fn().mockRejectedValue(new DOMException("Fullscreen denied.", "NotAllowedError"))
+    });
+    fireEvent.click(fullscreenButton);
+    await act(async () => await Promise.resolve());
+    act(() => vi.advanceTimersByTime(0));
+
+    expect(screen.getByRole("dialog", { name: "Example Research supplementary workflow video fullscreen" })).toContainElement(player);
+    fireEvent.keyDown(document, { key: "Escape" });
+    act(() => vi.advanceTimersByTime(180));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(fullscreenButton).toHaveFocus();
+  });
+
+  it("keeps the inline player usable and politely reports a native fallback opening failure", () => {
+    vi.useFakeTimers();
+    Object.defineProperty(nativeDialogPrototype, "showModal", {
+      configurable: true,
+      value() {
+        throw new DOMException("Native dialog unavailable.", "InvalidStateError");
+      }
+    });
+    const { container } = render(<ResearchVideoPreview poster={graphicalAbstract} title="Example Research" video={video} />);
+    const player = getInlineVideo(container);
+    const playerRoot = getInlinePlayer(container);
+    revealPlayerControls(playerRoot);
+
+    fireEvent.click(screen.getByRole("button", { name: "Enter fullscreen" }));
+    act(() => vi.advanceTimersByTime(0));
+
+    const fullscreenDialog = container.querySelector<HTMLDialogElement>("[data-testid='research-video-fullscreen']")!;
+    expect(fullscreenDialog).not.toHaveAttribute("open");
+    expect(fullscreenDialog).toHaveAttribute("role", "presentation");
+    expect(fullscreenDialog).toContainElement(player);
+    expect(player).toBe(getInlineVideo(container));
+    expect(screen.getByRole("status", { hidden: true })).toHaveTextContent("Fullscreen is unavailable in this browser.");
+  });
+
+  it("retains native fullscreen when document exit is rejected instead of opening the fallback", async () => {
+    const { container } = render(<ResearchVideoPreview poster={graphicalAbstract} title="Example Research" video={video} />);
+    const playerRoot = getInlinePlayer(container);
+    revealPlayerControls(playerRoot);
+    Object.defineProperty(document, "fullscreenElement", { configurable: true, value: playerRoot });
+    Object.defineProperty(document, "exitFullscreen", {
+      configurable: true,
+      value: vi.fn().mockRejectedValue(new DOMException("Exit denied.", "NotAllowedError"))
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Enter fullscreen" }));
+    await act(async () => await Promise.resolve());
+
+    expect(document.fullscreenElement).toBe(playerRoot);
+    expect(screen.queryByRole("dialog", { name: "Example Research supplementary workflow video fullscreen" })).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Fullscreen could not be exited. Try again.");
+    Object.defineProperty(document, "fullscreenElement", { configurable: true, value: null });
+  });
+
+  it("exposes persistent fullscreen exits only while the native fallback is active", () => {
+    vi.useFakeTimers();
+    const { container } = render(<ResearchVideoPreview poster={graphicalAbstract} title="Example Research" video={video} />);
+    const playerRoot = getInlinePlayer(container);
+    const fullscreenDialog = container.querySelector<HTMLDialogElement>("[data-testid='research-video-fullscreen']")!;
+    const persistentExit = fullscreenDialog.querySelector<HTMLButtonElement>(".research-video-fullscreen__exit")!;
+
+    expect(persistentExit).toHaveAttribute("hidden");
+    expect(screen.queryAllByRole("button", { name: "Exit fullscreen" })).toHaveLength(0);
+
+    revealPlayerControls(playerRoot);
+    const fullscreenButton = screen.getByRole("button", { name: "Enter fullscreen" });
+    Object.defineProperty(playerRoot, "requestFullscreen", { configurable: true, value: undefined });
+    fireEvent.click(fullscreenButton);
+    act(() => vi.advanceTimersByTime(0));
+
+    const activeDialog = screen.getByRole("dialog", { name: "Example Research supplementary workflow video fullscreen" });
+    expect(persistentExit).not.toHaveAttribute("hidden");
+    expect(within(activeDialog).getAllByRole("button", { name: "Exit fullscreen" })).toHaveLength(2);
+    expect(persistentExit).toHaveFocus();
+
+    fireEvent.click(persistentExit);
+    act(() => vi.advanceTimersByTime(180));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(persistentExit).toHaveAttribute("hidden");
+    expect(screen.queryAllByRole("button", { name: "Exit fullscreen" })).toHaveLength(0);
+    expect(fullscreenButton).toHaveFocus();
   });
 
   it("reveals the bottom controls only for an active pointer, touch surface, or keyboard focus", () => {
@@ -340,6 +499,39 @@ describe("ResearchVideoPreview", () => {
     expect(screen.getByTestId("research-video-captions")).toBeInTheDocument();
     fireEvent(player, new Event("enterpictureinpicture"));
     expect(screen.queryByTestId("research-video-captions")).not.toBeInTheDocument();
+  });
+
+  it("keeps native captions active until both picture-in-picture and native fullscreen exit", async () => {
+    const captionTrack = new EventTarget() as EventTarget & { activeCues: Array<{ text: string }>; mode: TextTrackMode };
+    captionTrack.activeCues = [{ text: "External presentation caption." }];
+    captionTrack.mode = "showing";
+    vi.spyOn(HTMLMediaElement.prototype, "textTracks", "get").mockReturnValue([captionTrack] as unknown as TextTrackList);
+
+    const { container } = render(<ResearchVideoPreview poster={graphicalAbstract} title="Example Research" video={video} />);
+    const playerRoot = getInlinePlayer(container);
+    const player = getInlineVideo(container);
+    await waitFor(() => expect(screen.getByTestId("research-video-captions")).toHaveTextContent("External presentation caption."));
+    expect(captionTrack.mode).toBe("hidden");
+
+    fireEvent(player, new Event("enterpictureinpicture"));
+    fireEvent(player, new Event("webkitbeginfullscreen"));
+    await waitFor(() => expect(captionTrack.mode).toBe("showing"));
+    expect(screen.queryByTestId("research-video-captions")).not.toBeInTheDocument();
+
+    fireEvent(player, new Event("leavepictureinpicture"));
+    expect(captionTrack.mode).toBe("showing");
+
+    revealPlayerControls(playerRoot);
+    fireEvent.click(screen.getByRole("button", { name: "Disable captions" }));
+    expect(captionTrack.mode).toBe("disabled");
+
+    fireEvent(player, new Event("webkitendfullscreen"));
+    expect(captionTrack.mode).toBe("disabled");
+    expect(screen.queryByTestId("research-video-captions")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Enable captions" }));
+    await waitFor(() => expect(captionTrack.mode).toBe("hidden"));
+    expect(screen.getByTestId("research-video-captions")).toHaveTextContent("External presentation caption.");
   });
 
   it("keeps retained layers hidden when captions return in a gap after seeking", async () => {

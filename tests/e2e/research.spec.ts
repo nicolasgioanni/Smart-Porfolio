@@ -2537,17 +2537,25 @@ test.describe("Research showcase", () => {
           const element = playerElement.querySelector<HTMLElement>(selector);
           if (!element) throw new Error(`Missing ${selector}`);
           const box = element.getBoundingClientRect();
-          return { bottom: box.bottom, top: box.top };
+          return { bottom: box.bottom, left: box.left, right: box.right, top: box.top };
         };
+        const player = playerElement.getBoundingClientRect();
+        const media = playerElement.querySelector("video") as HTMLVideoElement;
+        const ratio = (media.videoWidth || 1710) / (media.videoHeight || 1108);
+        const paintedHeight = Math.min(player.height, player.width / ratio);
+        const paintedTop = player.top + (player.height - paintedHeight) / 2;
         return {
-          center: rect(".research-video-player__center-control"),
-          lower: rect(".research-video-player__captions--lower")
+          lower: rect(".research-video-player__captions--lower"),
+          paintedBottom: paintedTop + paintedHeight,
+          player
         };
       });
-      expect(
-        lowerCaptionGeometry.lower.bottom <= lowerCaptionGeometry.center.top + 1 ||
-          lowerCaptionGeometry.lower.top >= lowerCaptionGeometry.center.bottom - 1
-      ).toBe(true);
+      expect(lowerCaptionGeometry.lower.left).toBeGreaterThanOrEqual(lowerCaptionGeometry.player.left - 1);
+      expect(lowerCaptionGeometry.lower.right).toBeLessThanOrEqual(lowerCaptionGeometry.player.right + 1);
+      expect(lowerCaptionGeometry.lower.top).toBeGreaterThanOrEqual(lowerCaptionGeometry.player.top - 1);
+      expect(lowerCaptionGeometry.lower.bottom).toBeLessThanOrEqual(lowerCaptionGeometry.player.bottom + 1);
+      expect(lowerCaptionGeometry.lower.bottom).toBeLessThanOrEqual(lowerCaptionGeometry.paintedBottom + 1);
+      expect(lowerCaptionGeometry.lower.bottom).toBeGreaterThanOrEqual(lowerCaptionGeometry.paintedBottom - 16);
       await player.locator("video.research-video-player__media").tap({ position: { x: 12, y: 12 } });
       await expect(player).toHaveAttribute("data-controls-visible", "true");
       await expect(bottomControls).toHaveCSS("opacity", "1");
@@ -2706,6 +2714,316 @@ test.describe("Research showcase", () => {
         await expect(dialog).toHaveCount(0);
         await expectNoHorizontalOverflow(page);
       }
+    }
+  });
+
+  test("@mobile-video keeps popup captions and same-node fullscreen usable across phone widths and rotation", async ({ browser }) => {
+    test.slow();
+    const context = await browser.newContext({ hasTouch: true, isMobile: true, viewport: { height: 844, width: 390 } });
+
+    try {
+      const page = await context.newPage();
+      for (const viewport of [{ height: 956, width: 440 }]) {
+        await page.setViewportSize(viewport);
+        await page.goto("/research");
+        await settleLayout(page);
+        const inlinePlayer = page.locator('article.research-project[id="cytocv-miller-lab"]').getByTestId("research-video-player");
+        await inlinePlayer.scrollIntoViewIfNeeded();
+        await inlinePlayer.locator("video.research-video-player__media").tap({ position: { x: 12, y: 12 } });
+        await expect(inlinePlayer).toHaveAttribute("data-controls-visible", "true");
+        await inlinePlayer.getByRole("button", { name: "Open video settings" }).tap();
+        const inlineSettings = inlinePlayer.getByTestId("video-settings");
+        await expect(inlineSettings).toHaveAttribute("data-open", "true");
+        await inlineSettings.getByRole("button", { name: "Open enlarged player" }).tap();
+
+        const popup = page.getByRole("dialog", { name: "CytoCV supplementary workflow video" });
+        const popupPlayer = popup.getByTestId("research-video-player");
+        const popupVideo = popupPlayer.locator("video.research-video-player__media");
+        await expect(popup).toBeVisible();
+        await expect(popupPlayer).toHaveAttribute("data-caption-adaptive", "true");
+        await expect(popupPlayer).toHaveAttribute("data-caption-handoff", "true");
+        await popupVideo.tap({ position: { x: 12, y: 12 } });
+        await expect(popupPlayer).toHaveAttribute("data-controls-visible", "true");
+        await popupVideo.evaluate((element) => {
+          const media = element as HTMLVideoElement;
+          media.currentTime = 19;
+          media.dispatchEvent(new Event("timeupdate"));
+          media.dispatchEvent(new Event("seeked"));
+        });
+        const captions = popupPlayer.getByTestId("research-video-captions");
+        await expect(captions).toContainText("This red image shows the cell contour");
+        await expect(captions).toHaveCSS("opacity", "1");
+        await expect(captions).toHaveCSS("font-family", /Space Grotesk|sans-serif/);
+        await expect(captions).toHaveCSS("font-weight", "400");
+        const readCaptionGeometry = (layer: "raised" | "lower" = "raised") => popupPlayer.evaluate((playerElement, captionLayer) => {
+          const player = playerElement.getBoundingClientRect();
+          const media = playerElement.querySelector("video") as HTMLVideoElement;
+          const captions = playerElement.querySelector<HTMLElement>(
+            captionLayer === "raised" ? "[data-testid='research-video-captions']" : ".research-video-player__captions--lower"
+          )!;
+          const bar = playerElement.querySelector<HTMLElement>("[data-testid='research-video-bottom-controls']")!;
+          const center = playerElement.querySelector<HTMLElement>(".research-video-player__center-control")!;
+          const settings = playerElement.querySelector<HTMLElement>("[data-testid='video-settings']")!;
+          const caption = captions.getBoundingClientRect();
+          const ratio = (media.videoWidth || 1710) / (media.videoHeight || 1108);
+          const paintedWidth = Math.min(player.width, player.height * ratio);
+          const paintedHeight = Math.min(player.height, player.width / ratio);
+          const paintedLeft = player.left + (player.width - paintedWidth) / 2;
+          const paintedRight = paintedLeft + paintedWidth;
+          const paintedTop = player.top + (player.height - paintedHeight) / 2;
+          const paintedBottom = paintedTop + paintedHeight;
+          const overlaps = (a: DOMRect, b: DOMRect) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+          return {
+            bar: bar.getBoundingClientRect(),
+            caption,
+            center: center.getBoundingClientRect(),
+            clipped: captions.scrollHeight - captions.clientHeight,
+            player,
+            paintedLeft,
+            paintedRight,
+            paintedBottom,
+            paintedTop,
+            raisedPosition: playerElement.getAttribute("data-caption-raised-position"),
+            barOverlap: overlaps(caption, bar.getBoundingClientRect()),
+            centerOverlap: overlaps(caption, center.getBoundingClientRect()),
+            centerVisible: getComputedStyle(center).visibility !== "hidden",
+            settingsOverlap: settings.getAttribute("data-open") === "true" && overlaps(caption, settings.getBoundingClientRect())
+          };
+        }, layer);
+        const expectRaisedCaptionWithinPlayerAndNearPicture = (geometry: Awaited<ReturnType<typeof readCaptionGeometry>>) => {
+          expect(geometry.caption.left).toBeGreaterThanOrEqual(geometry.paintedLeft - 1);
+          expect(geometry.caption.right).toBeLessThanOrEqual(geometry.paintedRight + 1);
+          expect(geometry.caption.top).toBeGreaterThanOrEqual(geometry.player.top - 1);
+          expect(geometry.caption.bottom).toBeLessThanOrEqual(geometry.player.bottom + 1);
+
+          const isInsidePaintedPicture =
+            geometry.caption.top >= geometry.paintedTop - 1 && geometry.caption.bottom <= geometry.paintedBottom + 1;
+          if (!isInsidePaintedPicture) {
+            expect(geometry.raisedPosition).toBe("upper");
+          }
+        };
+        const shownCaptionGeometry = await readCaptionGeometry();
+        expect(shownCaptionGeometry.clipped).toBeLessThanOrEqual(1);
+        expectRaisedCaptionWithinPlayerAndNearPicture(shownCaptionGeometry);
+        expect(
+          !shownCaptionGeometry.barOverlap && !shownCaptionGeometry.centerOverlap && !shownCaptionGeometry.settingsOverlap
+        ).toBe(true);
+        await popupVideo.tap({ position: { x: 12, y: 12 } });
+        await expect(popupPlayer).toHaveAttribute("data-controls-visible", "false");
+        await expect(popupPlayer.locator(".research-video-player__captions--lower")).toHaveCSS("opacity", "1");
+        await expect(captions).toHaveCSS("opacity", "0");
+        await popupVideo.tap({ position: { x: 12, y: 12 } });
+        await expect(popupPlayer).toHaveAttribute("data-controls-visible", "true");
+        await expect(captions).toHaveCSS("opacity", "1");
+        await popupPlayer.getByRole("button", { name: "Open video settings" }).tap();
+        await expect(popupPlayer.getByTestId("video-settings")).toHaveAttribute("data-open", "true");
+        for (const width of [320, 390, 420, 421, 440]) {
+          await page.setViewportSize({ height: 956, width });
+          await expect(popup).toBeVisible();
+          await expect(captions).toContainText("This red image shows the cell contour");
+          if ((await popupPlayer.getByTestId("video-settings").getAttribute("data-open")) !== "true") {
+            await popupPlayer.getByRole("button", { name: "Open video settings" }).tap();
+          }
+          await expect.poll(() => popupPlayer.evaluate((element) => Number.parseFloat(element.style.getPropertyValue("--research-video-caption-inline-end")))).toBeGreaterThan(12);
+          const geometry = await readCaptionGeometry();
+          expect(geometry.clipped).toBeLessThanOrEqual(1);
+          expectRaisedCaptionWithinPlayerAndNearPicture(geometry);
+          expect(!geometry.barOverlap && !geometry.settingsOverlap && (!geometry.centerVisible || !geometry.centerOverlap), JSON.stringify(geometry)).toBe(true);
+          const layerFonts = await popupPlayer.evaluate((playerElement) => {
+            const [raised, lower] = Array.from(playerElement.querySelectorAll<HTMLElement>(".research-video-player__captions"));
+            return [getComputedStyle(raised).font, getComputedStyle(lower).font];
+          });
+          expect(layerFonts[0]).toBe(layerFonts[1]);
+          await popupVideo.tap({ position: { x: 12, y: 12 } });
+          await expect(popupPlayer.locator(".research-video-player__captions--lower")).toHaveCSS("opacity", "1");
+          const hiddenCaptionGeometry = await readCaptionGeometry("lower");
+          expect(hiddenCaptionGeometry.caption.left).toBeGreaterThanOrEqual(hiddenCaptionGeometry.paintedLeft - 1);
+          expect(hiddenCaptionGeometry.caption.right).toBeLessThanOrEqual(hiddenCaptionGeometry.paintedRight + 1);
+          expect(hiddenCaptionGeometry.caption.bottom).toBeLessThanOrEqual(hiddenCaptionGeometry.paintedBottom + 1);
+          expect(hiddenCaptionGeometry.caption.bottom).toBeGreaterThanOrEqual(hiddenCaptionGeometry.paintedBottom - 16);
+          await popupVideo.tap({ position: { x: 12, y: 12 } });
+          await expect(captions).toHaveCSS("opacity", "1");
+          await expectNoHorizontalOverflow(page);
+        }
+        await popupPlayer.getByRole("button", { name: "Mute video" }).tap();
+        await expect(popupPlayer.getByTestId("video-volume-range")).toHaveAttribute("data-open", "true");
+        await page.keyboard.press("Escape");
+        await popupPlayer.getByRole("button", { name: "Open video settings" }).tap();
+        await expect(popupPlayer.getByTestId("video-settings")).toHaveAttribute("data-open", "true");
+        await expect(captions).toBeVisible();
+        await page.keyboard.press("Escape");
+        await expectCustomPlayerContained(popupPlayer);
+
+        await page.setViewportSize({ height: 956, width: 320 });
+        await popupVideo.evaluate((element) => {
+          const media = element as HTMLVideoElement;
+          media.currentTime = 19;
+          media.dispatchEvent(new Event("timeupdate"));
+          media.dispatchEvent(new Event("seeked"));
+        });
+        await expect(captions).toContainText("This red image shows the cell contour, which was obtained from the DIC image, and the outline");
+        await popupVideo.tap({ position: { x: 12, y: 12 } });
+        await expect(popupPlayer).toHaveAttribute("data-controls-visible", "false");
+        const popupCenterControl = popupPlayer.locator(".research-video-player__center-control");
+        await expect(popupCenterControl).toHaveCSS("visibility", "visible");
+        await popup.getByRole("button", { name: /Close video for CytoCV/ }).focus();
+        const webkitMobile = browser.browserType().name() === "webkit";
+        if (webkitMobile) {
+          await popupCenterControl.focus();
+          await page.keyboard.press("ArrowRight");
+        } else {
+          await page.keyboard.press("Tab");
+        }
+        await expect
+          .poll(() =>
+            popupPlayer.evaluate((playerElement) => {
+              const focused = document.activeElement;
+              if (!(focused instanceof HTMLElement) || !playerElement.contains(focused)) return false;
+              if (focused === playerElement) return true;
+
+              const isTransport = focused.matches(
+                ".research-video-player__center-control, .research-video-player__seek, .research-video-player__actions-left button"
+              );
+              const style = getComputedStyle(focused);
+              return isTransport && style.visibility !== "hidden" && style.display !== "none";
+            })
+          )
+          .toBe(true);
+        await expect(popupPlayer).toHaveAttribute("data-controls-visible", "true");
+        const seek = popupPlayer.getByRole("slider", { name: "Seek video" });
+        if (webkitMobile) {
+          await seek.focus();
+        } else {
+          await page.keyboard.press("Tab");
+        }
+        await expect
+          .poll(() =>
+            popupPlayer.evaluate((playerElement) => {
+              const focused = document.activeElement;
+              if (!(focused instanceof HTMLElement) || !playerElement.contains(focused)) return false;
+              const isTransport = focused.matches(
+                ".research-video-player__center-control, .research-video-player__seek, .research-video-player__actions-left button"
+              );
+              const style = getComputedStyle(focused);
+              return isTransport && style.visibility !== "hidden" && style.display !== "none";
+            })
+          )
+          .toBe(true);
+        await page.setViewportSize(viewport);
+        await expectNoHorizontalOverflow(page);
+
+        await popupPlayer.evaluate((element) => {
+          const player = element as HTMLElement;
+          const video = player.querySelector("video") as HTMLVideoElement;
+          (window as Window & { __researchVideoNode?: HTMLVideoElement }).__researchVideoNode = video;
+          Object.defineProperty(player, "requestFullscreen", {
+            configurable: true,
+            value: () => Promise.reject(new DOMException("blocked", "NotAllowedError"))
+          });
+        });
+        await popupVideo.evaluate(async (element) => {
+          await (element as HTMLVideoElement).play();
+        });
+        await expect.poll(() => popupVideo.evaluate((element) => (element as HTMLVideoElement).paused)).toBe(false);
+        const entryPlaybackTime = await popupVideo.evaluate((element) => (element as HTMLVideoElement).currentTime);
+        await popupPlayer.getByRole("button", { name: "Enter fullscreen" }).tap();
+        const fullscreen = page.getByRole("dialog", { name: "CytoCV supplementary workflow video enlarged fullscreen" });
+        await expect(fullscreen).toBeVisible();
+        const waitForFullscreenCaptionGeometry = async () => {
+          await expect(fullscreen).toHaveAttribute("data-state", "open");
+          await expect
+            .poll(() =>
+              popupPlayer.evaluate(async (playerElement) => {
+                const snapshot = () => {
+                  const caption = playerElement.querySelector<HTMLElement>("[data-testid='research-video-captions']")!;
+                  const player = playerElement.getBoundingClientRect();
+                  const captionBox = caption.getBoundingClientRect();
+                  return [player.width, player.height, captionBox.left, captionBox.top, captionBox.right, captionBox.bottom];
+                };
+                const before = snapshot();
+                await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+                const after = snapshot();
+                return before.every((value, index) => Math.abs(value - after[index]!) <= 0.5);
+              })
+            )
+            .toBe(true);
+        };
+        await expect(popupPlayer).toHaveAttribute("data-fullscreen-fallback", "true");
+        const [portraitFullscreenBox, portraitFullscreenPlayerBox] = await Promise.all([fullscreen.boundingBox(), popupPlayer.boundingBox()]);
+        expect(portraitFullscreenBox).not.toBeNull();
+        expect(portraitFullscreenPlayerBox).not.toBeNull();
+        expect(portraitFullscreenBox!.width).toBeGreaterThanOrEqual(viewport.width - 1);
+        expect(portraitFullscreenBox!.height).toBeGreaterThanOrEqual(viewport.height - 1);
+        expect(portraitFullscreenPlayerBox!.width).toBeGreaterThanOrEqual(portraitFullscreenBox!.width - 32);
+        expect(portraitFullscreenPlayerBox!.height).toBeGreaterThanOrEqual(portraitFullscreenBox!.height - 32);
+        await expect.poll(() => popupPlayer.evaluate((element) => {
+          const video = element.querySelector("video");
+          return video === (window as Window & { __researchVideoNode?: HTMLVideoElement }).__researchVideoNode;
+        })).toBe(true);
+        await expect.poll(() => popupVideo.evaluate((element) => (element as HTMLVideoElement).paused)).toBe(false);
+        await expect.poll(() => popupVideo.evaluate((element) => (element as HTMLVideoElement).currentTime)).toBeGreaterThan(entryPlaybackTime + 0.1);
+        await popupVideo.evaluate((element) => {
+          const media = element as HTMLVideoElement;
+          media.pause();
+          media.currentTime = 19;
+          media.dispatchEvent(new Event("timeupdate"));
+          media.dispatchEvent(new Event("seeked"));
+        });
+        await expect.poll(() => popupVideo.evaluate((element) => (element as HTMLVideoElement).paused)).toBe(true);
+        await expect(captions).toContainText("This red image shows the cell contour");
+        await expect.poll(() => popupVideo.evaluate((element) => (element as HTMLVideoElement).currentTime)).toBeCloseTo(19, 0);
+        for (const fallbackViewport of [
+          { height: 956, width: 320 },
+          { height: 956, width: 390 },
+          { height: 956, width: 420 },
+          { height: 956, width: 421 },
+          { height: 956, width: 440 },
+          { height: 390, width: 844 }
+        ]) {
+          await page.setViewportSize(fallbackViewport);
+          await expect(fullscreen).toBeVisible();
+          await waitForFullscreenCaptionGeometry();
+          await expect(captions).toContainText("This red image shows the cell contour");
+          const geometry = await readCaptionGeometry();
+          expect(geometry.clipped).toBeLessThanOrEqual(1);
+          expectRaisedCaptionWithinPlayerAndNearPicture(geometry);
+          expect(geometry.barOverlap, JSON.stringify(geometry)).toBe(false);
+          expect(geometry.settingsOverlap, JSON.stringify(geometry)).toBe(false);
+          if (geometry.centerVisible) expect(geometry.centerOverlap, JSON.stringify(geometry)).toBe(false);
+          await expectNoHorizontalOverflow(page);
+        }
+        const [fullscreenBox, fullscreenPlayerBox] = await Promise.all([fullscreen.boundingBox(), popupPlayer.boundingBox()]);
+        expect(fullscreenBox).not.toBeNull();
+        expect(fullscreenPlayerBox).not.toBeNull();
+        expect(fullscreenPlayerBox!.width).toBeGreaterThanOrEqual(fullscreenBox!.width - 32);
+        expect(fullscreenPlayerBox!.height).toBeGreaterThanOrEqual(fullscreenBox!.height - 32);
+        await popupVideo.evaluate(async (element) => {
+          await (element as HTMLVideoElement).play();
+        });
+        await expect.poll(() => popupVideo.evaluate((element) => (element as HTMLVideoElement).paused)).toBe(false);
+        const exitPlaybackTime = await popupVideo.evaluate((element) => (element as HTMLVideoElement).currentTime);
+        if ((await popupPlayer.getAttribute("data-controls-visible")) !== "false") {
+          await popupVideo.tap({ position: { x: 12, y: 12 } });
+        }
+        await expect(popupPlayer).toHaveAttribute("data-controls-visible", "false");
+        await expect(popupPlayer.getByTestId("research-video-bottom-controls")).toHaveAttribute("inert", "");
+        const fullscreenExit = fullscreen.getByRole("button", { name: "Exit fullscreen" });
+        await fullscreenExit.click();
+        await expect(fullscreen).not.toBeVisible();
+        await expect(popup).toBeVisible();
+        await expect(popupPlayer).toHaveAttribute("data-fullscreen-fallback", "false");
+        await expect(popupPlayer.getByRole("button", { name: "Enter fullscreen" })).toBeFocused();
+        await expect(popupPlayer).toHaveAttribute("data-controls-visible", "true");
+        await expect(popupPlayer.getByTestId("research-video-bottom-controls")).not.toHaveAttribute("inert");
+        await expect.poll(() => popupVideo.evaluate((element) => (element as HTMLVideoElement).paused)).toBe(false);
+        await expect.poll(() => popupVideo.evaluate((element) => (element as HTMLVideoElement).currentTime)).toBeGreaterThan(exitPlaybackTime + 0.1);
+        await popupVideo.evaluate((element) => (element as HTMLVideoElement).pause());
+        await popup.getByRole("button", { name: /Close video for CytoCV/ }).tap();
+        await page.setViewportSize(viewport);
+        await expectNoHorizontalOverflow(page);
+      }
+    } finally {
+      await context.close();
     }
   });
 
