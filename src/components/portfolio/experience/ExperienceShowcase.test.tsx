@@ -11,7 +11,7 @@ const cytocvExperience: ExperienceItem = {
   organizationLogo: "/images/organizations/uwb_stem_logo.png",
   organizationLogoAlt: "UW Bothell School of STEM logo",
   type: "research",
-  location: "Bothell, WA",
+  location: "Bothell, Washington, United States",
   startDate: "2024-08",
   endDate: "2026-08",
   homeSummary: "Built and deployed full-stack computer-vision tools for scientific microscopy analysis.",
@@ -29,7 +29,7 @@ const treasuryExperience: ExperienceItem = {
   organization: "U.S. Department of the Treasury",
   organizationLogo: "/images/organizations/us_treasury_logo.webp",
   organizationLogoAlt: "U.S. Department of the Treasury logo",
-  location: "Washington, DC",
+  location: "Washington, District of Columbia, United States",
   startDate: "2026-08",
   endDate: "2026-10",
   bullets: [],
@@ -41,11 +41,11 @@ const treasuryExperience: ExperienceItem = {
 
 const cdaoExperience: ExperienceItem = {
   id: "cdao-some-kinda-engineer",
-  title: "Some Kinda Engineer",
-  organization: "Chief Digital & Artificial Intelligence Office",
+  title: "Member of Technical Staff",
+  organization: "DoW Chief Digital & Artificial Intelligence Office (CDAO)",
   organizationLogo: "/images/organizations/cdao_logo.webp",
-  organizationLogoAlt: "Chief Digital & Artificial Intelligence Office emblem",
-  location: "Washington, DC",
+  organizationLogoAlt: "DoW Chief Digital & Artificial Intelligence Office (CDAO) emblem",
+  location: "Washington, District of Columbia, United States",
   startDate: "2026-10",
   endDate: "Present",
   bullets: [],
@@ -82,8 +82,11 @@ describe("ExperienceShowcase", () => {
     expect(screen.getByText("UW Bothell School of STEM")).toBeInTheDocument();
     expect(screen.getByText("Aug 2024 – Aug 2026")).toBeInTheDocument();
     const metadataLines = Array.from(container.querySelectorAll(".experience-card__metadata-line"));
-    expect(metadataLines.map((line) => line.textContent)).toEqual(["Aug 2024 – Aug 2026 · 2 yrs 1 mo", "Bothell, WA"]);
-    expect(screen.getByText("Bothell, WA")).toBeInTheDocument();
+    expect(metadataLines.map((line) => line.textContent)).toEqual([
+      "Aug 2024 – Aug 2026 · 2 yrs 1 mo",
+      "Bothell, Washington, United States"
+    ]);
+    expect(screen.getByText("Bothell, Washington, United States")).toBeInTheDocument();
     expect(screen.getByText(/Built and deployed CytoCV/)).toBeInTheDocument();
     expect(screen.getByText("Research")).toBeInTheDocument();
     expect(container.querySelector(".experience-card__logo")).toHaveAttribute(
@@ -166,7 +169,7 @@ describe("ExperienceShowcase", () => {
     render(<ExperienceShowcase items={[cytocvExperience, secondRole]} motionEnabled={false} summary={experienceSummary} />);
 
     const cards = screen.getAllByRole("article");
-    const workflowButton = within(cards[0]!).getByRole("button", { name: /Scientific workflow/i });
+    const workflowButton = within(cards[0]!).getByRole("button", { name: /Scientific Workflow Automation/i });
     const analysisButton = cards[1]!.querySelector<HTMLButtonElement>(".detail-section__trigger");
 
     expect(analysisButton).not.toBeNull();
@@ -190,7 +193,7 @@ describe("ExperienceShowcase", () => {
   it("closes through document Escape and restores focus without consuming a handled Escape", async () => {
     render(<ExperienceShowcase items={[cytocvExperience]} motionEnabled={false} summary={experienceSummary} />);
 
-    const trigger = screen.getByRole("button", { name: /Scientific workflow/i });
+    const trigger = screen.getByRole("button", { name: /Scientific Workflow Automation/i });
     fireEvent.click(trigger);
     const panel = document.getElementById(trigger.getAttribute("aria-controls")!);
     const scrollport = panel?.querySelector<HTMLElement>(".detail-section__panel-scroll");
@@ -216,7 +219,7 @@ describe("ExperienceShowcase", () => {
 
     expect(roleCard).not.toBeNull();
     expect(within(roleCard!).getByText("U.S. Department of the Treasury")).toBeInTheDocument();
-    expect(within(roleCard!).getByText("Washington, DC")).toBeInTheDocument();
+    expect(within(roleCard!).getByText("Washington, District of Columbia, United States")).toBeInTheDocument();
     expect(within(roleCard!).getByText("Tech.Treasury.Gov")).toBeInTheDocument();
     const treasuryResource = within(roleCard!).getByRole("link", { name: "Tech.Treasury.Gov" });
     expect(treasuryResource).toHaveAttribute(
@@ -231,7 +234,7 @@ describe("ExperienceShowcase", () => {
     expect(within(roleCard!).queryByRole("button")).not.toBeInTheDocument();
     expect(Array.from(roleCard!.querySelectorAll(".experience-card__metadata-line")).map((line) => line.textContent)).toEqual([
       "Aug 2026 – Oct 2026 · 3 mos",
-      "Washington, DC"
+      "Washington, District of Columbia, United States"
     ]);
   });
 
@@ -248,13 +251,13 @@ describe("ExperienceShowcase", () => {
 
       expect(screen.getByText("Details not yet available.")).toBeInTheDocument();
       expect(screen.getByText("Current")).toBeInTheDocument();
-      expect(screen.getByRole("heading", { name: "Some Kinda Engineer" })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Member of Technical Staff" })).toBeInTheDocument();
       expect(container.querySelector(".experience-card__logo")).toHaveAttribute("src", "/images/organizations/cdao_logo.webp");
       expect(screen.getByText("Oct 2026 – Present")).toBeInTheDocument();
-      expect(screen.getByText("Washington, DC")).toBeInTheDocument();
+      expect(screen.getByText("Washington, District of Columbia, United States")).toBeInTheDocument();
       expect(
         Array.from(container.querySelectorAll(".experience-card__metadata-line")).map((line) => line.textContent)
-      ).toEqual(["Oct 2026 – Present · 1 mo", "Washington, DC"]);
+      ).toEqual(["Oct 2026 – Present · 1 mo", "Washington, District of Columbia, United States"]);
 
       vi.setSystemTime(new Date("2026-11-01T12:00:00"));
       Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });

@@ -61,6 +61,9 @@ const metadata: GeneratedContentMetadata = {
 const brentFullQuote =
   "Nicolas has worked with me on an open source project, CytoCV, in collaboration with biologists at the University of Utah. He has excelled in many critical areas on this project including software engineering, web development, UX, computer vision, and the ability to work with biologists and translate their needs into software. Nicolas is proactive in identifying and solving issues and has demonstrated excellent skills in writing, documentation, and collaboration.";
 
+const billyFullQuote =
+  "Nicolas was already a highly skilled engineer when I met him, clearly immersed in the latest agentic coding practices and enthusiastic about learning more. He exhibited a great passion for building useful software and taking an active interest in stakeholders' needs. I highly recommend him for software engineering roles, especially any for which clear communication is a necessity.";
+
 function createSheets(overrides: Partial<RawPortfolioSheets> = {}): RawPortfolioSheets {
   return {
     profile: [
@@ -990,17 +993,19 @@ describe("portfolio normalization", () => {
     const cytocvResearch = content.research.find((item) => item.id === "cytocv-miller-lab");
 
     expect(content.profile).toMatchObject({
-      currentTitle: "Some Kinda Engineer",
-      currentCompany: "Chief Digital & Artificial Intelligence Office",
+      currentTitle: "Member of Technical Staff",
+      currentCompany: "DoW Chief Digital & Artificial Intelligence Office (CDAO)",
       currentExperienceId: "cdao-some-kinda-engineer",
-      previousExperienceId: "us-treasury-ai-engineer"
+      previousExperienceId: "us-treasury-ai-engineer",
+      experienceSummary:
+        "My experience spans engineering with the DoW Chief Digital & Artificial Intelligence Office (CDAO) and the U.S. Treasury, research software and machine learning at the University of Washington, and teaching core computer science courses."
     });
     expect(cdaoRole).toMatchObject({
-      title: "Some Kinda Engineer",
-      organization: "Chief Digital & Artificial Intelligence Office",
+      title: "Member of Technical Staff",
+      organization: "DoW Chief Digital & Artificial Intelligence Office (CDAO)",
       organizationLogo: "/images/organizations/cdao_logo.webp",
-      organizationLogoAlt: "Chief Digital & Artificial Intelligence Office emblem",
-      location: "Washington, DC",
+      organizationLogoAlt: "DoW Chief Digital & Artificial Intelligence Office (CDAO) emblem",
+      location: "Washington, District of Columbia, United States",
       startDate: "2026-10",
       endDate: "Present",
       homeOrder: 1,
@@ -1013,7 +1018,7 @@ describe("portfolio normalization", () => {
       organizationLogo: "/images/organizations/us_treasury_logo.webp",
       organizationLogoAlt: "U.S. Department of the Treasury logo",
       startDate: "2026-08",
-      location: "Washington, DC",
+      location: "Washington, District of Columbia, United States",
       endDate: "2026-10",
       homeOrder: 2,
       detailOrder: 2,
@@ -1023,15 +1028,15 @@ describe("portfolio normalization", () => {
     expect(homeContent.experience[0]?.id).toBe("cdao-some-kinda-engineer");
     expect(overview.currentWork).toMatchObject({
       id: "cdao-some-kinda-engineer",
-      title: "Some Kinda Engineer",
-      organization: "Chief Digital & Artificial Intelligence Office",
+      title: "Member of Technical Staff",
+      organization: "DoW Chief Digital & Artificial Intelligence Office (CDAO)",
       startDate: "2026-10",
       endDate: "Present",
       dateLabel: "Oct 2026 – Present",
-      location: "Washington, DC",
+      location: "Washington, District of Columbia, United States",
       logo: {
         src: "/images/organizations/cdao_logo.webp",
-        alt: "Chief Digital & Artificial Intelligence Office emblem"
+        alt: "DoW Chief Digital & Artificial Intelligence Office (CDAO) emblem"
       }
     });
     expect(overview.currentWork?.summary).toBeUndefined();
@@ -1041,6 +1046,21 @@ describe("portfolio normalization", () => {
       "Aug 2024 to Aug 2026"
     );
     expect(cytocvResearch?.endDate).toBe("2026-08");
+    expect(
+      content.experience
+        .filter((item) => [
+          "research-assistant-software-engineering",
+          "teaching-assistant",
+          "undergraduate-researcher-adversarial-ml",
+          "research-assistant-ai-ml"
+        ].includes(item.id))
+        .map((item) => item.location)
+    ).toEqual([
+      "Bothell, Washington, United States",
+      "Bothell, Washington, United States",
+      "Bothell, Washington, United States",
+      "Bothell, Washington, United States"
+    ]);
   });
 
   it("associates the approved organization and university marks through template content", () => {
@@ -1062,10 +1082,10 @@ describe("portfolio normalization", () => {
         }
       ],
       [
-        "Chief Digital & Artificial Intelligence Office",
+        "DoW Chief Digital & Artificial Intelligence Office (CDAO)",
         {
           organizationLogo: "/images/organizations/cdao_logo.webp",
-          organizationLogoAlt: "Chief Digital & Artificial Intelligence Office emblem"
+          organizationLogoAlt: "DoW Chief Digital & Artificial Intelligence Office (CDAO) emblem"
         }
       ]
     ]);
@@ -1157,7 +1177,7 @@ describe("portfolio normalization", () => {
     ]);
   });
 
-  it("maps the three Home projects, three focused skill groups, and four recommendations from template content", () => {
+  it("maps the three Home projects, three focused skill groups, and five recommendations from template content", () => {
     const content = normalizePortfolioContent(readTemplateSheets(), metadata);
     const homeProjects = content.projects.filter((item) => item.showOnHome);
     const skillCounts = new Map<string, number>();
@@ -1255,11 +1275,25 @@ describe("portfolio normalization", () => {
       content.skills.every((skill) => Boolean(skill.proficiency && skill.summary && skill.whereUsed))
     ).toBe(true);
     expect(content.recommendations.map((item) => item.recommenderName)).toEqual([
+      "Billy Gardner McIntyre",
       "Brent Lagesse",
       "Annuska Zolyomi, PhD",
       "Anoop Prasad",
       "Minh Nhat Huynh"
     ]);
+    expect(content.recommendations.find((item) => item.id === "billy-gardner-mcintyre")).toMatchObject({
+      recommenderTitle: "AI Engineer",
+      recommenderOrganization: "U.S. Department of the Treasury",
+      relationship: "Mentored Nicolas",
+      recommendationDate: "2026-10-05",
+      source: "LinkedIn",
+      sourceUrl: "https://www.linkedin.com/in/nicolas-gioanni/details/recommendations/",
+      linkedinUrl: "https://www.linkedin.com/in/bgmcintyre",
+      fullQuote: billyFullQuote,
+      homeOrder: 1,
+      detailOrder: 1,
+      showOnHome: true
+    });
     expect(content.recommendations.find((item) => item.id === "brent-lagesse")).toMatchObject({
       fullQuote: brentFullQuote,
       fullQuoteLink: {
@@ -1269,7 +1303,19 @@ describe("portfolio normalization", () => {
     });
     expect(content.recommendations.find((item) => item.id === "brent-lagesse")?.fullQuote).not.toContain("https://");
     expect(content.recommendations.find((item) => item.id === "brent-lagesse")?.fullQuote.match(/CytoCV/g)).toHaveLength(1);
-    expect(content.recommendations.filter((item) => item.showOnHome)).toHaveLength(3);
+    expect(content.recommendations.filter((item) => item.showOnHome)).toHaveLength(4);
+    expect(selectHomeRecommendations(content.recommendations, 3).map((item) => item.id)).toEqual([
+      "billy-gardner-mcintyre",
+      "brent-lagesse",
+      "annuska-zolyomi"
+    ]);
+    expect(sortRecommendationsForDetail(content.recommendations).map((item) => item.id)).toEqual([
+      "billy-gardner-mcintyre",
+      "brent-lagesse",
+      "annuska-zolyomi",
+      "anoop-prasad",
+      "minh-nhat-huynh"
+    ]);
   });
 
   it("rejects mail links used as organization logos", () => {

@@ -7,7 +7,7 @@ export function RecommendationsPageSkeleton() {
   return (
     <PageSkeleton pathname={siteRoutes.recommendations}>
       <div aria-hidden="true" className="detail-card-skeleton-grid detail-card-skeleton-grid--recommendations">
-        {Array.from({ length: 4 }).map((_, index) => (
+        {Array.from({ length: 5 }).map((_, index) => (
           <article className="detail-card-skeleton detail-card-skeleton--recommendation" key={index}>
             <div className="detail-card-skeleton__header">
               <SkeletonBlock height={24} width="66%" />

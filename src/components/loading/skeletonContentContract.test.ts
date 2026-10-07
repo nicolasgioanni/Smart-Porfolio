@@ -69,7 +69,7 @@ const experienceContentFixture: ExperienceItem[] = [
   title: `Experience ${index + 1}`,
   organization:
     index === 0
-      ? "Chief Digital & Artificial Intelligence Office"
+      ? "DoW Chief Digital & Artificial Intelligence Office (CDAO)"
       : index === 1
         ? "Treasury"
         : index < 4
@@ -133,6 +133,9 @@ describe("skeleton source contracts", () => {
     const generatedSummary = "A valid Experience summary from supported generated content.";
 
     expect(experienceFallback).not.toBeNull();
+    expect(experienceFallback?.description).toBe(
+      "My experience spans engineering with the DoW Chief Digital & Artificial Intelligence Office (CDAO) and the U.S. Treasury, research software and machine learning at the University of Washington, and teaching core computer science courses."
+    );
     expect(resolveRouteHeaderContent(siteRoutes.experience, { profile: { experienceSummary: generatedSummary } })?.description).toBe(
       generatedSummary
     );

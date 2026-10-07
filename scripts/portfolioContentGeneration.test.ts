@@ -381,7 +381,7 @@ describe("strict XLSX download boundary", () => {
     expect(requestHeaders.has("cookie")).toBe(false);
     expect(generated.metadata.sourceMode).toBe("remote");
     expect(generated.profile.experienceSummary).toBe(
-      "My experience spans engineering with the Chief Digital & Artificial Intelligence Office and the U.S. Treasury, research software and machine learning at the University of Washington, and teaching core computer science courses."
+      "My experience spans engineering with the DoW Chief Digital & Artificial Intelligence Office (CDAO) and the U.S. Treasury, research software and machine learning at the University of Washington, and teaching core computer science courses."
     );
     expect(generated.metadata.sources.resume).toBe("template");
     expect(logs.join("\n")).not.toContain(workbookUrl);

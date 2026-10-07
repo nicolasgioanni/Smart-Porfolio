@@ -107,6 +107,7 @@ describe("skeleton components", () => {
       "recommendations"
     ]);
     expect(container.querySelectorAll('[data-skeleton-section="education"] .home-skeleton__row')).toHaveLength(1);
+    expect(container.querySelectorAll('[data-skeleton-section="recommendations"] .home-skeleton__card')).toHaveLength(3);
     expect(container.querySelectorAll(".home-skeleton__identity-list > .skeleton-block")).toHaveLength(5);
     expect(
       Array.from(container.querySelectorAll(".home-skeleton__experience-group")).map(
@@ -358,7 +359,7 @@ describe("skeleton components", () => {
     expect(container.querySelectorAll(".detail-card-skeleton--project")).toHaveLength(3);
 
     rerender(<RouteSkeleton pathname="/recommendations" />);
-    expect(container.querySelectorAll(".detail-card-skeleton--recommendation")).toHaveLength(4);
+    expect(container.querySelectorAll(".detail-card-skeleton--recommendation")).toHaveLength(5);
 
     rerender(<RouteSkeleton pathname="/resume" />);
     expect(container.querySelector(".resume-skeleton__actions")).toBeInTheDocument();
