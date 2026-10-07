@@ -1,7 +1,7 @@
 import type { ExperienceItem, GeneratedPortfolioContent, PortfolioLink, ProfileContent, ProjectItem } from "@/content/types";
 import { describe, expect, it } from "vitest";
 import { experienceSkeletonProfiles } from "@/components/loading/ExperiencePageSkeleton";
-import { projectSkeletonProfiles } from "@/components/loading/projectSkeletonProfiles";
+import { getProjectSkeletonProfiles } from "@/components/loading/projectSkeletonProfiles";
 import { researchSkeletonProfiles } from "@/components/loading/ResearchPageSkeleton";
 import { getExperienceModeContent } from "@/lib/content/experienceNarratives";
 import { getResearchFormalTitle, getResearchModeContent, getResearchVisibleResources } from "@/lib/content/researchNarratives";
@@ -157,21 +157,14 @@ describe("skeleton source contracts", () => {
     expect(siteRoutePaths.slice(1).every((pathname) => Boolean(routeHeaderContent[pathname]?.description))).toBe(true);
   });
 
-  it("keeps literal project loader profiles in the fixture detail order without ambient generated content", () => {
+  it("derives project loader profiles from the selected detail content", () => {
     const projects = selectProjectDetailContent({ projects: projectContentFixture } as GeneratedPortfolioContent);
+    const projectSkeletonProfiles = getProjectSkeletonProfiles(projects);
 
     expect(projects.map((project) => project.id)).toEqual(["notepal", "clair", "leetnotes"]);
     expect(projectSkeletonProfiles.map((profile) => profile.id)).toEqual(projects.map((project) => project.id));
-    expect(projectSkeletonProfiles.map((profile) => profile.chipWidths.length)).toEqual([10, 6, 5]);
     expect(projectSkeletonProfiles.map((profile) => profile.actionWidths.length)).toEqual([2, 1, 1]);
-    expect(projectSkeletonProfiles.map((profile) => profile.deepDiveLines)).toEqual([
-      [[100, 84], [100, 88]],
-      [[100, 86], [100, 84]],
-      [[100, 86], [100, 90]]
-    ]);
-    expect(projects.map((project) => project.stack.length)).toEqual([10, 6, 5]);
-    expect(projects.every((project) => Boolean(project.problem) && Boolean(project.solution))).toBe(true);
-    expect(projects.every((project) => !project.impact)).toBe(true);
+    expect(projectSkeletonProfiles.map((profile) => profile.summaryWidths)).toEqual([[100, 86], [100, 72], [100, 86]]);
     expect(projects.map((project) => project.links.length)).toEqual([2, 1, 1]);
   });
 

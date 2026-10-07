@@ -13,7 +13,7 @@ export function generateMetadata(): Metadata {
   return createPageMetadata(getPortfolioContent(), {
     pathname: siteRoutes.projects,
     title: projectsHeader.title,
-    description: "Engineering projects with problem framing, decisions, stack, links, and impact."
+    description: projectsHeader.description
   });
 }
 

@@ -1,31 +1,39 @@
+import type { ProjectItem } from "@/content/types";
+import { getProjectActions } from "@/lib/projects/projectActions";
+import { getProjectVisual } from "@/lib/projects/projectVisualRegistry";
+
 export type ProjectSkeletonProfile = {
   actionWidths: readonly number[];
-  chipWidths: readonly number[];
-  deepDiveLines: readonly (readonly number[])[];
-  id: "notepal" | "clair" | "leetnotes";
+  hasVisual: boolean;
+  id: string;
+  summaryWidths: readonly number[];
+  tabCount: number;
 };
 
+export type HomeProjectSkeletonProfile = Pick<ProjectSkeletonProfile, "actionWidths" | "id">;
+
 /**
- * Literal presentation data in resolved detail order. Keeping it local means
- * the loading boundary never waits on generated portfolio content.
+ * The Projects loader follows the validated detail selection. This keeps both
+ * the legacy three-row template and the five-project showcase aligned with
+ * their rendered cards without duplicating workbook-owned counts.
  */
-export const projectSkeletonProfiles = [
-  {
-    actionWidths: [112, 96],
-    chipWidths: [60, 78, 59, 54, 90, 82, 70, 70, 86, 62],
-    deepDiveLines: [[100, 84], [100, 88]],
-    id: "notepal"
-  },
-  {
-    actionWidths: [112],
-    chipWidths: [66, 59, 82, 40, 54, 82],
-    deepDiveLines: [[100, 86], [100, 84]],
-    id: "clair"
-  },
-  {
-    actionWidths: [112],
-    chipWidths: [59, 102, 100, 44, 54],
-    deepDiveLines: [[100, 86], [100, 90]],
-    id: "leetnotes"
-  }
-] as const satisfies readonly ProjectSkeletonProfile[];
+export function getProjectSkeletonProfiles(items: readonly ProjectItem[]): ProjectSkeletonProfile[] {
+  return items.map((item, index) => {
+    const hasKnownVisual = Boolean(getProjectVisual(item.id));
+
+    return {
+    actionWidths: getProjectActions(item.links).map((action) => (action.label === "Source code" ? 112 : 96)),
+    hasVisual: hasKnownVisual || Boolean(item.image),
+    id: item.id,
+    summaryWidths: index % 2 === 0 ? [100, 86] : [100, 72],
+    tabCount: hasKnownVisual ? 2 : 0
+    };
+  });
+}
+
+export function getHomeProjectSkeletonProfiles(items: readonly ProjectItem[]): HomeProjectSkeletonProfile[] {
+  return items.map((item) => ({
+    actionWidths: getProjectActions(item.links).map((action) => (action.label === "Source code" ? 92 : 84)),
+    id: item.id
+  }));
+}

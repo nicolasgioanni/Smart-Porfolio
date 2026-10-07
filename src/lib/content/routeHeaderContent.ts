@@ -38,7 +38,7 @@ export const routeHeaderContent = {
   },
   [siteRoutes.projects]: {
     accessory: "none",
-    description: "I build practical tools for learning, file organization, and developer automation—explore the projects below.",
+    description: "Applied AI, full-stack, automation, and desktop projects—each with a concept view and an implementation flow.",
     placement: "page",
     title: "Projects"
   },

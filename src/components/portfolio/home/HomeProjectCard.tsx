@@ -1,30 +1,14 @@
-import type { PortfolioContentLink, ProjectItem } from "@/content/types";
+import type { ProjectItem } from "@/content/types";
 import { GlassButton } from "@/components/glass/GlassButton";
 import { PortfolioCard } from "@/components/portfolio/shared/PortfolioCard";
 import { ProjectSkillShowcase } from "@/components/portfolio/projects/ProjectSkillShowcase";
-import { getLinkKind, getSummary } from "@/lib/content/displayHelpers";
+import { getSummary } from "@/lib/content/displayHelpers";
 import { HomeCardSummary } from "@/components/portfolio/home/HomeCardSummary";
+import { getProjectActions } from "@/lib/projects/projectActions";
 
 type HomeProjectCardProps = {
   item: ProjectItem;
 };
-
-type ProjectAction = {
-  label: "Source code" | "Live demo";
-  link: PortfolioContentLink;
-};
-
-const projectActionOrder: Array<{ kind: string; label: ProjectAction["label"] }> = [
-  { kind: "github", label: "Source code" },
-  { kind: "website", label: "Live demo" }
-];
-
-function getProjectActions(links: PortfolioContentLink[]): ProjectAction[] {
-  return projectActionOrder.flatMap(({ kind, label }) => {
-    const link = links.find((candidate) => getLinkKind(candidate) === kind);
-    return link ? [{ label, link }] : [];
-  });
-}
 
 export function HomeProjectCard({ item }: HomeProjectCardProps) {
   const summary = getSummary(item.homeSummary, item.detailSummary);

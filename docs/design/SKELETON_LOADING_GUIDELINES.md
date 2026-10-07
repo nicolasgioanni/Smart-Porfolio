@@ -33,7 +33,7 @@ Reusable primitives and compositions include:
 | --- | --- |
 | Home | Profile shell, core content sections, three skills cards, and recommendation footprint. |
 | Research | Page introduction, compact audience selector, and three alternating visualization-and-evidence modules, each with abstract and explainer-row footprints. |
-| Projects | Page introduction and card grid shaped like the evidence route. |
+| Projects | Canonical page introduction and content-derived gallery cards with title, sentence, folder tabs, media, and source/demo action footprints. |
 | Experience | Page introduction, compact audience selector, and six logo-led template role cards with evidence-row footprints. |
 | Recommendations | Page introduction and five recommendation-card footprints. |
 | Resume | Page introduction and private-resume request panel. |
@@ -60,6 +60,8 @@ Each route `loading.tsx` calls `shouldRenderSkeletons()` before returning the pa
 Experience is the only generated page-header override. Both its resolved route and loader pass validated `getPortfolioContent()` data through `resolveRouteHeaderContent()` so they share the generated `profile.experienceSummary` or the registry fallback exactly. Do not add another generated override outside that resolver.
 
 Research card footprint counts come from validated selected detail items and the same `getResearchVisibleResources()` resolver used by resolved cards. Only the isolated visual renderer may inject controlled canonical local-template Research items; normal loading boundaries and direct alignment remain generated-workbook driven.
+
+Projects card counts and action footprints come from the selected validated records and the same source-first action resolver as the resolved page. Home takes its compact project footprints from the selected Home records. Both the older three-row workbook and migrated five-row workbook remain supported. The gallery loader mirrors the two-column `981px` boundary, single-column `980px` boundary, and reserved media ratios without interactive tabs or copied body text. Controlled local-template Projects and Home items are injected only for the isolated visual snapshots; normal loaders and direct alignment use generated content.
 
 Research visual columns preserve the resolved route's two-row order: graphical abstract first, then the CytoCV video or an explainer scene. Above `920px`, the two static rows use the same flexible centered tracks as the resolved column; at `920px` and below they return to natural heights. The one-pixel divider is inset `24px` on desktop and `16px` on narrow layouts. Graphical-abstract frames retain their 16px local inset and 16:9 containment geometry. An explainer loader reserves a linked-scene surface, compact nonsemantic label and marker-key shapes, and a 44px playback-control footprint. It does not copy the resolved caption or workflow prose. Keep all placeholders noninteractive while updating these frames.
 

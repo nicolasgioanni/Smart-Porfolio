@@ -92,7 +92,7 @@ describe("package and CI deployment automation", () => {
       "playwright test contact.spec.ts --project=chromium"
     );
     expect(packageJson.scripts["test:e2e:priority"]).toBe(
-      "playwright test skeleton-alignment.spec.ts skeletons.transition.spec.ts navigation.spec.ts footer.spec.ts contact.spec.ts recommendations.spec.ts experience.spec.ts research.spec.ts research-mobile-video.spec.ts --project=chromium"
+      "playwright test skeleton-alignment.spec.ts skeletons.transition.spec.ts navigation.spec.ts footer.spec.ts contact.spec.ts recommendations.spec.ts experience.spec.ts projects.spec.ts research.spec.ts research-mobile-video.spec.ts --project=chromium"
     );
     expect(packageJson.scripts["test:e2e:full"]).toBe(
       "playwright test --project=chromium"
@@ -112,10 +112,12 @@ describe("package and CI deployment automation", () => {
     expect(priorityTestDirectories).toEqual([
       "src/components/overlay",
       "src/components/portfolio/experience",
+      "src/components/portfolio/projects",
       "src/components/portfolio/recommendations",
       "src/components/portfolio/research",
       "src/components/portfolio/shared",
       "src/components/theme",
+      "src/lib/projects",
       "src/lib/theme"
     ]);
     expect(requiredPriorityFiles).toEqual(
@@ -131,6 +133,8 @@ describe("package and CI deployment automation", () => {
         "src/components/portfolio/shared/DetailDisclosureList.test.tsx",
         "src/components/portfolio/shared/detailDisclosureStyles.test.ts",
         "src/components/portfolio/experience/ExperienceShowcase.test.tsx",
+        "src/components/portfolio/projects/ProjectSkillShowcase.test.tsx",
+        "src/components/portfolio/projects/ProjectShowcase.test.tsx",
         "src/components/portfolio/recommendations/RecommendationsList.test.tsx",
         "src/components/portfolio/research/ResearchShowcase.test.tsx",
         "src/components/overlay/ModalDialog.test.tsx"

@@ -169,9 +169,15 @@ Use `PortfolioCard` variants according to meaning:
 | `media` | Card with primary media. |
 | `timeline` | Experience timeline entry. |
 
-Research and project Home cards use concise copy and bottom-aligned verified actions. At `720px` and below, they show one short sentence from `homeMobileSummaries.ts`; unknown IDs use the first authored summary sentence. The `721–860px` intermediate Home layout uses that same concise summary and hides Home Project skill chips to keep half-width windows readable; full copy and skills return at `861px`. CSS selects the server-rendered copy for the viewport. Research Home cards omit dates and locations at every size. Project Home skill chips appear above `860px` only. Phone Home sections use 16px panel padding, slightly tighter gaps, 17px card headings, and 13px supporting copy. The Projects route retains evidence cards, while the Research route uses its alternating project showcase described below.
+Research and project Home cards use concise copy and bottom-aligned verified actions. At `720px` and below, they show one short sentence from `homeMobileSummaries.ts`; unknown IDs use the first authored summary sentence. The `721–860px` intermediate Home layout uses that same concise summary and hides Home Project skill chips to keep half-width windows readable; full copy and skills return at `861px`. CSS selects the server-rendered copy for the viewport. Research Home cards omit dates and locations at every size. Project Home skill chips appear above `860px` only. Phone Home sections use 16px panel padding, slightly tighter gaps, 17px card headings, and 13px supporting copy. The Projects route uses the visual gallery below, while the Research route uses its alternating project showcase.
 
 Home section route actions use compact buttons aligned with the section heading. They remain visually subordinate to primary page actions.
+
+### Projects gallery
+
+The Projects route uses two equal columns above `980px` and one column at or below that boundary. Each `PortfolioCard` keeps its title, concise workbook summary, and source-first actions visible around a folder-style visual frame. Five known project IDs pair a static 3D Concept illustration with a code-rendered How it works diagram. The selected view belongs to the individual card; there is no carousel, autoplay, or shared selection.
+
+The shared media footprint is `16:10`, changing to `4:3` on narrow screens. Folder tabs have visible selected and focus states and a minimum 44px target. Diagrams use real HTML labels over native SVG geometry, and semantic tokens keep their solid surfaces legible across all three palettes. View changes are immediate and leave surrounding geometry fixed. Unknown project IDs retain authored copy and image without fabricated workflows. See [Project showcase content and artwork](../content/PROJECT_SHOWCASE.md) for the registry, attribution, and workbook handoff.
 
 ### Research showcase
 

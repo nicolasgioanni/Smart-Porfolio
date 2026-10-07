@@ -1177,7 +1177,7 @@ describe("portfolio normalization", () => {
     ]);
   });
 
-  it("maps the three Home projects, three focused skill groups, and five recommendations from template content", () => {
+  it("maps five template projects into the ranked Home three, three focused skill groups, and five recommendations", () => {
     const content = normalizePortfolioContent(readTemplateSheets(), metadata);
     const homeProjects = content.projects.filter((item) => item.showOnHome);
     const skillCounts = new Map<string, number>();
@@ -1191,17 +1191,43 @@ describe("portfolio normalization", () => {
       maxHomeRecommendationItems: 3,
       maxHomeSkillItems: 12
     });
-    expect(homeProjects.map((item) => item.title)).toEqual(["NotePal", "Clair", "LeetNotes"]);
+    expect(content.projects.map((item) => item.id)).toEqual([
+      "compliance-label-assistant",
+      "notepal",
+      "tergion-technologies",
+      "leetnotes",
+      "clair"
+    ]);
+    expect(content.projects.map((item) => item.homeOrder)).toEqual([1, 2, 3, 4, 5]);
+    expect(content.projects.map((item) => item.detailOrder)).toEqual([1, 2, 3, 4, 5]);
+    expect(homeProjects.map((item) => item.id)).toEqual([
+      "compliance-label-assistant",
+      "notepal",
+      "tergion-technologies"
+    ]);
+    expect(selectHomeContent(content).projects.map((item) => item.id)).toEqual([
+      "compliance-label-assistant",
+      "notepal",
+      "tergion-technologies"
+    ]);
+    expect(content.projects.filter((item) => !item.showOnHome).map((item) => item.id)).toEqual([
+      "leetnotes",
+      "clair"
+    ]);
+    expect(content.projects.filter((item) => !item.links.some((link) => link.label === "Live demo")).map((item) => item.id)).toEqual([
+      "leetnotes",
+      "clair"
+    ]);
     expect(homeProjects.every((item) => item.homeSkills.length === 3)).toBe(true);
     expect(content.projects.find((item) => item.id === "notepal")).toMatchObject({
-      subtitle: "Multimodal study workspace",
+      subtitle: "Co-developed AI study workspace",
       homeSkills: [
         {
           name: "Next.js",
           icon: "nextdotjs",
           summary: "Next.js powers NotePal's web interface and routing.",
           details:
-            "The Next.js frontend provides the application interface, route structure, and authenticated study workflow while sending uploaded content to the separate Flask processing API."
+            "The Next.js frontend provides the application routes, authenticated study workspace, rich-text editing, quizzes, and document-aware chat. A separate Flask/Python module processes document and media inputs."
         },
         {
           name: "TypeScript",
@@ -1215,7 +1241,7 @@ describe("portfolio normalization", () => {
           icon: "openai",
           summary: "OpenAI API generates NotePal's language-based study features.",
           details:
-            "Backend requests use OpenAI models for text summarization, multiple-choice and short-answer quiz generation, and chatbot answers based on content extracted from uploaded documents and media."
+            "OpenAI requests generate summaries and quizzes. The chat route uses a history-aware LangChain retriever with document-scoped Pinecone embeddings to ground streamed responses in study notes."
         }
       ]
     });
@@ -1248,7 +1274,7 @@ describe("portfolio normalization", () => {
         icon: "python",
         summary: "Python implements the LeetNotes synchronization CLI.",
         details:
-          "The package reads published sheet CSVs, normalizes problem titles and LeetCode slugs, generates Markdown study notes, writes solution.py variants, and maintains the repository's indexed problem structure."
+          "The Python package fetches published sheet CSVs, normalizes problem titles and LeetCode metadata, generates Markdown notes, detects solution languages, writes language-specific files, and maintains an indexed problem structure."
       },
       {
         name: "GitHub Actions",
@@ -1262,7 +1288,7 @@ describe("portfolio normalization", () => {
         icon: "googlesheets",
         summary: "Google Sheets serves as LeetNotes' editable content source.",
         details:
-          "Each list uses paired Notes and Solutions sheets published as CSV: one stores problem metadata, approaches, complexity, and study notes; the other stores plain-text Python solutions."
+          "Paired Notes and Solutions sheets published as CSV hold problem metadata, approaches, complexity, study notes, and source-code snippets. Language hints and detection support multiple solution languages."
       }
     ]);
     expect(Array.from(skillCounts.entries())).toEqual([

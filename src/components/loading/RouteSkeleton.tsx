@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import type { ResearchItem } from "@/content/types";
+import type { ProjectItem, ResearchItem } from "@/content/types";
 import { ContactPageSkeleton } from "@/components/loading/ContactPageSkeleton";
 import { ExperiencePageSkeleton } from "@/components/loading/ExperiencePageSkeleton";
 import { HomePageSkeleton } from "@/components/loading/HomePageSkeleton";
@@ -19,6 +19,10 @@ export type RouteSkeletonProps = {
    * route loading boundaries omit it and preserve generated-content alignment.
    */
   researchDetailItems?: readonly ResearchItem[];
+  /** Canonical Project fixture items for standalone visual skeleton rendering. */
+  projectDetailItems?: readonly ProjectItem[];
+  /** Canonical Home Project fixture items for standalone visual skeleton rendering. */
+  homeProjectItems?: readonly ProjectItem[];
 };
 
 function TermsPageSkeleton() {
@@ -53,10 +57,12 @@ export const routeSkeletons = {
 
 export const skeletonRoutePaths = Object.freeze(Object.keys(routeSkeletons) as SiteRoutePath[]);
 
-export function RouteSkeleton({ pathname, researchDetailItems }: RouteSkeletonProps) {
+export function RouteSkeleton({ homeProjectItems, pathname, projectDetailItems, researchDetailItems }: RouteSkeletonProps) {
   const Skeleton = routeSkeletons[pathname];
   const content =
-    pathname === siteRoutes.research ? <ResearchPageSkeleton detailItems={researchDetailItems} /> : <Skeleton />;
+    pathname === siteRoutes.research ? <ResearchPageSkeleton detailItems={researchDetailItems} /> :
+      pathname === siteRoutes.projects ? <ProjectsPageSkeleton detailItems={projectDetailItems} /> :
+        pathname === siteRoutes.home ? <HomePageSkeleton projectItems={homeProjectItems} /> : <Skeleton />;
 
   return (
     <div data-skeleton-route={pathname} data-testid={`loading-boundary-${pathname}`}>

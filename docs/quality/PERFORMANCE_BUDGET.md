@@ -25,6 +25,7 @@ Current intentional client features include:
 - role rotation and optional scroll reveals;
 - experience depth switching and chapter expansion;
 - skills dialogs and recommendation expansion;
+- independent Project visual tabs over static image and diagram content;
 - contact verification and submission.
 
 Avoid large client-only trees or framework additions when native browser and React behavior already meets the requirement. Compare the Next.js route table after adding a dependency or converting a server component.
@@ -44,6 +45,8 @@ Keep motion CSS-first. Do not add an animation library to the core experience wi
 Optimize raster images before adding them to `public/`. Match encoded dimensions to their real display role, prefer WebP or AVIF when browser support and transparency needs permit, and avoid multi-megabyte source images for small UI marks.
 
 Reserve image dimensions to avoid layout shift. Keep the shared page background CSS and token driven rather than adding full-page wallpaper downloads.
+
+Project artwork is stored as five optimized WebP files totaling about 287 KiB. Supporting images, including native fallbacks, use lazy loading to prevent React from preloading hidden gallery images on unrelated routes.
 
 Every public asset is anonymously retrievable. Asset privacy is a security requirement, not a performance technique.
 

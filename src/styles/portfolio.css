@@ -1048,10 +1048,210 @@
   background: var(--color-control-surface-soft);
 }
 
+.project-card--showcase .project-card__image {
+  aspect-ratio: 16 / 10;
+}
+
 .project-card__deep-dive {
   display: grid;
   gap: var(--space-3);
   color: var(--color-muted);
+}
+
+.project-card--showcase {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.project-card__showcase-header {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.project-card__showcase-header .content-card__summary {
+  color: var(--color-muted);
+}
+
+.project-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.project-visual-tabs {
+  display: grid;
+  min-width: 0;
+  container-type: inline-size;
+}
+
+.project-visual-tabs__enhanced {
+  display: grid;
+  min-width: 0;
+}
+
+.project-visual-tabs__list {
+  display: flex;
+  gap: 1px;
+  align-items: end;
+  padding-inline: var(--space-2);
+  border-bottom: 1px solid var(--color-line);
+}
+
+.project-visual-tabs__tab {
+  min-width: 0;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
+  color: var(--color-muted);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-bold);
+}
+
+.project-visual-tabs__tab[aria-selected="true"] {
+  border-color: var(--color-line);
+  color: var(--color-ink-strong);
+  background: var(--color-control-surface);
+}
+
+.project-visual-tabs__tab:focus-visible {
+  position: relative;
+  z-index: 1;
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.project-visual-tabs__panel,
+.project-visual-tabs__native-concept,
+.project-visual-tabs__native-details {
+  min-width: 0;
+  aspect-ratio: 16 / 10;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-line);
+  border-top: 0;
+  border-radius: 0 0 var(--radius-card) var(--radius-card);
+  background: var(--color-control-surface-soft);
+}
+
+.project-visual-tabs__panel[hidden] {
+  display: none;
+}
+
+.project-visual-tabs__image,
+.project-visual-tabs__native-concept img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.project-visual-tabs__panel--diagram {
+  display: grid;
+}
+
+.project-diagram {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--color-control-surface-soft);
+}
+
+.project-diagram__geometry,
+.project-diagram__nodes {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.project-diagram__geometry {
+  color: var(--color-accent-strong);
+}
+
+.project-diagram__track,
+.project-diagram__motif :is(path, rect) {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.project-diagram__arrow {
+  fill: currentColor;
+}
+
+.project-diagram__nodes {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.project-diagram__node {
+  position: absolute;
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  width: 22%;
+  min-height: 28%;
+  padding: clamp(5px, 1vw, 10px);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: var(--color-card-surface-strong);
+  box-shadow: var(--shadow-card);
+}
+
+.project-diagram__step,
+.project-diagram__detail {
+  color: var(--color-subtle);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-label);
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.project-diagram__label {
+  color: var(--color-ink-strong);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.15;
+  overflow-wrap: normal;
+}
+
+.project-visual-tabs__attribution {
+  margin: 0;
+  padding-top: var(--space-2);
+  color: var(--color-muted);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-normal);
+}
+
+.project-visual-tabs__native-details {
+  display: block;
+  height: auto;
+  aspect-ratio: auto;
+  overflow: visible;
+}
+
+.project-visual-tabs__native-details summary {
+  min-height: 44px;
+  padding: var(--space-3) var(--space-4);
+  color: var(--color-ink-strong);
+  cursor: pointer;
+  font-weight: var(--font-weight-bold);
+}
+
+.project-visual-tabs__native-details .project-diagram {
+  aspect-ratio: 16 / 10;
+  border-top: 1px solid var(--color-line);
 }
 
 .home-experience-list {
@@ -2070,7 +2270,55 @@
   }
 }
 
+@container (max-width: 520px) {
+  .project-diagram__geometry {
+    opacity: 0.24;
+  }
+
+  .project-diagram__nodes {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-2);
+    align-content: center;
+    padding: var(--space-4);
+  }
+
+  .project-diagram__node {
+    position: static;
+    width: auto;
+    min-height: 0;
+    padding: var(--space-2);
+  }
+
+  .project-diagram__step,
+  .project-diagram__detail {
+    font-size: var(--font-size-eyebrow);
+  }
+
+  .project-diagram__label {
+    font-size: var(--font-size-small);
+  }
+}
+
 @media (max-width: 720px) {
+  .project-card--showcase .project-card__image {
+    aspect-ratio: 4 / 3;
+  }
+
+  .project-visual-tabs__panel,
+  .project-visual-tabs__native-concept {
+    aspect-ratio: 4 / 3;
+  }
+
+  .project-visual-tabs__native-details .project-diagram {
+    aspect-ratio: 4 / 3;
+  }
+
+  .project-visual-tabs__attribution {
+    padding-top: var(--space-2);
+    font-size: var(--font-size-eyebrow);
+  }
+
   .home-card-summary__full,
   .home-project-card__skills,
   .skills-group--compact .skill-icon,

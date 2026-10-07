@@ -38,6 +38,8 @@ The current generator behaves as follows:
 
 There is no per-sheet URL, CSV download mode, or per-tab fallback. Supplying a workbook URL selects the remote path for the complete public workbook. A failed configured download never falls back to local content, even when strict mode is false.
 
+The Projects gallery keeps this source contract. Its five-row [project import](../../src/content/templates/projects.csv) must also replace the live workbook's existing `projects` rows before a deployment candidate can show the new lineup. Local visuals do not inject missing records into remote content; see [Project showcase](PROJECT_SHOWCASE.md#workbook-publication-handoff).
+
 Generated metadata declares `sourceMode` as `templates` when all nine public sheets are local and `remote` when all nine come from the workbook. The type also permits `mixed`, but the current all-or-nothing public source selection cannot emit that mode.
 
 The generator also requires the checked-in `resume.csv` compatibility template to remain header-only. It reads that local guard file in both source modes, never downloads resume content, and never accepts a `resume` worksheet in the remote workbook.
