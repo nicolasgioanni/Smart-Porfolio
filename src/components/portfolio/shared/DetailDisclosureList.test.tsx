@@ -136,6 +136,33 @@ describe("DetailDisclosureList", () => {
     }
   });
 
+  it("settles from the grid transition event when its animation promise does not resolve", async () => {
+    const { rerender } = renderList("evidence");
+    const panel = screen.getByRole("region", { name: "Evidence" });
+    const requestAnimationFrame = vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
+      callback(0);
+      return 1;
+    });
+    const getAnimations = vi.fn(() => [
+      { finished: new Promise<void>(() => {}), transitionProperty: "grid-template-rows" }
+    ]);
+    Object.defineProperty(panel, "getAnimations", { configurable: true, value: getAnimations });
+
+    try {
+      rerender(detailDisclosureList());
+      await waitFor(() => expect(getAnimations).toHaveBeenCalledTimes(1));
+      expect(panel.closest(".detail-section")).toHaveAttribute("data-visual-state", "closing");
+
+      const transitionEnd = new Event("transitionend", { bubbles: true });
+      Object.defineProperty(transitionEnd, "propertyName", { value: "grid-template-rows" });
+      fireEvent(panel, transitionEnd);
+
+      await waitFor(() => expect(panel.closest(".detail-section")).toHaveAttribute("data-visual-state", "closed"));
+    } finally {
+      requestAnimationFrame.mockRestore();
+    }
+  });
+
   it("does not let a stale close transition clear a reopened panel", async () => {
     const { rerender } = renderList("evidence");
     const trigger = screen.getByRole("button", { name: /Evidence/i });
