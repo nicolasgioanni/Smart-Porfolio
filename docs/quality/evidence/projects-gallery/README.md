@@ -10,3 +10,5 @@ These Chromium captures were taken from the static export on 2026-10-07 with the
 The exported site was also checked in Light and Dark. With JavaScript disabled at 1280px and 320px, it exposed one visible Projects heading, five cards, five loaded Concept images, eight source/demo links, and five usable native diagram disclosures. Home's first three highlights and the skill dialog were checked against the same export.
 
 The [showcase guide](../../../content/PROJECT_SHOWCASE.md) records workbook publication instructions, source-code evidence, attribution, and illustration prompts. Mobile Research WebKit checks use browser emulation; no physical iPhone check was performed for this change.
+
+The [Ubuntu baseline capture](https://github.com/nicolasgioanni/Smart-Porfolio/actions/runs/37653976020) succeeded for implementation revision `02555c94f4589c2e9e33e8f43adcd7e4c5523aee`. All 25 uploaded images were reviewed before copying the original artifact bytes: the six Home/Projects snapshots changed and the other 19 were byte-identical. Zero-difference comparison remains required.
