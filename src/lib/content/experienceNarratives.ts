@@ -24,7 +24,7 @@ const experienceNarratives: Record<string, ExperienceNarrative> = {
       sections: [
         {
           id: "workflow",
-          title: "Scientific workflow",
+          title: "Scientific Workflow Automation",
           lead: "Translated a microscopy workflow into a repeatable path from DeltaVision or TIFF upload through analysis, review, and export.",
           details: [
             "Built for the University of Utah Miller Lab through UW Bothell's SEE Lab.",
@@ -34,7 +34,7 @@ const experienceNarratives: Record<string, ExperienceNarrative> = {
         },
         {
           id: "analysis",
-          title: "Image analysis",
+          title: "DIC-Guided Computer Vision",
           lead: "Used DIC-guided Mask R-CNN inference to segment cells and mother-daughter pairs for multichannel analysis.",
           details: [
             "Reviewable overlays align DIC segmentation with fluorescence channels before export.",
@@ -44,7 +44,7 @@ const experienceNarratives: Record<string, ExperienceNarrative> = {
         },
         {
           id: "results",
-          title: "Research platform",
+          title: "Production-Grade Research Infrastructure",
           lead: "Delivered background processing, progress and cancellation controls, protected artifacts, and durable results.",
           details: [
             "Authentication and retention controls support repeatable shared-lab use.",
@@ -54,7 +54,7 @@ const experienceNarratives: Record<string, ExperienceNarrative> = {
         },
         {
           id: "ownership",
-          title: "Open research software",
+          title: "Open-Source Research Leadership",
           lead: "Led architecture, implementation, deployment, and maintenance with SEE Lab and Miller Lab collaborators.",
           details: [
             "Released CytoCV v2.0.0 with citation metadata, reproducibility documentation, and a versioned software DOI.",
@@ -213,7 +213,7 @@ const experienceNarratives: Record<string, ExperienceNarrative> = {
       sections: [
         {
           id: "question",
-          title: "Study scope",
+          title: "Adversarial ML Research Portfolio",
           lead: "Built eight focused prototypes spanning adversarial attacks and defensive techniques.",
           details: [
             "The study covered evasion, model extraction, model inversion, and backdoor poisoning.",
@@ -223,7 +223,7 @@ const experienceNarratives: Record<string, ExperienceNarrative> = {
         },
         {
           id: "workflow",
-          title: "Attack experiments",
+          title: "Multi-Vector Attack Engineering",
           lead: "Generated DeepFool adversarial examples and built Copycat CNN, MIFace, and corner-trigger poisoning experiments.",
           details: [
             "The prototypes covered distinct evasion, extraction, inversion, and poisoning threat models.",
@@ -233,7 +233,7 @@ const experienceNarratives: Record<string, ExperienceNarrative> = {
         },
         {
           id: "evaluation",
-          title: "Defense experiments",
+          title: "Layered Defense Engineering",
           lead: "Compared adversarial-input detection, JPEG preprocessing, Gaussian-noise postprocessing, and defensive distillation.",
           details: [
             "FGM adversarial samples supplied detector training data.",
@@ -243,7 +243,7 @@ const experienceNarratives: Record<string, ExperienceNarrative> = {
         },
         {
           id: "outcome",
-          title: "Evaluation",
+          title: "Cross-Dataset Robustness Evaluation",
           lead: "Measured attack success alongside clean, attacked, and defended model accuracy.",
           details: [
             "Ran the prototypes across MNIST, Fashion-MNIST, and CIFAR-10.",
@@ -307,7 +307,7 @@ const experienceNarratives: Record<string, ExperienceNarrative> = {
       sections: [
         {
           id: "workflow",
-          title: "Research workflow",
+          title: "End-to-End CRISPR Workflow Automation",
           lead: "Automated yeast CRISPR guide and donor design from FASTA input to spreadsheet output.",
           details: [
             "The tool reads FSA or FNA records, applies requested mutation rules, and prepares candidate designs.",
@@ -317,7 +317,7 @@ const experienceNarratives: Record<string, ExperienceNarrative> = {
         },
         {
           id: "selection",
-          title: "Sequence design",
+          title: "PAM-Aware Guide & Donor Engineering",
           lead: "Selected 20-base guides near PAM sites and constructed configurable 132-base donor sequences.",
           details: [
             "Forward NGG and reverse-strand CCN discovery keeps candidate selection strand-aware.",
@@ -327,7 +327,7 @@ const experienceNarratives: Record<string, ExperienceNarrative> = {
         },
         {
           id: "output",
-          title: "Candidate selection",
+          title: "Constraint-Driven Candidate Optimization",
           lead: "Supported guide filtering, ranking, duplicate removal, reverse complements, and kill-guide generation.",
           details: [
             "Configurable rank thresholds and guide-library rules narrow candidate sets when those modes are enabled.",
@@ -337,7 +337,7 @@ const experienceNarratives: Record<string, ExperienceNarrative> = {
         },
         {
           id: "outcome",
-          title: "Researcher-ready output",
+          title: "Researcher-Ready Experimental Outputs",
           lead: "Generated color-coded XLS workbooks with traceable guide, donor, mutation, and cut-site details.",
           details: [
             "Outputs include guides, original PAMs, mutation offsets, cut-site distances, full constructs, and decision rationale."

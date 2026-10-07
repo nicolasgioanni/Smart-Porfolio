@@ -35,7 +35,7 @@ Reusable primitives and compositions include:
 | Research | Page introduction, compact audience selector, and three alternating visualization-and-evidence modules, each with abstract and explainer-row footprints. |
 | Projects | Page introduction and card grid shaped like the evidence route. |
 | Experience | Page introduction, compact audience selector, and six logo-led template role cards with evidence-row footprints. |
-| Recommendations | Page introduction and recommendation cards. |
+| Recommendations | Page introduction and five recommendation-card footprints. |
 | Resume | Page introduction and private-resume request panel. |
 | Contact | Page introduction and form-shell footprint while the static contact route resolves. |
 | Contact Terms, Terms, Privacy, Security | Canonical legal header and route-specific section footprints. |
