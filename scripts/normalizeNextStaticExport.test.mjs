@@ -127,11 +127,17 @@ describe("Next.js static export segment normalization", () => {
 });
 
 describe("Next.js build adapter", () => {
-  it("normalizes projectDir/out only after a static export build", async () => {
+  it("normalizes projectDir/out and writes CSP headers only after a static export build", async () => {
     const projectDirectory = await createExportDirectory();
     const nestedDirectory = path.join(projectDirectory, "out", "privacy", "__next.privacy");
     await mkdir(nestedDirectory, { recursive: true });
     await writeFile(path.join(nestedDirectory, "__PAGE__.txt"), "adapter segment", "utf8");
+    await writeFile(
+      path.join(projectDirectory, "out", "_headers"),
+      "/*\n  Permissions-Policy: camera=(), geolocation=(), microphone=(), payment=(), usb=()\n  Referrer-Policy: strict-origin-when-cross-origin\n  Strict-Transport-Security: max-age=31536000\n  X-Content-Type-Options: nosniff\n  X-Frame-Options: DENY\n",
+      "utf8"
+    );
+    await writeFile(path.join(projectDirectory, "out", "index.html"), "<script>window.bootstrap = true;</script>", "utf8");
 
     await expect(
       nextBuildAdapter.onBuildComplete({ config: { output: "export" }, projectDir: projectDirectory })
@@ -139,6 +145,9 @@ describe("Next.js build adapter", () => {
     await expect(
       readFile(path.join(projectDirectory, "out", "privacy", "__next.privacy.__PAGE__.txt"), "utf8")
     ).resolves.toBe("adapter segment");
+    await expect(readFile(path.join(projectDirectory, "out", "_headers"), "utf8")).resolves.toContain(
+      "Content-Security-Policy:"
+    );
   });
 
   it("rejects a non-export build before reading output", async () => {

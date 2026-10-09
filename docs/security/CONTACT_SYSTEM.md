@@ -295,10 +295,14 @@ Every Function response sets:
 
 - `Cache-Control: no-store, max-age=0`;
 - `Content-Type: application/json; charset=utf-8`;
+- `Content-Security-Policy: default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`;
+- `Permissions-Policy: camera=(), geolocation=(), microphone=(), payment=(), usb=()`;
 - `Referrer-Policy: no-referrer`;
-- `X-Content-Type-Options: nosniff`.
+- `Strict-Transport-Security: max-age=31536000`;
+- `X-Content-Type-Options: nosniff`; and
+- `X-Frame-Options: DENY`.
 
-Cloudflare Pages does not apply `public/_headers` rules to Function-generated responses. Static pages receive the broader Content Security Policy, Permissions Policy, HSTS, framing, referrer, and content-type protections declared there. See [Cloudflare Pages custom headers](https://developers.cloudflare.com/pages/configuration/headers/).
+Cloudflare Pages does not apply `public/_headers` rules to Function-generated responses. The build derives the static pages' separate CSP hashes into `out/_headers`; Function JSON headers are maintained in `functions/_shared/contact/request.ts`. See [Cloudflare Pages custom headers](https://developers.cloudflare.com/pages/configuration/headers/).
 
 ## Configuration
 

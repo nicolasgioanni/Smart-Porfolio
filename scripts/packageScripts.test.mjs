@@ -13,6 +13,7 @@ import { readContentVersion, writeContentVersion } from "./writeContentVersion.m
 
 const projectRoot = path.resolve(import.meta.dirname, "..");
 const workflowPath = path.join(projectRoot, ".github", "workflows", "ci.yml");
+const headersPlaywrightConfigPath = path.join(projectRoot, "playwright.headers.config.ts");
 const candidateSha = "0123456789abcdef0123456789abcdef01234567";
 const contentHash = "a".repeat(64);
 
@@ -28,6 +29,7 @@ describe("package and CI deployment automation", () => {
   it("pins local Wrangler and writes content-version metadata after both build modes", async () => {
     const packageJson = JSON.parse(await readFile(path.join(projectRoot, "package.json"), "utf8"));
     const nextConfigSource = await readFile(path.join(projectRoot, "next.config.mjs"), "utf8");
+    const headersPlaywrightConfig = await readFile(headersPlaywrightConfigPath, "utf8");
     const nvmVersion = (await readFile(path.join(projectRoot, ".nvmrc"), "utf8")).trim();
 
     expect(packageJson.engines.node).toBe(">=22.13.0");
@@ -36,6 +38,9 @@ describe("package and CI deployment automation", () => {
     expect(packageJson.scripts["build:generated"]).toBe(
       "next build && node scripts/writeContentVersion.mjs"
     );
+    expect(headersPlaywrightConfig).toContain("npm run build:generated && npx --no-install wrangler pages dev out");
+    expect(headersPlaywrightConfig).not.toContain("npm run build &&");
+    expect(headersPlaywrightConfig).not.toContain("generate:content");
     expect(nextConfigSource).toMatch(/adapterPath:\s*fileURLToPath\(new URL\("\.\/scripts\/nextBuildAdapter\.mjs"/);
     expect(nextConfigSource).toMatch(/output:\s*"export"/);
     expect(packageJson.scripts["dev:pages"]).toContain("npx --no-install wrangler");
@@ -92,10 +97,10 @@ describe("package and CI deployment automation", () => {
       "playwright test contact.spec.ts --project=chromium"
     );
     expect(packageJson.scripts["test:e2e:priority"]).toBe(
-      "playwright test skeleton-alignment.spec.ts skeletons.transition.spec.ts navigation.spec.ts footer.spec.ts contact.spec.ts recommendations.spec.ts experience.spec.ts projects.spec.ts research.spec.ts research-mobile-video.spec.ts --project=chromium"
+      "playwright test skeleton-alignment.spec.ts skeletons.transition.spec.ts navigation.spec.ts footer.spec.ts contact.spec.ts recommendations.spec.ts experience.spec.ts projects.spec.ts research.spec.ts research-mobile-video.spec.ts --project=chromium && npm run test:e2e:response-headers"
     );
     expect(packageJson.scripts["test:e2e:full"]).toBe(
-      "playwright test --project=chromium"
+      "playwright test --project=chromium && npm run test:e2e:response-headers"
     );
     expect(packageJson.scripts["verify:priority"]).toBe(
       "npm run docs:check && npm run lint && npm run typecheck && npm run test:priority && npm run test:e2e:priority && npm run build"
@@ -141,7 +146,12 @@ describe("package and CI deployment automation", () => {
       ])
     );
 
-    expect(packageJson.scripts["test:e2e:full"]).toBe("playwright test --project=chromium");
+    expect(packageJson.scripts["test:e2e:response-headers"]).toBe(
+      "playwright test --config=playwright.headers.config.ts --project=chromium"
+    );
+    expect(packageJson.scripts["test:e2e:full"]).toBe(
+      "playwright test --project=chromium && npm run test:e2e:response-headers"
+    );
   });
 
   it("keeps a stable verify job across branch, daily, and forced-manual triggers", async () => {

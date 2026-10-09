@@ -15,7 +15,7 @@ Smart Portfolio uses a layered quality gate for documentation, static content, R
 | TypeScript mode | Strict, no emit |
 | CI runner | Verify: `ubuntu-24.04`; deploy and scheduled heartbeat: `ubuntu-latest` |
 
-`vitest.config.ts` enables globals, loads `vitest.setup.ts`, maps `@` to `src`, excludes `tests/e2e/`, and uses one fork worker so local D1 and jsdom contracts do not compete for host resources. Playwright likewise runs one worker and starts an owned Next.js server; select a unique `PLAYWRIGHT_PORT` when another worktree is active. The verification path has one explicit Ubuntu 24.04 and Node 22 configuration, not a multi-platform test matrix.
+`vitest.config.ts` enables globals, loads `vitest.setup.ts`, maps `@` to `src`, excludes the Playwright-only `tests/e2e/` and `tests/headers/` directories, and uses one fork worker so local D1 and jsdom contracts do not compete for host resources. Playwright likewise runs one worker and starts an owned Next.js server; select a unique `PLAYWRIGHT_PORT` when another worktree is active. The verification path has one explicit Ubuntu 24.04 and Node 22 configuration, not a multi-platform test matrix.
 
 ## Command matrix
 
@@ -29,9 +29,10 @@ Smart Portfolio uses a layered quality gate for documentation, static content, R
 | `npm run test:footer` | Two focused footer regression files | Use while changing the footer; release CI covers them through `test` |
 | `npm run test:navigation` | Focused mobile rail, header, responsive-query, theme, and navigation style tests | Use while changing navigation; release CI covers them through `test` |
 | `npm run test:skeletons` | Focused skeleton component, content, style, and page-entry tests | Protects route fallback semantics, fixture geometry, and static no-motion placeholders |
-| `npm run test:e2e:priority` | Playwright skeleton alignment and held-navigation transitions, navigation, footer, mocked-contact, Recommendations, Projects, Experience, and Research flows | Portable pull-request browser gate; uses no provider credentials or delivery endpoint and intentionally excludes Linux-only visual comparison |
-| `npm run test:e2e:full` | Every supported Playwright specification in one Chromium process | Release browser gate; includes every skeleton part and the mocked-contact flow |
+| `npm run test:e2e:priority` | Playwright skeleton alignment and held-navigation transitions, navigation, footer, mocked-contact, Recommendations, Projects, Experience, Research, and generated response-header checks | Portable pull-request browser gate; response-header checks serve the generated export with Wrangler and use no provider credentials or delivery endpoint; the command intentionally excludes Linux-only visual comparison |
+| `npm run test:e2e:full` | Every supported Playwright specification plus generated response-header checks | Release browser gate; includes every skeleton part, mocked-contact flow, and generated header behavior |
 | `npm run test:e2e:contact` | Playwright contact flow specification in Chromium | Mocks Turnstile and both same-origin contact endpoints; never submits to a provider |
+| `npm run test:e2e:response-headers` | Playwright CSP and response-header specification in Chromium | Builds the static export, serves it through local Wrangler Pages, and checks CSP hashes, aliases, unknown-path 404 fallback, inline-script rejection, hydration, theme preference, and a mocked Turnstile source |
 | `npm run test:e2e:navigation` | Playwright navigation specification in Chromium | Uses port 3100 by default and starts its own local server |
 | `npm run test:e2e:skeletons:alignment` | Playwright resolved-page versus canonical-loader geometry specification | Covers direct header line boxes, wrap boundaries, generated Experience copy, detail footprints, overflow, themes, and reduced motion in inert same-origin fixtures |
 | `npm run test:e2e:skeletons:visual` | Linux-only Playwright screenshot specification | Captures or compares 25 reviewed skeleton geometry baselines on Ubuntu 24.04 only, rejecting browser diagnostics before any screenshot |

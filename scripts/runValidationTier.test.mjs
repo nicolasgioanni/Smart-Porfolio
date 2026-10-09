@@ -15,6 +15,7 @@ describe("priority validation tier", () => {
     expect(priorityTestTargets).toEqual(expect.arrayContaining([
       "scripts/contactTransport.integration.test.ts",
       "scripts/updateContactTlds.test.mjs",
+      "scripts/staticResponseHeaders.test.mjs",
       "src/components/contact/ContactNotifications.test.tsx",
       "src/components/contact/useContactStepTransition.test.tsx",
       "src/components/navigation/smartLink.test.tsx",

@@ -127,7 +127,7 @@ Check both the assigned production domain and the primary custom domain. Confirm
 
 ### Verify static response headers
 
-On representative static pages, confirm the Cloudflare response includes the intended policy from `public/_headers`:
+On representative static pages, confirm the Cloudflare response includes the base headers from `public/_headers` and the final-HTML CSP hash policy generated in `out/_headers`:
 
 - `Content-Security-Policy`
 - `Permissions-Policy`

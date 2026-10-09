@@ -3,6 +3,14 @@ import { MAX_REQUEST_BYTES, type ContactEnv, type ReadBodyResult } from "./contr
 import { awaitWithDeadline, cancelBodyReader, createDeadline } from "./transport";
 
 const REQUEST_BODY_READ_TIMEOUT_MS = 15_000;
+const functionJsonSecurityHeaders = {
+  "Content-Security-Policy": "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+  "Permissions-Policy": "camera=(), geolocation=(), microphone=(), payment=(), usb=()",
+  "Referrer-Policy": "no-referrer",
+  "Strict-Transport-Security": "max-age=31536000",
+  "X-Content-Type-Options": "nosniff",
+  "X-Frame-Options": "DENY"
+} as const;
 
 export type ContactApiRequest =
   | { kind: "valid"; body: unknown }
@@ -12,8 +20,7 @@ export function jsonResponse(status: number, body: Record<string, boolean | stri
   const headers = new Headers(extraHeaders);
   headers.set("Cache-Control", "no-store, max-age=0");
   headers.set("Content-Type", "application/json; charset=utf-8");
-  headers.set("Referrer-Policy", "no-referrer");
-  headers.set("X-Content-Type-Options", "nosniff");
+  for (const [name, value] of Object.entries(functionJsonSecurityHeaders)) headers.set(name, value);
 
   return new Response(JSON.stringify(body), { status, headers });
 }

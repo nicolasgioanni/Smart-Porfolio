@@ -291,9 +291,9 @@ The automated smoke test does not request every static route, test the custom do
 - `/api/contact/verify`
 - `/api/contact`
 
-All other route and asset requests remain on the static Pages path. `public/_headers` supplies the static Content Security Policy, permissions policy, referrer policy, HSTS, content-type protection, frame denial, and the non-cache rules for both public metadata files.
+All other route and asset requests remain on the static Pages path. `public/_headers` supplies the base static headers and metadata cache rules. After final HTML normalization, the build adapter derives per-page and unknown-route fallback CSP hash rules into deployable `out/_headers`; it fails before artifact creation if a Cloudflare Pages header line exceeds 2,000 bytes or the file exceeds 100 rules. The generated policy supplies the static Content Security Policy, permissions policy, referrer policy, HSTS, content-type protection, and frame denial.
 
-Pages `_headers` rules do not apply to Function responses. Both Functions set their own JSON content type, no-store caching, referrer, and content-type-sniffing headers.
+Pages `_headers` rules do not apply to Function responses. Both Functions set their own JSON content type, no-store caching, restrictive CSP, Permissions Policy, referrer, HSTS, framing, and content-type-sniffing headers.
 
 ## Failure and rollback behavior
 
