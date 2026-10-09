@@ -1,9 +1,5 @@
-import type { EducationItem, ExperienceItem, GeneratedPortfolioContent, ProjectItem, ResearchItem } from "@/content/types";
+import type { EducationItem, ExperienceItem, GeneratedPortfolioContent, ProjectItem } from "@/content/types";
 import { sortForDetail } from "@/lib/content/sortPortfolioContent";
-
-export function selectResearchDetailContent(content: GeneratedPortfolioContent): ResearchItem[] {
-  return sortForDetail(content.research);
-}
 
 export function selectProjectDetailContent(content: GeneratedPortfolioContent): ProjectItem[] {
   return sortForDetail(content.projects);

@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 import type { ResearchItem } from "@/content/types";
 import { EmptyState } from "@/components/portfolio/shared/EmptyState";
-import { ResearchCard } from "@/components/portfolio/research/ResearchCard";
+import { ResearchCard } from "@/features/research/components/ResearchCard";
 import type { OpenDetailDisclosure } from "@/components/portfolio/shared/useDetailDisclosure";
 import type { DetailMode } from "@/lib/content/detailNarratives";
 

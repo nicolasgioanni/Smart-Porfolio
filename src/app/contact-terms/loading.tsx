@@ -1,4 +1,4 @@
-import { RouteSkeleton } from "@/components/loading/RouteSkeleton";
+import { RouteSkeleton } from "@/app/RouteSkeleton";
 import { shouldRenderSkeletons } from "@/components/loading/shouldRenderSkeletons";
 import { siteRoutes } from "@/lib/routing/siteRoutes";
 

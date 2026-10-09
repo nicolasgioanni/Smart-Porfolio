@@ -56,7 +56,7 @@ describe("package and CI deployment automation", () => {
       "vitest run src/components/navigation/MobileNavigation.test.tsx src/components/navigation/navigation.test.tsx src/components/navigation/navigationStyles.test.ts src/components/responsive/useMediaQuery.test.tsx src/components/theme/ThemeSwitcher.test.tsx"
     );
     expect(packageJson.scripts["test:skeletons"]).toBe(
-      "vitest run src/components/loading/skeleton.test.tsx src/components/loading/skeletonStyles.test.ts src/components/loading/skeletonContentContract.test.ts src/components/loading/ResearchPageSkeleton.test.tsx scripts/renderRouteSkeleton.test.mjs src/components/motion/pageEntryStyles.test.ts"
+      "vitest run src/components/loading/skeleton.test.tsx src/components/loading/skeletonStyles.test.ts src/components/loading/skeletonContentContract.test.ts src/features/research/loading/ResearchPageSkeleton.test.tsx scripts/renderRouteSkeleton.test.mjs src/components/motion/pageEntryStyles.test.ts"
     );
     expect(packageJson.scripts["test:e2e:navigation"]).toBe(
       "playwright test navigation.spec.ts --project=chromium"
@@ -114,9 +114,9 @@ describe("package and CI deployment automation", () => {
       "src/components/portfolio/experience",
       "src/components/portfolio/projects",
       "src/components/portfolio/recommendations",
-      "src/components/portfolio/research",
       "src/components/portfolio/shared",
       "src/components/theme",
+      "src/features/research",
       "src/lib/projects",
       "src/lib/theme"
     ]);
@@ -136,7 +136,7 @@ describe("package and CI deployment automation", () => {
         "src/components/portfolio/projects/ProjectSkillShowcase.test.tsx",
         "src/components/portfolio/projects/ProjectShowcase.test.tsx",
         "src/components/portfolio/recommendations/RecommendationsList.test.tsx",
-        "src/components/portfolio/research/ResearchShowcase.test.tsx",
+        "src/features/research/components/ResearchShowcase.test.tsx",
         "src/components/overlay/ModalDialog.test.tsx"
       ])
     );

@@ -2,10 +2,10 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { ModalDialog } from "@/components/overlay/ModalDialog";
-import { ResearchMediaDialog } from "@/components/portfolio/research/ResearchMediaDialog";
-import { ResearchVideoPlayer } from "@/components/portfolio/research/ResearchVideoPlayer";
-import type { ResearchGraphicalAbstract } from "@/lib/content/researchGraphicalAbstracts";
-import type { ResearchVideo } from "@/lib/content/researchVideos";
+import { ResearchMediaDialog } from "@/features/research/components/ResearchMediaDialog";
+import { ResearchVideoPlayer } from "@/features/research/components/ResearchVideoPlayer";
+import type { ResearchGraphicalAbstract } from "@/features/research/content/researchGraphicalAbstracts";
+import type { ResearchVideo } from "@/features/research/content/researchVideos";
 import { getPlaybackSettings, pausePlayback, type ResearchVideoPlaybackSettings } from "@/lib/media/researchVideoPlayback";
 
 type ResearchVideoPreviewProps = {
@@ -165,9 +165,6 @@ export function ResearchVideoPreview({ poster, title, video }: ResearchVideoPrev
             videoRef={inlineVideoRef}
           />
         </ModalDialog>
-        <a className="research-video__transcript" data-testid="read-transcript" href={video.transcriptSrc} rel="noreferrer" target="_blank">
-          Read transcript
-        </a>
       </section>
 
       <ResearchMediaDialog

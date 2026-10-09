@@ -15,8 +15,8 @@ import {
 } from "react";
 import { LinkIcon } from "@/components/icons/LinkIcon";
 import { useReducedMotionPreference } from "@/components/motion/useReducedMotionPreference";
-import type { ResearchGraphicalAbstract } from "@/lib/content/researchGraphicalAbstracts";
-import type { ResearchVideo } from "@/lib/content/researchVideos";
+import type { ResearchGraphicalAbstract } from "@/features/research/content/researchGraphicalAbstracts";
+import type { ResearchVideo } from "@/features/research/content/researchVideos";
 import {
   applyPlaybackSettings,
   setPlaybackTime,
@@ -106,7 +106,7 @@ function statusMessage(status: VideoStatus): string | null {
   if (status === "loading") return "Loading video metadata.";
   if (status === "buffering") return "Video is buffering.";
   if (status === "ended") return "Video ended. Use Play video to replay it.";
-  if (status === "error") return "Video playback is unavailable. Read the transcript for the narrated workflow.";
+  if (status === "error") return "Video playback is unavailable.";
   return null;
 }
 
@@ -1230,7 +1230,7 @@ export function ResearchVideoPlayer({
       >
         <source src={video.src} type={video.mimeType} />
         <track default kind="captions" label="English" src={video.captionsSrc} srcLang="en" />
-        Your browser cannot play this video. Read the transcript below.
+        Your browser cannot play this video.
       </video>
 
       {hasEnhancedCaptionLayers ? (

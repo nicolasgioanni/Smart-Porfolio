@@ -1,8 +1,8 @@
 "use client";
 
 import { useId, useRef, useState } from "react";
-import { ResearchMediaDialog } from "@/components/portfolio/research/ResearchMediaDialog";
-import type { ResearchGraphicalAbstract } from "@/lib/content/researchGraphicalAbstracts";
+import { ResearchMediaDialog } from "@/features/research/components/ResearchMediaDialog";
+import type { ResearchGraphicalAbstract } from "@/features/research/content/researchGraphicalAbstracts";
 
 type ResearchGraphicalAbstractPreviewProps = {
   abstract: ResearchGraphicalAbstract;

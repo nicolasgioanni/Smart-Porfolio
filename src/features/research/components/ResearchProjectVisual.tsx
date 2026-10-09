@@ -1,22 +1,14 @@
 import type { ResearchItem } from "@/content/types";
-import { ResearchGraphicalAbstractPreview } from "@/components/portfolio/research/ResearchGraphicalAbstractPreview";
-import { ResearchExplainer, type ResearchExplainerVariant } from "@/components/portfolio/research/ResearchExplainer";
-import { ResearchVideoPreview } from "@/components/portfolio/research/ResearchVideoPreview";
-import { getResearchGraphicalAbstract } from "@/lib/content/researchGraphicalAbstracts";
-import { getResearchVideo } from "@/lib/content/researchVideos";
+import { ResearchGraphicalAbstractPreview } from "@/features/research/components/ResearchGraphicalAbstractPreview";
+import { ResearchVideoPreview } from "@/features/research/components/ResearchVideoPreview";
+import { getResearchGraphicalAbstract } from "@/features/research/content/researchGraphicalAbstracts";
+import { getResearchVideo } from "@/features/research/content/researchVideos";
 
 type ResearchProjectVisualProps = {
   item: ResearchItem;
   order: number;
   title: string;
 };
-
-/** Keep authored media selection tied to the stable generated Research ids. */
-export function getResearchExplainerVariant(itemId: string): ResearchExplainerVariant | undefined {
-  if (itemId === "adversarial-machine-learning") return "aml";
-  if (itemId === "yeast-dna-target-selection") return "guide-donor";
-  return undefined;
-}
 
 function FallbackVisual() {
   return (
@@ -33,25 +25,27 @@ function FallbackVisual() {
 export function ResearchProjectVisual({ item, order, title }: ResearchProjectVisualProps) {
   const graphicalAbstract = getResearchGraphicalAbstract(item);
   const video = getResearchVideo(item);
-  const explainerVariant = getResearchExplainerVariant(item.id);
 
-  if (graphicalAbstract && (video || explainerVariant)) {
+  if (graphicalAbstract && video) {
     return (
       <div className="research-media-stack">
         <div className="research-project__media-row research-project__media-row--abstract">
           <ResearchGraphicalAbstractPreview abstract={graphicalAbstract} title={title} />
         </div>
         <div aria-hidden="true" className="research-project__media-divider" />
-        <div className="research-project__media-row research-project__media-row--explainer">
-          {video ? <ResearchVideoPreview poster={graphicalAbstract} title={title} video={video} /> : null}
-          {explainerVariant ? <ResearchExplainer variant={explainerVariant} /> : null}
+        <div className="research-project__media-row research-project__media-row--video">
+          <ResearchVideoPreview poster={graphicalAbstract} title={title} video={video} />
         </div>
       </div>
     );
   }
 
   if (graphicalAbstract) {
-    return <ResearchGraphicalAbstractPreview abstract={graphicalAbstract} title={title} />;
+    return (
+      <div className="research-project__single-media">
+        <ResearchGraphicalAbstractPreview abstract={graphicalAbstract} title={title} />
+      </div>
+    );
   }
 
   return (

@@ -5,7 +5,7 @@ import type { ResearchItem } from "@/content/types";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { DetailLevelControl } from "@/components/portfolio/shared/DetailLevelControl";
 import { useDetailDisclosure } from "@/components/portfolio/shared/useDetailDisclosure";
-import { ResearchList } from "@/components/portfolio/research/ResearchList";
+import { ResearchList } from "@/features/research/components/ResearchList";
 import type { DetailMode } from "@/lib/content/detailNarratives";
 import { routeHeaderContent } from "@/lib/content/routeHeaderContent";
 

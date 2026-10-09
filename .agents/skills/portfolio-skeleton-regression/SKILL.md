@@ -23,6 +23,8 @@ Keep that fixture inert: no application scripts, development portal, or mutation
 
 Research visual snapshots receive controlled canonical local-template detail items only through `tests/e2e/renderRouteSkeleton.tsx`. Keep that injection isolated to the visual renderer. Normal loading boundaries and component or alignment coverage must resolve generated-workbook data so their resource geometry follows validated content.
 
+Research has two distinct media footprints. CytoCV reserves an abstract/divider/video stack; AML and Guide Donor Scheduler reserve one full-height, vertically centered abstract group above `920px` and intrinsic natural height at or below it. Keep resolved and skeleton alignment helpers shape-aware, retain the `32rem` media cap and `16px` padding, and never restore explainer-scene, label, legend, or playback-control placeholders.
+
 Projects and affected Home profiles must derive card/action counts from selected generated records and the shared project action resolver, supporting both the old workbook and the five-row migration. Only the isolated screenshot renderer may use controlled local-template project records. Preserve the gallery's `980/981px` column boundary and media footprint when updating its loader.
 
 ## Review Linux baselines
