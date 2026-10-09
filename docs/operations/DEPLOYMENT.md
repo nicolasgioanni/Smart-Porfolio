@@ -91,6 +91,19 @@ The workflow fails before downloading the workbook if either Pages target variab
 | `CLOUDFLARE_API_TOKEN` | Restricted Cloudflare token with Pages and D1 edit authority for this account |
 | `CLOUDFLARE_ACCOUNT_ID` | Target Cloudflare account identifier |
 
+The private-preview checker also accepts the following deploy-job-only secrets. They are intentionally distinct from the Pages/D1 upload credential and must never be converted to repository variables or Pages runtime variables:
+
+| Secret | Purpose |
+| --- | --- |
+| `PRIVATE_PREVIEW_ACCOUNT_ID` | Account queried by the read-only private-preview inventory |
+| `PRIVATE_PREVIEW_DNS_ZONE_ID` | Zone queried for the exact custom-preview CNAME and legacy Access applications |
+| `PRIVATE_PREVIEW_API_TOKEN` | Read-only provider API credential for Pages, Access, DNS, organization, and entitlement observations |
+| `PRIVATE_PREVIEW_SERVICE_TOKEN_ID` | Exact Access service-token identity that the policy check must find |
+| `PRIVATE_PREVIEW_ACCESS_CLIENT_ID` | Access client identifier used only for authenticated preview smoke requests |
+| `PRIVATE_PREVIEW_ACCESS_CLIENT_SECRET` | Access client secret used only for authenticated preview smoke requests |
+| `PRIVATE_PREVIEW_CUSTOM_HOSTNAME` | Exact reviewed custom-preview hostname; never derived from deployment history |
+| `PRIVATE_PREVIEW_ACCESS_TEAM_DOMAIN` | Exact reviewed Access tenant used for an unauthenticated login redirect check |
+
 The workbook source is supplied only to non-PR content generation. Cloudflare deployment secrets are supplied only to the deploy job.
 
 ### Cloudflare runtime secrets
@@ -124,6 +137,22 @@ The top-level values cover production. `env.preview.vars` narrows the preview en
 The tracked `database_id` values identify the reviewed live resources. Do not recreate those existing databases during an audit. A deliberate database replacement must use new, separate production and preview databases. Review the resulting UUIDs, update the matching names and IDs in `wrangler.jsonc`, and commit that configuration change before deployment. If a database name changes, update the corresponding hard-coded migration targets in `.github/workflows/ci.yml` and their configuration/workflow contract tests in the same reviewed change.
 
 Do not reuse or copy the current live IDs for a different account, and do not commit a shared ID for both environments. `preview_database_id: contact-rate-limit-local` is a local-emulation identifier, not a remote database. The deploy job rejects missing, all-zero, or shared remote IDs, then applies tracked migrations to the selected database before uploading Pages.
+
+## Private-preview protection is activation-blocked
+
+The preview path has a separate credential-safe checker at `scripts/privatePreviewCheck.mjs`. It does not change the static export, Pages Direct Upload, Pages Functions, D1, Turnstile, Resend, GitHub Actions trigger tiers, or the anonymous production checker. Its preview-only preflight runs after the exact-artifact and branch checks but before preview D1 migration or Wrangler upload.
+
+The checker validates only strict, fixed HTTPS targets. Its provider transport has a whole-operation deadline, manual redirects, a bounded response body, and a read-only API credential. Its service-auth transport sends the Access client pair only to `develop`, the reviewed custom host, and the exact hash host returned by the verified upload API record; its anonymous transport sends neither credential. Both preview preflights bind the private account identifier to the deployment account, `smart-portfolio` project, and `develop` branch without logging any identifier. They exhaust bounded Cloudflare V4 array pagination through its terminating empty page, capture every advertised historical preview URL and alias, evaluate account- and custom-zone Access applications and policies, require `strict_service_token_auth`, require the configured proxied CNAME to target the stable `develop` alias, and check anonymous denial for every historical alias. Old failed, canceled, or skipped deployments still contribute advertised hosts; only the exact new deployment must be `deploy`/`success`.
+
+Before preview D1 mutation, a root-path `*.smart-portfolio-bds.pages.dev` public destination must carry the exact configured service-token `non_identity` policy. The checker also audits every more-specific Pages namespace application and path override, so an exact historical-host policy cannot leave a future hash public. It accepts no broader service-token policy and rejects broad Allow or Bypass paths, unknown selector shapes, and public path overrides.
+
+Before mutation, the service token must authenticate to the existing stable and configured custom preview targets. After an upload, Wrangler 4.131 JSONL output supplies one exact deployment ID; the checker reads that exact ID through the API and then requires the uploaded hash alias, `develop` alias, and configured custom host to expose the candidate `content-version.json`, identical artifact manifest, root bytes and canonical link, `robots.txt`, `sitemap.xml`, and the two safe `405` contact method responses. It never chooses a newest deployment or a commit-only match. Historical aliases only need policy coverage and anonymous denial because they can legitimately contain older content.
+
+The entitlement endpoint is observed but cannot activate a deployment yet. The public provider schema does not establish an Access feature-key mapping or its semantics, so a successful preflight ends with the explicit `activation_blocked` state `entitlement_mapping_unreviewed`. The workflow therefore fails before preview D1 or upload until a separately reviewed provider observation documents exact feature keys and allocation semantics. This change does not add permissions, create an Access application or policy, change DNS, expand Contact origins, or expand Turnstile hostnames.
+
+The custom-preview hostname is not assumed to be an approved interactive contact origin. Any future activation needs an exact reviewed `wrangler.jsonc` origin/hostname expansion, separate Turnstile evidence, and a controlled interactive test. It must not infer an allowlist from Pages aliases, deployment history, or wildcard Access destinations.
+
+Private provider responses are written only under fresh mode-restricted per-operation directories, and Wrangler JSONL, Wrangler stdout/stderr, and preview D1 command output use separate mode-restricted runner-temporary files. None is uploaded as an Actions artifact. Public workflow output contains only sanitized status codes and counts. `scripts/checkDeployedContent.mjs` remains credential-free and continues to follow redirects only for the public production path.
 
 ## Set up or restore a deployment
 

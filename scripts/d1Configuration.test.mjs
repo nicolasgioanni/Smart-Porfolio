@@ -78,10 +78,15 @@ describe("contact D1 configuration", () => {
   it("migrates the selected database before uploading the Pages deployment", async () => {
     const workflow = await readFile(path.join(projectRoot, ".github", "workflows", "ci.yml"), "utf8");
     const migrationStep = workflow.indexOf("Validate the environment-specific D1 binding and apply migrations");
-    const deployStep = workflow.indexOf("Deploy the verified export and Pages Function with pinned Wrangler");
+    const privatePreflight = workflow.indexOf("Preflight private preview Access state before mutation");
+    const productionDeployStep = workflow.indexOf("Deploy the verified production export and Pages Function with pinned Wrangler");
+    const previewDeployStep = workflow.indexOf("Deploy the private preview export with pinned Wrangler");
 
     expect(migrationStep).toBeGreaterThan(-1);
-    expect(deployStep).toBeGreaterThan(migrationStep);
+    expect(privatePreflight).toBeGreaterThan(-1);
+    expect(privatePreflight).toBeLessThan(migrationStep);
+    expect(productionDeployStep).toBeGreaterThan(migrationStep);
+    expect(previewDeployStep).toBeGreaterThan(migrationStep);
     expect(workflow).toContain(
       "wrangler d1 migrations apply smart-portfolio-contact-rate-limit-preview --env preview --remote"
     );

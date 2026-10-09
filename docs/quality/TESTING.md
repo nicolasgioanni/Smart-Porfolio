@@ -25,7 +25,7 @@ Smart Portfolio uses a layered quality gate for documentation, static content, R
 | `npm run generate:content` | Content source download or template read, normalization, validation, and generated JSON write | Uses `.env` when run through the CLI |
 | `npm run lint` | ESLint over the repository with `--max-warnings=0` | Generated content and build directories are ignored; direct library/component import boundaries cover alias and relative specifiers |
 | `npm run typecheck` | `next typegen && tsc --noEmit` | Regenerates Next route types and the ignored managed `next-env.d.ts` before strict TypeScript checking |
-| `npm run test:priority` | High-risk documentation, deployment, contact, shared dialog, typography, theme palette, Projects, Research, Experience, Recommendations, navigation, and skeleton contracts | Pull-request unit and contract gate; it includes `SmartLink` route recognition and internal-link behavior, every Function test under `functions/`, and feature directories for future shared-detail tests. |
+| `npm run test:priority` | High-risk documentation, deployment, private-preview, contact, shared dialog, typography, theme palette, Projects, Research, Experience, Recommendations, navigation, and skeleton contracts | Pull-request unit and contract gate; it includes strict private-preview parser and credential-transport fixtures, `SmartLink` route recognition and internal-link behavior, every Function test under `functions/`, and feature directories for future shared-detail tests. |
 | `npm run test:footer` | Two focused footer regression files | Use while changing the footer; release CI covers them through `test` |
 | `npm run test:navigation` | Focused mobile rail, header, responsive-query, theme, and navigation style tests | Use while changing navigation; release CI covers them through `test` |
 | `npm run test:skeletons` | Focused skeleton component, content, style, and page-entry tests | Protects route fallback semantics, fixture geometry, and static no-motion placeholders |
@@ -87,6 +87,7 @@ The validator uses only Node.js standard-library APIs and does not check externa
 | Public asset references | `scripts/demoAssets.test.mjs`, `scripts/pngMetadata.test.mjs` | Referenced local assets and the three curated research abstracts exist and are non-empty; configured media stays under its allowlisted directory and extensions; Research PNG IHDR, palette, critical-chunk, zlib, Adam7 scanline, and nonempty image-data ordering semantics; stat-before-read size rejection; protected byte/chunk/decoded-data/dimension/canvas ceilings; restricted metadata absence; and dimensions, exact byte length, complete-file SHA-256, and IDAT-stream SHA-256 for every curated abstract |
 | Environment placeholders | `scripts/envConfiguration.test.mjs` | Supported variables, ignored local files, and removal of legacy variable families |
 | D1 configuration and schema | `scripts/d1Configuration.test.mjs`, `scripts/d1Reservation.integration.test.ts` | Distinct pinned remote UUIDs, local isolation, minimal reservation and payload-fingerprint columns, indexes, migration-before-deploy ordering, and real local-D1 changed-payload and third-reservation refusal |
+| Private preview deployment boundary | `scripts/privatePreviewCheck.test.mjs`, `scripts/packageScripts.test.mjs` | Strict Wrangler JSONL identity, provider pagination and entitlement parsing, manual redirect rejection, anonymous denial, service-token header isolation, deadline failure, activation-blocked preflight, secret-only workflow wiring, and pre-D1 preview gating. |
 
 These are unit and integration-style tests with temporary files and injected fetch implementations. They do not download the production workbook during pull-request verification.
 
@@ -221,8 +222,9 @@ Latest pushes to `main` or `develop`:
 5. Install Chromium once and run the complete browser suite once. This includes the direct skeleton alignment matrix, held-navigation semantics, and Linux zero-difference visual matrix.
 6. Build with `build:generated` and the branch-specific public Turnstile key.
 7. Create, verify, and upload the artifact manifest.
-8. Enter the conditional deploy job, validate the selected D1 binding, and apply pending migrations.
-9. Upload the Pages artifact only after migration succeeds.
+8. For preview candidates, enter the private-preview preflight before D1. Its current explicit entitlement-mapping blocker ends the job before mutation or upload.
+9. For an activated target, validate the selected D1 binding and apply pending migrations.
+10. Upload the Pages artifact only after migration succeeds.
 
 ### Scheduled and manual checks
 
@@ -234,7 +236,7 @@ The stable `verify` job selects `priority` for pull requests and `full` for ever
 
 ## Post-deployment smoke tests
 
-The deploy job runs `scripts/checkDeployedContent.mjs` against the stable assigned-domain alias. It verifies root HTML, exact content and commit metadata, exact artifact-manifest equality, and the exact HTTP `405` JSON contract for GET requests to both contact Functions.
+For production, the deploy job runs the unchanged credential-free `scripts/checkDeployedContent.mjs` against the stable assigned-domain alias. It verifies root HTML, exact content and commit metadata, exact artifact-manifest equality, and the exact HTTP `405` JSON contract for GET requests to both contact Functions. The private preview path has its own credential-isolated checker and currently stops at its explicit activation blocker before upload.
 
 It does not test:
 

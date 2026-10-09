@@ -77,7 +77,7 @@ Core pages do not require a runtime Next.js server, database, authentication ser
 | Content transformation | `src/lib/content/`, `src/lib/csv/`, `scripts/lib/portfolioContentGeneration.ts` | Parsing, normalization, validation, selection, sorting, hashing, workbook structure, and canonical route-header ownership. |
 | Styling | `src/styles/` | Semantic tokens, themes, layout, solid surface primitives, portfolio surfaces, navigation, motion, loading, and contact UI. |
 | Runtime contact | `functions/`, `migrations/` | Origin enforcement, Turnstile verification, signed tickets, schema and DNS validation, pseudonymous quota storage, and email delivery. |
-| Operations | `.github/workflows/ci.yml`, `scripts/`, `wrangler.jsonc` | Candidate selection, quality gates, artifact integrity, Direct Upload, smoke tests, and environment configuration. |
+| Operations | `.github/workflows/ci.yml`, `scripts/`, `wrangler.jsonc` | Candidate selection, quality gates, artifact integrity, Direct Upload, public smoke tests, private-preview preflight, and environment configuration. |
 
 ## Static-first application
 
@@ -188,9 +188,10 @@ A deployable candidate follows this sequence:
 6. Upload and download the immutable Actions artifact.
 7. Verify every artifact digest and the candidate commit.
 8. Recheck that a production candidate is still current.
-9. Validate the selected D1 target and apply pending migrations.
-10. Deploy the static export and Functions from repository root with pinned Wrangler.
-11. Smoke-test static content, both manifests, and GET rejection from both contact Functions.
+9. For a preview candidate, complete the credential-isolated private-preview preflight before any D1 mutation; its current entitlement-mapping blocker fails closed.
+10. Validate the selected D1 target and apply pending migrations.
+11. Deploy the static export and Functions from repository root with pinned Wrangler.
+12. Smoke-test static content, both manifests, and GET rejection from both contact Functions.
 
 The active `/content-version.json` remains the deployed source of truth. A failure before Wrangler upload leaves it unchanged. A post-upload smoke failure can occur after the new manifest is already active, so operators must inspect the deployed result and choose retry or rollback deliberately. See [Operations](../operations/OPERATIONS.md) for event behavior, retry, and rollback considerations.
 
@@ -204,6 +205,7 @@ The active `/content-version.json` remains the deployed source of truth. A failu
 | Turnstile site keys | Public browser configuration | Build environment and client bundle |
 | Workbook locator | Anonymous read locator stored for log redaction | GitHub Actions secret |
 | Cloudflare API token and account identifier | Deployment credentials | GitHub Actions secrets |
+| Private-preview API credential, Access service credentials, Access/DNS identifiers, and custom-host configuration | Private deployment evidence and authenticated preview check inputs | GitHub Actions secrets and runner-temporary evidence only |
 | Turnstile secret, Resend key, and owner recipient | Private runtime configuration | Cloudflare encrypted secrets |
 | Submission UUID, keyed normalized-email hash, keyed payload fingerprint, and quota timestamps | Pseudonymous runtime data | Environment-specific Cloudflare D1 database |
 | Allowed origins, allowed hostnames, sender, and public reply-to | Reviewed non-secret configuration | `wrangler.jsonc` |
@@ -255,7 +257,7 @@ The two-step ticket flow avoids sending a consumed Turnstile token twice and kee
 | Function routing and static headers | `public/_routes.json` and `public/_headers` |
 | Cloudflare project configuration | `wrangler.jsonc` |
 | Candidate and deployment behavior | `.github/workflows/ci.yml` |
-| Artifact and manifest behavior | `scripts/artifactIntegrity.mjs`, `writeContentVersion.mjs`, and `checkDeployedContent.mjs` |
+| Artifact and manifest behavior | `scripts/artifactIntegrity.mjs`, `writeContentVersion.mjs`, `checkDeployedContent.mjs`, and `privatePreviewCheck.mjs` |
 | License | `LICENSE` |
 
 ## Extension constraints
