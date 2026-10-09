@@ -1,7 +1,7 @@
 import type { HomePortfolioContent } from "@/content/types";
+import type { ReactNode } from "react";
 import { HomeEducationSummary } from "@/components/portfolio/home/HomeEducationSummary";
 import { HomeFeaturedExperience } from "@/components/portfolio/home/HomeFeaturedExperience";
-import { HomeFeaturedProjects } from "@/components/portfolio/home/HomeFeaturedProjects";
 import { HomeFeaturedResearch } from "@/components/portfolio/home/HomeFeaturedResearch";
 import { HomeOverviewSection } from "@/components/portfolio/home/HomeOverviewSection";
 import { HomeRecommendations } from "@/components/portfolio/home/HomeRecommendations";
@@ -10,9 +10,10 @@ import { PortfolioHero } from "@/components/portfolio/home/PortfolioHero";
 
 type HomeOverviewProps = {
   content: HomePortfolioContent;
+  projectHighlights: ReactNode;
 };
 
-export function HomeOverview({ content }: HomeOverviewProps) {
+export function HomeOverview({ content, projectHighlights }: HomeOverviewProps) {
   const motionEnabled = content.siteSettings.enableScrollMotion;
   const showRecommendations =
     content.siteSettings.enableRecommendations !== false &&
@@ -67,7 +68,7 @@ export function HomeOverview({ content }: HomeOverviewProps) {
           title="Projects"
           wide
         >
-          <HomeFeaturedProjects items={content.projects} />
+          {projectHighlights}
         </HomeOverviewSection>
 
         <HomeOverviewSection

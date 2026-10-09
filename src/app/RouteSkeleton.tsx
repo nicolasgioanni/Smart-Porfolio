@@ -4,11 +4,14 @@ import { ContactPageSkeleton } from "@/components/loading/ContactPageSkeleton";
 import { ExperiencePageSkeleton } from "@/components/loading/ExperiencePageSkeleton";
 import { HomePageSkeleton } from "@/components/loading/HomePageSkeleton";
 import { LegalPageSkeleton, legalSkeletonProfiles } from "@/components/loading/LegalPageSkeleton";
-import { ProjectsPageSkeleton } from "@/components/loading/ProjectsPageSkeleton";
+import { ProjectsPageSkeleton } from "@/features/projects/loading/ProjectsPageSkeleton";
+import { getHomeProjectSkeletonProfiles } from "@/features/projects/loading/projectSkeletonProfiles";
 import { RecommendationsPageSkeleton } from "@/components/loading/RecommendationsPageSkeleton";
 import { ResearchPageSkeleton } from "@/features/research/loading/ResearchPageSkeleton";
 import { ResumePageSkeleton } from "@/components/loading/ResumePageSkeleton";
 import { siteRoutes, type SiteRoutePath } from "@/lib/routing/siteRoutes";
+import { getPortfolioContent } from "@/lib/content/getPortfolioContent";
+import { selectHomeItems } from "@/lib/content/selectHomeContent";
 
 type RouteSkeletonComponent = ComponentType;
 
@@ -41,8 +44,15 @@ function SecurityPageSkeleton() {
   return <LegalPageSkeleton pathname={siteRoutes.security} sectionProfiles={legalSkeletonProfiles[siteRoutes.security]} />;
 }
 
+function HomeRouteSkeleton({ projectItems }: { projectItems?: readonly ProjectItem[] }) {
+  const content = getPortfolioContent();
+  const items = projectItems ?? selectHomeItems(content.projects, content.siteSettings.maxHomeProjectItems);
+
+  return <HomePageSkeleton projectProfiles={getHomeProjectSkeletonProfiles(items)} />;
+}
+
 export const routeSkeletons = {
-  [siteRoutes.home]: HomePageSkeleton,
+  [siteRoutes.home]: HomeRouteSkeleton,
   [siteRoutes.experience]: ExperiencePageSkeleton,
   [siteRoutes.research]: ResearchPageSkeleton,
   [siteRoutes.projects]: ProjectsPageSkeleton,
@@ -62,7 +72,7 @@ export function RouteSkeleton({ homeProjectItems, pathname, projectDetailItems, 
   const content =
     pathname === siteRoutes.research ? <ResearchPageSkeleton detailItems={researchDetailItems} /> :
       pathname === siteRoutes.projects ? <ProjectsPageSkeleton detailItems={projectDetailItems} /> :
-        pathname === siteRoutes.home ? <HomePageSkeleton projectItems={homeProjectItems} /> : <Skeleton />;
+        pathname === siteRoutes.home ? <HomeRouteSkeleton projectItems={homeProjectItems} /> : <Skeleton />;
 
   return (
     <div data-skeleton-route={pathname} data-testid={`loading-boundary-${pathname}`}>

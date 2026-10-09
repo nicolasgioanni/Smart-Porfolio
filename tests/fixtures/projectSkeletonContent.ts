@@ -1,24 +1,24 @@
 import type { ProjectItem } from "../../src/content/types";
 
 const projectSkeletonSpecs = [
-  ["compliance-label-assistant", 2],
-  ["notepal", 2],
-  ["tergion-technologies", 2],
-  ["leetnotes", 1],
-  ["clair", 1]
+  ["compliance-label-assistant", "Live demo"],
+  ["notepal", "Live demo"],
+  ["tergion-technologies", "Live demo"],
+  ["leetnotes", null],
+  ["clair", "Download"]
 ] as const;
 
-export const canonicalProjectSkeletonItems: readonly ProjectItem[] = projectSkeletonSpecs.map(([id, actionCount], index) => ({
+export const canonicalProjectSkeletonItems: readonly ProjectItem[] = projectSkeletonSpecs.map(([id, secondaryAction], index) => ({
   detailOrder: index + 1,
   featured: false,
   homeOrder: index + 1,
   homeSkills: [],
   id,
   image: `/images/projects/${id}-concept.webp`,
-  links: actionCount === 2
+  links: secondaryAction
     ? [
         { label: "Source code", url: `https://github.com/example/${id}` },
-        { label: "Live demo", url: `https://example.com/${id}` }
+        { label: secondaryAction, url: secondaryAction === "Download" ? `https://github.com/example/${id}/releases/latest` : `https://example.com/${id}` }
       ]
     : [{ label: "Source code", url: `https://github.com/example/${id}` }],
   showOnHome: index < 3,

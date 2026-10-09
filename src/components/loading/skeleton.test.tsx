@@ -33,7 +33,7 @@ import { HomePageSkeleton } from "@/components/loading/HomePageSkeleton";
 import { legalSkeletonProfiles } from "@/components/loading/LegalPageSkeleton";
 import { PageSkeleton } from "@/components/loading/PageSkeleton";
 import { SectionHeader } from "@/components/layout/SectionHeader";
-import { getProjectSkeletonProfiles } from "@/components/loading/projectSkeletonProfiles";
+import { getProjectSkeletonProfiles } from "@/features/projects/loading/projectSkeletonProfiles";
 import { researchSkeletonProfiles } from "@/features/research/loading/ResearchPageSkeleton";
 import { RouteHeaderSkeleton } from "@/components/loading/RouteHeaderSkeleton";
 import { RouteSkeleton, routeSkeletons, skeletonRoutePaths } from "@/app/RouteSkeleton";
@@ -94,7 +94,7 @@ describe("skeleton components", () => {
   });
 
   it("renders Home page skeleton without real content text", () => {
-    const { container } = render(<HomePageSkeleton />);
+    const { container } = render(<HomePageSkeleton projectProfiles={[]} />);
 
     expect(container.textContent).toBe("");
     expect(container.querySelectorAll(".home-skeleton__skill-group")).toHaveLength(3);
@@ -221,6 +221,53 @@ describe("skeleton components", () => {
     );
   });
 
+  it("keeps Home project skeleton profiles app-composed for generated, explicit, and empty content", () => {
+    const generatedProjects: ProjectItem[] = [
+      {
+        id: "generated-project",
+        title: "Generated project",
+        homeSkills: [],
+        stack: [],
+        links: [
+          { label: "Live demo", url: "https://example.com/generated" },
+          { label: "Source code", url: "https://github.com/example/generated" }
+        ],
+        featured: false,
+        showOnHome: true
+      }
+    ];
+    const explicitProjects: ProjectItem[] = [
+      {
+        id: "explicit-project",
+        title: "Explicit project",
+        homeSkills: [],
+        stack: [],
+        links: [
+          { label: "Source code", url: "https://github.com/example/explicit" },
+          { label: "Download", url: "https://github.com/example/explicit/releases/latest" }
+        ],
+        featured: false,
+        showOnHome: false
+      }
+    ];
+    researchContentFixture.projects = generatedProjects;
+    const { container, rerender } = render(<RouteSkeleton pathname="/" />);
+    const projectCards = () => Array.from(container.querySelectorAll<HTMLElement>('[data-skeleton-section="projects"] .home-skeleton__card'));
+    const actionWidths = () => projectCards().flatMap((card) =>
+      Array.from(card.querySelectorAll<HTMLElement>(".home-skeleton__card-actions > .skeleton-block")).map((block) => block.style.width)
+    );
+
+    expect(projectCards()).toHaveLength(1);
+    expect(actionWidths()).toEqual(["92px", "84px"]);
+
+    rerender(<RouteSkeleton homeProjectItems={explicitProjects} pathname="/" />);
+    expect(projectCards()).toHaveLength(1);
+    expect(actionWidths()).toEqual(["92px", "88px"]);
+
+    rerender(<RouteSkeleton homeProjectItems={[]} pathname="/" />);
+    expect(projectCards()).toHaveLength(0);
+  });
+
   it("derives project loader actions from selected content", () => {
     const profiles = getProjectSkeletonProfiles([
       {
@@ -248,6 +295,15 @@ describe("skeleton components", () => {
 
     expect(profiles.map((profile) => profile.actionWidths)).toEqual([[112, 96], [112]]);
     expect(profiles.map((profile) => profile.summaryWidths)).toEqual([[100, 86], [100, 72]]);
+    expect(getProjectSkeletonProfiles([{
+      id: "notepal",
+      title: "NotePal",
+      homeSkills: [],
+      stack: [],
+      links: [],
+      featured: false,
+      showOnHome: false
+    }]).at(0)).toMatchObject({ hasAttribution: true });
     expect(researchSkeletonProfiles.map((profile) => profile.formalTitle)).toEqual([true, false, true]);
   });
 

@@ -1,7 +1,7 @@
 import type { ProjectItem } from "@/content/types";
 import { EmptyState } from "@/components/portfolio/shared/EmptyState";
 import { FeaturedGrid } from "@/components/portfolio/shared/FeaturedGrid";
-import { HomeProjectCard } from "@/components/portfolio/home/HomeProjectCard";
+import { HomeProjectCard } from "@/features/projects/components/HomeProjectCard";
 
 export function HomeFeaturedProjects({ items }: { items: ProjectItem[] }) {
   if (items.length === 0) {

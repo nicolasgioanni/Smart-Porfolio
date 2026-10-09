@@ -1,10 +1,10 @@
 import type { ProjectItem } from "@/content/types";
 import { GlassButton } from "@/components/glass/GlassButton";
 import { PortfolioCard } from "@/components/portfolio/shared/PortfolioCard";
-import { ProjectSkillShowcase } from "@/components/portfolio/projects/ProjectSkillShowcase";
+import { ProjectSkillShowcase } from "@/features/projects/components/ProjectSkillShowcase";
 import { getSummary } from "@/lib/content/displayHelpers";
 import { HomeCardSummary } from "@/components/portfolio/home/HomeCardSummary";
-import { getProjectActions } from "@/lib/projects/projectActions";
+import { getProjectActions } from "@/features/projects/selectors/projectActions";
 
 type HomeProjectCardProps = {
   item: ProjectItem;

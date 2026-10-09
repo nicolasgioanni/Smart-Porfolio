@@ -40,8 +40,8 @@ export default defineConfig({
     },
     {
       name: "webkit-mobile",
-      grep: /@mobile-video/,
-      testMatch: /research(?:-mobile-video)?\.spec\.ts/,
+      grep: /@mobile-(?:video|projects)/,
+      testMatch: /(?:research(?:-mobile-video)?|projects)\.spec\.ts/,
       use: { browserName: "webkit", ...devices["iPhone 13"] }
     }
   ]

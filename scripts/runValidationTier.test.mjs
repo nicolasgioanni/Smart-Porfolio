@@ -24,8 +24,8 @@ describe("priority validation tier", () => {
     expect(requiredPriorityFiles).toEqual(expect.arrayContaining([
       "src/components/portfolio/shared/DetailDisclosureList.test.tsx",
       "src/components/portfolio/shared/detailDisclosureStyles.test.ts",
-      "src/components/portfolio/projects/ProjectSkillShowcase.test.tsx",
-      "src/components/portfolio/projects/ProjectShowcase.test.tsx"
+      "src/features/projects/components/ProjectSkillShowcase.test.tsx",
+      "src/features/projects/components/ProjectShowcase.test.tsx"
     ]));
 
     for (const directory of priorityTestDirectories) {
