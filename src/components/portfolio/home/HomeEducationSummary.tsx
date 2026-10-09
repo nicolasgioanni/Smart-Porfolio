@@ -1,6 +1,7 @@
 import type { EducationItem } from "@/content/types";
 import { EmptyState } from "@/components/portfolio/shared/EmptyState";
 import { formatEducationProgram, formatProfileOverviewDateRange } from "@/lib/content/profileOverview";
+import { HomeEducationDetails } from "@/components/portfolio/home/HomeEducationDetails";
 
 const initialsStopWords = new Set(["and", "at", "for", "of", "on", "the"]);
 
@@ -72,11 +73,7 @@ export function HomeEducationSummary({ items }: { items: EducationItem[] }) {
               {dateLabel ? <p className="home-education-item__dates">{dateLabel}</p> : null}
               {item.location ? <p className="home-education-item__location">{item.location}</p> : null}
               {item.bullets.length > 0 ? (
-                <ul aria-label={`${item.institution} education details`} className="home-education-item__details">
-                  {item.bullets.map((bullet) => (
-                    <li key={bullet}>{bullet}</li>
-                  ))}
-                </ul>
+                <HomeEducationDetails bullets={item.bullets} institution={item.institution} />
               ) : null}
             </div>
           </article>

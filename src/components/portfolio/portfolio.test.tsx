@@ -329,13 +329,24 @@ describe("portfolio UI helpers", () => {
       "home-education-item__concentration",
       "home-education-item__dates",
       "home-education-item__location",
-      "home-education-item__details"
+      "home-education-item__disclosure"
     ]);
 
-    const educationDetails = screen.getByRole("list", { name: "Example University education details" });
+    const educationDisclosure = container.querySelector<HTMLDetailsElement>(".home-education-item__disclosure");
+    expect(educationDisclosure).not.toHaveAttribute("open");
+    expect(within(educationDisclosure!).getByText("Show more")).toBeInTheDocument();
+    expect(within(educationDisclosure!).getByText("Show less")).toHaveClass("home-education-item__disclosure-label-less");
+    const educationDetails = screen.getByRole("list", { hidden: true, name: "Example University education details" });
     expect(within(educationDetails).getByText("GPA: 3.9/4.0")).toBeInTheDocument();
     expect(within(educationDetails).getByText("Dean's List: 2022–2026")).toBeInTheDocument();
     expect(within(educationDetails).getByText("Relevant coursework: Algorithms")).toBeInTheDocument();
+    expect(container.querySelectorAll(".home-education-item__disclosure")).toHaveLength(1);
+
+    fireEvent.click(educationDisclosure!.querySelector("summary")!);
+    expect(educationDisclosure).toHaveAttribute("open");
+
+    fireEvent.click(educationDisclosure!.querySelector("summary")!);
+    expect(educationDisclosure).not.toHaveAttribute("open");
     expect(container.querySelector(".portfolio-card")).not.toBeInTheDocument();
     expect(container.querySelector(".glass-chip")).not.toBeInTheDocument();
   });

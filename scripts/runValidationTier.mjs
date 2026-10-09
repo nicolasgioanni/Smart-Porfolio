@@ -37,6 +37,8 @@ export const priorityTestTargets = [
   "src/components/contact/ContactNotifications.test.tsx",
   "src/styles/contactStyles.test.ts",
   "src/components/loading/skeletonContentContract.test.ts",
+  "src/components/layout/ResearchNoScriptRouteGate.test.tsx",
+  "src/components/portfolio/home/HomeEducationDetails.test.tsx",
   "src/components/navigation/MobileNavigation.test.tsx",
   "src/components/navigation/navigation.test.tsx",
   "src/components/navigation/smartLink.test.tsx",

@@ -173,6 +173,12 @@ Research and project Home cards use concise copy and bottom-aligned verified act
 
 Home section route actions use compact buttons aligned with the section heading. They remain visually subordinate to primary page actions.
 
+### Home Education details
+
+The Home Education history keeps the institution, program, concentration, dates, and optional location visible. Each entry's authored bullets start collapsed behind a compact `Show more` disclosure below its metadata; the control becomes `Show less` when expanded. The control stays above the bullets, and the section grows in normal document flow at every viewport width. Entries expand independently and entries without bullets omit the control.
+
+Use the shared compact Hover Base 1 treatment and semantic palette tokens. Preserve the existing bullet typography and spacing, keep the control content-width, and provide a comfortable touch target. The native disclosure remains usable without JavaScript; client enhancement adds the bounded height and opacity transition described in [Animation guidelines](ANIMATION_GUIDELINES.md#home-education-disclosure).
+
 ### Projects gallery
 
 The Projects route uses two equal columns above `980px` and one column at or below that boundary. Each `PortfolioCard` keeps its title, concise workbook summary, and source-first actions visible around a folder-style visual frame. Five known project IDs pair a static 3D Concept illustration with a code-rendered How it works diagram. The selected view belongs to the individual card; there is no carousel, autoplay, or shared selection.
@@ -254,7 +260,7 @@ The verification well reserves normal (300 by 65 pixels) or compact (150 by 140 
 
 ## Motion
 
-Motion supports state and orientation. Prefer opacity and transform. Shared detail disclosures, recommendation disclosure, and footer grid rows are documented exceptions where a bounded layout transition communicates state.
+Motion supports state and orientation. Prefer opacity and transform. Shared detail disclosures, recommendation disclosure, Home Education disclosure, and footer grid rows are documented exceptions where a bounded layout transition communicates state.
 
 The role rotation, route indicator, header state, mobile rail drift, theme disclosure, research and experience details, recommendation expansion, footer disclosure, and scroll reveals have explicit reduced-motion behavior. Skeletons are static. See [Animation guidelines](ANIMATION_GUIDELINES.md) for exact timing and constraints.
 
