@@ -8,6 +8,9 @@ import {
   verifyTurnstile
 } from "../../_shared/contact";
 import { readContactApiRequest } from "../../_shared/contact";
+import { createDeadline } from "../../_shared/contact/transport";
+
+const VERIFY_OPERATION_TIMEOUT_MS = 12_000;
 
 interface PagesContext<Env> {
   request: Request;
@@ -16,8 +19,10 @@ interface PagesContext<Env> {
 
 export async function onRequest(context: PagesContext<ContactEnv>): Promise<Response> {
   const { request, env } = context;
+  const deadline = createDeadline(VERIFY_OPERATION_TIMEOUT_MS);
+  try {
 
-  const parsedRequest = await readContactApiRequest(request, env, () => hasRequiredTurnstileConfiguration(env));
+  const parsedRequest = await readContactApiRequest(request, env, () => hasRequiredTurnstileConfiguration(env), deadline);
   if (parsedRequest.kind === "rejected") return parsedRequest.response;
 
   const parsed = parseTurnstileVerificationPayload(parsedRequest.body);
@@ -25,7 +30,8 @@ export async function onRequest(context: PagesContext<ContactEnv>): Promise<Resp
     return jsonResponse(400, { ok: false, error: "invalid_request" });
   }
 
-  const verification = await verifyTurnstile(parsed.payload, request, env);
+  if (deadline.isExpired()) return jsonResponse(503, { ok: false, error: "verification_unavailable" });
+  const verification = await verifyTurnstile(parsed.payload, request, env, deadline);
   if (verification.kind === "unavailable") {
     return jsonResponse(503, { ok: false, error: "verification_unavailable" });
   }
@@ -33,10 +39,13 @@ export async function onRequest(context: PagesContext<ContactEnv>): Promise<Resp
     return jsonResponse(400, { ok: false, error: "verification_failed" });
   }
 
-  const ticket = await createContactTicket(parsed.payload.submissionId, env);
-  if (!ticket) {
+  const ticket = await createContactTicket(parsed.payload.submissionId, env, Date.now(), deadline);
+  if (!ticket || deadline.isExpired()) {
     return jsonResponse(503, { ok: false, error: "service_unavailable" });
   }
 
   return jsonResponse(200, { ok: true }, { "Set-Cookie": serializeContactTicketCookie(ticket) });
+  } finally {
+    deadline.clear();
+  }
 }

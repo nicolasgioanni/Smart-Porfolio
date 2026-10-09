@@ -1,6 +1,6 @@
 import { isAllowedOrigin } from "./config";
 import { MAX_REQUEST_BYTES, type ContactEnv, type ReadBodyResult } from "./contracts";
-import { awaitWithDeadline, cancelBodyReader, createDeadline } from "./transport";
+import { awaitWithDeadline, cancelBodyReader, createDeadline, type Deadline } from "./transport";
 
 const REQUEST_BODY_READ_TIMEOUT_MS = 15_000;
 
@@ -18,7 +18,7 @@ export function jsonResponse(status: number, body: Record<string, boolean | stri
   return new Response(JSON.stringify(body), { status, headers });
 }
 
-export async function readJsonBody(request: Request): Promise<ReadBodyResult> {
+export async function readJsonBody(request: Request, operationDeadline?: Deadline): Promise<ReadBodyResult> {
   const contentLength = request.headers.get("Content-Length");
   if (contentLength) {
     const parsedLength = Number(contentLength);
@@ -32,7 +32,8 @@ export async function readJsonBody(request: Request): Promise<ReadBodyResult> {
   const chunks: Uint8Array[] = [];
   let byteLength = 0;
   let completed = false;
-  const deadline = createDeadline(REQUEST_BODY_READ_TIMEOUT_MS);
+  // The body cap remains 15 seconds even when the enclosing operation is longer.
+  const deadline = createDeadline(REQUEST_BODY_READ_TIMEOUT_MS, undefined, operationDeadline);
 
   try {
     while (true) {
@@ -73,7 +74,8 @@ export async function readJsonBody(request: Request): Promise<ReadBodyResult> {
 export async function readContactApiRequest(
   request: Request,
   env: ContactEnv,
-  isConfigurationValid: () => boolean
+  isConfigurationValid: () => boolean,
+  operationDeadline?: Deadline
 ): Promise<ContactApiRequest> {
   if (request.method !== "POST") {
     return {
@@ -95,7 +97,7 @@ export async function readContactApiRequest(
     return { kind: "rejected", response: jsonResponse(415, { ok: false, error: "unsupported_media_type" }) };
   }
 
-  const body = await readJsonBody(request);
+  const body = await readJsonBody(request, operationDeadline);
   if (body.kind === "too-large") {
     return { kind: "rejected", response: jsonResponse(413, { ok: false, error: "request_too_large" }) };
   }

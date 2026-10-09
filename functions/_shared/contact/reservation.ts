@@ -12,16 +12,20 @@ import {
 } from "./contracts";
 import { encodeBase64Url } from "./base64url";
 import { isPlainObject } from "./values";
+import { createDeliveryIdentity } from "./delivery";
+import { awaitWithDeadline, createDeadline, type Deadline } from "./transport";
 
 const RATE_LIMIT_HKDF_SALT = "portfolio-contact-rate-limit:v1:hkdf-salt";
 const RATE_LIMIT_HKDF_INFO = "portfolio-contact-rate-limit:v1:email-hmac-key";
 const PAYLOAD_FINGERPRINT_HKDF_SALT = "portfolio-contact-payload-fingerprint:v1:hkdf-salt";
 const PAYLOAD_FINGERPRINT_HKDF_INFO = "portfolio-contact-payload-fingerprint:v1:hmac-key";
+const D1_RESERVATION_TIMEOUT_MS = 5_000;
 
 export async function reserveContactSubmission(
   payload: ContactPayload,
   env: ContactEnv,
-  now = Date.now()
+  now = Date.now(),
+  operationDeadline?: Deadline
 ): Promise<ContactReservationResult> {
   const database = env.CONTACT_RATE_LIMIT_DB;
   const secret = env.TURNSTILE_SECRET_KEY?.trim();
@@ -35,8 +39,8 @@ export async function reserveContactSubmission(
   let payloadHash: string;
   try {
     [emailHash, payloadHash] = await Promise.all([
-      createRateLimitEmailHash(payload.email, secret),
-      createContactPayloadFingerprint(payload, secret)
+      createRateLimitEmailHash(payload.email, secret, operationDeadline),
+      createContactPayloadFingerprint(payload, secret, createDeliveryIdentity(payload, env), operationDeadline)
     ]);
   } catch {
     return { kind: "unavailable" };
@@ -59,7 +63,13 @@ export async function reserveContactSubmission(
         )
         .bind(emailHash, nowSeconds)
     ];
-    const results = await database.batch<Record<string, unknown>>(statements);
+    if (operationDeadline?.isExpired()) return { kind: "unavailable" };
+    // D1 cannot cancel an issued batch. A late completion is ignored here; a
+    // same-ID retry reads the atomic reservation instead of sending mail twice.
+    const databaseDeadline = createDeadline(D1_RESERVATION_TIMEOUT_MS, undefined, operationDeadline);
+    const results = await awaitWithDeadline(database.batch<Record<string, unknown>>(statements), databaseDeadline);
+    databaseDeadline.clear();
+    if (!results || databaseDeadline.isExpired() || operationDeadline?.isExpired()) return { kind: "unavailable" };
     if (results.length !== statements.length || results.some((result) => result.success !== true)) {
       return { kind: "unavailable" };
     }
@@ -90,10 +100,13 @@ export async function reserveContactSubmission(
   return { kind: "unavailable" };
 }
 
-async function createRateLimitEmailHash(email: string, secret: string): Promise<string> {
-  const key = await deriveRateLimitKey(secret);
+async function createRateLimitEmailHash(email: string, secret: string, deadline?: Deadline): Promise<string> {
+  const key = await awaitCrypto(deriveRateLimitKey(secret), deadline);
+  if (!key) throw new Error("deadline");
   const normalizedEmail = email.trim().toLowerCase();
-  const digest = new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(normalizedEmail)));
+  const signed = await awaitCrypto(crypto.subtle.sign("HMAC", key, new TextEncoder().encode(normalizedEmail)), deadline);
+  if (!signed) throw new Error("deadline");
+  const digest = new Uint8Array(signed);
   return encodeBase64Url(digest);
 }
 
@@ -115,9 +128,15 @@ async function deriveRateLimitKey(secret: string): Promise<CryptoKey> {
   );
 }
 
-async function createContactPayloadFingerprint(payload: ContactPayload, secret: string): Promise<string> {
+async function createContactPayloadFingerprint(
+  payload: ContactPayload,
+  secret: string,
+  deliveryIdentity: string | undefined,
+  deadline?: Deadline
+): Promise<string> {
+  if (!deliveryIdentity) throw new Error("invalid delivery identity");
   const canonicalPayload = JSON.stringify({
-    v: 1,
+    v: 2,
     submissionId: payload.submissionId,
     firstName: payload.firstName,
     lastName: payload.lastName,
@@ -127,13 +146,21 @@ async function createContactPayloadFingerprint(payload: ContactPayload, secret: 
     contactConsent: payload.contactConsent,
     legalConsent: payload.legalConsent,
     startedAt: payload.startedAt,
-    website: payload.website
+    website: payload.website,
+    deliveryIdentity
   });
-  const key = await derivePayloadFingerprintKey(secret);
-  const digest = new Uint8Array(
-    await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(canonicalPayload))
-  );
+  const key = await awaitCrypto(derivePayloadFingerprintKey(secret), deadline);
+  if (!key) throw new Error("deadline");
+  const signed = await awaitCrypto(crypto.subtle.sign("HMAC", key, new TextEncoder().encode(canonicalPayload)), deadline);
+  if (!signed) throw new Error("deadline");
+  const digest = new Uint8Array(signed);
   return encodeBase64Url(digest);
+}
+
+async function awaitCrypto<T>(operation: Promise<T>, deadline?: Deadline): Promise<T | undefined> {
+  if (!deadline) return operation;
+  const value = await awaitWithDeadline(operation, deadline);
+  return deadline.isExpired() ? undefined : value;
 }
 
 async function derivePayloadFingerprintKey(secret: string): Promise<CryptoKey> {

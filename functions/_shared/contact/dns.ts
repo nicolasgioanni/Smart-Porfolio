@@ -1,6 +1,6 @@
 import { isValidEmail } from "../../../src/lib/contact/validation";
 import type { EmailDomainValidationResult } from "./contracts";
-import { fetchWithJsonTimeout, type ReadJsonResponse } from "./transport";
+import { fetchWithJsonTimeout, type Deadline, type ReadJsonResponse } from "./transport";
 import { isPlainObject } from "./values";
 
 const DNS_OVER_HTTPS_URL = "https://cloudflare-dns.com/dns-query";
@@ -15,11 +15,11 @@ interface DnsJsonResponse {
 
 type DnsQueryResult = { kind: "ok"; answers: Array<{ type: number; data: string }> } | { kind: "not-found" } | { kind: "unavailable" };
 
-export async function validateEmailDomain(email: string): Promise<EmailDomainValidationResult> {
+export async function validateEmailDomain(email: string, operationDeadline?: Deadline): Promise<EmailDomainValidationResult> {
   if (!isValidEmail(email)) return { kind: "invalid" };
 
   const domain = email.slice(email.lastIndexOf("@") + 1).toLowerCase();
-  const mxResult = await queryDns(domain, "MX");
+  const mxResult = await queryDns(domain, "MX", operationDeadline);
   if (mxResult.kind === "unavailable") return { kind: "unavailable" };
   if (mxResult.kind === "not-found") return { kind: "invalid" };
 
@@ -31,7 +31,7 @@ export async function validateEmailDomain(email: string): Promise<EmailDomainVal
       : { kind: "invalid" };
   }
 
-  const [aResult, aaaaResult] = await Promise.all([queryDns(domain, "A"), queryDns(domain, "AAAA")]);
+  const [aResult, aaaaResult] = await Promise.all([queryDns(domain, "A", operationDeadline), queryDns(domain, "AAAA", operationDeadline)]);
   const hasAddress = [aResult, aaaaResult].some(
     (result) => result.kind === "ok" && result.answers.some((answer) => answer.type === 1 || answer.type === 28)
   );
@@ -40,14 +40,15 @@ export async function validateEmailDomain(email: string): Promise<EmailDomainVal
   return { kind: "invalid" };
 }
 
-async function queryDns(domain: string, recordType: "MX" | "A" | "AAAA"): Promise<DnsQueryResult> {
+async function queryDns(domain: string, recordType: "MX" | "A" | "AAAA", operationDeadline?: Deadline): Promise<DnsQueryResult> {
   return (
     (await fetchWithJsonTimeout(
       `${DNS_OVER_HTTPS_URL}?name=${encodeURIComponent(domain)}&type=${recordType}`,
       { headers: { Accept: "application/dns-json" } },
       DNS_TIMEOUT_MS,
       DNS_MAX_RESPONSE_BYTES,
-      parseDnsResponse
+      parseDnsResponse,
+      operationDeadline
     )) ?? { kind: "unavailable" }
   );
 }

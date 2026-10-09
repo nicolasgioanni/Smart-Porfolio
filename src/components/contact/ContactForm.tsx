@@ -32,6 +32,29 @@ const initialConsents: Record<ConsentField, boolean> = {
 };
 
 const verificationAutoAdvanceDelayMs = 500;
+const contactNetworkTimeoutMs = 25_000;
+
+async function fetchContactJson(url: string, init: RequestInit): Promise<{ response: Response; result: { error?: string; ok?: boolean } | null }> {
+  const controller = new AbortController();
+  const timedOut = Symbol("contact-network-timeout");
+  let timeout: number | undefined;
+  const expired = new Promise<typeof timedOut>((resolve) => {
+    timeout = window.setTimeout(() => {
+      controller.abort();
+      resolve(timedOut);
+    }, contactNetworkTimeoutMs);
+  });
+  try {
+    const response = await Promise.race([fetch(url, { ...init, signal: controller.signal }), expired]);
+    if (response === timedOut) throw new DOMException("The contact request timed out.", "AbortError");
+
+    const result = await Promise.race([response.json().catch(() => null), expired]);
+    if (result === timedOut) throw new DOMException("The contact response timed out.", "AbortError");
+    return { response, result };
+  } finally {
+    if (timeout !== undefined) window.clearTimeout(timeout);
+  }
+}
 
 function retryAfterCopy(value: string | null): string {
   if (!value) return "Try again after the 24-hour limit resets.";
@@ -343,7 +366,7 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
     setVerificationPhase("verifying");
 
     try {
-      const response = await fetch("/api/contact/verify", {
+      const { response, result } = await fetchContactJson("/api/contact/verify", {
         method: "POST",
         credentials: "same-origin",
         headers: {
@@ -355,7 +378,6 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
           turnstileToken: token
         })
       });
-      const result = (await response.json().catch(() => null)) as { error?: string; ok?: boolean } | null;
 
       if (verificationRequestRef.current !== requestId) return;
       if (!response.ok || result?.ok !== true) {
@@ -592,7 +614,7 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
     setSubmissionPhase("submitting");
 
     try {
-      const response = await fetch("/api/contact", {
+      const { response, result } = await fetchContactJson("/api/contact", {
         method: "POST",
         credentials: "same-origin",
         headers: {
@@ -601,7 +623,6 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
         },
         body: requestBody
       });
-      const result = (await response.json().catch(() => null)) as { error?: string; ok?: boolean } | null;
 
       if (!response.ok || result?.ok !== true) {
         if (result?.error === "verification_required") {

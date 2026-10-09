@@ -1,7 +1,7 @@
 import { hasUnsafeControlCharacters } from "../../../src/lib/contact/validation";
 import { parseHostnames } from "./config";
 import { CONTACT_ACTION, type ContactEnv, type TurnstileVerificationPayload, type TurnstileVerificationResult } from "./contracts";
-import { fetchWithJsonTimeout, type ReadJsonResponse } from "./transport";
+import { fetchWithJsonTimeout, type Deadline, type ReadJsonResponse } from "./transport";
 import { isPlainObject } from "./values";
 
 const TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
@@ -22,7 +22,8 @@ type TurnstileAttemptResult = TurnstileVerificationResult | { kind: "transient" 
 export async function verifyTurnstile(
   payload: TurnstileVerificationPayload,
   request: Request,
-  env: ContactEnv
+  env: ContactEnv,
+  operationDeadline?: Deadline
 ): Promise<TurnstileVerificationResult> {
   const secret = env.TURNSTILE_SECRET_KEY?.trim();
   const allowedHostnames = parseHostnames(env.TURNSTILE_ALLOWED_HOSTNAMES);
@@ -52,13 +53,15 @@ export async function verifyTurnstile(
   };
 
   for (let attempt = 0; attempt < TURNSTILE_MAX_ATTEMPTS; attempt += 1) {
+    if (operationDeadline?.isExpired()) return { kind: "unavailable" };
     const result =
       (await fetchWithJsonTimeout(
         TURNSTILE_VERIFY_URL,
         requestInit,
         TURNSTILE_TIMEOUT_MS,
         TURNSTILE_MAX_RESPONSE_BYTES,
-        (response, readJson) => classifyTurnstileAttempt(response, readJson, payload.submissionId, allowedHostnames)
+        (response, readJson) => classifyTurnstileAttempt(response, readJson, payload.submissionId, allowedHostnames),
+        operationDeadline
       )) ?? { kind: "transient" as const };
     if (result.kind !== "transient") return result;
   }
