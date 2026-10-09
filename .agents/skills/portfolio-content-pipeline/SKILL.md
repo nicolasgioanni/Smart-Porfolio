@@ -11,4 +11,6 @@ Read [system decisions](../../knowledge/SYSTEM_DECISIONS.md), [Content pipeline]
 
 Keep parser limits, header validation, normalization, semantic hashing, URL policy, and public-safe boundaries intact. Reuse the existing generation and resolver paths instead of adding component-level source access. Test a changed boundary with its closest parser or resolver contract, then generate content and run the relevant route checks.
 
+For Projects, read [Project showcase](../../../docs/content/PROJECT_SHOWCASE.md). Keep the workbook authoritative for membership, copy, order, and destinations; local illustration and diagram registries must not insert missing project records. Include the canonical CSV import handoff when changing the lineup.
+
 For Research media, read [Research media](../../../docs/content/RESEARCH_MEDIA.md) and the shared interface skill before changing graphical or video assets.

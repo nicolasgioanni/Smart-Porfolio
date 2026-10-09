@@ -98,6 +98,12 @@ Long recommendations expose a native button with `aria-expanded`, `aria-controls
 
 The footer's `Details` and `Collapse` button exposes `aria-expanded` and `aria-controls`. Collapsed detail content is `aria-hidden` and inert. Every route begins with a fresh compact disclosure; layout settling and restored or programmatic scrolling cannot open it. Downward wheel, touch, pointer-scroll, or scroll-key intent can activate automatic expansion when the runway is reached. The explicit button remains available for device-independent control, and focused details are not hidden by automatic collapse within the same route.
 
+## Project visual views
+
+Each project owns a labelled tablist with Concept selected initially. Arrow keys cycle its two tabs, Home and End select the first and last tab, and only the selected tab participates in the normal Tab sequence. Every tab points to its labelled panel and uses `aria-selected`; hidden panels leave the accessibility tree. The title, summary, and source/demo links remain visible when the view changes. Controls retain 44px minimum targets and the shared focus treatment.
+
+Concept illustrations have descriptive alt text. Diagrams expose an ordered list of real text steps; SVG paths are decorative. With JavaScript disabled, the Concept image and links remain visible and a native How it works disclosure exposes the diagram. Verify this on the built static export as well as component output, because streamed route boundaries can otherwise leave a loader visible. See [Project showcase content](../content/PROJECT_SHOWCASE.md).
+
 ## Motion and reduced motion
 
 Motion is supplementary. Content remains present when motion is disabled.

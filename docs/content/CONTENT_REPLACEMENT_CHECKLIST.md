@@ -69,8 +69,8 @@ Use this checklist when replacing local sample content or preparing a public wor
 - [ ] Keep `home_skills` at three or fewer ordered `name=icon` entries with valid lowercase icon keys.
 - [ ] Populate each numbered skill summary/details pair together and only for an existing skill position.
 - [ ] Verify project skill dialog copy describes the actual role of that technology.
-- [ ] Confirm link inference produces the intended `Source code` and optional `Live demo` actions on Home.
-- [ ] Verify problem, solution, impact, image, stack, and full links on the Projects route.
+- [ ] Confirm link inference produces the intended source-first `Source code` and optional `Live demo` actions on Home and Projects.
+- [ ] Verify concise summaries, both visual views, ordering, attribution, and native no-JavaScript disclosures on the Projects route. Follow the [five-row workbook handoff](PROJECT_SHOWCASE.md) when publishing the reviewed lineup.
 
 ## Skills
 

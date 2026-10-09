@@ -47,6 +47,7 @@ This is an npm repository: `package.json`, `package-lock.json`, and `.nvmrc` are
 | [Content replacement checklist](content/CONTENT_REPLACEMENT_CHECKLIST.md) | Short publication checklist for replacing portfolio content safely. |
 | [Asset provenance](content/ASSET_PROVENANCE.md) | Source, publication status, and transformation record for externally sourced public assets. |
 | [Research media](content/RESEARCH_MEDIA.md) | Publication facts, accessibility artifacts, and integrity contracts for self-hosted Research media. |
+| [Project showcase](content/PROJECT_SHOWCASE.md) | Workbook import handoff, code evidence, and generated-artwork provenance for the two-view Projects gallery. |
 
 ## Design and user experience
 

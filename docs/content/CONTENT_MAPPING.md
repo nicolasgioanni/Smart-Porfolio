@@ -150,7 +150,9 @@ Home Project cards display `title`, optional `subtitle`, `home_summary` with det
 
 A Home skill with complete summary and details opens its evidence dialog. A skill without those optional fields remains a static badge. Generation guarantees at most three skills and validates numbered explanation pairs against their positions.
 
-The Projects route displays title, subtitle, detail summary with Home fallback, problem, solution, impact, image, full stack, and every link. `featured` affects ordering but is not displayed as a chip on project cards.
+The Projects route displays a title, one detail-summary sentence with Home fallback, a local visual frame, and the same ordered Source code and Live demo actions as Home. Missing actions are omitted. Problem, solution, impact, subtitle, and full stack remain compatible source fields but are not displayed in the concise gallery. `featured` affects sorting without appearing as a chip; the reviewed five-row import sets it false on every row and uses explicit detail ordering.
+
+Known project IDs receive independent Concept and How it works tabs. For those IDs, the typed local registry owns the reviewed Concept illustration path, meaningful alt text, intrinsic dimensions, and code-rendered workflow. The workbook `image` field remains the authored fallback for unknown IDs. Unknown IDs keep authored image and text fallbacks without an invented diagram. The current import features Compliance Label Assistant, NotePal, and Tergion on Home while preserving its three-item compact layout. See [Project showcase](PROJECT_SHOWCASE.md) for the exact import file, source evidence, editorial limits, and artwork prompts.
 
 ## Skills
 

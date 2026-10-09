@@ -1153,6 +1153,7 @@
 .research-video-player[data-enhanced="true"] .research-video-player__media {
   position: absolute;
   inset: 0;
+  z-index: 0;
 }
 
 .research-video-player__bottom-bar,

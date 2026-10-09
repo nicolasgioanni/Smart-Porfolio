@@ -150,6 +150,7 @@ describe("research showcase styles", () => {
   it("keeps a native media viewport under progressive liquid-glass controls with opaque fallbacks", () => {
     const playerRule = rule("\\.research-video-player");
     const mediaRule = rule("\\.research-video-player__media");
+    const enhancedMediaRule = rule('\\.research-video-player\\[data-enhanced="true"\\] \\.research-video-player__media');
     const controlRule = rule("\\.research-video-player__control");
     const controlSurfaceRule = researchStyles.match(/^\.research-video-player__control::before\s*\{[^}]*}/m)?.[0] ?? "";
     const centerRule = rule("\\.research-video-player__center-control");
@@ -159,6 +160,7 @@ describe("research showcase styles", () => {
 
     expect(playerRule).toMatch(/background:\s*#000/);
     expect(mediaRule).toMatch(/object-fit:\s*contain/);
+    expect(enhancedMediaRule).toMatch(/z-index:\s*0/);
     expect(controlRule).toMatch(/width:\s*44px/);
     expect(controlRule).toMatch(/min-height:\s*44px/);
     expect(controlSurfaceRule).toMatch(/inset:\s*7px/);

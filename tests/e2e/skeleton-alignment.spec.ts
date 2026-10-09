@@ -32,8 +32,8 @@ type Viewport = {
 
 type ProjectFootprint = {
   actions: number;
-  chips: number;
-  deepDive: number;
+  tabs: number;
+  visual: number;
 };
 
 type ResearchFootprint = {
@@ -497,11 +497,11 @@ test("matches the Home hero's 720, 860, and 980 responsive boundaries", async ({
 test("matches real Project and Research detail footprints at compact, phone, tablet, and desktop widths", async ({ page }) => {
   for (const viewport of [primaryViewports[0]!, primaryViewports[1]!, primaryViewports[3]!, primaryViewports.at(-1)!]) {
     await preparePage(page, viewport, siteRoutes.projects);
-    const resolvedProjectFootprints = await page.locator(".project-card").evaluateAll((cards): ProjectFootprint[] =>
+    const resolvedProjectFootprints = await page.locator(".project-card--showcase").evaluateAll((cards): ProjectFootprint[] =>
       cards.map((card) => ({
-        actions: card.querySelectorAll(".card-links > a").length,
-        chips: card.querySelectorAll(".tag-list > *").length,
-        deepDive: card.querySelectorAll(".project-card__deep-dive > p").length
+        actions: card.querySelectorAll(".project-card__actions > a").length,
+        tabs: card.querySelectorAll(".project-visual-tabs__tab").length,
+        visual: card.querySelectorAll(".project-visual-tabs, .project-card__image").length
       }))
     );
     const { fixturePage: projectFixturePage, skeleton: projectSkeleton } = await mountStaticRouteSkeleton(
@@ -514,8 +514,8 @@ test("matches real Project and Research detail footprints at compact, phone, tab
       await expect(projectCards).toHaveCount(resolvedProjectFootprints.length);
       for (const [index, footprint] of resolvedProjectFootprints.entries()) {
         const card = projectCards.nth(index);
-        await expect(card.locator(".detail-card-skeleton__chips > .skeleton-block")).toHaveCount(footprint.chips);
-        await expect(card.locator(".detail-card-skeleton__deep-dive-group")).toHaveCount(footprint.deepDive);
+        await expect(card.locator(".detail-card-skeleton__project-tabs > .skeleton-block")).toHaveCount(footprint.tabs);
+        await expect(card.locator(".detail-card-skeleton__project-visual")).toHaveCount(footprint.visual);
         await expect(card.locator(".detail-card-skeleton__actions > .skeleton-block")).toHaveCount(footprint.actions);
       }
       await assertViewportHasNoOverflow(projectFixturePage, `Projects skeleton does not overflow at ${viewport.name}`);

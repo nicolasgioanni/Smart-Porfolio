@@ -9,10 +9,12 @@ const vitestEntryPoint = path.join(projectRoot, "node_modules", "vitest", "vites
 export const priorityTestDirectories = [
   "src/components/overlay",
   "src/components/portfolio/experience",
+  "src/components/portfolio/projects",
   "src/components/portfolio/recommendations",
   "src/components/portfolio/research",
   "src/components/portfolio/shared",
   "src/components/theme",
+  "src/lib/projects",
   "src/lib/theme"
 ];
 
@@ -60,6 +62,8 @@ export const requiredPriorityFiles = [...new Set([
   "src/components/portfolio/shared/detailDisclosureStyles.test.ts",
   "src/components/portfolio/experience/ExperienceShowcase.test.tsx",
   "src/components/portfolio/experience/experienceStyles.test.ts",
+  "src/components/portfolio/projects/ProjectSkillShowcase.test.tsx",
+  "src/components/portfolio/projects/ProjectShowcase.test.tsx",
   "src/components/portfolio/recommendations/ExpandableRecommendationText.test.tsx",
   "src/components/portfolio/recommendations/RecommendationVerificationLink.test.tsx",
   "src/components/portfolio/recommendations/RecommendationsList.test.tsx",

@@ -363,6 +363,10 @@ describe("static portfolio security contracts", () => {
       path.join(projectRoot, "src", "components", "portfolio", "home", "HomeProjectCard.tsx"),
       "utf8"
     );
+    const projectActionsSource = readFileSync(
+      path.join(projectRoot, "src", "lib", "projects", "projectActions.ts"),
+      "utf8"
+    );
     const projectSkillSource = readFileSync(
       path.join(projectRoot, "src", "components", "portfolio", "projects", "ProjectSkillShowcase.tsx"),
       "utf8"
@@ -423,7 +427,9 @@ describe("static portfolio security contracts", () => {
     expect(projectSource).toMatch(/ProjectSkillShowcase/);
     expect(projectSource).toMatch(/projectTitle=\{item\.title\}\s+skills=\{visibleSkills\}/);
     expect(projectSource).not.toMatch(/<SkillBadge|visibleSkills\.map/);
-    expect(projectSource).toMatch(/Source code[\s\S]*Live demo/);
+    expect(projectSource).toMatch(/import\s*{\s*getProjectActions\s*}\s*from\s*"@\/lib\/projects\/projectActions"/);
+    expect(projectSource).toMatch(/const\s+actions\s*=\s*getProjectActions\(item\.links\)/);
+    expect(projectActionsSource).toMatch(/Source code[\s\S]*Live demo/);
     expect(projectSource).not.toMatch(/Featured|GlassChip/);
     expect(projectSkillsRule).toMatch(/justify-content:\s*center/);
     expect(projectSkillsRule).toMatch(/width:\s*100%/);

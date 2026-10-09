@@ -17,6 +17,7 @@
 
 - Route every hydrated `data-theme` write through `src/lib/theme/themeTransition.ts`. Use `src/components/overlay/ModalDialog.tsx` for modal previews and evidence dialogs. Read the interface skill before changing either.
 - For published Research media, use the existing content resolvers and previews. Read the interface and content skills before changing graphical or video assets.
+- For Projects visuals, preserve workbook-owned records and local presentation ownership. Follow [Project showcase](docs/content/PROJECT_SHOWCASE.md) for the import handoff, verified claims, concept assets, diagrams, and no-JavaScript fallback.
 - Before changing skeleton geometry, route coverage, visual baselines, transition coverage, or the browser gate, read `.agents/skills/portfolio-skeleton-regression/SKILL.md`. Preserve Linux-only zero-difference baselines and every part of `npm run test:e2e:skeletons`.
 
 ## Evidence

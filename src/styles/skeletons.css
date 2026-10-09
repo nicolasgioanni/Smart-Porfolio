@@ -340,7 +340,23 @@
 }
 
 .detail-card-skeleton--project {
-  min-height: 398px;
+  min-height: 410px;
+}
+
+.detail-card-skeleton__project-visual {
+  aspect-ratio: 16 / 10;
+}
+
+.detail-card-skeleton__project-visual .skeleton-block {
+  height: 100% !important;
+}
+
+.detail-card-skeleton__project-tabs {
+  display: flex;
+  gap: 1px;
+  align-items: end;
+  padding-inline: var(--space-2);
+  border-bottom: 1px solid var(--color-line);
 }
 
 .detail-card-skeleton__header,
@@ -609,6 +625,10 @@
 }
 
 @media (max-width: 720px) {
+  .detail-card-skeleton__project-visual {
+    aspect-ratio: 4 / 3;
+  }
+
   .home-skeleton {
     gap: var(--space-6);
   }

@@ -77,7 +77,7 @@ Smart-Porfolio/
 | `migrations/` | Append-only Cloudflare D1 schema changes applied before the corresponding Pages deployment. |
 | `public/` | Public images, favicons, Pages security headers, and the exact Function route allowlist copied into the static export. |
 | `scripts/` | Content ingestion, local automation, deployment manifests, artifact integrity, deployment smoke checks, and script-level tests. |
-| `tests/e2e/` | Playwright Chromium regressions for deterministic skeleton alignment, inert visual fixtures, and transitions; responsive navigation; recommendation overlays; Experience and Research detail behavior; and footer first-render, route, restoration, and scroll behavior. |
+| `tests/e2e/` | Playwright Chromium regressions for deterministic skeleton alignment, inert visual fixtures, and transitions; responsive navigation; recommendation overlays; Projects visual views; Experience and Research detail behavior; and footer first-render, route, restoration, and scroll behavior. |
 | `src/` | Next.js routes, React components, typed content, selectors, validation, theme helpers, and CSS. |
 | `next.config.mjs` | Static export and unoptimized image configuration. |
 | `package.json` | Supported Node.js range, dependencies, and executable project commands. |
@@ -93,7 +93,7 @@ Every route under `src/app/` is compatible with the Next.js static export. Clien
 | `/` | `src/app/page.tsx` | Profile and portfolio overview | Yes |
 | `/experience` | `src/app/experience/page.tsx` | Two-depth, expandable experience showcase | Yes |
 | `/research` | `src/app/research/page.tsx` | Two-depth, alternating visual research showcase | Yes |
-| `/projects` | `src/app/projects/page.tsx` | Detailed project evidence | Yes |
+| `/projects` | `src/app/projects/page.tsx` | Concise project gallery with independent Concept and How it works views | Yes |
 | `/recommendations` | `src/app/recommendations/page.tsx` | Recommendation list or configured empty state | Conditional |
 | `/resume` | `src/app/resume/page.tsx` | Private resume request instructions without a published file | Yes |
 | `/contact` | `src/app/contact/page.tsx` | Static form shell that calls the isolated contact Functions | No, footer only |
@@ -120,6 +120,8 @@ The recommendation route and navigation item remain discoverable only when recom
 `src/components/portfolio/` groups the Home summary layer and evidence-focused route components by owner: `home/`, `profile/`, `experience/`, `research/`, `projects/`, `recommendations/`, `skills/`, and `resume/`. `shared/` contains only domain-neutral display and control primitives. Skills components remain under `skills/` when another portfolio domain consumes them. `home/HomeOverview.tsx` owns Home section order. `selectHomeContent.ts`, `selectVisibleContent.ts`, `selectDetailContent.ts`, `selectRecommendationContent.ts`, and `profileOverview.ts` divide content selection by surface and domain. `research/ResearchGraphicalAbstractPreview.tsx` owns Research thumbnails; `ResearchVideoPreview.tsx` coordinates inline/enlarged playback handoff. Both use `ResearchMediaDialog.tsx` for fitted media framing over the shared modal lifecycle. `ResearchVideoPlayer.tsx` owns the progressively enhanced player, browser caption cues, responsive controls, measured mobile caption placement, and container-fullscreen requests. `ResearchVideoPreview` hosts the persistent in-place fullscreen wrappers and owns the separate paused inline/enlarged handoff. Fullscreen preserves the media element; the shared `ModalDialog` owns its fallback lifecycle.
 
 Focused client behavior includes the configured role rotation, modal media and skills dialogs, recommendation measurement and expansion, optional scroll reveals, and the shared shell interactions. Content rendering remains server-generated. Modal consumers provide their content and geometry while `src/components/overlay/ModalDialog.tsx` provides the common accessible interaction contract.
+
+`projects/ProjectVisualTabs.tsx` owns each gallery card's small client boundary. `ProjectDiagram.tsx` renders readable HTML steps and native SVG geometry. `src/lib/projects/projectVisualRegistry.ts` owns the five established visual definitions, while `projectActions.ts` shares source-first destination selection with Home and loading profiles. Optimized Concept assets live under `public/images/projects/`; [Project showcase content](../content/PROJECT_SHOWCASE.md) records their prompts and workbook migration.
 
 ### Direct import boundary
 
@@ -223,4 +225,4 @@ Vitest discovers the complete suite. ESLint, TypeScript, the static build, docum
 - [Testing](../quality/TESTING.md)
 - [Maintenance](../development/MAINTENANCE.md)
 
-The shell composes Research’s `ResearchNoScriptRouteGate` outside route loading boundaries. Its server-resolved pathname exposes the shared Research showcase only when scripting is disabled; normal route children retain their direct `site-main` relationship for motion and skeleton checks. No runtime content fetching or export rewriting is involved.
+The shell composes `StaticPortfolioRouteGate` outside route loading boundaries. Its server-resolved pathname exposes either the Research showcase or the native Projects gallery only when scripting is disabled; normal route children retain their direct `site-main` relationship for motion and skeleton checks. No runtime content fetching or export rewriting is involved.

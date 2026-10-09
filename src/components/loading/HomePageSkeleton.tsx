@@ -1,9 +1,18 @@
 import { PageSkeleton } from "@/components/loading/PageSkeleton";
+import { getHomeProjectSkeletonProfiles, type HomeProjectSkeletonProfile } from "@/components/loading/projectSkeletonProfiles";
 import { SkeletonBlock } from "@/components/loading/SkeletonBlock";
 import { SkeletonText } from "@/components/loading/SkeletonText";
+import { getPortfolioContent } from "@/lib/content/getPortfolioContent";
+import { selectHomeItems } from "@/lib/content/selectHomeContent";
+import type { ProjectItem } from "@/content/types";
 import { siteRoutes } from "@/lib/routing/siteRoutes";
 
-export function HomePageSkeleton() {
+export function HomePageSkeleton({ projectItems }: { projectItems?: readonly ProjectItem[] }) {
+  const content = getPortfolioContent();
+  const projectProfiles = getHomeProjectSkeletonProfiles(
+    projectItems ?? selectHomeItems(content.projects, content.siteSettings.maxHomeProjectItems)
+  );
+
   return (
     <PageSkeleton pathname={siteRoutes.home} variant="home">
       <div aria-hidden="true" className="home-skeleton">
@@ -81,7 +90,7 @@ export function HomePageSkeleton() {
           </section>
           <HomeEducationSection />
           <HomeCardSection section="research" width="20%" />
-          <HomeCardSection section="projects" width="22%" />
+          <HomeCardSection projectProfiles={projectProfiles} section="projects" width="22%" />
           <section className="home-skeleton__section home-skeleton__section--skills" data-skeleton-section="skills">
             <div className="home-skeleton__section-header">
               <SkeletonBlock height={28} width="18%" />
@@ -138,7 +147,15 @@ function HomeEducationSection() {
   );
 }
 
-function HomeCardSection({ section, width }: { section: "projects" | "research"; width: string }) {
+function HomeCardSection({
+  projectProfiles,
+  section,
+  width
+}: {
+  projectProfiles?: readonly HomeProjectSkeletonProfile[];
+  section: "projects" | "research";
+  width: string;
+}) {
   return (
     <section
       className="home-skeleton__section home-skeleton__section--cards"
@@ -149,22 +166,22 @@ function HomeCardSection({ section, width }: { section: "projects" | "research";
         <SkeletonBlock height={36} radius={12} width={58} />
       </div>
       <div className="home-skeleton__card-grid">
-        {Array.from({ length: 3 }).map((_, index) => (
-          <HomeCard key={index} />
-        ))}
+        {section === "projects"
+          ? (projectProfiles ?? []).map((profile) => <HomeCard actionWidths={profile.actionWidths} key={profile.id} />)
+          : Array.from({ length: 3 }).map((_, index) => <HomeCard key={index} />)}
       </div>
     </section>
   );
 }
 
-function HomeCard({ recommendation = false }: { recommendation?: boolean }) {
+function HomeCard({ actionWidths = [92], recommendation = false }: { actionWidths?: readonly number[]; recommendation?: boolean }) {
   return (
     <article className="home-skeleton__card">
       <SkeletonBlock height={22} width="76%" />
       <SkeletonBlock height={14} width="58%" />
       <SkeletonText rows={recommendation ? 4 : 3} widths={["100%", "92%", "78%", "64%"]} />
       <div className="home-skeleton__card-actions">
-        <SkeletonBlock height={32} radius="999px" width={recommendation ? 116 : 92} />
+        {recommendation ? <SkeletonBlock height={32} radius="999px" width={116} /> : actionWidths?.map((width, index) => <SkeletonBlock height={32} key={index} radius="999px" width={width} />)}
         {recommendation ? <SkeletonBlock height={32} radius="999px" width={132} /> : null}
       </div>
     </article>

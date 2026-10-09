@@ -30,6 +30,10 @@ The verification gate and its reserved Turnstile well do not participate. Reduce
 
 The contact body portal enters from 8 pixels above with a 200ms opacity/transform animation. Cards use 10-pixel peeks and small 1.00/0.98/0.96 scales, expanding into measured separate rows through 200ms transforms. Dismissal fades and travels up 8 pixels over 200ms. Reserve stack geometry immediately; do not animate the contact form or surrounding page to accommodate notifications. Reduced motion disables these animations and removes dismissed cards immediately. Independent notification countdowns pause during hover, focus, touch-expanded reading, and document hiding. The verification well separately reserves widget/status/recovery space so provider lifecycle changes never move the surrounding gate. Its loading and server-confirmation label is the narrow text-only exception to the no-gradient rule: a 2.4-second blue highlight travels inside clipped glyphs, with no surface treatment, JavaScript loop, or animation outside pending states. Reduced motion uses static blue and forced colors use system text.
 
+## Project visuals
+
+Concept illustrations and How it works diagrams are static. Switching a card's visual view does not animate, autoplay, or change its reserved media height. The same immediate behavior applies with reduced motion. Preserve independent per-card selection and normal document scrolling.
+
 ## Home role rotation
 
 The desktop Home role uses a fixed-height, overflow-hidden window sized for the widest configured role so neither the line nor surrounding layout shifts. Server rendering and initial hydration show the first configured engineer role. Its hard clipping edge keeps text sharp. Do not animate `filter` or text blur.

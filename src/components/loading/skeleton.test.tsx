@@ -1,17 +1,19 @@
 ﻿import { render, screen } from "@testing-library/react";
 import type { ComponentType } from "react";
-import type { ResearchItem } from "@/content/types";
+import type { ProjectItem, ResearchItem } from "@/content/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { canonicalResearchSkeletonItems, researchSkeletonFixtures } from "../../../tests/fixtures/researchSkeletonContent";
 
 const researchContentFixture = vi.hoisted(() => ({
-  items: [] as ResearchItem[]
+  items: [] as ResearchItem[],
+  projects: [] as ProjectItem[]
 }));
 
 vi.mock("@/lib/content/getPortfolioContent", () => ({
   getPortfolioContent: () => ({
     profile: {},
     research: researchContentFixture.items,
+    projects: researchContentFixture.projects,
     siteSettings: { enableSkeletons: true }
   })
 }));
@@ -31,7 +33,7 @@ import { HomePageSkeleton } from "@/components/loading/HomePageSkeleton";
 import { legalSkeletonProfiles } from "@/components/loading/LegalPageSkeleton";
 import { PageSkeleton } from "@/components/loading/PageSkeleton";
 import { SectionHeader } from "@/components/layout/SectionHeader";
-import { projectSkeletonProfiles } from "@/components/loading/projectSkeletonProfiles";
+import { getProjectSkeletonProfiles } from "@/components/loading/projectSkeletonProfiles";
 import { researchSkeletonProfiles } from "@/components/loading/ResearchPageSkeleton";
 import { RouteHeaderSkeleton } from "@/components/loading/RouteHeaderSkeleton";
 import { RouteSkeleton, routeSkeletons, skeletonRoutePaths } from "@/components/loading/RouteSkeleton";
@@ -64,6 +66,7 @@ function getResearchResourceCounts(container: HTMLElement): number[] {
 describe("skeleton components", () => {
   afterEach(() => {
     researchContentFixture.items = [];
+    researchContentFixture.projects = [];
   });
 
   it("renders block shapes without content text", () => {
@@ -218,13 +221,33 @@ describe("skeleton components", () => {
     );
   });
 
-  it("renders project and research cards from their typed literal profiles", () => {
-    expect(projectSkeletonProfiles.map((profile) => profile.chipWidths)).toEqual([
-      [60, 78, 59, 54, 90, 82, 70, 70, 86, 62],
-      [66, 59, 82, 40, 54, 82],
-      [59, 102, 100, 44, 54]
+  it("derives project loader actions from selected content", () => {
+    const profiles = getProjectSkeletonProfiles([
+      {
+        id: "with-demo",
+        title: "With demo",
+        homeSkills: [],
+        stack: [],
+        links: [
+          { label: "Live demo", url: "https://example.com/demo" },
+          { label: "Source code", url: "https://github.com/example/source" }
+        ],
+        featured: false,
+        showOnHome: false
+      },
+      {
+        id: "source-only",
+        title: "Source only",
+        homeSkills: [],
+        stack: [],
+        links: [{ label: "Source code", url: "https://github.com/example/source-only" }],
+        featured: false,
+        showOnHome: false
+      }
     ]);
-    expect(projectSkeletonProfiles.map((profile) => profile.actionWidths)).toEqual([[112, 96], [112], [112]]);
+
+    expect(profiles.map((profile) => profile.actionWidths)).toEqual([[112, 96], [112]]);
+    expect(profiles.map((profile) => profile.summaryWidths)).toEqual([[100, 86], [100, 72]]);
     expect(researchSkeletonProfiles.map((profile) => profile.formalTitle)).toEqual([true, false, true]);
   });
 
@@ -356,7 +379,7 @@ describe("skeleton components", () => {
     expect(container.querySelector(".contact-skeleton__fallback")).toBeInTheDocument();
 
     rerender(<RouteSkeleton pathname="/projects" />);
-    expect(container.querySelectorAll(".detail-card-skeleton--project")).toHaveLength(3);
+    expect(container.querySelectorAll(".detail-card-skeleton--project")).toHaveLength(researchContentFixture.projects.length);
 
     rerender(<RouteSkeleton pathname="/recommendations" />);
     expect(container.querySelectorAll(".detail-card-skeleton--recommendation")).toHaveLength(5);

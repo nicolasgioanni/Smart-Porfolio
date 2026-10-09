@@ -23,6 +23,8 @@ Keep that fixture inert: no application scripts, development portal, or mutation
 
 Research visual snapshots receive controlled canonical local-template detail items only through `tests/e2e/renderRouteSkeleton.tsx`. Keep that injection isolated to the visual renderer. Normal loading boundaries and component or alignment coverage must resolve generated-workbook data so their resource geometry follows validated content.
 
+Projects and affected Home profiles must derive card/action counts from selected generated records and the shared project action resolver, supporting both the old workbook and the five-row migration. Only the isolated screenshot renderer may use controlled local-template project records. Preserve the gallery's `980/981px` column boundary and media footprint when updating its loader.
+
 ## Review Linux baselines
 
 Baselines are Linux-only and currently contain 25 images under `tests/e2e/__screenshots__/linux/`. Capture them only with the manual Ubuntu 24.04 workflow for the exact selected revision. Review every uploaded image before committing the approved artifact bytes. Do not create Windows or macOS snapshots, weaken the zero-difference threshold, or accept an unreviewed update.

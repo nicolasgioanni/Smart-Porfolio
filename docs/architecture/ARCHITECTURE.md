@@ -100,6 +100,7 @@ Static export does not mean the site contains no JavaScript. Focused client comp
 - Home role rotation;
 - scroll reveal where enabled;
 - skills dialogs through the shared modal layer;
+- independent Project Concept/How it works tabs;
 - recommendation measurement and expansion;
 - contact verification and submission.
 
@@ -119,6 +120,12 @@ The boundary has four responsibilities:
 4. Provide one deterministic snapshot to tests and the static build.
 
 Production candidates use strict remote mode. The workflow generates once, runs tests against that snapshot, and calls `build:generated` so the build cannot download a different workbook revision. Production-generated content is a transient candidate, not deployment state committed back to the branch.
+
+## Project presentation boundary
+
+The workbook remains the authority for project records, summaries, ordering, visibility, and destinations. `src/lib/projects/projectVisualRegistry.ts` adds typed local illustration metadata and diagram content for established IDs without changing `ProjectItem` or the workbook schema. Unknown IDs fall back to authored content and images. `projectActions.ts` supplies the shared source-first action selection used by Home, the gallery, and their loading footprints.
+
+`ProjectList` and `ProjectCard` remain server-composed around `PortfolioCard`, `FeaturedGrid`, and `GlassButton`. Only each `ProjectVisualTabs` boundary owns client selection; it starts at Concept on every route mount and does not fetch data. Native disclosures retain diagrams without JavaScript. Home stays compact and keeps its existing skill-dialog behavior. The [project showcase guide](../content/PROJECT_SHOWCASE.md) owns the five-row migration, reviewed source evidence, image prompts, and attribution.
 
 ## Content selection and UI mapping
 
