@@ -22,6 +22,27 @@ const billyRecommendation: RecommendationItem = {
   detailOrder: 1
 };
 
+const currentRecommendationIds = [
+  "billy-gardner-mcintyre",
+  "brent-lagesse",
+  "annuska-zolyomi",
+  "anoop-prasad",
+  "minh-nhat-huynh"
+] as const;
+
+function createRecommendation(
+  id: string,
+  overrides: Partial<RecommendationItem> = {}
+): RecommendationItem {
+  return {
+    ...billyRecommendation,
+    id,
+    recommenderName: "Taylor Recommender",
+    linkedinUrl: "https://www.linkedin.com/in/taylor-recommender/",
+    ...overrides
+  };
+}
+
 describe("RecommendationCard", () => {
   it("renders Billy's attributed recommendation with safe LinkedIn destinations and no avatar field", () => {
     const { container } = render(<RecommendationCard item={billyRecommendation} />);
@@ -48,5 +69,57 @@ describe("RecommendationCard", () => {
       "href",
       billyRecommendation.sourceUrl
     );
+  });
+
+  it.each(currentRecommendationIds)(
+    "uses the shared recommendation-page fallback for the current %s record when source data is absent or duplicates the profile",
+    (id) => {
+      const profileUrl = "https://www.linkedin.com/in/taylor-recommender/";
+
+      const { rerender } = render(<RecommendationCard item={createRecommendation(id, { sourceUrl: undefined })} />);
+      expect(screen.getByRole("link", { name: /verified recommendation on linkedin/i })).toHaveAttribute(
+        "href",
+        "https://www.linkedin.com/in/nicolas-gioanni/details/recommendations/"
+      );
+      expect(screen.getByRole("link", { name: /view taylor recommender's recommendation on linkedin/i })).toHaveAttribute(
+        "href",
+        "https://www.linkedin.com/in/nicolas-gioanni/details/recommendations/"
+      );
+
+      rerender(<RecommendationCard item={createRecommendation(id, { sourceUrl: profileUrl })} />);
+      expect(screen.getByRole("link", { name: /verified recommendation on linkedin/i })).toHaveAttribute(
+        "href",
+        "https://www.linkedin.com/in/nicolas-gioanni/details/recommendations/"
+      );
+    }
+  );
+
+  it("keeps a distinct explicit source and does not invent verification links for future records", () => {
+    const explicitSourceUrl = "https://www.linkedin.com/posts/taylor-recommender/";
+    const { rerender } = render(
+      <RecommendationCard item={createRecommendation("future-recommender", { sourceUrl: explicitSourceUrl })} />
+    );
+
+    expect(screen.getByRole("link", { name: /verified recommendation on linkedin/i })).toHaveAttribute(
+      "href",
+      explicitSourceUrl
+    );
+    expect(screen.getByRole("link", { name: /view taylor recommender's recommendation on linkedin/i })).toHaveAttribute(
+      "href",
+      explicitSourceUrl
+    );
+
+    rerender(
+      <RecommendationCard
+        item={createRecommendation("future-recommender", {
+          sourceUrl: "https://www.linkedin.com/in/taylor-recommender/"
+        })}
+      />
+    );
+    expect(screen.queryByRole("link", { name: /verified recommendation on linkedin/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: /view taylor recommender's recommendation on linkedin/i })
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /view taylor recommender's linkedin profile/i })).toBeInTheDocument();
   });
 });

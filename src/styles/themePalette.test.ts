@@ -191,6 +191,23 @@ describe("theme palette contract", () => {
       expect(
         contrastRatio(palette.get("--hover-base-1-inline-link-text")!, background)
       ).toBeGreaterThanOrEqual(4.5);
+
+      for (const surface of [
+        "--color-recommendation-card-solid",
+        "--color-card-surface",
+        "--color-card-surface-strong"
+      ]) {
+        expect(
+          contrastRatio(palette.get("--color-recommendation-verification")!, palette.get(surface)!)
+        ).toBeGreaterThanOrEqual(4.5);
+        expect(
+          contrastRatio(palette.get("--color-recommendation-verification-interaction")!, palette.get(surface)!)
+        ).toBeGreaterThanOrEqual(4.5);
+      }
+
+      expect(
+        relativeLuminance(palette.get("--color-recommendation-verification-interaction")!)
+      ).toBeLessThan(relativeLuminance(palette.get("--color-recommendation-verification")!));
     }
   });
 

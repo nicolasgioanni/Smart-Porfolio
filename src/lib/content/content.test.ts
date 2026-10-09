@@ -24,6 +24,10 @@ import {
   shouldShowRecommendationsRoute
 } from "@/lib/content/selectRecommendationContent";
 import {
+  getRecommendationVerificationUrl,
+  linkedInRecommendationsUrl
+} from "@/lib/content/recommendationVerification";
+import {
   createProfileOverviewContent,
   createShortAboutText,
   formatCompactGraduationDate,
@@ -2058,6 +2062,46 @@ describe("content selection and sorting", () => {
         74
       )
     ).toBe("This is a long recommendation that should be shortened for the Home page w...");
+  });
+
+  it.each([
+    "billy-gardner-mcintyre",
+    "brent-lagesse",
+    "annuska-zolyomi",
+    "anoop-prasad",
+    "minh-nhat-huynh"
+  ])("resolves the approved LinkedIn verification fallback for %s", (id) => {
+    const profileUrl = `https://www.linkedin.com/in/${id}/`;
+    const explicitSourceUrl = `https://www.linkedin.com/posts/${id}/`;
+
+    expect(
+      getRecommendationVerificationUrl({ id, linkedinUrl: profileUrl, sourceUrl: explicitSourceUrl })
+    ).toBe(explicitSourceUrl);
+    expect(getRecommendationVerificationUrl({ id, linkedinUrl: profileUrl })).toBe(linkedInRecommendationsUrl);
+    expect(
+      getRecommendationVerificationUrl({ id, linkedinUrl: profileUrl, sourceUrl: profileUrl })
+    ).toBe(linkedInRecommendationsUrl);
+  });
+
+  it("requires unknown recommendations to supply a distinct source URL", () => {
+    const profileUrl = "https://www.linkedin.com/in/future-recommender/";
+    const explicitSourceUrl = "https://www.linkedin.com/posts/future-recommender/";
+
+    expect(
+      getRecommendationVerificationUrl({
+        id: "future-recommender",
+        linkedinUrl: profileUrl,
+        sourceUrl: explicitSourceUrl
+      })
+    ).toBe(explicitSourceUrl);
+    expect(getRecommendationVerificationUrl({ id: "future-recommender", linkedinUrl: profileUrl })).toBeUndefined();
+    expect(
+      getRecommendationVerificationUrl({
+        id: "future-recommender",
+        linkedinUrl: profileUrl,
+        sourceUrl: profileUrl
+      })
+    ).toBeUndefined();
   });
 
   it("hides the Recommendations route when empty unless empty display is enabled", () => {
