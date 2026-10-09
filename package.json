@@ -11,6 +11,7 @@
     "dev:pages": "npm run build && npm run db:migrate:local && npx --no-install wrangler pages dev out --env-file .env",
     "db:migrate:local": "npx --no-install wrangler d1 migrations apply CONTACT_RATE_LIMIT_DB --local",
     "docs:check": "node scripts/validateDocumentation.mjs",
+    "route:agent": "node scripts/routeAgentWork.mjs",
     "update:contact-tlds": "node scripts/updateContactTlds.mjs",
     "generate:content": "tsx scripts/fetchPortfolioContent.ts",
     "prebuild": "npm run generate:content",

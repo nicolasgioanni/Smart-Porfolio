@@ -20,6 +20,7 @@ export const priorityTestDirectories = [
 
 export const priorityTestTargets = [
   "scripts/validateDocumentation.test.mjs",
+  "scripts/routeAgentWork.test.mjs",
   "scripts/contactTransport.integration.test.ts",
   "scripts/updateContactTlds.test.mjs",
   "scripts/packageScripts.test.mjs",
