@@ -117,7 +117,9 @@ The recommendation route and navigation item remain discoverable only when recom
 
 ### Portfolio components
 
-`src/components/portfolio/` groups the Home summary layer and evidence-focused route components by owner: `home/`, `profile/`, `experience/`, `research/`, `projects/`, `recommendations/`, `skills/`, and `resume/`. `shared/` contains only domain-neutral display and control primitives. Skills components remain under `skills/` when another portfolio domain consumes them. `home/HomeOverview.tsx` owns Home section order. `selectHomeContent.ts`, `selectVisibleContent.ts`, `selectDetailContent.ts`, `selectRecommendationContent.ts`, and `profileOverview.ts` divide content selection by surface and domain. `research/ResearchGraphicalAbstractPreview.tsx` owns Research thumbnails; `ResearchVideoPreview.tsx` coordinates inline/enlarged playback handoff. Both use `ResearchMediaDialog.tsx` for fitted media framing over the shared modal lifecycle. `ResearchVideoPlayer.tsx` owns the progressively enhanced player, browser caption cues, responsive controls, measured mobile caption placement, and container-fullscreen requests. `ResearchVideoPreview` hosts the persistent in-place fullscreen wrappers and owns the separate paused inline/enlarged handoff. Fullscreen preserves the media element; the shared `ModalDialog` owns its fallback lifecycle.
+`src/components/portfolio/` groups the Home summary layer and evidence-focused route components by owner: `home/`, `profile/`, `experience/`, `projects/`, `recommendations/`, `skills/`, and `resume/`. `shared/` contains only domain-neutral display and control primitives. Skills components remain under `skills/` when another portfolio domain consumes them. `home/HomeOverview.tsx` owns Home section order. `selectHomeContent.ts`, `selectVisibleContent.ts`, `selectDetailContent.ts`, `selectRecommendationContent.ts`, and `profileOverview.ts` divide shared content selection by surface and domain.
+
+`src/features/research/` owns the Research feature vertically: route components, media resolvers and selectors, loading composition, and `research.css`. `components/ResearchGraphicalAbstractPreview.tsx` owns Research thumbnails; `ResearchVideoPreview.tsx` coordinates inline/enlarged playback handoff. Both use the feature's `ResearchMediaDialog.tsx` over the shared modal lifecycle. `ResearchVideoPlayer.tsx` owns the progressively enhanced player, browser caption cues, responsive controls, measured mobile caption placement, and container-fullscreen requests. `ResearchVideoPreview` hosts the persistent in-place fullscreen wrappers and owns the separate paused inline/enlarged handoff. Fullscreen preserves the media element; the shared `ModalDialog` owns its fallback lifecycle. App composition passes the Research no-JavaScript fallback into `SiteShell` so shared layout components do not import feature modules.
 
 Focused client behavior includes the configured role rotation, modal media and skills dialogs, recommendation measurement and expansion, optional scroll reveals, and the shared shell interactions. Content rendering remains server-generated. Modal consumers provide their content and geometry while `src/components/overlay/ModalDialog.tsx` provides the common accessible interaction contract.
 
@@ -125,11 +127,11 @@ Focused client behavior includes the configured role rotation, modal media and s
 
 ### Direct import boundary
 
-`eslint.config.mjs` enforces direct import direction for both alias and relative specifiers. Files under `src/lib/` cannot import `src/components` or `src/features`; files under `src/components/` cannot import generated content, Cloudflare Functions, or scripts. Components receive generated content through the app and library layers. The rule intentionally does not analyze transitive dependency graphs or constrain `src/app/`; `src/lib/architecture/importBoundaries.test.ts` keeps the direct policy executable.
+`eslint.config.mjs` enforces direct import direction for both alias and relative specifiers. Files under `src/lib/` cannot import `src/components` or `src/features`; production files under `src/components/` cannot import feature modules, generated content, Cloudflare Functions, or scripts. Shared components receive feature composition through props and generated content through supported app and library boundaries. The rule intentionally does not analyze transitive dependency graphs or constrain `src/app/`; `src/lib/architecture/importBoundaries.test.ts` keeps the direct policy executable.
 
 ### Surface and loading primitives
 
-`src/components/glass/` owns reusable solid surfaces, cards, controls, links, chips, dividers, and blobs. `src/components/loading/` owns route-level skeleton composition, including `RouteSkeleton` delegation and `RouteHeaderSkeleton` intrinsic header ink. Components consume semantic values from `src/styles/` rather than defining theme colors locally.
+`src/components/glass/` owns reusable solid surfaces, cards, controls, links, chips, dividers, and blobs. `src/components/loading/` owns shared skeleton primitives and non-feature compositions, while `src/app/RouteSkeleton.tsx` owns cross-feature route delegation and `src/features/research/loading/` owns the Research loading composition. `RouteHeaderSkeleton` retains the shared intrinsic header ink. Components consume semantic values from `src/styles/` or their owning feature style sheet rather than defining theme colors locally.
 
 Shared dialog lifecycle and transition state live in `src/components/overlay/ModalDialog.tsx` and `src/styles/dialog.css`. Consumer style sheets define only domain-specific backdrop color, frame size, and internal presentation.
 
@@ -149,10 +151,10 @@ Shared dialog lifecycle and transition state live in `src/components/overlay/Mod
 | `src/lib/content/validatePortfolioContent.ts` | Required values, references, URLs, and cross-field invariants. |
 | `src/lib/content/selectHomeContent.ts` | Home ordering, limits, links, skill grouping, and assembled Home content. |
 | `src/lib/content/selectVisibleContent.ts` | Shared Home explicit-visibility, featured, then all-items fallback and item-limit resolution. |
-| `src/lib/content/selectDetailContent.ts` | Research, project, experience, and education detail ordering. |
+| `src/lib/content/selectDetailContent.ts` | Project, experience, and education detail ordering. |
 | `src/lib/content/selectRecommendationContent.ts` | Recommendation visibility, ordering, route eligibility, detail selection, and excerpt fallback. |
 | `src/lib/content/routeHeaderContent.ts` | Exhaustive canonical route-header registry and the sole generated Experience summary resolver shared by resolved pages and loaders. |
-| `src/lib/content/researchGraphicalAbstracts.ts` | Canonical graphical-abstract selection and checked-in fallback metadata for established Research IDs. |
+| `src/features/research/content/` | Research detail selection, narratives, graphical-abstract resolution, and video resolution. |
 | `scripts/fetchPortfolioContent.ts` | Source-mode selection, anonymous workbook fetch, timeout and byte-cap enforcement, generated-file I/O, and command output. |
 | `scripts/lib/workbookArchive.ts` | XLSX resolved archive-entry and streamed decoded-byte limits enforced before ExcelJS parsing. |
 | `scripts/lib/portfolioContentGeneration.ts` | Workbook URL and payload checks, XLSX parsing, worksheet and row validation, formula extraction, hashing, and metadata finalization. |
@@ -174,7 +176,7 @@ The local `resume.csv` compatibility template must remain header-only. It is nev
 | `glass.css` | Solid surface primitives, cards, buttons, links, chips, dividers, and blobs. |
 | `navigation.css` | Desktop and mobile navigation, theme disclosure, profile preview, and route indicator. |
 | `portfolio.css` | Home profile, cards, timelines, skills, recommendations, and detail layouts. |
-| `research.css` | Research modules, evidence rows, graphical-abstract containment, and preview-dialog presentation. |
+| `src/features/research/research.css` | Research modules, evidence rows, graphical-abstract containment, video presentation, and preview-dialog presentation. |
 | `motion.css` | CSS-only page entrance plus scroll reveal and compression states. |
 | `skeletons.css` | Static solid loading placeholders and transparent canonical header ink whose line fragments follow resolved typography. |
 | `contact.css` | Contact wizard, fields, review, consent, status, and responsive rules. |

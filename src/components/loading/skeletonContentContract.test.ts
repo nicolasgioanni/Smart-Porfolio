@@ -2,16 +2,16 @@ import type { ExperienceItem, GeneratedPortfolioContent, PortfolioLink, ProfileC
 import { describe, expect, it } from "vitest";
 import { experienceSkeletonProfiles } from "@/components/loading/ExperiencePageSkeleton";
 import { getProjectSkeletonProfiles } from "@/components/loading/projectSkeletonProfiles";
-import { researchSkeletonProfiles } from "@/components/loading/ResearchPageSkeleton";
+import { researchSkeletonProfiles } from "@/features/research/loading/ResearchPageSkeleton";
+import { selectResearchDetailContent } from "@/features/research/content/selectResearchDetailContent";
 import { getExperienceModeContent } from "@/lib/content/experienceNarratives";
-import { getResearchFormalTitle, getResearchModeContent, getResearchVisibleResources } from "@/lib/content/researchNarratives";
+import { getResearchFormalTitle, getResearchModeContent, getResearchVisibleResources } from "@/features/research/content/researchNarratives";
 import { getProfileIdentityItems } from "@/lib/content/profileOverview";
 import { resolveRouteHeaderContent, routeHeaderContent } from "@/lib/content/routeHeaderContent";
 import { siteRoutePaths, siteRoutes } from "@/lib/routing/siteRoutes";
 import {
   selectExperienceDetailContent,
-  selectProjectDetailContent,
-  selectResearchDetailContent
+  selectProjectDetailContent
 } from "@/lib/content/selectDetailContent";
 import { researchSkeletonFixtures } from "../../../tests/fixtures/researchSkeletonContent";
 
@@ -201,8 +201,7 @@ describe("skeleton source contracts", () => {
       "adversarial-machine-learning",
       "yeast-dna-target-selection"
     ]);
-    expect(researchSkeletonProfiles.map((profile) => profile.media)).toEqual(["video", "explainer", "explainer"]);
-    expect(researchSkeletonProfiles.map((profile) => profile.legend)).toEqual([false, false, true]);
+    expect(researchSkeletonProfiles.map((profile) => profile.media)).toEqual(["video", "abstract", "abstract"]);
     expect(researchSkeletonProfiles.map((profile) => profile.resourceWidths.length)).toEqual([4, 3, 1]);
     expect(researchSkeletonProfiles.every((profile) => profile.organizationLogo && profile.impact)).toBe(true);
 

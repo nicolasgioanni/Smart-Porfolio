@@ -1,8 +1,8 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { ResearchItem } from "@/content/types";
-import { ResearchShowcase } from "@/components/portfolio/research/ResearchShowcase";
-import { getResearchModeContent } from "@/lib/content/researchNarratives";
+import { ResearchShowcase } from "@/features/research/components/ResearchShowcase";
+import { getResearchModeContent } from "@/features/research/content/researchNarratives";
 
 const researchItems: ResearchItem[] = [
   {
@@ -109,13 +109,16 @@ describe("ResearchShowcase", () => {
       projects.map((project) => Array.from(project.querySelectorAll(".research-media-title"), (title) => title.textContent))
     ).toEqual([
       ["CytoCV Graphical Abstract", "CytoCV Demo"],
-      ["AML Graphical Abstract", "Can AI spot an altered image?"],
-      ["GuideDonorScheduler Graphical Abstract", "Design a DNA change"]
+      ["AML Graphical Abstract"],
+      ["GuideDonorScheduler Graphical Abstract"]
     ]);
-    expect(projects.map((project) => project.querySelectorAll(".research-project__media-row").length)).toEqual([2, 2, 2]);
-    expect(projects.map((project) => project.querySelectorAll(".research-project__media-divider").length)).toEqual([1, 1, 1]);
-    expect(container.querySelectorAll('[data-research-explainer="aml"]')).toHaveLength(1);
-    expect(container.querySelectorAll('[data-research-explainer="guide-donor"]')).toHaveLength(1);
+    expect(projects.map((project) => project.querySelectorAll(".research-media-stack").length)).toEqual([1, 0, 0]);
+    expect(projects.map((project) => project.querySelectorAll(".research-project__media-row").length)).toEqual([2, 0, 0]);
+    expect(projects.map((project) => project.querySelectorAll(".research-project__media-divider").length)).toEqual([1, 0, 0]);
+    expect(projects.map((project) => project.querySelectorAll(".research-project__single-media").length)).toEqual([0, 1, 1]);
+    expect(projects.map((project) => project.querySelectorAll(".research-video").length)).toEqual([1, 0, 0]);
+    expect(container.querySelectorAll("[data-research-explainer]")).toHaveLength(0);
+    expect(container.querySelectorAll(".research-explainer__playback-control")).toHaveLength(0);
     expect(screen.queryByRole("img", { name: /segmentation diagram|attack and defense matrix|sequence design diagram/i })).not.toBeInTheDocument();
     expect(screen.queryByText("Graduate Research Assistant")).not.toBeInTheDocument();
     expect(screen.queryByText("Bothell, Washington, United States")).not.toBeInTheDocument();

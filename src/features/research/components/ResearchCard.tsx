@@ -4,7 +4,7 @@ import { GlassSurface } from "@/components/glass/GlassSurface";
 import { LinkIcon } from "@/components/icons/LinkIcon";
 import { DetailDisclosureList } from "@/components/portfolio/shared/DetailDisclosureList";
 import { DisabledResourceButton } from "@/components/portfolio/shared/DisabledResourceButton";
-import { ResearchProjectVisual } from "@/components/portfolio/research/ResearchProjectVisual";
+import { ResearchProjectVisual } from "@/features/research/components/ResearchProjectVisual";
 import type { DetailMode } from "@/lib/content/detailNarratives";
 import { getLinkKind } from "@/lib/content/displayHelpers";
 import {
@@ -12,7 +12,7 @@ import {
   getResearchFormalTitle,
   getResearchModeContent,
   getResearchVisibleResources
-} from "@/lib/content/researchNarratives";
+} from "@/features/research/content/researchNarratives";
 
 type ResearchCardProps = {
   item: ResearchItem;

@@ -7,7 +7,10 @@ const tokenStyles = readFileSync(path.join(projectRoot, "src", "styles", "tokens
 const glassStyles = readFileSync(path.join(projectRoot, "src", "styles", "glass.css"), "utf8");
 const layoutStyles = readFileSync(path.join(projectRoot, "src", "styles", "layout.css"), "utf8");
 const contactStyles = readFileSync(path.join(projectRoot, "src", "styles", "contact.css"), "utf8");
-const researchStyles = readFileSync(path.join(projectRoot, "src", "styles", "research.css"), "utf8");
+const researchStyles = readFileSync(
+  path.join(projectRoot, "src", "features", "research", "research.css"),
+  "utf8"
+);
 const contactStylesWithoutPendingGradient = contactStyles.replace(
   /background: linear-gradient\(90deg, var\(--color-progress-base\) 0%, var\(--color-progress-base\) 42%, var\(--color-progress-highlight\) 50%, var\(--color-progress-base\) 58%, var\(--color-progress-base\) 100%\);\r?\n/,
   ""
@@ -188,6 +191,23 @@ describe("theme palette contract", () => {
       expect(
         contrastRatio(palette.get("--hover-base-1-inline-link-text")!, background)
       ).toBeGreaterThanOrEqual(4.5);
+
+      for (const surface of [
+        "--color-recommendation-card-solid",
+        "--color-card-surface",
+        "--color-card-surface-strong"
+      ]) {
+        expect(
+          contrastRatio(palette.get("--color-recommendation-verification")!, palette.get(surface)!)
+        ).toBeGreaterThanOrEqual(4.5);
+        expect(
+          contrastRatio(palette.get("--color-recommendation-verification-interaction")!, palette.get(surface)!)
+        ).toBeGreaterThanOrEqual(4.5);
+      }
+
+      expect(
+        relativeLuminance(palette.get("--color-recommendation-verification-interaction")!)
+      ).toBeLessThan(relativeLuminance(palette.get("--color-recommendation-verification")!));
     }
   });
 

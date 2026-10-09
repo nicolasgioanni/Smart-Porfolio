@@ -5,6 +5,7 @@ import { ExpandableRecommendationText } from "@/components/portfolio/recommendat
 import { PortfolioCard } from "@/components/portfolio/shared/PortfolioCard";
 import { RecommendationVerificationLink } from "@/components/portfolio/recommendations/RecommendationVerificationLink";
 import { formatSingleDate } from "@/lib/formatting/formatDateRange";
+import { getRecommendationVerificationUrl } from "@/lib/content/recommendationVerification";
 
 type RecommendationCardProps = {
   collapsedLineCount?: number;
@@ -27,7 +28,7 @@ export function RecommendationCard({
 }: RecommendationCardProps) {
   const quote = item.fullQuote;
   const recommendationDate = formatSingleDate(item.recommendationDate);
-  const sourceUrl = item.sourceUrl && item.sourceUrl !== item.linkedinUrl ? item.sourceUrl : undefined;
+  const sourceUrl = getRecommendationVerificationUrl(item);
   const showLinkedInActionIcons = variant === "detail";
 
   return (

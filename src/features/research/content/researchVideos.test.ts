@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getResearchVideo } from "@/lib/content/researchVideos";
+import { getResearchVideo } from "@/features/research/content/researchVideos";
 
 const curatedVideo = {
   captionsSrc: "/images/research/cytocv-supplementary-video-s1.en.vtt",

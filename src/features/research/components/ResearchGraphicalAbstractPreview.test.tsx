@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { ResearchGraphicalAbstractPreview } from "@/components/portfolio/research/ResearchGraphicalAbstractPreview";
+import { ResearchGraphicalAbstractPreview } from "@/features/research/components/ResearchGraphicalAbstractPreview";
 
 const graphicalAbstract = {
   alt: "Four-step research workflow.",

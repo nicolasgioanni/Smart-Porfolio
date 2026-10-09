@@ -24,7 +24,7 @@ import { HomeOverview } from "@/components/portfolio/home/HomeOverview";
 import { HomeRecommendations } from "@/components/portfolio/home/HomeRecommendations";
 import { PortfolioHero } from "@/components/portfolio/home/PortfolioHero";
 import { RecommendationsList } from "@/components/portfolio/recommendations/RecommendationsList";
-import { ResearchList } from "@/components/portfolio/research/ResearchList";
+import { ResearchList } from "@/features/research/components/ResearchList";
 import { createProfileOverviewContent } from "@/lib/content/profileOverview";
 
 const linkedInRecommendationsUrl =
