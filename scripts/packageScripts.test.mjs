@@ -46,7 +46,20 @@ describe("package and CI deployment automation", () => {
     expect(packageJson.scripts["test:priority"]).toBe(
       "node scripts/runValidationTier.mjs priority"
     );
-    expect(packageJson.devDependencies.wrangler).toBe("4.131.0");
+    expect(packageJson.dependencies.next).toBe("16.3.8");
+    expect(packageJson.devDependencies["@next/eslint-plugin-next"]).toBe("16.3.8");
+    expect(packageJson.devDependencies.miniflare).toBe("5.20261006.1-alpha");
+    expect(packageJson.devDependencies.wrangler).toBe("4.149.0");
+    expect(packageJson.overrides).toMatchObject({
+      "source-map-js": "1.2.2",
+      eslint: { minimatch: { "brace-expansion": "1.1.21" } },
+      archiver: {
+        "readdir-glob": { minimatch: { "brace-expansion": "2.1.7" } }
+      },
+      "@typescript-eslint/typescript-estree": {
+        minimatch: { "brace-expansion": "5.0.12" }
+      }
+    });
     expect(packageJson.devDependencies.vitest).toBe("4.1.11");
     expect(packageJson.devDependencies["@playwright/test"]).toMatch(/^\^1\./);
     expect(packageJson.scripts["test:footer"]).toBe(

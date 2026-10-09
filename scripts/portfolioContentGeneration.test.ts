@@ -272,7 +272,17 @@ describe("workbook dependency boundary", () => {
     expect(devDependencies.exceljs).toBe("4.4.0");
     expect(devDependencies.jszip).toBe("3.10.1");
     expect(dependencies.exceljs).toBeUndefined();
-    expect(packageJson.overrides).toEqual({ exceljs: { uuid: "11.1.1" } });
+    expect(packageJson.overrides).toEqual({
+      exceljs: { uuid: "11.1.1" },
+      "source-map-js": "1.2.2",
+      eslint: { minimatch: { "brace-expansion": "1.1.21" } },
+      archiver: {
+        "readdir-glob": { minimatch: { "brace-expansion": "2.1.7" } }
+      },
+      "@typescript-eslint/typescript-estree": {
+        minimatch: { "brace-expansion": "5.0.12" }
+      }
+    });
     expect(
       directPackageNames.filter((name) =>
         /google.*(?:api|auth|oauth|drive|sheet)|(?:api|auth|oauth|drive|sheet).*google/i.test(name)
