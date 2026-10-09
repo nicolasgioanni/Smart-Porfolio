@@ -69,6 +69,20 @@ afterEach(() => {
 });
 
 describe("Cloudflare contact verification function", () => {
+  it("rejects an allowlisted cross-alias Origin through the verification handler before Siteverify", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await invoke(requestFor(validPayload(), { origin: "https://www.nicolasmgioanni.dev" }), {
+      ...env,
+      CONTACT_ALLOWED_ORIGINS: "https://nicolasmgioanni.dev,https://www.nicolasmgioanni.dev"
+    });
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ ok: false, error: "request_rejected" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("allows POST only and returns non-cacheable generic responses", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
@@ -244,6 +258,22 @@ describe("Cloudflare contact verification function", () => {
     expect(response.status).toBe(503);
     expect(await response.json()).toEqual({ ok: false, error: "verification_unavailable" });
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not issue a ticket when its signing crypto stalls after an accepted provider response", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn().mockResolvedValueOnce(successfulTurnstile());
+    vi.stubGlobal("fetch", fetchMock);
+    vi.spyOn(crypto.subtle, "sign").mockImplementation(() => new Promise<ArrayBuffer>(() => undefined));
+
+    const responsePromise = invoke(requestFor(validPayload()));
+    await vi.advanceTimersByTimeAsync(12_000);
+    const response = await responsePromise;
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ ok: false, error: "service_unavailable" });
+    expect(response.headers.get("Set-Cookie")).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("disposes a late Siteverify response when a noncooperative fetch ignores abort", async () => {

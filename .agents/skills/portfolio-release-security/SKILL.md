@@ -9,6 +9,6 @@ Use this skill for Pages Functions, contact flow security, environment configura
 
 For an endpoint or runtime-control change, read [Security](../../../docs/security/SECURITY.md) and [Contact system](../../../docs/security/CONTACT_SYSTEM.md). For deployment, migration, or release automation, read [Deployment](../../../docs/operations/DEPLOYMENT.md) and [Operations](../../../docs/operations/OPERATIONS.md). Read both sets only when the change crosses those boundaries. Treat repository enforcement and external operator configuration as separate evidence.
 
-For every endpoint, define and test methods, media types, schema, body and time limits, origins, authentication or verification, privacy, abuse controls, errors, headers, and release checks. Keep secrets server-only and retain the existing environment separation.
+For every endpoint, define and test methods, media types, schema, body and operation limits, origins bound to the actual request origin, authentication or verification, privacy, abuse controls, errors, headers, and release checks. Propagate an operation budget into every external side effect and treat uncancellable persistence completion as retry-safe rather than permission to continue. Keep secrets server-only and retain the existing environment separation.
 
 Preserve the exact-candidate, verified-artifact deployment path and its stale-revision, integrity, binding, migration, and smoke-test checks. Do not imply that GitHub branch protection or provider controls are enabled unless their live configuration has been independently verified.

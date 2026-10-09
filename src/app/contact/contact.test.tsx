@@ -120,8 +120,8 @@ afterEach(() => {
 });
 
 type FetchMockOptions = {
-  contact?: (attempt: number) => Promise<Response> | Response;
-  verify?: (attempt: number) => Promise<Response> | Response;
+  contact?: (attempt: number, init: RequestInit | undefined) => Promise<Response> | Response;
+  verify?: (attempt: number, init: RequestInit | undefined) => Promise<Response> | Response;
 };
 
 function requestUrl(input: RequestInfo | URL): string {
@@ -131,15 +131,15 @@ function requestUrl(input: RequestInfo | URL): string {
 function installFetchMock(options: FetchMockOptions = {}) {
   let contactAttempt = 0;
   let verifyAttempt = 0;
-  const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+  const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = requestUrl(input);
     if (url === "/api/contact/verify") {
       verifyAttempt += 1;
-      return options.verify?.(verifyAttempt) ?? Response.json({ ok: true });
+      return options.verify?.(verifyAttempt, init) ?? Response.json({ ok: true });
     }
     if (url === "/api/contact") {
       contactAttempt += 1;
-      return options.contact?.(contactAttempt) ?? Response.json({ ok: true });
+      return options.contact?.(contactAttempt, init) ?? Response.json({ ok: true });
     }
     throw new Error(`Unexpected fetch request: ${url}`);
   });
@@ -224,6 +224,33 @@ function containerFromClass(className: string): HTMLElement {
   const element = document.querySelector<HTMLElement>(`.${className}`);
   if (!element) throw new Error(`Expected .${className} to be rendered.`);
   return element;
+}
+
+async function expireContactRequest() {
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(25_000);
+  });
+}
+
+async function flushContactTasks() {
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+}
+
+async function completeVerificationWithFakeTimers(): Promise<string> {
+  await flushContactTasks();
+  const widget = screen.getByTestId("turnstile-mock");
+  const submissionId = widget.getAttribute("data-cdata") ?? "";
+  fireEvent.click(screen.getByRole("button", { name: "Complete human verification" }));
+  await flushContactTasks();
+  const continueButton = screen.getByRole("button", { name: "Continue" });
+  expect(continueButton).toBeEnabled();
+  fireEvent.click(continueButton);
+  await flushContactTasks();
+  expect(screen.getByRole("heading", { level: 2, name: "Tell me your name" })).toBeInTheDocument();
+  return submissionId;
 }
 
 describe("contact route", () => {
@@ -322,6 +349,112 @@ describe("contact route", () => {
     fireEvent.click(screen.getByRole("button", { name: "Continue" }));
     expect(await screen.findByRole("heading", { name: "Tell me your name" })).toBeInTheDocument();
     expect(callsFor(fetchMock, "/api/contact/verify")).toHaveLength(1);
+  });
+
+  it("recovers from a verification header stall and preserves the locked delivery body after a delivery JSON stall", async () => {
+    vi.useFakeTimers();
+    let firstVerificationSignal: AbortSignal | undefined;
+    let firstDeliverySignal: AbortSignal | undefined;
+    const fetchMock = installFetchMock({
+      verify: (attempt, init) => {
+        if (attempt !== 1) return Response.json({ ok: true });
+        firstVerificationSignal = init?.signal ?? undefined;
+        return new Promise<Response>(() => undefined);
+      },
+      contact: (attempt, init) => {
+        if (attempt !== 1) return Response.json({ ok: true });
+        firstDeliverySignal = init?.signal ?? undefined;
+        return { ok: true, json: () => new Promise<never>(() => undefined) } as unknown as Response;
+      }
+    });
+    render(<ContactPage />);
+    await flushContactTasks();
+    const submissionId = screen.getByTestId("turnstile-mock").getAttribute("data-cdata");
+
+    fireEvent.click(screen.getByRole("button", { name: "Complete human verification" }));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    await expireContactRequest();
+
+    expect(firstVerificationSignal?.aborted).toBe(true);
+    expect(screen.getByRole("alert")).toHaveTextContent(/Secure verification is temporarily unavailable/i);
+    fireEvent.click(screen.getByRole("button", { name: "Try security check again" }));
+    await completeVerificationWithFakeTimers();
+    completeName();
+    completeDetails({ message: "Keep this exact stalled body" });
+    acceptAcknowledgments();
+    fireEvent.click(screen.getByRole("button", { name: "Send request" }));
+    await flushContactTasks();
+    const firstBody = String((callsFor(fetchMock, "/api/contact")[0]?.[1] as RequestInit).body);
+    await expireContactRequest();
+
+    expect(firstDeliverySignal?.aborted).toBe(true);
+    expect(screen.getByRole("alert")).toHaveTextContent(/could not reach the delivery service/i);
+    expect(screen.getByRole("button", { name: "Back" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Send request" }));
+    await flushContactTasks();
+    expect(screen.getByRole("heading", { name: "Thanks for reaching out" })).toBeInTheDocument();
+
+    const verifyBodies = callsFor(fetchMock, "/api/contact/verify").map(([, init]) =>
+      JSON.parse(String((init as RequestInit).body)) as { submissionId: string }
+    );
+    expect(verifyBodies).toHaveLength(2);
+    expect(verifyBodies.every((body) => body.submissionId === submissionId)).toBe(true);
+    const deliveryBodies = callsFor(fetchMock, "/api/contact").map(([, init]) => String((init as RequestInit).body));
+    expect(deliveryBodies).toEqual([firstBody, firstBody]);
+  });
+
+  it("recovers from a verification JSON stall and preserves the locked delivery body after a delivery header stall", async () => {
+    vi.useFakeTimers();
+    let firstVerificationSignal: AbortSignal | undefined;
+    let firstDeliverySignal: AbortSignal | undefined;
+    const fetchMock = installFetchMock({
+      verify: (attempt, init) => {
+        if (attempt !== 1) return Response.json({ ok: true });
+        firstVerificationSignal = init?.signal ?? undefined;
+        return { ok: true, json: () => new Promise<never>(() => undefined) } as unknown as Response;
+      },
+      contact: (attempt, init) => {
+        if (attempt !== 1) return Response.json({ ok: true });
+        firstDeliverySignal = init?.signal ?? undefined;
+        return new Promise<Response>(() => undefined);
+      }
+    });
+    render(<ContactPage />);
+    await flushContactTasks();
+    const submissionId = screen.getByTestId("turnstile-mock").getAttribute("data-cdata");
+
+    fireEvent.click(screen.getByRole("button", { name: "Complete human verification" }));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    await expireContactRequest();
+
+    expect(firstVerificationSignal?.aborted).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "Try security check again" }));
+    await completeVerificationWithFakeTimers();
+    completeName();
+    completeDetails({ message: "Keep this exact header-stalled body" });
+    acceptAcknowledgments();
+    fireEvent.click(screen.getByRole("button", { name: "Send request" }));
+    await flushContactTasks();
+    const firstBody = String((callsFor(fetchMock, "/api/contact")[0]?.[1] as RequestInit).body);
+    await expireContactRequest();
+
+    expect(firstDeliverySignal?.aborted).toBe(true);
+    expect(screen.getByRole("button", { name: "Back" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Send request" }));
+    await flushContactTasks();
+    expect(screen.getByRole("heading", { name: "Thanks for reaching out" })).toBeInTheDocument();
+
+    const verifyBodies = callsFor(fetchMock, "/api/contact/verify").map(([, init]) =>
+      JSON.parse(String((init as RequestInit).body)) as { submissionId: string }
+    );
+    expect(verifyBodies).toHaveLength(2);
+    expect(verifyBodies.every((body) => body.submissionId === submissionId)).toBe(true);
+    const deliveryBodies = callsFor(fetchMock, "/api/contact").map(([, init]) => String((init as RequestInit).body));
+    expect(deliveryBodies).toEqual([firstBody, firstBody]);
   });
 
   it.each([

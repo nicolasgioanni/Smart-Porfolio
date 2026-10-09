@@ -29,6 +29,11 @@ export function isAllowedOrigin(request: Request, configuredOrigins?: string): b
   const origin = normalizeOrigin(rawOrigin);
   if (!origin) return false;
 
+  // Origin is an assertion about the caller, not a routing hint.  A Pages
+  // Function must only accept it for the exact host that received this request.
+  const requestOrigin = normalizeOrigin(new URL(request.url).origin);
+  if (!requestOrigin || origin !== requestOrigin) return false;
+
   const allowedOrigins = parseOrigins(configuredOrigins);
   if (allowedOrigins.length === 0) return false;
   return allowedOrigins.includes(origin);

@@ -21,6 +21,7 @@ export const priorityTestDirectories = [
 export const priorityTestTargets = [
   "scripts/validateDocumentation.test.mjs",
   "scripts/contactTransport.integration.test.ts",
+  "scripts/d1Reservation.integration.test.ts",
   "scripts/updateContactTlds.test.mjs",
   "scripts/packageScripts.test.mjs",
   "scripts/runValidationTier.test.mjs",
@@ -30,6 +31,7 @@ export const priorityTestTargets = [
   "scripts/portfolioContentGeneration.test.ts",
   "scripts/pngMetadata.test.mjs",
   "functions",
+  "functions/_shared/contact/transport.test.ts",
   "src/app/contact/contact.test.tsx",
   "src/components/contact/useContactStepTransition.test.tsx",
   "src/components/contact/contactFormValidation.test.ts",

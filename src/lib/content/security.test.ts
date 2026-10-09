@@ -36,8 +36,10 @@ describe("static portfolio security contracts", () => {
       "src/components/contact/ContactForm.tsx"
     ]);
     const contactFormSource = readFileSync(runtimeFetchFiles[0], "utf8");
-    expect(contactFormSource).toContain('fetch("/api/contact/verify"');
-    expect(contactFormSource).toContain('fetch("/api/contact"');
+    expect(contactFormSource).toContain("async function fetchContactJson");
+    expect(contactFormSource).toMatch(/fetch\(url,\s*\{/);
+    const contactEndpointCalls = [...contactFormSource.matchAll(/fetchContactJson\(\s*"([^"]+)"/g)].map(([, endpoint]) => endpoint);
+    expect(contactEndpointCalls).toEqual(["/api/contact/verify", "/api/contact"]);
     expect(contactFormSource).toContain("onTokenChange={handleTurnstileTokenChange}");
     expect(contactFormSource).not.toMatch(/onTokenChange=\{\([^)]*\)\s*=>/);
   });

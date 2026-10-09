@@ -1,7 +1,7 @@
 import { isValidEmail } from "../../../src/lib/contact/validation";
 import { isValidFromMailbox } from "./config";
 import type { ContactEnv, ContactPayload, EmailMessage } from "./contracts";
-import { discardResponseBody, fetchWithTimeout } from "./transport";
+import { discardResponseBody, fetchWithTimeout, type Deadline } from "./transport";
 
 const RESEND_EMAIL_URL = "https://api.resend.com/emails";
 const CANONICAL_SITE_URL = "https://nicolasmgioanni.dev";
@@ -10,7 +10,8 @@ const RESEND_TIMEOUT_MS = 8_000;
 export async function sendContactEmails(
   payload: ContactPayload,
   env: ContactEnv,
-  reservationTimestamp = Math.floor(Date.now() / 1_000)
+  reservationTimestamp = Math.floor(Date.now() / 1_000),
+  operationDeadline?: Deadline
 ): Promise<boolean> {
   const apiKey = env.RESEND_API_KEY?.trim();
   const recipient = env.CONTACT_RECIPIENT_EMAIL?.trim();
@@ -38,14 +39,27 @@ export async function sendContactEmails(
     replyToEmail,
     reservationYear
   );
+  if (operationDeadline?.isExpired()) return false;
   const visitorAccepted = await sendResendEmail(
     visitorMessage,
     apiKey,
-    `portfolio-contact/visitor/${payload.submissionId}`
+    `portfolio-contact/visitor/${payload.submissionId}`,
+    operationDeadline
   );
   if (!visitorAccepted) return false;
 
-  return sendResendEmail(ownerMessage, apiKey, `portfolio-contact/owner/${payload.submissionId}`);
+  if (operationDeadline?.isExpired()) return false;
+  return sendResendEmail(ownerMessage, apiKey, `portfolio-contact/owner/${payload.submissionId}`, operationDeadline);
+}
+
+export function createDeliveryIdentity(payload: ContactPayload, env: ContactEnv): string | undefined {
+  const recipient = env.CONTACT_RECIPIENT_EMAIL?.trim();
+  const fromEmail = env.CONTACT_FROM_EMAIL?.trim();
+  const replyToEmail = env.CONTACT_REPLY_TO_EMAIL?.trim();
+  if (!recipient || !fromEmail || !replyToEmail) return undefined;
+  // Fixed reference year keeps retry identity stable across New Year; actual mail
+  // continues to render with the reservation year.
+  return JSON.stringify(createEmailMessages(payload, recipient, fromEmail, replyToEmail, 2000));
 }
 
 export function createEmailMessages(
@@ -159,7 +173,12 @@ export function escapeHtml(value: string): string {
   });
 }
 
-async function sendResendEmail(message: EmailMessage, apiKey: string, idempotencyKey: string): Promise<boolean> {
+async function sendResendEmail(
+  message: EmailMessage,
+  apiKey: string,
+  idempotencyKey: string,
+  operationDeadline?: Deadline
+): Promise<boolean> {
   const response = await fetchWithTimeout(
     RESEND_EMAIL_URL,
     {
@@ -171,7 +190,8 @@ async function sendResendEmail(message: EmailMessage, apiKey: string, idempotenc
       },
       body: JSON.stringify(message)
     },
-    RESEND_TIMEOUT_MS
+    RESEND_TIMEOUT_MS,
+    operationDeadline
   );
   const accepted = response?.ok === true;
   discardResponseBody(response);

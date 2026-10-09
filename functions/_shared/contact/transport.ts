@@ -1,10 +1,16 @@
 export type ReadJsonResponse = () => Promise<unknown | undefined>;
 
-export async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number): Promise<Response | undefined> {
+export async function fetchWithTimeout(
+  url: string,
+  init: RequestInit,
+  timeoutMs: number,
+  operationDeadline?: Deadline
+): Promise<Response | undefined> {
   const controller = new AbortController();
-  const deadline = createDeadline(timeoutMs, () => controller.abort());
+  const deadline = createDeadline(timeoutMs, () => controller.abort(), operationDeadline);
 
   try {
+    if (operationDeadline?.isExpired()) return undefined;
     return await fetchResponse(url, init, controller.signal, deadline);
   } finally {
     deadline.clear();
@@ -21,14 +27,16 @@ export async function fetchWithJsonTimeout<T>(
   init: RequestInit,
   timeoutMs: number,
   maxResponseBytes: number,
-  handleResponse: (response: Response, readJson: ReadJsonResponse) => Promise<T>
+  handleResponse: (response: Response, readJson: ReadJsonResponse) => Promise<T>,
+  operationDeadline?: Deadline
 ): Promise<T | undefined> {
   const controller = new AbortController();
-  const deadline = createDeadline(timeoutMs, () => controller.abort());
+  const deadline = createDeadline(timeoutMs, () => controller.abort(), operationDeadline);
 
   try {
+    if (operationDeadline?.isExpired()) return undefined;
     const response = await fetchResponse(url, init, controller.signal, deadline);
-    if (!response) return undefined;
+    if (!response || deadline.isExpired()) return undefined;
 
     let bodyRead = false;
     const readJson: ReadJsonResponse = async () => {
@@ -38,7 +46,7 @@ export async function fetchWithJsonTimeout<T>(
     };
 
     try {
-      return await handleResponse(response, readJson);
+      return await awaitWithDeadline(handleResponse(response, readJson), deadline);
     } finally {
       if (!bodyRead) discardResponseBody(response);
     }
@@ -75,26 +83,31 @@ export interface Deadline {
   isExpired: () => boolean;
 }
 
-export function createDeadline(timeoutMs: number, onExpire?: () => void): Deadline {
+export function createDeadline(timeoutMs: number, onExpire?: () => void, parent?: Deadline): Deadline {
   let deadlineExpired = false;
   let expire: () => void = () => undefined;
   const expired = new Promise<void>((resolve) => {
     expire = resolve;
   });
-  const timeout = setTimeout(() => {
+  const expireDeadline = () => {
+    if (deadlineExpired) return;
     deadlineExpired = true;
-    try {
-      onExpire?.();
-    } finally {
-      expire();
-    }
-  }, timeoutMs);
+    try { onExpire?.(); } finally { expire(); }
+  };
+  const timeout = setTimeout(expireDeadline, timeoutMs);
+  void parent?.expired.then(expireDeadline);
 
   return { expired, clear: () => clearTimeout(timeout), isExpired: () => deadlineExpired };
 }
 
 export async function awaitWithDeadline<T>(operation: Promise<T>, deadline: Deadline): Promise<T | undefined> {
-  return Promise.race([operation.catch(() => undefined), deadline.expired.then(() => undefined)]);
+  // Keep a rejection observer attached even when a deadline wins, so a
+  // non-cooperative provider cannot produce an unhandled late rejection.
+  const guarded = operation.then(
+    (value) => value,
+    () => undefined
+  );
+  return Promise.race([guarded, deadline.expired.then(() => undefined)]);
 }
 
 async function fetchResponse(
