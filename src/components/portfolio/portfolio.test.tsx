@@ -18,7 +18,7 @@ import { EmptyState } from "@/components/portfolio/shared/EmptyState";
 import { FeaturedGrid } from "@/components/portfolio/shared/FeaturedGrid";
 import { HomeEducationSummary } from "@/components/portfolio/home/HomeEducationSummary";
 import { HomeFeaturedExperience } from "@/components/portfolio/home/HomeFeaturedExperience";
-import { HomeFeaturedProjects } from "@/components/portfolio/home/HomeFeaturedProjects";
+import { HomeFeaturedProjects } from "@/features/projects/components/HomeFeaturedProjects";
 import { HomeFeaturedResearch } from "@/components/portfolio/home/HomeFeaturedResearch";
 import { HomeOverview } from "@/components/portfolio/home/HomeOverview";
 import { HomeRecommendations } from "@/components/portfolio/home/HomeRecommendations";
@@ -714,7 +714,8 @@ describe("portfolio UI helpers", () => {
   });
 
   it("renders Home major sections without repetitive card eyebrows", () => {
-    const { container } = render(<HomeOverview content={createHomeContent([], [skillGroup])} />);
+    const content = createHomeContent([], [skillGroup]);
+    const { container } = render(<HomeOverview content={content} projectHighlights={<HomeFeaturedProjects items={content.projects} />} />);
     const overviewGrid = container.querySelector<HTMLElement>(".home-overview-grid");
     const skillsSection = container.querySelector<HTMLElement>(".home-section--skills");
     const recommendationsSection = container.querySelector<HTMLElement>(".home-section--recommendations");
@@ -755,7 +756,8 @@ describe("portfolio UI helpers", () => {
   });
 
   it("renders each Home section in the requested order even when recommendations exist", () => {
-    const { container } = render(<HomeOverview content={createHomeContent([recommendation])} />);
+    const content = createHomeContent([recommendation]);
+    const { container } = render(<HomeOverview content={content} projectHighlights={<HomeFeaturedProjects items={content.projects} />} />);
 
     expect(Array.from(container.querySelectorAll(".home-overview-grid h2")).map((heading) => heading.textContent)).toEqual([
       "Experience",

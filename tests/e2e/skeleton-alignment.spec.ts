@@ -32,9 +32,10 @@ type Viewport = {
 
 type ProjectFootprint = {
   actions: number;
-  attribution: number;
   badge: number;
   controls: number;
+  divider: number;
+  headerAttribution: number;
   visual: number;
 };
 
@@ -570,9 +571,12 @@ test("matches real Project and Research detail footprints at compact, visual, co
     const resolvedProjectFootprints = await page.locator(".project-card--showcase").evaluateAll((cards): ProjectFootprint[] =>
       cards.map((card) => ({
         actions: card.querySelectorAll(".project-card__actions > a").length,
-        attribution: card.querySelectorAll(".project-card__attribution").length,
         badge: card.querySelectorAll(".project-card__badge").length,
         controls: card.querySelectorAll(".project-visual-switcher__toggle").length,
+        divider: card.querySelectorAll(".project-card__footer-divider").length,
+        headerAttribution: card.querySelectorAll(
+          ".project-card__showcase-header .content-card__summary > .project-card__attribution",
+        ).length,
         visual: card.querySelectorAll(".project-visual-switcher, .project-card__image").length
       }))
     );
@@ -590,24 +594,35 @@ test("matches real Project and Research detail footprints at compact, visual, co
         await expect(card.locator(".detail-card-skeleton__project-controls > .skeleton-block")).toHaveCount(footprint.controls);
         await expect(card.locator(".detail-card-skeleton__project-visual")).toHaveCount(footprint.visual);
         await expect(card.locator(".detail-card-skeleton__actions > .skeleton-block")).toHaveCount(footprint.actions);
-        await expect(card.locator(".detail-card-skeleton__project-attribution")).toHaveCount(footprint.attribution);
+        await expect(card.locator(".detail-card-skeleton__project-divider")).toHaveCount(footprint.divider);
+        await expect(
+          card.locator(
+            ".detail-card-skeleton__project-summary > .detail-card-skeleton__project-attribution",
+          ),
+        ).toHaveCount(footprint.headerAttribution);
         if (footprint.visual > 0 && footprint.controls > 0) {
           const geometry = await card.evaluate((element) => {
             const visual = element.querySelector<HTMLElement>(".detail-card-skeleton__project-visual");
             const controls = element.querySelector<HTMLElement>(".detail-card-skeleton__project-controls");
+            const divider = element.querySelector<HTMLElement>(".detail-card-skeleton__project-divider");
             const actions = element.querySelector<HTMLElement>(".detail-card-skeleton__actions");
             if (!visual || !controls || !actions) throw new Error("Project skeleton is missing its visual, control, or actions row.");
             const visualBox = visual.getBoundingClientRect();
             const controlsBox = controls.getBoundingClientRect();
+            const dividerBox = divider?.getBoundingClientRect();
             const actionsBox = actions.getBoundingClientRect();
             return {
               actionsAfterControls: actionsBox.top >= controlsBox.bottom - 1,
+              actionsAfterDivider: !dividerBox || actionsBox.top >= dividerBox.bottom - 1,
               controlsAfterVisual: controlsBox.top >= visualBox.bottom - 1,
+              dividerAfterControls: !dividerBox || dividerBox.top >= controlsBox.bottom - 1,
               ratio: visualBox.width / visualBox.height
             };
           });
           expect(geometry.controlsAfterVisual, `Projects skeleton control should follow visual at ${viewport.name}`).toBe(true);
           expect(geometry.actionsAfterControls, `Projects skeleton actions should follow control at ${viewport.name}`).toBe(true);
+          expect(geometry.dividerAfterControls, `Projects skeleton divider should follow control at ${viewport.name}`).toBe(true);
+          expect(geometry.actionsAfterDivider, `Projects skeleton actions should follow divider at ${viewport.name}`).toBe(true);
           const expectedRatio = viewport.width <= 720 ? 4 / 3 : 16 / 10;
           expect(Math.abs(geometry.ratio - expectedRatio), `Projects skeleton visual ratio at ${viewport.name}`).toBeLessThan(0.02);
         }

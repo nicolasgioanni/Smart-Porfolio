@@ -1,17 +1,11 @@
 import { PageSkeleton } from "@/components/loading/PageSkeleton";
-import { getHomeProjectSkeletonProfiles, type HomeProjectSkeletonProfile } from "@/features/projects/loading/projectSkeletonProfiles";
 import { SkeletonBlock } from "@/components/loading/SkeletonBlock";
 import { SkeletonText } from "@/components/loading/SkeletonText";
-import { getPortfolioContent } from "@/lib/content/getPortfolioContent";
-import { selectHomeItems } from "@/lib/content/selectHomeContent";
-import type { ProjectItem } from "@/content/types";
 import { siteRoutes } from "@/lib/routing/siteRoutes";
 
-export function HomePageSkeleton({ projectItems }: { projectItems?: readonly ProjectItem[] }) {
-  const content = getPortfolioContent();
-  const projectProfiles = getHomeProjectSkeletonProfiles(
-    projectItems ?? selectHomeItems(content.projects, content.siteSettings.maxHomeProjectItems)
-  );
+export type HomeProjectSkeletonProfile = { actionWidths: readonly number[]; id: string };
+
+export function HomePageSkeleton({ projectProfiles }: { projectProfiles: readonly HomeProjectSkeletonProfile[] }) {
 
   return (
     <PageSkeleton pathname={siteRoutes.home} variant="home">

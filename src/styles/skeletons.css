@@ -355,9 +355,20 @@
   align-content: start;
 }
 
+.detail-card-skeleton__project-summary {
+  display: grid;
+  gap: var(--space-1);
+}
+
 .detail-card-skeleton__project-footer {
   gap: var(--space-2);
   align-content: start;
+}
+
+.detail-card-skeleton__project-divider {
+  height: 1px;
+  margin-inline: var(--space-2);
+  background: var(--color-line-strong);
 }
 
 .detail-card-skeleton__project-visual {

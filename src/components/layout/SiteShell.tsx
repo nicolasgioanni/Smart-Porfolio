@@ -3,27 +3,18 @@ import type { GeneratedPortfolioContent } from "@/content/types";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { StaticPortfolioRouteGate } from "@/components/layout/StaticPortfolioRouteGate";
-import { HomeOverview } from "@/components/portfolio/home/HomeOverview";
-import { ProjectsNoScriptFallback } from "@/features/projects/components/ProjectsNoScriptFallback";
-import { selectProjectDetailContent } from "@/lib/content/selectDetailContent";
-import { selectHomeContent } from "@/lib/content/selectHomeContent";
 import type { ThemeName } from "@/lib/theme/resolveThemeName";
 
 type SiteShellProps = {
   children: ReactNode;
   content: GeneratedPortfolioContent;
+  homeFallback: ReactNode;
   initialTheme: ThemeName;
+  projectsFallback: ReactNode;
   researchFallback: ReactNode;
 };
 
-export function SiteShell({ children, content, initialTheme, researchFallback }: SiteShellProps) {
-  const projectsFallback = <ProjectsNoScriptFallback items={selectProjectDetailContent(content)} />;
-  const homeContent = selectHomeContent(content);
-  const homeFallback = (
-    <HomeOverview
-      content={{ ...homeContent, siteSettings: { ...homeContent.siteSettings, enableScrollMotion: false } }}
-    />
-  );
+export function SiteShell({ children, content, homeFallback, initialTheme, projectsFallback, researchFallback }: SiteShellProps) {
 
   return (
     <div className="site-shell" data-glass-effects={content.siteSettings.enableGlassEffects ? "true" : "false"}>

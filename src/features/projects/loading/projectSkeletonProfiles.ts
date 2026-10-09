@@ -25,7 +25,7 @@ export function getProjectSkeletonProfiles(items: readonly ProjectItem[]): Proje
 
     return {
       actionWidths: getProjectActions(item.links).map((action) => action.label === "Source code" ? 112 : action.label === "Download" ? 94 : 96),
-      hasAttribution: Boolean(getProjectVisual(item.id)?.diagram.attribution),
+      hasAttribution: Boolean(getProjectVisual(item.id)?.attribution),
       hasBadge: Boolean(getProjectVisual(item.id)?.badge),
       hasVisual: hasKnownVisual || Boolean(item.image),
       id: item.id,

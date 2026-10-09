@@ -2,12 +2,14 @@ import type { ProjectItem } from "@/content/types";
 import { GlassButton } from "@/components/glass/GlassButton";
 import { GlassChip } from "@/components/glass/GlassChip";
 import { GlassIconLink } from "@/components/glass/GlassIconLink";
+import { LinkIcon } from "@/components/icons/LinkIcon";
+import { SmartLink } from "@/components/navigation/SmartLink";
 import { PortfolioCard } from "@/components/portfolio/shared/PortfolioCard";
 import { ProjectVisualTabs } from "@/features/projects/components/ProjectVisualTabs";
 import { ProjectStaticVisual } from "@/features/projects/components/ProjectStaticVisual";
 import { getSummary, limitItems } from "@/lib/content/displayHelpers";
 import { getProjectActions, getProjectDiagramAction, getProjectPreviewAction } from "@/features/projects/selectors/projectActions";
-import { getProjectVisual } from "@/features/projects/selectors/projectVisualRegistry";
+import { getProjectVisual, type ProjectAttribution } from "@/features/projects/selectors/projectVisualRegistry";
 
 type ProjectCardProps = {
   item: ProjectItem;
@@ -56,23 +58,39 @@ function ProjectShowcaseCard({ item, staticVisual }: { item: ProjectItem; static
           <h3 className="content-card__title">{item.title}</h3>
           {visual?.badge ? <span className={`project-card__badge project-card__badge--${visual.badge.tone}`}><span aria-hidden="true" className="project-card__badge-icon">{visual.badge.tone === "live" ? "●" : visual.badge.tone === "installable" ? "↓" : "◷"}</span>{visual.badge.label}{visual.badge.tone === "installable" ? <span className="visually-hidden"> — Windows installer available</span> : null}</span> : null}
         </div>
-        {summary ? <p className="content-card__summary">{summary}</p> : null}
+        {summary ? (
+          <p className="content-card__summary">
+            {summary}
+            {visual?.attribution ? <ProjectAttributionLine attribution={visual.attribution} /> : null}
+          </p>
+        ) : visual?.attribution ? <p className="content-card__summary"><ProjectAttributionLine attribution={visual.attribution} /></p> : null}
       </header>
       {visual ? staticVisual ? <ProjectStaticVisual diagramAction={diagramAction} previewAction={previewAction} projectId={item.id} projectTitle={item.title} visual={visual} /> : <ProjectVisualTabs diagramAction={diagramAction} previewAction={previewAction} projectId={item.id} projectTitle={item.title} visual={visual} /> : item.image ? <img alt="" className="project-card__image" height="320" loading="lazy" src={item.image} width="640" /> : null}
-      {actions.length > 0 || visual?.diagram.attribution ? (
+      {actions.length > 0 ? (
         <footer className="project-card__footer">
-          {actions.length > 0 ? (
-            <div className="project-card__actions">
-              {actions.map(({ label, link }) => (
-                <GlassButton aria-label={`${label} for ${item.title}`} href={link.url} key={`${item.id}-${label}`} variant="secondary">
-                  {label}
-                </GlassButton>
-              ))}
-            </div>
-          ) : null}
-          {visual?.diagram.attribution ? <p className="project-card__attribution">{visual.diagram.attribution}</p> : null}
+          <div aria-hidden="true" className="project-card__footer-divider" />
+          <div className="project-card__actions">
+            {actions.map(({ label, link }) => (
+              <GlassButton aria-label={`${label} for ${item.title}`} href={link.url} key={`${item.id}-${label}`} variant="secondary">
+                {label}
+              </GlassButton>
+            ))}
+          </div>
         </footer>
       ) : null}
     </PortfolioCard>
+  );
+}
+
+function ProjectAttributionLine({ attribution }: { attribution: ProjectAttribution }) {
+  return (
+    <span className="project-card__attribution">
+      {" "}{attribution.prefix}
+      <SmartLink className="project-card__attribution-link" href={attribution.link.url}>
+        <span data-label={attribution.link.label}>{attribution.link.label}</span>
+        <LinkIcon className="project-card__attribution-link-icon" />
+      </SmartLink>
+      {attribution.suffix}
+    </span>
   );
 }

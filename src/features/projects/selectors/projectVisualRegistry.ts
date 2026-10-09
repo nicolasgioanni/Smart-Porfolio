@@ -1,11 +1,16 @@
 export type ProjectDiagramNode = { detail?: string; label: string; x: number; y: number };
-export type ProjectDiagram = { attribution?: string; description: string; nodes: readonly ProjectDiagramNode[]; title: string };
+export type ProjectAttribution = {
+  link: { label: string; url: string };
+  prefix: string;
+  suffix: string;
+};
+export type ProjectDiagram = { description: string; nodes: readonly ProjectDiagramNode[]; title: string };
 export type ProjectPreviewMobileAsset = { height: number; src: string; width: number };
 export type ProjectPreview =
   | { alt: string; fit: "contain" | "cover"; height: number; kind: "screenshot"; mobile?: ProjectPreviewMobileAsset; src: string; width: number }
   | { fallback: { alt: string; src: string }; height: number; kind: "leetnotes"; width: number };
 export type ProjectPreviewBadge = { label: "Live site" | "Installable" | "Scheduled"; tone: "installable" | "live" | "scheduled" };
-export type ProjectVisual = { badge?: ProjectPreviewBadge; diagram: ProjectDiagram; preview: ProjectPreview };
+export type ProjectVisual = { attribution?: ProjectAttribution; badge?: ProjectPreviewBadge; diagram: ProjectDiagram; preview: ProjectPreview };
 
 export const projectVisualRegistry = {
   "compliance-label-assistant": {
@@ -31,6 +36,11 @@ export const projectVisualRegistry = {
     }
   },
   notepal: {
+    attribution: {
+      link: { label: "Parth Gupta", url: "https://www.linkedin.com/in/parthgu/" },
+      prefix: "Co-developed with ",
+      suffix: "."
+    },
     badge: { label: "Live site", tone: "live" },
     preview: {
       alt: "NotePal homepage with its study tools introduction and Enter NotePal action.",
@@ -42,7 +52,6 @@ export const projectVisualRegistry = {
       width: 1272
     },
     diagram: {
-      attribution: "Co-developed with Parth Gupta.",
       description: "Study materials are processed into structured notes, then support quizzes and context-aware chat.",
       nodes: [
         { detail: "files", label: "Study material", x: 18, y: 136 },

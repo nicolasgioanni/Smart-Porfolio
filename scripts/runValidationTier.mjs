@@ -14,7 +14,6 @@ export const priorityTestDirectories = [
   "src/components/portfolio/shared",
   "src/components/theme",
   "src/features/research",
-  "src/lib/projects",
   "src/lib/theme"
 ];
 

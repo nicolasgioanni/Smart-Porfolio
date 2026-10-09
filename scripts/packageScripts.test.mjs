@@ -117,7 +117,6 @@ describe("package and CI deployment automation", () => {
       "src/components/portfolio/shared",
       "src/components/theme",
       "src/features/research",
-      "src/lib/projects",
       "src/lib/theme"
     ]);
     expect(requiredPriorityFiles).toEqual(

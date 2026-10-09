@@ -391,7 +391,7 @@ async function expectCardRowsAligned(left: Locator, right: Locator) {
 }
 
 test.describe("Projects showcase", () => {
-  test("renders the generated project order, real previews, badges, and source-first footer actions", async ({
+  test("renders the generated project order, real previews, safe inline credits, and source-first footer actions", async ({
     page,
   }) => {
     const projects = selectProjectDetailContent(
@@ -417,6 +417,19 @@ test.describe("Projects showcase", () => {
           .getByRole("link")
           .filter({ hasText: /^(Source code|Live demo|Download)$/ }),
       ).toHaveText(actions.map((action) => action.label));
+
+      const footerDivider = card.locator(".project-card__footer-divider");
+      await expect(footerDivider).toHaveCount(actions.length > 0 ? 1 : 0);
+      if (actions.length > 0) {
+        await expect(footerDivider).toHaveAttribute("aria-hidden", "true");
+        const [dividerBox, actionsBox] = await Promise.all([
+          footerDivider.boundingBox(),
+          card.locator(".project-card__actions").boundingBox(),
+        ]);
+        expect(dividerBox).not.toBeNull();
+        expect(actionsBox).not.toBeNull();
+        expect(actionsBox!.y).toBeGreaterThanOrEqual(dividerBox!.y + dividerBox!.height - 1);
+      }
 
       if (!visual) continue;
 
@@ -449,6 +462,21 @@ test.describe("Projects showcase", () => {
         await expect(badge).toHaveClass(
           new RegExp(`project-card__badge--${visual.badge.tone}`),
         );
+      }
+
+      const attribution = card.locator(
+        ".project-card__showcase-header .content-card__summary > .project-card__attribution",
+      );
+      await expect(attribution).toHaveCount(visual.attribution ? 1 : 0);
+      await expect(
+        card.locator(".project-card__footer .project-card__attribution"),
+      ).toHaveCount(0);
+      if (visual.attribution) {
+        const attributionLink = attribution.locator(".project-card__attribution-link");
+        await expect(attributionLink).toHaveAccessibleName(visual.attribution.link.label);
+        await expect(attributionLink).toHaveAttribute("href", visual.attribution.link.url);
+        await expect(attributionLink).toHaveAttribute("target", "_blank");
+        await expect(attributionLink).toHaveAttribute("rel", /noopener/);
       }
 
       if (visual.preview.kind === "leetnotes") {
@@ -753,7 +781,7 @@ test.describe("Projects showcase", () => {
     }
   });
 
-  test("aligns paired desktop card rows and keeps NotePal attribution beneath its actions", async ({
+  test("aligns paired desktop card rows and keeps NotePal credit inline above divided actions", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
@@ -766,15 +794,61 @@ test.describe("Projects showcase", () => {
     }
 
     const notePal = cards.filter({ has: page.locator('[data-project-visual="notepal"]') });
-    const attribution = notePal.locator(".project-card__attribution");
-    await expect(attribution).toHaveText("Co-developed with Parth Gupta.");
-    const [attributionBox, actionsBox] = await Promise.all([
+    const attribution = notePal.locator(
+      ".project-card__showcase-header .content-card__summary > .project-card__attribution",
+    );
+    const attributionLink = attribution.locator(".project-card__attribution-link");
+    const divider = notePal.locator(".project-card__footer-divider");
+    await expect(attribution).toHaveCount(1);
+    await expect(attributionLink).toHaveAccessibleName("Parth Gupta");
+    await expect(attributionLink).toHaveAttribute(
+      "href",
+      "https://www.linkedin.com/in/parthgu/",
+    );
+    await expect(attributionLink).toHaveAttribute("target", "_blank");
+    await expect(attributionLink).toHaveAttribute("rel", /noopener/);
+    await expect(notePal.locator(".project-card__footer .project-card__attribution")).toHaveCount(0);
+    await expect(divider).toHaveCount(1);
+    await expect(divider).toHaveAttribute("aria-hidden", "true");
+
+    const [attributionBox, dividerBox, actionsBox, footerBox] = await Promise.all([
       attribution.boundingBox(),
+      divider.boundingBox(),
       notePal.locator(".project-card__actions").boundingBox(),
+      notePal.locator(".project-card__footer").boundingBox(),
     ]);
     expect(attributionBox).not.toBeNull();
+    expect(dividerBox).not.toBeNull();
     expect(actionsBox).not.toBeNull();
-    expect(attributionBox!.y).toBeGreaterThanOrEqual(actionsBox!.y + actionsBox!.height - 1);
+    expect(footerBox).not.toBeNull();
+    expect(attributionBox!.y).toBeLessThan(dividerBox!.y);
+    expect(actionsBox!.y).toBeGreaterThanOrEqual(dividerBox!.y + dividerBox!.height - 1);
+    expect(dividerBox!.x).toBeGreaterThan(footerBox!.x);
+    expect(dividerBox!.x + dividerBox!.width).toBeLessThan(footerBox!.x + footerBox!.width);
+
+    const inactiveColor = await attributionLink.evaluate((element) => getComputedStyle(element).color);
+    await attributionLink.hover();
+    await expect(attributionLink).toHaveCSS("text-decoration-line", "underline");
+    const hoverColor = await attributionLink.evaluate((element) => {
+      const probe = document.createElement("span");
+      probe.style.color = "var(--color-accent-strong)";
+      element.append(probe);
+      const color = getComputedStyle(probe).color;
+      probe.remove();
+      return color;
+    });
+    await expect(attributionLink).toHaveCSS("color", hoverColor);
+    expect(hoverColor).not.toBe(inactiveColor);
+
+    await page.mouse.move(0, 0);
+    await getPanels(notePal)
+      .first()
+      .locator("a.project-visual-switcher__media-link")
+      .focus();
+    await page.keyboard.press("Shift+Tab");
+    await expect(attributionLink).toBeFocused();
+    await expect(attributionLink).toHaveCSS("text-decoration-line", "underline");
+    await expect(attributionLink).toHaveCSS("color", hoverColor);
   });
 
   test("keeps the two-column boundary, contained workflows, and three palette variants usable", async ({

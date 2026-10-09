@@ -20,21 +20,24 @@ export function ProjectsPageSkeleton({ detailItems }: { detailItems?: readonly P
                 <SkeletonBlock height={26} width="74%" />
                 {profile.hasBadge ? <SkeletonBlock className="detail-card-skeleton__project-badge" height={24} radius="999px" width={76} /> : null}
               </div>
-              <SkeletonText rows={profile.summaryWidths.length} widths={profile.summaryWidths.map((width) => `${width}%`)} />
+              <div className="detail-card-skeleton__project-summary">
+                <SkeletonText rows={profile.summaryWidths.length} widths={profile.summaryWidths.map((width) => `${width}%`)} />
+                {profile.hasAttribution ? <SkeletonBlock className="detail-card-skeleton__project-attribution" height={14} width="42%" /> : null}
+              </div>
             </div>
             <div className="detail-card-skeleton__project-visual-content">
               {profile.hasVisual ? <div className="detail-card-skeleton__project-visual"><SkeletonBlock height="100%" /></div> : null}
               {profile.visualControlCount > 0 ? (
                 <div className="detail-card-skeleton__project-controls">
-                  <SkeletonBlock height={44} radius="999px" width={112} />
+                  <SkeletonBlock height={44} radius="999px" width={126} />
                 </div>
               ) : null}
             </div>
             <div className="detail-card-skeleton__project-footer">
+              {profile.actionWidths.length > 0 ? <div aria-hidden="true" className="detail-card-skeleton__project-divider" /> : null}
               <div className="detail-card-skeleton__actions">
                 {profile.actionWidths.map((width, actionIndex) => <SkeletonBlock height={38} key={actionIndex} radius="999px" width={width} />)}
               </div>
-              {profile.hasAttribution ? <SkeletonBlock className="detail-card-skeleton__project-attribution" height={14} width="42%" /> : null}
             </div>
           </article>
         ))}

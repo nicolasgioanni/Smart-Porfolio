@@ -100,16 +100,26 @@ describe("Project showcase", () => {
     expect(container.querySelector(".project-card__image")).toBeInTheDocument();
   });
 
-  it("keeps the NotePal attribution in the card footer after its actions in enhanced and static output", () => {
+  it("keeps the typed NotePal attribution inline with the summary in enhanced and static output", () => {
     const notePal = { ...complianceProject, id: "notepal", title: "NotePal" };
     const { container } = render(<ProjectCard item={notePal} variant="detail" />);
-    const footer = container.querySelector(".project-card__footer");
+    const summary = container.querySelector<HTMLElement>(".project-card__showcase-header .content-card__summary");
+    const footer = container.querySelector<HTMLElement>(".project-card__footer");
+    const link = within(summary!).getByRole("link", { name: "Parth Gupta" });
 
-    expect(footer).toHaveTextContent("Co-developed with Parth Gupta.");
-    expect(footer?.querySelector(".project-card__actions")?.compareDocumentPosition(footer.querySelector(".project-card__attribution")!)).toBe(
+    expect(summary).toHaveTextContent("Turns alcohol-label images into explainable field checks with AI extraction and deterministic verification. Co-developed with Parth Gupta.");
+    expect(link).toHaveAttribute("href", "https://www.linkedin.com/in/parthgu/");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    expect(link.querySelector(".project-card__attribution-link-icon")).toHaveAttribute("aria-hidden", "true");
+    expect(footer).not.toHaveTextContent("Co-developed with Parth Gupta.");
+    expect(footer?.querySelector(".project-card__footer-divider")?.compareDocumentPosition(footer.querySelector(".project-card__actions")!)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
-    expect(renderToStaticMarkup(<ProjectCard item={notePal} staticVisual variant="detail" />)).toContain("Co-developed with Parth Gupta.");
+    const staticMarkup = renderToStaticMarkup(<ProjectCard item={notePal} staticVisual variant="detail" />);
+    expect(staticMarkup).toContain("Co-developed with ");
+    expect(staticMarkup).toContain('href="https://www.linkedin.com/in/parthgu/"');
+    expect(staticMarkup).toContain("Parth Gupta");
   });
 
   it("renders the no-JavaScript route fallback with source-first actions", () => {

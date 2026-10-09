@@ -360,7 +360,7 @@ describe("static portfolio security contracts", () => {
     const dialogCss = readFileSync(path.join(projectRoot, "src", "styles", "dialog.css"), "utf8");
     const tokensCss = readFileSync(path.join(projectRoot, "src", "styles", "tokens.css"), "utf8");
     const projectSource = readFileSync(
-      path.join(projectRoot, "src", "components", "portfolio", "home", "HomeProjectCard.tsx"),
+      path.join(projectRoot, "src", "features", "projects", "components", "HomeProjectCard.tsx"),
       "utf8"
     );
     const projectActionsSource = readFileSync(

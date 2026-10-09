@@ -165,6 +165,7 @@ describe("skeleton source contracts", () => {
     expect(projectSkeletonProfiles.map((profile) => profile.id)).toEqual(projects.map((project) => project.id));
     expect(projectSkeletonProfiles.map((profile) => profile.actionWidths.length)).toEqual([2, 1, 1]);
     expect(projectSkeletonProfiles.map((profile) => profile.summaryWidths)).toEqual([[100, 86], [100, 72], [100, 86]]);
+    expect(projectSkeletonProfiles.map((profile) => profile.hasAttribution)).toEqual([true, false, false]);
     expect(projects.map((project) => project.links.length)).toEqual([2, 1, 1]);
   });
 
