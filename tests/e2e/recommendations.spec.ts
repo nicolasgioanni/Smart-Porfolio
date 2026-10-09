@@ -1,7 +1,11 @@
-import { expect, test, type Locator } from "./browserTest";
+import { expect, test, type Locator, type Page } from "./browserTest";
 import { captureBrowserConsole, expectNoBrowserConsoleIssues } from "./browserConsole";
+import { readGeneratedPortfolioContent } from "./generatedContent";
 import { settleLayout } from "./settleLayout";
 import { selectThemeWithChooser } from "./themePreference";
+import { selectHomeContent } from "../../src/lib/content/selectHomeContent";
+import { selectRecommendationDetailContent } from "../../src/lib/content/selectRecommendationContent";
+import { getRecommendationVerificationUrl } from "../../src/lib/content/recommendationVerification";
 
 type RecommendationGeometry = {
   bottom: number;
@@ -184,7 +188,165 @@ async function getFocusableSlotIndex(slots: Locator, excludedIndex: number): Pro
   );
 }
 
+const verificationPaletteColors = {
+  dark: { default: "rgb(121, 188, 255)", interaction: "rgb(101, 178, 255)" },
+  light: { default: "rgb(9, 94, 177)", interaction: "rgb(8, 79, 150)" },
+  navy: { default: "rgb(121, 188, 255)", interaction: "rgb(101, 178, 255)" }
+} as const;
+
+async function expectRenderedVerificationLinks(
+  page: Page,
+  selector: string,
+  items: ReturnType<typeof selectRecommendationDetailContent>
+) {
+  await expect(page.locator(selector)).toHaveCount(items.length);
+
+  for (const item of items) {
+    const card = page.locator(`${selector}[data-recommendation-id="${item.id}"]`);
+    const verificationUrl = getRecommendationVerificationUrl(item);
+
+    await expect(card).toHaveCount(1);
+    const profileLink = card.getByRole("link", {
+      name: `View ${item.recommenderName}'s LinkedIn profile`,
+      exact: true
+    });
+    if (item.linkedinUrl) {
+      await expect(profileLink).toHaveCount(1);
+      await expect(profileLink).toHaveAttribute("href", item.linkedinUrl);
+    } else {
+      await expect(profileLink).toHaveCount(0);
+    }
+
+    const verificationLink = card.getByRole("link", {
+      name: `View ${item.recommenderName}'s verified recommendation on LinkedIn`,
+      exact: true
+    });
+    const recommendationAction = card.getByRole("link", {
+      name: `View ${item.recommenderName}'s recommendation on LinkedIn`,
+      exact: true
+    });
+
+    if (verificationUrl) {
+      await expect(verificationLink).toHaveCount(1);
+      await expect(verificationLink).toHaveAttribute("href", verificationUrl);
+      await expect(verificationLink).toHaveAttribute("target", "_blank");
+      await expect(verificationLink).toHaveAttribute("rel", "noopener noreferrer");
+      await expect(recommendationAction).toHaveCount(1);
+      await expect(recommendationAction).toHaveAttribute("href", verificationUrl);
+    } else {
+      await expect(verificationLink).toHaveCount(0);
+      await expect(recommendationAction).toHaveCount(0);
+    }
+  }
+}
+
+async function getVerificationGeometry(link: Locator) {
+  return link.evaluate((element) => {
+    const card = element.closest<HTMLElement>(".recommendation-card");
+
+    if (!card) throw new Error("Expected verification link to belong to a recommendation card");
+
+    const linkRect = element.getBoundingClientRect();
+    const cardRect = card.getBoundingClientRect();
+
+    return {
+      card: { height: cardRect.height, width: cardRect.width },
+      link: {
+        height: linkRect.height,
+        width: linkRect.width,
+        x: linkRect.left - cardRect.left,
+        y: linkRect.top - cardRect.top
+      }
+    };
+  });
+}
+
 test.describe("recommendation cards", () => {
+  test("renders generated verification destinations with stable interaction geometry across Home and detail palettes", async ({ page }) => {
+    const generatedContent = readGeneratedPortfolioContent();
+    const homeItems = selectHomeContent(generatedContent).recommendations;
+    const detailItems = selectRecommendationDetailContent(generatedContent);
+
+    for (const [path, selector, items] of [
+      ["/", ".home-recommendations__item", homeItems],
+      ["/recommendations", ".recommendations-list__item", detailItems]
+    ] as const) {
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await page.goto(path);
+      await settleLayout(page, { waitForNetworkIdle: true });
+
+      for (const [theme, colors] of Object.entries(verificationPaletteColors)) {
+        await selectThemeWithChooser(page, theme as keyof typeof verificationPaletteColors);
+        await expectRenderedVerificationLinks(page, selector, items);
+
+        const firstVerifiedItem = items.find((item) => Boolean(getRecommendationVerificationUrl(item)));
+        if (firstVerifiedItem) {
+          const firstVerificationLink = page
+            .locator(`${selector}[data-recommendation-id="${firstVerifiedItem.id}"]`)
+            .getByRole("link", {
+              name: `View ${firstVerifiedItem.recommenderName}'s verified recommendation on LinkedIn`,
+              exact: true
+            });
+          const icon = firstVerificationLink.locator(".recommendation-verification-link__icon");
+
+          await firstVerificationLink.scrollIntoViewIfNeeded();
+          const before = await getVerificationGeometry(firstVerificationLink);
+          await expect(firstVerificationLink).toHaveCSS("color", colors.default);
+          await expect(icon).toHaveCSS("color", colors.default);
+
+          await firstVerificationLink.hover();
+          await expect(firstVerificationLink).toHaveCSS("color", colors.interaction);
+          await expect(icon).toHaveCSS("color", colors.interaction);
+          expect(await getVerificationGeometry(firstVerificationLink)).toEqual(before);
+
+          await page.mouse.move(0, 0);
+          await firstVerificationLink.focus();
+          await expect(firstVerificationLink).toHaveCSS("color", colors.interaction);
+          await expect(icon).toHaveCSS("color", colors.interaction);
+          expect(await getVerificationGeometry(firstVerificationLink)).toEqual(before);
+        }
+      }
+    }
+  });
+
+  test("wraps generated verification links within phone recommendation cards", async ({ page }) => {
+    const generatedContent = readGeneratedPortfolioContent();
+
+    for (const [path, selector, items] of [
+      ["/", ".home-recommendations__item", selectHomeContent(generatedContent).recommendations],
+      ["/recommendations", ".recommendations-list__item", selectRecommendationDetailContent(generatedContent)]
+    ] as const) {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto(path);
+      await settleLayout(page, { waitForNetworkIdle: true });
+      await expectRenderedVerificationLinks(page, selector, items);
+
+      for (const item of items) {
+        const card = page.locator(`${selector}[data-recommendation-id="${item.id}"]`);
+        const verificationLink = card.getByRole("link", { name: /verified recommendation on linkedin/i });
+        const verificationUrl = getRecommendationVerificationUrl(item);
+
+        if (!verificationUrl) {
+          await expect(verificationLink).toHaveCount(0);
+          continue;
+        }
+
+        await verificationLink.scrollIntoViewIfNeeded();
+        const [cardBox, linkBox] = await Promise.all([card.boundingBox(), verificationLink.boundingBox()]);
+
+        expect(cardBox).not.toBeNull();
+        expect(linkBox).not.toBeNull();
+        expect(linkBox!.x).toBeGreaterThanOrEqual(cardBox!.x - 1);
+        expect(linkBox!.x + linkBox!.width).toBeLessThanOrEqual(cardBox!.x + cardBox!.width + 1);
+        expect(await verificationLink.evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+      }
+
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)
+      ).toBe(true);
+    }
+  });
+
   test("keeps desktop rows fixed and dims exactly the cards covered by the active overlay", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto("/recommendations");

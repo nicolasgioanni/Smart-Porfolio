@@ -215,6 +215,8 @@ Recommendation cards render the full quote with an optional validated inline lin
 
 The outer Home panel keeps its collapsed border and background. An expanded card may extend below it while an invisible reserve preserves normal document flow for later sections. Home recommendation cards use an opaque theme-matched fill so their color remains stable across the panel boundary.
 
+The verification link pairs the current-color shield with a reserved-width text label. It uses `--color-recommendation-verification` at rest and `--color-recommendation-verification-interaction` for hover and keyboard focus: Light uses `#095eb1` and `#084f96`; My mode and Dark use `#79bcff` and `#65b2ff`. Those colors retain at least 4.5:1 contrast on recommendation, card, and strong-card surfaces. Verification stays background-free and does not shift its box during interaction; its label becomes bold and underlined while the icon follows the same semantic color.
+
 Quote links remain part of the prose. They become brighter and underlined on hover or focus without adding a background or changing line layout. Expansion controls preserve `aria-expanded`, `aria-controls`, and reduced-motion behavior.
 
 ## Footer
