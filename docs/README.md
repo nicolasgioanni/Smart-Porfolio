@@ -35,6 +35,7 @@ This is an npm repository: `package.json`, `package-lock.json`, and `.nvmrc` are
 | [Project README](../README.md) | Product overview, architecture summary, setup path, route map, and links into the documentation suite. |
 | [Architecture](architecture/ARCHITECTURE.md) | System boundaries, layers, data flow, tradeoffs, and authoritative implementation sources. |
 | [Project structure](architecture/PROJECT_STRUCTURE.md) | Repository tree, route ownership, component groups, tests, and guidance on where changes belong. |
+| [Implementation inventory](architecture/IMPLEMENTATION_INVENTORY.md) | Compact source-of-truth map, trust-boundary status terms, configuration placement, failure ownership, and guide ownership. |
 
 ## Content authoring
 
@@ -97,6 +98,8 @@ This is an npm repository: `package.json`, `package-lock.json`, and `.nvmrc` are
 
 Use the narrowest authoritative implementation source when documentation and code differ.
 
+The documentation uses five status labels to avoid overstating what a repository can prove: **implemented** means tracked source and local evidence exist; **repository-declared** means tracked configuration or automation records an intended contract; **operator-managed** means the current external setting must be observed outside the repository; **historical evidence** records a past review without asserting current state; and **proposed** identifies work that is not implemented yet. [Implementation inventory](architecture/IMPLEMENTATION_INVENTORY.md) defines the labels and maps every documentation area to its implementation evidence.
+
 | Topic | Authoritative implementation |
 | --- | --- |
 | Dependencies, Node.js version, and commands | `package.json`, `package-lock.json`, and `.nvmrc` |
@@ -120,4 +123,4 @@ Use the narrowest authoritative implementation source when documentation and cod
 5. Run `npm run docs:check` and the relevant focused tests.
 6. Run `npm run verify` before delivery.
 
-When adding a document, give it one clear purpose, add it to the appropriate table above, and link it from the guide that introduces the concept. Do not publish secret values, the workbook URL, private recipient configuration, or machine-specific paths.
+When adding a document, give it one clear purpose, add it to the appropriate table above, and link it from the guide that introduces the concept. Use implemented, repository-declared, operator-managed, historical-evidence, or proposed wording where it prevents a claim about live state from being mistaken for checked-in behavior. Do not publish secret values, the workbook URL, private recipient configuration, or machine-specific paths.

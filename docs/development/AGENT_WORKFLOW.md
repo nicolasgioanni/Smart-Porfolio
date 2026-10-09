@@ -28,7 +28,7 @@ Read the linked product document only when the selected task needs its detail. T
 
 ## Model routing
 
-Use Astra for coordination, review, decomposition, and evidence synthesis. Use GPT-5.6 Terra at High or Extra High for implementation. If a requested capability is unavailable in a cloned environment, follow the same checked repository contracts with the available tooling and report the validation actually performed.
+Use GPT-5.6 Sol for coordination, architecture, review, decomposition, and evidence synthesis. Use GPT-5.6 Terra at High or Extra High for implementation. If a requested capability is unavailable in a cloned environment, follow the same checked repository contracts with the available tooling and report the validation actually performed.
 
 ## Complete a change
 

@@ -2,6 +2,8 @@
 
 Smart Portfolio uses a layered quality gate for documentation, static content, React behavior, style contracts, Cloudflare Pages Functions, deployment automation, and the exported build. This guide maps each command to the behavior it actually verifies.
 
+[Implementation inventory](../architecture/IMPLEMENTATION_INVENTORY.md) maps testable source contracts to operator-managed boundaries. Use it with this command matrix when selecting evidence for a documentation, component, content, Function, or release change.
+
 ## Supported environment
 
 | Setting | Value |
@@ -196,6 +198,8 @@ The workflow contract tests inspect checked-in workflow text and execute the man
 
 The `verify` job installs locked dependencies before any conditional quality work.
 
+This section owns the test evidence selected by CI. Candidate selection, content no-op decisions, immutable-artifact transfer, D1 migration, Wrangler upload, and smoke recovery are release sequencing owned by [Deployment](../operations/DEPLOYMENT.md#single-snapshot-exact-artifact-pipeline) and [Operations](../operations/OPERATIONS.md#failure-triage).
+
 ### Pull requests: priority gate
 
 Pull requests targeting `main` or `develop`:
@@ -220,13 +224,12 @@ Latest pushes to `main` or `develop`:
 4. Run the complete Vitest suite once, including local D1 integration coverage.
 5. Install Chromium once and run the complete browser suite once. This includes the direct skeleton alignment matrix, held-navigation semantics, and Linux zero-difference visual matrix.
 6. Build with `build:generated` and the branch-specific public Turnstile key.
-7. Create, verify, and upload the artifact manifest.
-8. Enter the conditional deploy job, validate the selected D1 binding, and apply pending migrations.
-9. Upload the Pages artifact only after migration succeeds.
+
+After the full test and build evidence succeeds, the deployment workflow creates and rechecks the exact artifact, validates and migrates the selected D1 target, uploads through Wrangler, and performs its bounded smoke check. Those actions are not additional test coverage; see [Deployment](../operations/DEPLOYMENT.md#single-snapshot-exact-artifact-pipeline).
 
 ### Scheduled and manual checks
 
-Scheduled runs and non-forced manual runs perform the strict content work before deciding whether full verification is required. When both the candidate content hash and commit SHA match production, documentation integrity, lint, typecheck, tests, build, artifact upload, and deployment are skipped. A mismatch in either field selects the complete path, while forced manual runs always select it after strict content validation.
+Scheduled runs and non-forced manual runs perform the strict content work before deciding whether this full test evidence is required. When both the candidate content hash and commit SHA match production, CI does not select a quality tier. A mismatch selects the complete test path, while forced manual runs always select it after strict content validation. The release no-op and deployment consequences are defined in [Deployment](../operations/DEPLOYMENT.md#trigger-and-branch-behavior).
 
 ### Tier boundaries and diagnostics
 

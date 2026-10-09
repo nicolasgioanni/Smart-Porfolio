@@ -125,7 +125,7 @@ Focused client behavior includes the configured role rotation, modal media and s
 
 ### Direct import boundary
 
-`eslint.config.mjs` enforces direct import direction for both alias and relative specifiers. Files under `src/lib/` cannot import `src/components` or `src/features`; files under `src/components/` cannot import generated content, Cloudflare Functions, or scripts. Components receive generated content through the app and library layers. The rule intentionally does not analyze transitive dependency graphs or constrain `src/app/`; `src/lib/architecture/importBoundaries.test.ts` keeps the direct policy executable.
+`eslint.config.mjs` enforces direct import direction for both alias and relative specifiers. Files under `src/lib/` cannot import presentation modules; files under `src/components/` cannot import generated content, Cloudflare Functions, or scripts. Components receive generated content through the app and library layers. The rule intentionally does not analyze transitive dependency graphs or constrain `src/app/`; `src/lib/architecture/importBoundaries.test.ts` keeps the direct policy executable. This baseline has no `src/features/` directory: portfolio domain components are owned by `src/components/portfolio/` and domain content logic by `src/lib/content/`.
 
 ### Surface and loading primitives
 
@@ -220,6 +220,7 @@ Vitest discovers the complete suite. ESLint, TypeScript, the static build, docum
 ## Related guides
 
 - [Architecture](ARCHITECTURE.md)
+- [Implementation inventory](IMPLEMENTATION_INVENTORY.md)
 - [Content pipeline](../content/CONTENT_PIPELINE.md)
 - [Design system](../design/DESIGN_SYSTEM.md)
 - [Testing](../quality/TESTING.md)
