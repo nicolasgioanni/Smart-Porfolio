@@ -340,8 +340,10 @@ describe("CSV parsing and field normalization", () => {
     expect(isSupportedUrl("/resume/../secret.pdf")).toBe(false);
     expect(isSupportedUrl("/resume/%2e%2e/secret.pdf")).toBe(false);
     expect(isSupportedUrl("not a url")).toBe(false);
+    expect(isSupportedUrl("https://author:secret@example.com/portfolio")).toBe(false);
     expect(isHttpsUrl("https://www.linkedin.com/in/example")).toBe(true);
     expect(isHttpsUrl("http://www.linkedin.com/in/example")).toBe(false);
+    expect(isHttpsUrl("https://author:secret@example.com/profile")).toBe(false);
     expect(isIsoDate("2026-08-07")).toBe(true);
     expect(isIsoDate("2026-02-30")).toBe(false);
     expect(isIsoDate("August 7, 2026")).toBe(false);
@@ -743,6 +745,48 @@ describe("portfolio normalization", () => {
         metadata
       )
     ).toThrow(/institutionLogo URL/);
+  });
+
+  it("rejects credential-bearing content URLs without returning their credentials", () => {
+    const credentialUrl = "https://author:content-secret@example.com/resource";
+    let errorMessage = "";
+
+    try {
+      normalizePortfolioContent(
+        createSheets({ links: [{ id: "private-url", label: "Private URL", url: credentialUrl, kind: "external" }] }),
+        metadata
+      );
+    } catch (error: unknown) {
+      errorMessage = error instanceof Error ? error.message : String(error);
+    }
+
+    expect(errorMessage).toMatch(/invalid url/i);
+    expect(errorMessage).not.toContain("author");
+    expect(errorMessage).not.toContain("content-secret");
+    expect(errorMessage).not.toContain(credentialUrl);
+  });
+
+  it("rejects credential-bearing research media paths without returning their credentials", () => {
+    const credentialPath = "https://author:media-secret@example.com/research.webp";
+    const baseResearchRow = createSheets().research[0]!;
+
+    for (const fieldName of ["graphical_abstract", "video"] as const) {
+      let errorMessage = "";
+
+      try {
+        normalizePortfolioContent(
+          createSheets({ research: [{ ...baseResearchRow, [fieldName]: credentialPath }] }),
+          metadata
+        );
+      } catch (error: unknown) {
+        errorMessage = error instanceof Error ? error.message : String(error);
+      }
+
+      expect(errorMessage).toMatch(fieldName === "graphical_abstract" ? /invalid graphicalAbstract path/ : /invalid video path/);
+      expect(errorMessage).not.toContain("author");
+      expect(errorMessage).not.toContain("media-secret");
+      expect(errorMessage).not.toContain(credentialPath);
+    }
   });
 
   it("accepts paired, local research media and rejects unsafe or incomplete combinations", () => {

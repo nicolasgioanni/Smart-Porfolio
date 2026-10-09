@@ -72,7 +72,7 @@ Client validation, disabled controls, consent state, and a successful widget ani
 
 The Next.js application exports static HTML, JavaScript, CSS, images, and public generated content. Core pages do not require a runtime Next.js server, database, user authentication, or runtime spreadsheet request. Every file emitted under `out/` is public.
 
-The build downloads one anonymous HTTPS XLSX source, validates it, and turns it into public generated content. Treat that workbook as untrusted public input. The generator applies a 5 MiB compressed-download limit, archive entry and streamed decoded-byte limits before ExcelJS parses it, then worksheet, row, field, and URL checks before static rendering. Spreadsheet text renders as ordinary React text. Do not add raw HTML or `dangerouslySetInnerHTML` for content-source text.
+The build downloads one anonymous XLSX source, validates it, and turns it into public generated content. Treat that workbook as untrusted public input. The [Content pipeline remote-download boundary](../content/CONTENT_PIPELINE.md#remote-download-boundary) owns its per-hop destination policy, redirect cap, request deadline, response-size limit, and cleanup behavior. Archive entry and streamed decoded-byte limits apply before ExcelJS parses it, followed by worksheet, row, field, and URL checks before static rendering. Spreadsheet text renders as ordinary React text. Do not add raw HTML or `dangerouslySetInnerHTML` for content-source text.
 
 ### Build and deployment boundary
 
@@ -213,7 +213,7 @@ Cloudflare Pages does not apply `_headers` rules to Function-generated responses
 
 ## URL and rendering rules
 
-Accepted general content URLs are HTTPS, HTTP, valid `mailto:` links, or safe root-relative paths. Root-relative paths must reject traversal segments. Recommendation source and professional-profile links have stricter HTTPS requirements. Every accepted root-relative file under `public/` remains publicly retrievable.
+Accepted general content URLs are HTTPS, HTTP, valid `mailto:` links, or safe root-relative paths. HTTP(S) URLs must not contain an embedded username or password. Root-relative paths must reject traversal segments. Recommendation source and professional-profile links have stricter HTTPS requirements. URL-validation errors identify the field without reproducing an invalid URL value. Every accepted root-relative file under `public/` remains publicly retrievable.
 
 External links opened in a new tab must include `rel="noopener noreferrer"`. Content-source text must remain escaped React text. An optional validated inline recommendation link may be composed from ordinary text nodes and one HTTPS anchor; do not parse content-source HTML or Markdown and do not auto-link arbitrary text.
 

@@ -232,7 +232,7 @@ export function normalizeLinkList(value: string | undefined, fieldName = "links"
     }
 
     if (!isSupportedUrl(url)) {
-      throw new Error(`Invalid link URL for ${fieldName}: ${url}`);
+      throw new Error(`Invalid link URL for ${fieldName}`);
     }
 
     return { label, url };
@@ -289,7 +289,7 @@ function normalizeLinks(rows: CsvRow[]): PortfolioLink[] {
     validateUniqueRowId(id, "links", seenIds);
 
     if (!isSupportedUrl(url)) {
-      throw new Error(`${location} has invalid url: ${url}`);
+      throw new Error(`${location} has invalid url`);
     }
 
     return {
@@ -416,7 +416,7 @@ function normalizeRecommendationHttpsUrl(value: string | undefined, fieldName: s
   if (!normalizedValue) return undefined;
 
   if (!isHttpsUrl(normalizedValue)) {
-    throw new Error(`${fieldName} must be a safe https URL: ${value}`);
+    throw new Error(`${fieldName} must be a safe https URL`);
   }
 
   return normalizedValue;
@@ -438,7 +438,7 @@ function normalizeRecommendationFullQuoteLink(
   }
 
   if (!isHttpsUrl(url)) {
-    throw new Error(`${location}.full_quote_link_url must be a safe https URL: ${urlValue}`);
+    throw new Error(`${location}.full_quote_link_url must be a safe https URL`);
   }
 
   if (fullQuote.indexOf(label) < 0 || fullQuote.indexOf(label) !== fullQuote.lastIndexOf(label)) {

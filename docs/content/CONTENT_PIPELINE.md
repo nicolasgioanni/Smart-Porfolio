@@ -24,7 +24,7 @@ The generator is `scripts/fetchPortfolioContent.ts`. Workbook-specific checks an
 
 Two environment variables control source selection:
 
-- `PORTFOLIO_WORKBOOK_URL`: one anonymously downloadable HTTPS XLSX URL.
+- `PORTFOLIO_WORKBOOK_URL`: one anonymously downloadable HTTPS XLSX URL on an allowed destination.
 - `PORTFOLIO_REQUIRE_REMOTE_CONTENT`: strict-mode switch. Only the exact string `true` enables it.
 
 The current generator behaves as follows:
@@ -48,16 +48,18 @@ When the command runs directly, it loads the ignored root `.env` file if present
 
 ## Remote download boundary
 
-The remote path accepts exactly one complete workbook snapshot. It can make at most two independent requests so one transient source failure does not discard an otherwise valid deployment candidate:
+The remote path accepts exactly one complete workbook snapshot. It makes at most two independent download attempts so one transient source failure does not discard an otherwise valid deployment candidate. Each attempt can make one initial request plus at most five redirects, for at most twelve HTTP requests across both attempts:
 
-- The URL must use HTTPS and must not contain a username or password.
-- Fetch credentials are omitted, redirects are followed, and no authorization or cookie header is added.
+- The configured URL and every redirect destination must use HTTPS, omit a username and password, use the default HTTPS port, and identify either a conventional DNS hostname or an admitted IP literal. Localhost names and the listed local, private, and special-purpose literal ranges fail before a request is made to that destination. Relative redirects resolve against the preceding accepted URL.
+- The literal check is deliberately conservative rather than a maintained classifier for global reachability. Along with private and local ranges, it rejects the IPv6 special-purpose blocks `2001::/23`, `2001:db8::/32`, `2002::/16`, and `3fff::/20`. It does not resolve hostnames or pin resolved addresses.
+- Redirects use manual handling. At most five distinct redirects are followed within an attempt; a missing, malformed, looping, excessive, downgraded, credential-bearing, or disallowed destination fails that attempt without a fallback.
+- Fetch credentials are omitted, and no authorization or cookie header is added.
 - The request advertises XLSX and generic binary responses through `Accept`.
 - Each attempt has a 15-second deadline covering response headers and the complete capped body.
 - A retryable failure waits one fixed second before one final attempt, for a maximum 31-second download window. Each attempt uses a fresh request and never combines bytes from different responses.
-- The maximum compressed response size is 5 MiB. A non-empty `Content-Length` must parse as a non-negative safe integer or generation fails. The declared size and the streamed or fallback body size are each enforced.
+- The maximum compressed response size is 5 MiB. A non-empty `Content-Length` must parse as a non-negative safe integer or generation fails. The declared size and the streamed or fallback body size are each enforced. Redirect, rejected, timed-out, and over-limit response bodies start cancellation without waiting for that cleanup to settle, so cleanup cannot extend the attempt deadline or retain partial bytes.
 - Deadlines, network or stream interruptions, HTTP 408, HTTP 429, and HTTP 5xx responses are retryable. Other HTTP 4xx responses and invalid length or size boundaries fail immediately.
-- Download failures use generic errors that do not include the configured URL. A timed-out stream is cancelled and partial bytes are discarded.
+- Download failures use generic errors that do not include the configured URL or a rejected redirect destination. A timed-out stream is cancelled and partial bytes are discarded.
 
 Payload validation rejects a `text/html` response type, common HTML or login content at the start of the body, and data without a ZIP signature. Before ExcelJS receives any workbook bytes, JSZip reads the ZIP central directory and streams every non-directory resolved archive entry to measure decoded output. The archive permits at most 128 resolved entries, 16 MiB decoded per entry, and 32 MiB decoded across all entries; the measurement does not trust ZIP-advertised uncompressed sizes. ExcelJS must then parse the bounded bytes as a valid, non-empty XLSX workbook. The response MIME type is not an allowlist by itself. A non-HTML MIME type can proceed only when the ZIP and XLSX checks also succeed.
 
@@ -129,6 +131,7 @@ Important normalization rules include:
 - Until the public XLSX is migrated, remote generation also accepts only the exact legacy Research header set with `image` in place of all three media columns. Legacy image values are discarded rather than converted into graphical abstracts; mixed schemas fail closed. The presentation resolver supplies checked-in abstracts only for the three established project IDs while this compatibility is active. Remove the compatibility after the anonymous public workbook uses the canonical headers and remote-generation CI verifies it.
 - Until the public XLSX is migrated, remote generation also accepts only the exact legacy Experience header set without `links`. It normalizes those rows to an empty links list, so main or develop remote generation drops role resources while that header remains; mixed schemas fail closed. Migrate the production workbook to the canonical Experience header with the CDAO and Treasury rows before deploy, then remove this compatibility path after remote-generation CI verifies it.
 - Recommendation source, LinkedIn, and inline quote destinations require HTTPS.
+- General HTTP(S) content URLs and HTTPS-only content URLs reject embedded usernames and passwords. URL validation errors identify the affected field without echoing an invalid value.
 - Profile role rotation requires all three role fields together and at least one non-empty pipe-delimited prefix.
 
 See [Content Sheet Schema](CONTENT_SHEET_SCHEMA.md) for field-specific requirements and URL rules.

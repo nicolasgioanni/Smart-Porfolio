@@ -109,7 +109,7 @@ export function isSupportedUrl(value: string, options: { allowMailto?: boolean; 
 
   try {
     const parsedUrl = new URL(trimmedValue);
-    return parsedUrl.protocol === "http:" || parsedUrl.protocol === "https:";
+    return (parsedUrl.protocol === "http:" || parsedUrl.protocol === "https:") && !parsedUrl.username && !parsedUrl.password;
   } catch {
     return false;
   }
@@ -124,7 +124,7 @@ export function isHttpsUrl(value: string): boolean {
 
   try {
     const parsedUrl = new URL(trimmedValue);
-    return parsedUrl.protocol === "https:";
+    return parsedUrl.protocol === "https:" && !parsedUrl.username && !parsedUrl.password;
   } catch {
     return false;
   }
@@ -148,7 +148,7 @@ function collectContentLinks(links: PortfolioContentLink[], location: string, er
     }
 
     if (!isSupportedUrl(link.url)) {
-      errors.push(`${location} has an invalid URL: ${link.url}`);
+      errors.push(`${location} has an invalid URL`);
     }
   }
 }
@@ -217,7 +217,7 @@ function validateTopLevelLinks(links: PortfolioLink[], errors: string[]): void {
     }
 
     if (!isSupportedUrl(link.url)) {
-      errors.push(`links.${link.id} has an invalid URL: ${link.url}`);
+      errors.push(`links.${link.id} has an invalid URL`);
     }
   }
 }
@@ -239,11 +239,11 @@ function validateResearch(items: ResearchItem[], errors: string[]): void {
       item.graphicalAbstract &&
       !isSupportedResearchGraphicalAbstractPath(item.graphicalAbstract)
     ) {
-      errors.push(`research.${item.id} has an invalid graphicalAbstract path: ${item.graphicalAbstract}`);
+      errors.push(`research.${item.id} has an invalid graphicalAbstract path`);
     }
 
     if (item.video && !isSupportedResearchVideoPath(item.video)) {
-      errors.push(`research.${item.id} has an invalid video path: ${item.video}`);
+      errors.push(`research.${item.id} has an invalid video path`);
     }
 
     if (item.video && !hasGraphicalAbstract) {
@@ -251,7 +251,7 @@ function validateResearch(items: ResearchItem[], errors: string[]): void {
     }
 
     if (item.organizationLogo && !isSupportedUrl(item.organizationLogo, { allowMailto: false })) {
-      errors.push(`research.${item.id} has an invalid organizationLogo URL: ${item.organizationLogo}`);
+      errors.push(`research.${item.id} has an invalid organizationLogo URL`);
     }
 
     collectContentLinks(item.links, `research.${item.id}`, errors);
@@ -265,7 +265,7 @@ function validateProjects(items: ProjectItem[], errors: string[]): void {
     }
 
     if (item.image && !isSupportedUrl(item.image)) {
-      errors.push(`projects.${item.id} has an invalid image URL: ${item.image}`);
+      errors.push(`projects.${item.id} has an invalid image URL`);
     }
 
     for (const [index, skill] of item.homeSkills.entries()) {
@@ -292,7 +292,7 @@ function validateExperience(items: ExperienceItem[], errors: string[]): void {
     }
 
     if (item.organizationLogo && !isSupportedUrl(item.organizationLogo, { allowMailto: false })) {
-      errors.push(`experience.${item.id} has an invalid organizationLogo URL: ${item.organizationLogo}`);
+      errors.push(`experience.${item.id} has an invalid organizationLogo URL`);
     }
 
     collectContentLinks(item.links, `experience.${item.id}`, errors);
@@ -310,11 +310,11 @@ function validateRecommendations(items: RecommendationItem[], errors: string[]):
     }
 
     if (item.sourceUrl && !isHttpsUrl(item.sourceUrl)) {
-      errors.push(`recommendations.${item.id} has an invalid sourceUrl: ${item.sourceUrl}`);
+      errors.push(`recommendations.${item.id} has an invalid sourceUrl`);
     }
 
     if (item.linkedinUrl && !isHttpsUrl(item.linkedinUrl)) {
-      errors.push(`recommendations.${item.id} has an invalid linkedinUrl: ${item.linkedinUrl}`);
+      errors.push(`recommendations.${item.id} has an invalid linkedinUrl`);
     }
 
     if (item.fullQuoteLink) {
@@ -325,7 +325,7 @@ function validateRecommendations(items: RecommendationItem[], errors: string[]):
       }
 
       if (!isHttpsUrl(url)) {
-        errors.push(`recommendations.${item.id} has an invalid fullQuoteLink URL: ${url}`);
+        errors.push(`recommendations.${item.id} has an invalid fullQuoteLink URL`);
       }
     }
   }
@@ -342,7 +342,7 @@ function validateEducation(items: EducationItem[], errors: string[]): void {
     }
 
     if (item.institutionLogo && !isSupportedUrl(item.institutionLogo, { allowMailto: false })) {
-      errors.push(`education.${item.id} has an invalid institutionLogo URL: ${item.institutionLogo}`);
+      errors.push(`education.${item.id} has an invalid institutionLogo URL`);
     }
   }
 }
@@ -357,23 +357,23 @@ export function validatePortfolioContent(content: GeneratedPortfolioContent): Ge
   if (!content.profile.shortBio) errors.push("profile.shortBio is required");
 
   if (content.profile.resumeUrl && !isSupportedUrl(content.profile.resumeUrl)) {
-    errors.push(`profile.resumeUrl has an invalid URL: ${content.profile.resumeUrl}`);
+    errors.push("profile.resumeUrl has an invalid URL");
   }
 
   if (content.profile.portraitImage && !isSupportedUrl(content.profile.portraitImage)) {
-    errors.push(`profile.portraitImage has an invalid URL: ${content.profile.portraitImage}`);
+    errors.push("profile.portraitImage has an invalid URL");
   }
 
   if (content.profile.faviconImage && !isSupportedUrl(content.profile.faviconImage)) {
-    errors.push(`profile.faviconImage has an invalid URL: ${content.profile.faviconImage}`);
+    errors.push("profile.faviconImage has an invalid URL");
   }
 
   if (typeof content.siteSettings.licenseUrl === "string" && content.siteSettings.licenseUrl && !isHttpsUrl(content.siteSettings.licenseUrl)) {
-    errors.push(`siteSettings.licenseUrl has an invalid URL: ${content.siteSettings.licenseUrl}`);
+    errors.push("siteSettings.licenseUrl has an invalid URL");
   }
 
   if (typeof content.siteSettings.repositoryUrl === "string" && content.siteSettings.repositoryUrl && !isHttpsUrl(content.siteSettings.repositoryUrl)) {
-    errors.push(`siteSettings.repositoryUrl has an invalid URL: ${content.siteSettings.repositoryUrl}`);
+    errors.push("siteSettings.repositoryUrl has an invalid URL");
   }
 
   if (
@@ -397,7 +397,7 @@ export function validatePortfolioContent(content: GeneratedPortfolioContent): Ge
     content.siteSettings.hostingPrivacyUrl &&
     !isHttpsUrl(content.siteSettings.hostingPrivacyUrl)
   ) {
-    errors.push(`siteSettings.hostingPrivacyUrl has an invalid URL: ${content.siteSettings.hostingPrivacyUrl}`);
+    errors.push("siteSettings.hostingPrivacyUrl has an invalid URL");
   }
 
   validateUniqueIds(content.links, "links", errors);
