@@ -1,5 +1,6 @@
 import path from "node:path";
 import { normalizeNextStaticExportSegments } from "./normalizeNextStaticExport.mjs";
+import { writeStaticResponseHeaders } from "./staticResponseHeaders.mjs";
 
 const adapter = {
   name: "portfolio-static-export-integrity",
@@ -11,6 +12,9 @@ const adapter = {
 
     const normalizedCount = await normalizeNextStaticExportSegments(path.join(projectDir, "out"));
     console.log(`Normalized ${normalizedCount} Next.js static export segment file(s).`);
+
+    const { htmlFileCount, ruleCount } = await writeStaticResponseHeaders(path.join(projectDir, "out"));
+    console.log(`Generated CSP hash rules for ${htmlFileCount} exported HTML file(s) across ${ruleCount} route rules.`);
   }
 };
 

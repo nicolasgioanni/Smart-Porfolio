@@ -24,6 +24,7 @@ export const priorityTestTargets = [
   "scripts/updateContactTlds.test.mjs",
   "scripts/packageScripts.test.mjs",
   "scripts/runValidationTier.test.mjs",
+  "scripts/staticResponseHeaders.test.mjs",
   "scripts/checkDeployedContent.test.mjs",
   "scripts/renderRouteSkeleton.test.mjs",
   "scripts/d1Configuration.test.mjs",

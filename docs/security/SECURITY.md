@@ -19,7 +19,7 @@ Documentation is not evidence that an external control is active. Treat the impl
 | Concern | Source |
 | --- | --- |
 | Function route boundary | `public/_routes.json` |
-| Static response headers | `public/_headers` |
+| Static response header template and final CSP rules | `public/_headers`, `scripts/staticResponseHeaders.mjs`, and generated `out/_headers` |
 | Contact public contract | `functions/_shared/contact.ts` |
 | Contact request validation, tickets, provider calls, and Function headers | `functions/_shared/contact/` |
 | Contact endpoint order and responses | `functions/api/contact/verify.ts`, `functions/api/contact.ts` |
@@ -198,18 +198,20 @@ Cloudflare documents custom JSON rate-limit block responses as a Pro-plan-or-hig
 
 ## Response headers and browser policy
 
-`public/_headers` adds the following protections to static Pages responses:
+`public/_headers` provides the static header template. After Next.js has exported and normalized the final HTML, the build adapter runs `scripts/staticResponseHeaders.mjs` to write the deployable `out/_headers`. It derives SHA-256 hashes from every inline script in each final HTML file, including Next bootstrap data, the pre-hydration theme script, and JSON-LD. It writes a narrower policy for each clean and `.html` route plus a hash-union fallback for unknown paths served through the exported 404 page. Cloudflare combines matching header rules, so the fallback contains every generated hash and cannot block a route-specific policy.
 
-- a Content Security Policy with `default-src 'self'`, no objects, no framing, and same-origin form actions;
+The generated static policy has the following protections:
+
+- a Content Security Policy with `default-src 'self'`, no objects, no framing, and same-origin form actions; `script-src` has exact final-HTML hashes and no `unsafe-inline` allowance;
 - the minimum `challenges.cloudflare.com` script, frame, and connection allowances used by Turnstile;
 - disabled camera, geolocation, microphone, payment, and USB permissions;
 - `Referrer-Policy: strict-origin-when-cross-origin`;
 - one-year HSTS;
 - content-type sniffing protection and `X-Frame-Options: DENY`.
 
-The exported application currently needs inline script and style allowances. Do not broaden third-party origins without review. Prefer nonce or hash based policies if a future delivery architecture can provide per-response CSP values.
+The application still needs `style-src 'unsafe-inline'` for reviewed React style attributes, including responsive presentation and Research fullscreen behavior. Do not broaden third-party origins or add inline script allowances without review. The generator fails the build when a rendered header line exceeds Cloudflare Pages' 2,000-byte limit or the complete file exceeds 100 rules. The local response-header browser suite starts Wrangler Pages against the generated export; it verifies hydration, stored-theme application, Turnstile mocking, HTML aliases, unknown-path 404 behavior, and rejection of a new inline script. It does not prove Cloudflare has activated the candidate artifact after deployment.
 
-Cloudflare Pages does not apply `_headers` rules to Function-generated responses. Both contact handlers therefore set their own `Cache-Control: no-store, max-age=0`, JSON content type, `Referrer-Policy: no-referrer`, and `X-Content-Type-Options: nosniff`. They do not currently add the static CSP, Permissions Policy, HSTS, or framing headers.
+Cloudflare Pages does not apply `_headers` rules to Function-generated responses. Both contact handlers therefore set their own `Cache-Control: no-store, max-age=0`, JSON content type, restrictive JSON CSP, Permissions Policy, `Referrer-Policy: no-referrer`, HSTS, `X-Content-Type-Options: nosniff`, and `X-Frame-Options: DENY`.
 
 ## URL and rendering rules
 
