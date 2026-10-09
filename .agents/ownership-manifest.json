@@ -234,7 +234,6 @@
     {"path": "package-lock.json", "reason": "The lockfile is dependency-resolution configuration."},
     {"path": ".env.example", "reason": "The checked-in local configuration template is repository-root documentation."},
     {"path": ".nvmrc", "reason": "The Node major-version selector is repository-root configuration."},
-    {"path": "next-env.d.ts", "reason": "Next.js-generated TypeScript environment declarations are repository-root configuration."},
     {"path": "eslint.config.mjs", "reason": "Lint policy is repository-root configuration."},
     {"path": "playwright.config.ts", "reason": "Browser-test server configuration is repository-root configuration."},
     {"path": "tsconfig.json", "reason": "TypeScript configuration is repository-root configuration."},

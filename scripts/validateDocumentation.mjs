@@ -221,6 +221,7 @@ function isIgnoredFixturePath(relativePath) {
     basename === ".dev.vars" ||
     basename.startsWith(".dev.vars.") ||
     basename === ".local" ||
+    basename === "next-env.d.ts" ||
     basename.endsWith(".log")
   );
 }

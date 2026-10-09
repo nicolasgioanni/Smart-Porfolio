@@ -593,6 +593,30 @@ describe("documentation validation", () => {
     }
   });
 
+  it("validates a fresh Git checkout before Next generates its ignored declarations", async () => {
+    const root = await createGitOwnershipFixture();
+    try {
+      await expect(readFile(path.join(root, "next-env.d.ts"), "utf8")).rejects.toThrow();
+      await expect(validateDocumentation({ projectRoot: root })).resolves.toMatchObject({
+        errors: [],
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps generated Next declarations outside non-Git fixture inventory", async () => {
+    const root = await createOwnershipFixture();
+    try {
+      await writeFile(path.join(root, "next-env.d.ts"), "/// <reference types=\"next\" />\n", "utf8");
+      await expect(validateDocumentation({ projectRoot: root })).resolves.toMatchObject({
+        errors: [],
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("rejects symlinked ownership inputs before private content can be parsed or read", async () => {
     const protectedPaths = [
       ".agents/ownership-manifest.json",
