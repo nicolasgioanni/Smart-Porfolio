@@ -29,6 +29,7 @@ jobs:
       deploy_target: ${{ steps.decision.outputs.deploy_target }}
       pages_domain: ${{ steps.pages.outputs.pages_domain }}
       pages_project_name: ${{ steps.pages.outputs.pages_project_name }}
+      release_envelope_digest: ${{ steps.envelope.outputs.release_envelope_digest }}
       should_deploy: ${{ steps.decision.outputs.should_deploy }}
       verification_tier: ${{ steps.decision.outputs.verification_tier }}
     steps:
@@ -37,6 +38,7 @@ jobs:
         with:
           ref: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'main' || github.sha }}
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up Node.js
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
@@ -94,14 +96,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [[ "$CLOUDFLARE_PAGES_PROJECT_NAME" != "smart-portfolio" ]]; then
-            echo "CLOUDFLARE_PAGES_PROJECT_NAME must be smart-portfolio."
-            exit 1
-          fi
-          if [[ "$CLOUDFLARE_PAGES_DOMAIN" != "smart-portfolio-bds.pages.dev" ]]; then
-            echo "CLOUDFLARE_PAGES_DOMAIN must match the reviewed Cloudflare-assigned domain."
-            exit 1
-          fi
+          node scripts/releaseEnvelope.mjs target "$CLOUDFLARE_PAGES_PROJECT_NAME" "$CLOUDFLARE_PAGES_DOMAIN"
           node scripts/checkDeployedContent.mjs url "$CLOUDFLARE_PAGES_DOMAIN" main > /dev/null
           node scripts/checkDeployedContent.mjs url "$CLOUDFLARE_PAGES_DOMAIN" develop > /dev/null
           echo "pages_domain=$CLOUDFLARE_PAGES_DOMAIN" >> "$GITHUB_OUTPUT"
@@ -260,20 +255,43 @@ jobs:
           NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY }}
         run: npm run build:generated
 
-      - name: Create and verify the artifact integrity manifest
+      - name: Compile the exact Pages Functions artifact
+        if: steps.decision.outputs.should_deploy == 'true'
+        run: >-
+          npx --no-install wrangler pages functions build functions
+          --outdir out/_worker.js
+          --output-routes-path out/_routes.json
+          --build-output-directory out
+
+      - name: Probe the exact compiled Pages Worker runtime
+        if: steps.decision.outputs.should_deploy == 'true'
+        run: node scripts/verifyCompiledPagesWorker.mjs out
+
+      - name: Create and seal the complete release envelope
         if: steps.decision.outputs.should_deploy == 'true'
         env:
           CANDIDATE_SHA: ${{ steps.candidate.outputs.candidate_sha }}
+          DEPLOY_TARGET: ${{ steps.decision.outputs.deploy_target }}
+        id: envelope
         run: |
+          set -euo pipefail
           node scripts/artifactIntegrity.mjs create out
           node scripts/artifactIntegrity.mjs verify out "$CANDIDATE_SHA"
+          release_envelope_digest="$(node scripts/releaseEnvelope.mjs create \
+            out \
+            release-envelope/release-envelope.json \
+            "$DEPLOY_TARGET" \
+            "$CANDIDATE_SHA")"
+          echo "release_envelope_digest=$release_envelope_digest" >> "$GITHUB_OUTPUT"
 
-      - name: Upload the exact verified static export
+      - name: Upload the exact sealed release artifact
         if: steps.decision.outputs.should_deploy == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: cloudflare-pages-build
-          path: out/
+          path: |
+            out/
+            release-envelope/release-envelope.json
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 1
@@ -287,13 +305,14 @@ jobs:
       contents: read
     concurrency:
       group: cloudflare-${{ needs.verify.outputs.deploy_target }}
-      cancel-in-progress: true
+      cancel-in-progress: false
     steps:
       - name: Check out the exact verified candidate
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           ref: ${{ needs.verify.outputs.candidate_sha }}
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up Node.js
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
@@ -301,85 +320,108 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Install the locked local deployment tool
-        run: npm ci
+      - name: Install the locked local deployment tool without lifecycle scripts
+        run: npm ci --ignore-scripts
 
-      - name: Download the immutable verified export
+      - name: Download the immutable sealed release artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: cloudflare-pages-build
-          path: out
+          path: release-artifact
 
-      - name: Validate every downloaded artifact file
+      - name: Validate the downloaded sealed release artifact before credentials
         env:
           CANDIDATE_SHA: ${{ needs.verify.outputs.candidate_sha }}
-        run: node scripts/artifactIntegrity.mjs verify out "$CANDIDATE_SHA"
+          DEPLOY_TARGET: ${{ needs.verify.outputs.deploy_target }}
+          RELEASE_ENVELOPE_DIGEST: ${{ needs.verify.outputs.release_envelope_digest }}
+        run: |
+          set -euo pipefail
+          node scripts/artifactIntegrity.mjs verify release-artifact/out "$CANDIDATE_SHA"
+          node scripts/releaseEnvelope.mjs verify \
+            release-artifact/out \
+            release-artifact/release-envelope/release-envelope.json \
+            "$DEPLOY_TARGET" \
+            "$CANDIDATE_SHA" \
+            "$RELEASE_ENVELOPE_DIGEST"
 
-      - name: Recheck the deployment branch immediately before Wrangler
-        shell: bash
+      - name: Stage only verified deployment inputs before credentials
+        env:
+          CANDIDATE_SHA: ${{ needs.verify.outputs.candidate_sha }}
+          DEPLOY_TARGET: ${{ needs.verify.outputs.deploy_target }}
+          RELEASE_ENVELOPE_DIGEST: ${{ needs.verify.outputs.release_envelope_digest }}
+        run: |
+          set -euo pipefail
+          node scripts/releaseEnvelope.mjs stage \
+            release-artifact/out \
+            release-artifact/release-envelope/release-envelope.json \
+            "$DEPLOY_TARGET" \
+            "$CANDIDATE_SHA" \
+            "$RELEASE_ENVELOPE_DIGEST" \
+            release-deployment
+
+      - name: Recheck the candidate immediately before D1 migration mutation
         env:
           CANDIDATE_BRANCH: ${{ needs.verify.outputs.candidate_branch }}
           CANDIDATE_SHA: ${{ needs.verify.outputs.candidate_sha }}
+        shell: bash
         run: |
           set -euo pipefail
-          git fetch --no-tags origin "+refs/heads/$CANDIDATE_BRANCH:refs/remotes/origin/$CANDIDATE_BRANCH"
-          latest_sha="$(git rev-parse "refs/remotes/origin/$CANDIDATE_BRANCH")"
-          if [[ "$latest_sha" != "$CANDIDATE_SHA" ]]; then
-            echo "Refusing to deploy stale $CANDIDATE_BRANCH revision $CANDIDATE_SHA; the branch is now $latest_sha."
-            exit 1
-          fi
+          node scripts/deploymentCandidate.mjs assert "$CANDIDATE_BRANCH" "$CANDIDATE_SHA"
 
-      - name: Validate the environment-specific D1 binding and apply migrations
+      - name: Confirm live Pages project immediately before D1 migration
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        working-directory: release-deployment
+        run: node "$GITHUB_WORKSPACE/scripts/cloudflarePagesPreflight.mjs"
+
+      - name: Apply the sealed D1 migration
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           DEPLOY_TARGET: ${{ needs.verify.outputs.deploy_target }}
+        working-directory: release-deployment
         shell: bash
         run: |
           set -euo pipefail
-          node --input-type=module <<'NODE'
-          import { readFileSync } from "node:fs";
-
-          const config = JSON.parse(readFileSync("wrangler.jsonc", "utf8"));
-          const placeholderId = "00000000-0000-0000-0000-000000000000";
-          const production = config.d1_databases?.find(({ binding }) => binding === "CONTACT_RATE_LIMIT_DB");
-          const preview = config.env?.preview?.d1_databases?.find(
-            ({ binding }) => binding === "CONTACT_RATE_LIMIT_DB"
-          );
-
-          if (!['production', 'preview'].includes(process.env.DEPLOY_TARGET ?? '')) {
-            throw new Error(`Unexpected D1 deployment target: ${process.env.DEPLOY_TARGET ?? 'missing'}.`);
-          }
-          for (const [environment, binding] of [['production', production], ['preview', preview]]) {
-            if (!binding?.database_id || binding.database_id === placeholderId) {
-              throw new Error(
-                `CONTACT_RATE_LIMIT_DB for ${environment} still has the non-deployable placeholder database ID.`
-              );
-            }
-          }
-          if (production?.database_id === preview?.database_id) {
-            throw new Error("Production and preview must use separate CONTACT_RATE_LIMIT_DB databases.");
-          }
-          NODE
-
           if [[ "$DEPLOY_TARGET" == "preview" ]]; then
-            npx --no-install wrangler d1 migrations apply smart-portfolio-contact-rate-limit-preview --env preview --remote
+            node "$GITHUB_WORKSPACE/node_modules/wrangler/wrangler-dist/cli.js" d1 migrations apply smart-portfolio-contact-rate-limit-preview --env preview --remote
           else
-            npx --no-install wrangler d1 migrations apply smart-portfolio-contact-rate-limit-production --remote
+            node "$GITHUB_WORKSPACE/node_modules/wrangler/wrangler-dist/cli.js" d1 migrations apply smart-portfolio-contact-rate-limit-production --remote
           fi
 
-      - name: Deploy the verified export and Pages Function with pinned Wrangler
+      - name: Recheck the candidate immediately before Pages upload
+        env:
+          CANDIDATE_BRANCH: ${{ needs.verify.outputs.candidate_branch }}
+          CANDIDATE_SHA: ${{ needs.verify.outputs.candidate_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/deploymentCandidate.mjs assert "$CANDIDATE_BRANCH" "$CANDIDATE_SHA"
+
+      - name: Confirm live Pages project immediately before Pages upload
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        working-directory: release-deployment
+        run: node "$GITHUB_WORKSPACE/scripts/cloudflarePagesPreflight.mjs"
+
+      - name: Upload the sealed Pages artifact
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_PAGES_PROJECT_NAME: ${{ needs.verify.outputs.pages_project_name }}
           CANDIDATE_BRANCH: ${{ needs.verify.outputs.candidate_branch }}
           CANDIDATE_SHA: ${{ needs.verify.outputs.candidate_sha }}
-        run: >-
-          npx --no-install wrangler pages deploy out
-          --project-name "$CLOUDFLARE_PAGES_PROJECT_NAME"
-          --branch "$CANDIDATE_BRANCH"
-          --commit-hash "$CANDIDATE_SHA"
+        working-directory: release-deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          node "$GITHUB_WORKSPACE/node_modules/wrangler/wrangler-dist/cli.js" pages deploy out \
+            --project-name "$CLOUDFLARE_PAGES_PROJECT_NAME" \
+            --branch "$CANDIDATE_BRANCH" \
+            --commit-hash "$CANDIDATE_SHA" \
+            --no-bundle
 
       - name: Smoke test static content, integrity metadata, and both contact APIs
         env:
@@ -391,7 +433,7 @@ jobs:
         run: |
           set -euo pipefail
           deployment_url="$(node scripts/checkDeployedContent.mjs url "$CLOUDFLARE_PAGES_DOMAIN" "$CANDIDATE_BRANCH")"
-          node scripts/checkDeployedContent.mjs smoke "$deployment_url" out "$CONTENT_HASH" "$CANDIDATE_SHA"
+          node scripts/checkDeployedContent.mjs smoke "$deployment_url" release-deployment/out "$CONTENT_HASH" "$CANDIDATE_SHA"
 
   heartbeat:
     name: develop-schedule-heartbeat

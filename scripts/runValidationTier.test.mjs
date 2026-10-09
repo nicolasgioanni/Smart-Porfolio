@@ -13,6 +13,10 @@ describe("priority validation tier", () => {
   it("selects the required trust-boundary contracts before running Vitest", () => {
     expect(priorityTestTargets).toContain("functions");
     expect(priorityTestTargets).toEqual(expect.arrayContaining([
+      "scripts/cloudflarePagesPreflight.test.mjs",
+      "scripts/deploymentCandidate.test.mjs",
+      "scripts/releaseEnvelope.test.mjs",
+      "scripts/pagesFunctions.integration.test.mjs",
       "scripts/contactTransport.integration.test.ts",
       "scripts/updateContactTlds.test.mjs",
       "src/components/contact/ContactNotifications.test.tsx",
