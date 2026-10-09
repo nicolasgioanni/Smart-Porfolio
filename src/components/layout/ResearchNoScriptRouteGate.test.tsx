@@ -9,7 +9,7 @@ describe("StaticPortfolioRouteGate", () => {
   it("server-renders an inert Research fallback without wrapping the regular route body", () => {
     route.pathname = "/research";
     const markup = renderToStaticMarkup(
-      <StaticPortfolioRouteGate projectsFallback={<p>Native projects fallback</p>} researchFallback={<p>Native fallback</p>}>
+      <StaticPortfolioRouteGate homeFallback={<p>Native home fallback</p>} projectsFallback={<p>Native projects fallback</p>} researchFallback={<p>Native fallback</p>}>
         <section>Regular route body</section>
       </StaticPortfolioRouteGate>
     );
@@ -22,16 +22,25 @@ describe("StaticPortfolioRouteGate", () => {
   it("server-renders a Projects fallback when one is provided", () => {
     route.pathname = "/projects";
     expect(renderToStaticMarkup(
-      <StaticPortfolioRouteGate projectsFallback={<p>Native projects fallback</p>} researchFallback={<p>Native research fallback</p>}>
+      <StaticPortfolioRouteGate homeFallback={<p>Native home fallback</p>} projectsFallback={<p>Native projects fallback</p>} researchFallback={<p>Native research fallback</p>}>
         <section>Regular route body</section>
       </StaticPortfolioRouteGate>
     )).toContain("Native projects fallback");
   });
 
+  it("server-renders a Home fallback when one is provided", () => {
+    route.pathname = "/";
+    expect(renderToStaticMarkup(
+      <StaticPortfolioRouteGate homeFallback={<p>Native home fallback</p>} projectsFallback={<p>Native projects fallback</p>} researchFallback={<p>Native research fallback</p>}>
+        <section>Regular route body</section>
+      </StaticPortfolioRouteGate>
+    )).toContain("Native home fallback");
+  });
+
   it("leaves unrelated route output unchanged", () => {
     route.pathname = "/contact";
     expect(renderToStaticMarkup(
-      <StaticPortfolioRouteGate projectsFallback={<p>Native projects fallback</p>} researchFallback={<p>Native fallback</p>}>
+      <StaticPortfolioRouteGate homeFallback={<p>Native home fallback</p>} projectsFallback={<p>Native projects fallback</p>} researchFallback={<p>Native fallback</p>}>
         <section>Regular route body</section>
       </StaticPortfolioRouteGate>
     )).toBe("<section>Regular route body</section>");

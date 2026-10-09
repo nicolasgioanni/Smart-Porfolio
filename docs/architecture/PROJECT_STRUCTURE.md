@@ -225,4 +225,4 @@ Vitest discovers the complete suite. ESLint, TypeScript, the static build, docum
 - [Testing](../quality/TESTING.md)
 - [Maintenance](../development/MAINTENANCE.md)
 
-The shell composes `StaticPortfolioRouteGate` outside route loading boundaries. Its server-resolved pathname exposes either the Research showcase or the native Projects gallery only when scripting is disabled; normal route children retain their direct `site-main` relationship for motion and skeleton checks. No runtime content fetching or export rewriting is involved.
+The shell composes `StaticPortfolioRouteGate` outside route loading boundaries. Its server-resolved pathname exposes the Home overview, Research showcase, or native Projects gallery only when scripting is disabled. Home reuses `HomeOverview` with scroll motion disabled and native Education disclosures. Normal route children retain their direct `site-main` relationship for motion and skeleton checks. No runtime content fetching or export rewriting is involved.

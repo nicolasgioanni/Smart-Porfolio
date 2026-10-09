@@ -83,6 +83,66 @@ async function expectDateLocationStackWithin(container: Locator, dateLine: Locat
   }
 }
 
+async function openEducation(page: Page) {
+  await page.goto("/");
+  await expect(getEducationSection(page).getByRole("heading", { level: 2, name: "Education", exact: true })).toBeAttached();
+}
+
+function getEducationItem(page: Page, index: number): Locator {
+  return page.locator("article.home-education-item").nth(index);
+}
+
+function getEducationSection(page: Page): Locator {
+  return page.locator(".home-overview-grid .home-section").filter({
+    has: page.getByRole("heading", { level: 2, name: "Education", exact: true })
+  });
+}
+
+async function expectNoDocumentOverflow(page: Page) {
+  await expect.poll(() => page.evaluate(
+    () => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1
+  )).toBe(true);
+}
+
+async function waitForEducationDisclosureAnimations(content: Locator) {
+  await expect.poll(() => content.evaluate((element) => element.getAnimations().length)).toBeGreaterThanOrEqual(2);
+}
+
+async function getEducationDisclosureMotion(content: Locator) {
+  return content.evaluate(async (element) => {
+    const measure = () => ({
+      height: element.getBoundingClientRect().height,
+      opacity: Number.parseFloat(getComputedStyle(element).opacity)
+    });
+    const animations = element.getAnimations();
+    const started = measure();
+    await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+    await new Promise<void>((resolve) => window.setTimeout(resolve, 100));
+
+    return {
+      animations: animations.map((animation) => animation.effect?.getTiming().duration),
+      started,
+      middle: measure(),
+      targetHeight: element.scrollHeight
+    };
+  });
+}
+
+async function settleEducationDisclosureAnimations(content: Locator) {
+  await content.evaluate(async (element) => {
+    await new Promise<void>((resolve) => window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve())));
+    await Promise.all(element.getAnimations().map((animation) => animation.finished.catch(() => undefined)));
+    await new Promise<void>((resolve) => window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve())));
+  });
+
+  await expect.poll(() => content.evaluate((element) => ({
+    animationCount: element.getAnimations().length,
+    height: element.style.height,
+    opacity: element.style.opacity,
+    overflow: element.style.overflow
+  }))).toEqual({ animationCount: 0, height: "", opacity: "", overflow: "" });
+}
+
 test("stacks rendered Home date metadata above location at desktop and phone widths", async ({ page }) => {
   const homeContent = selectHomeContent(readGeneratedPortfolioContent());
   const currentWork = homeContent.profileOverview.currentWork;
@@ -137,6 +197,276 @@ test("stacks rendered Home date metadata above location at desktop and phone wid
       () => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1
     )).toBe(true);
   }
+});
+
+test("keeps generated Education details native, collapsed, and keyboard-operable", async ({ page }) => {
+  const education = selectHomeContent(readGeneratedPortfolioContent()).education;
+
+  await page.setViewportSize({ width: 1280, height: viewportHeight });
+  await openEducation(page);
+
+  const items = page.locator("article.home-education-item");
+  await expect(items).toHaveCount(education.length);
+  if (education.length === 0) {
+    await expect(getEducationSection(page).getByRole("status")).toContainText(
+      "Education rows will appear here when content is available."
+    );
+    return;
+  }
+
+  for (const [index, item] of education.entries()) {
+    const educationItem = getEducationItem(page, index);
+    const disclosure = educationItem.locator("details.home-education-item__disclosure");
+
+    await expect(educationItem).toHaveCount(1);
+    await expect(educationItem.locator(".home-education-item__institution")).toHaveText(item.institution);
+
+    if (item.bullets.length === 0) {
+      await expect(disclosure).toHaveCount(0);
+      continue;
+    }
+
+    const summary = disclosure.locator("summary.home-education-item__disclosure-summary");
+    const showMore = summary.locator(".home-education-item__disclosure-label-more");
+    const showLess = summary.locator(".home-education-item__disclosure-label-less");
+    const details = disclosure.getByRole("list", { name: `${item.institution} education details`, includeHidden: true });
+    await expect(disclosure).toHaveCount(1);
+    await expect(disclosure).not.toHaveAttribute("open", "");
+    await expect(showMore).toBeVisible();
+    await expect(showLess).toBeHidden();
+    await expect(summary).toHaveAccessibleName("Show more");
+    await expect(details).toHaveCount(1);
+    await expect(details).toBeHidden();
+    await expect(details.locator("li")).toHaveCount(item.bullets.length);
+    await expect(details.locator("li")).toHaveText(item.bullets);
+    expect(await educationItem.evaluate((element) => {
+      const disclosureElement = element.querySelector("details.home-education-item__disclosure");
+      const metadata = element.querySelectorAll(
+        ".home-education-item__program, .home-education-item__concentration, .home-education-item__dates, .home-education-item__location"
+      );
+
+      return Boolean(disclosureElement) && Array.from(metadata).every((line) =>
+        Boolean(line.compareDocumentPosition(disclosureElement!) & Node.DOCUMENT_POSITION_FOLLOWING)
+      );
+    })).toBe(true);
+
+    await summary.focus();
+    await page.keyboard.press("Enter");
+    await expect(disclosure).toHaveAttribute("open", "");
+    await expect(showMore).toBeHidden();
+    await expect(showLess).toBeVisible();
+    await expect(summary).toHaveAccessibleName("Show less");
+    await expect(details).toBeVisible();
+
+    await page.keyboard.press("Space");
+    await expect(disclosure).not.toHaveAttribute("open", "");
+    await expect(showMore).toBeVisible();
+  }
+});
+
+test("keeps Education disclosure growth in flow without overflow at its responsive widths", async ({ page }) => {
+  const education = selectHomeContent(readGeneratedPortfolioContent()).education
+    .map((item, index) => ({ index, item }))
+    .filter(({ item }) => item.bullets.length > 0);
+
+  for (const width of [320, 390, 1280]) {
+    await page.setViewportSize({ width, height: viewportHeight });
+    await openEducation(page);
+
+    if (education.length === 0) {
+      await expect(getEducationSection(page).getByRole("status")).toContainText(
+        "Education rows will appear here when content is available."
+      );
+      await expectNoDocumentOverflow(page);
+      continue;
+    }
+
+    for (const { index, item } of education) {
+      const educationItem = getEducationItem(page, index);
+      const disclosure = educationItem.locator("details.home-education-item__disclosure");
+      const summary = disclosure.locator("summary.home-education-item__disclosure-summary");
+      const content = disclosure.locator(".home-education-item__disclosure-content");
+      const details = disclosure.getByRole("list", { name: `${item.institution} education details`, includeHidden: true });
+
+      await summary.scrollIntoViewIfNeeded();
+      const [itemBoxBefore, summaryBox] = await Promise.all([educationItem.boundingBox(), summary.boundingBox()]);
+      expect(itemBoxBefore).not.toBeNull();
+      expect(summaryBox).not.toBeNull();
+      expect(summaryBox!.width).toBeGreaterThanOrEqual(44);
+      expect(summaryBox!.height).toBeGreaterThanOrEqual(44);
+
+      await summary.click();
+      await expect(disclosure).toHaveAttribute("open", "");
+      await expect(details).toBeVisible();
+      await settleEducationDisclosureAnimations(content);
+
+      const [itemBoxAfter, contentBox, detailsBox] = await Promise.all([
+        educationItem.boundingBox(),
+        content.boundingBox(),
+        details.boundingBox()
+      ]);
+      expect(itemBoxAfter).not.toBeNull();
+      expect(contentBox).not.toBeNull();
+      expect(detailsBox).not.toBeNull();
+      expect(itemBoxAfter!.height).toBeGreaterThan(itemBoxBefore!.height);
+      expect(contentBox!.y).toBeGreaterThanOrEqual(summaryBox!.y + summaryBox!.height - 1);
+      expect(detailsBox!.x).toBeGreaterThanOrEqual(itemBoxAfter!.x - 1);
+      expect(detailsBox!.x + detailsBox!.width).toBeLessThanOrEqual(itemBoxAfter!.x + itemBoxAfter!.width + 1);
+      await expectNoDocumentOverflow(page);
+    }
+  }
+});
+
+test("uses semantic Education summary hover and focus states in every palette", async ({ page }) => {
+  const firstDetailedEducationIndex = selectHomeContent(readGeneratedPortfolioContent()).education.findIndex(
+    (item) => item.bullets.length > 0
+  );
+  test.skip(firstDetailedEducationIndex < 0, "Education interaction coverage requires a generated item with details.");
+
+  await page.setViewportSize({ width: 1280, height: viewportHeight });
+  await openEducation(page);
+
+  for (const theme of ["navy", "light", "dark"] as const) {
+    await reloadWithStoredTheme(page, theme);
+    const summary = getEducationItem(page, firstDetailedEducationIndex)
+      .locator("summary.home-education-item__disclosure-summary");
+
+    const idle = await summary.evaluate((element) => ({
+      color: getComputedStyle(element).color,
+      layerOpacity: getComputedStyle(element, "::before").opacity
+    }));
+    await summary.scrollIntoViewIfNeeded();
+    const summaryBox = await summary.boundingBox();
+    expect(summaryBox).not.toBeNull();
+    await page.mouse.move(summaryBox!.x + summaryBox!.width / 2, summaryBox!.y + summaryBox!.height / 2);
+    await expect.poll(() => summary.evaluate((element) => ({
+      color: getComputedStyle(element).color,
+      hoverMedia: window.matchMedia("(hover: hover) and (pointer: fine)").matches,
+      isHovered: element.matches(":hover"),
+      layerColor: getComputedStyle(element, "::before").backgroundColor,
+      layerOpacity: getComputedStyle(element, "::before").opacity,
+      shadow: getComputedStyle(element).boxShadow
+    }))).toMatchObject({ hoverMedia: true, isHovered: true, layerOpacity: "1" });
+    const hoveredStyle = await summary.evaluate((element) => ({
+      color: getComputedStyle(element).color,
+      layerColor: getComputedStyle(element, "::before").backgroundColor,
+      layerOpacity: getComputedStyle(element, "::before").opacity,
+      shadow: getComputedStyle(element).boxShadow
+    }));
+    expect(hoveredStyle.layerOpacity).not.toBe(idle.layerOpacity);
+    expect(hoveredStyle.layerColor).toMatch(/^rgb\(/);
+    expect(hoveredStyle.shadow).not.toBe("none");
+
+    await page.mouse.move(0, 0);
+    await expect.poll(() => summary.evaluate((element) => getComputedStyle(element, "::before").opacity)).toBe("0");
+    await summary.focus();
+    await expect.poll(() => summary.evaluate((element) => getComputedStyle(element, "::before").opacity)).toBe("1");
+    const focused = await summary.evaluate((element) => ({
+      color: getComputedStyle(element).color,
+      layerOpacity: getComputedStyle(element, "::before").opacity,
+      shadow: getComputedStyle(element).boxShadow
+    }));
+    expect(focused.layerOpacity).not.toBe(idle.layerOpacity);
+    expect(focused.shadow).not.toBe("none");
+    expect(focused.color).not.toBe(idle.color);
+  }
+});
+
+test("progresses and reverses Education disclosure animation without clipping its final state", async ({ page }) => {
+  const firstDetailedEducation = selectHomeContent(readGeneratedPortfolioContent()).education.find((item) => item.bullets.length > 0);
+  const firstDetailedEducationIndex = selectHomeContent(readGeneratedPortfolioContent()).education.findIndex(
+    (item) => item.bullets.length > 0
+  );
+  test.skip(firstDetailedEducationIndex < 0, "Education motion coverage requires a generated item with details.");
+
+  await page.setViewportSize({ width: 390, height: viewportHeight });
+  await openEducation(page);
+
+  const disclosure = getEducationItem(page, firstDetailedEducationIndex)
+    .locator("details.home-education-item__disclosure");
+  const summary = disclosure.locator("summary.home-education-item__disclosure-summary");
+  const showLess = summary.locator(".home-education-item__disclosure-label-less");
+  const content = disclosure.locator(".home-education-item__disclosure-content");
+  const details = disclosure.getByRole("list", { name: `${firstDetailedEducation!.institution} education details`, includeHidden: true });
+
+  await summary.scrollIntoViewIfNeeded();
+  await summary.click();
+  await expect(disclosure).toHaveAttribute("open", "");
+  await waitForEducationDisclosureAnimations(content);
+  const opening = await getEducationDisclosureMotion(content);
+  expect(opening.animations).toEqual(expect.arrayContaining([expect.any(Number), expect.any(Number)]));
+  expect(opening.animations.every((duration) => Number(duration) > 0)).toBe(true);
+  expect(opening.middle.height).toBeGreaterThan(opening.started.height);
+  expect(opening.middle.height).toBeLessThan(opening.targetHeight);
+  expect(opening.middle.opacity).toBeGreaterThan(opening.started.opacity);
+
+  await summary.click();
+  await waitForEducationDisclosureAnimations(content);
+  await page.waitForTimeout(90);
+  const closingHeight = await content.evaluate((element) => element.getBoundingClientRect().height);
+  expect(closingHeight).toBeGreaterThan(0);
+  expect(closingHeight).toBeLessThan(opening.targetHeight);
+
+  await summary.click();
+  await expect(showLess).toBeVisible();
+  const reopeningHeight = await content.evaluate((element) => element.getBoundingClientRect().height);
+  expect(reopeningHeight).toBeGreaterThan(0);
+  await settleEducationDisclosureAnimations(content);
+  await expect(details).toBeVisible();
+  await expect.poll(() => content.evaluate((element) => ({
+    height: element.style.height,
+    opacity: element.style.opacity,
+    overflow: element.style.overflow
+  }))).toEqual({ height: "", opacity: "", overflow: "" });
+
+  await summary.click();
+  await settleEducationDisclosureAnimations(content);
+  await summary.click();
+  await waitForEducationDisclosureAnimations(content);
+  const narrowInnerHeight = (await content.locator(".home-education-item__disclosure-measure").boundingBox())?.height ?? 0;
+  await page.setViewportSize({ width: 1280, height: viewportHeight });
+  await settleEducationDisclosureAnimations(content);
+  const widenedContent = await content.evaluate((element) => ({
+    height: element.getBoundingClientRect().height,
+    innerHeight: element.querySelector<HTMLElement>(".home-education-item__disclosure-measure")?.getBoundingClientRect().height
+  }));
+  const wideInnerHeight = (await content.locator(".home-education-item__disclosure-measure").boundingBox())?.height ?? 0;
+  expect(narrowInnerHeight).toBeGreaterThanOrEqual(wideInnerHeight);
+  expect(widenedContent.height).toBeGreaterThan(0);
+  expect(widenedContent.innerHeight).not.toBeUndefined();
+  expect(Math.abs(widenedContent.height - widenedContent.innerHeight!)).toBeLessThanOrEqual(1);
+  await expectNoDocumentOverflow(page);
+});
+
+test("expands Education details immediately when reduced motion is requested", async ({ page }) => {
+  const firstDetailedEducation = selectHomeContent(readGeneratedPortfolioContent()).education.find((item) => item.bullets.length > 0);
+  const firstDetailedEducationIndex = selectHomeContent(readGeneratedPortfolioContent()).education.findIndex(
+    (item) => item.bullets.length > 0
+  );
+  test.skip(firstDetailedEducationIndex < 0, "Education reduced-motion coverage requires a generated item with details.");
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.setViewportSize({ width: 320, height: viewportHeight });
+  await openEducation(page);
+
+  const disclosure = getEducationItem(page, firstDetailedEducationIndex)
+    .locator("details.home-education-item__disclosure");
+  const summary = disclosure.locator("summary.home-education-item__disclosure-summary");
+  const content = disclosure.locator(".home-education-item__disclosure-content");
+  const details = disclosure.getByRole("list", { name: `${firstDetailedEducation!.institution} education details`, includeHidden: true });
+
+  await expect(summary).toHaveCSS("transition-duration", "0s");
+  await summary.focus();
+  await page.keyboard.press("Enter");
+  await expect(disclosure).toHaveAttribute("open", "");
+  await expect(details).toBeVisible();
+  await expect.poll(() => content.evaluate((element) => ({
+    animationCount: element.getAnimations().length,
+    height: element.style.height,
+    opacity: element.style.opacity,
+    overflow: element.style.overflow
+  }))).toEqual({ animationCount: 0, height: "", opacity: "", overflow: "" });
+  await expectNoDocumentOverflow(page);
 });
 
 for (const width of mobileWidths) {

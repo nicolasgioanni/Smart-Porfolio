@@ -4,7 +4,7 @@ Motion is restrained, legible, and tied to comprehension or state. It must not d
 
 ## Preferred properties
 
-Animate `transform` and `opacity` first. Experience disclosure, recommendation disclosure, footer grid rows, the small header island, and the measured Contact data-entry frame are explicit bounded exceptions. Do not introduce layout animation elsewhere without documenting why it communicates state better than an immediate change.
+Animate `transform` and `opacity` first. Experience disclosure, recommendation disclosure, Home Education disclosure, footer grid rows, the small header island, and the measured Contact data-entry frame are explicit bounded exceptions. Do not introduce layout animation elsewhere without documenting why it communicates state better than an immediate change.
 
 ## Reduced motion
 
@@ -45,6 +45,12 @@ For the configured engineer sequence, animate only the right-aligned prefix whil
 Above the collapsed-navigation breakpoint, this approved prefix and 3D whole-line behavior remains unchanged. At `max-width: 980px`, CSS selects a mobile-safe visual branch with exactly one sharp role-label layer. It fades the current label out for `320ms`, swaps text only while fully transparent, and fades the same label node back in for `320ms`. The mobile label uses no mask, perspective, 3D transform, backface composition, or persistent `will-change`.
 
 Do not substitute typing, letter-by-letter, bounce, large-scale, spinning-carousel, bright-pill, or blur effects. A static-headline fallback never schedules rotation. Reduced motion schedules no timers and shows the first role statically. Role rotation is independent of the scroll-reveal setting.
+
+## Home Education disclosure
+
+The native academic-history disclosure gains a measured content-height transition using `--disclosure-height-duration`, with opacity using `--disclosure-opacity-duration` and the shared `--disclosure-easing`. The summary stays above the content while the card grows in normal flow on desktop and mobile. This bounded layout animation communicates that optional academic details belong to the same entry; it does not overlay subsequent sections.
+
+Rapid reversal starts from the current visible height and opacity, and stale animation completion must not overwrite the latest requested state. Release measured height after settlement so wrapping and resizing retain natural layout. Reduced motion, unavailable animation support, and unenhanced native interaction apply state immediately. Clean up active animations on unmount.
 
 ## Recommendation expansion
 
