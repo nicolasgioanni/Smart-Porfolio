@@ -423,6 +423,77 @@ describe("package and CI deployment automation", () => {
     );
   });
 
+  it("fails closed on private-preview Access preflight before D1 or Wrangler while preserving public production smoke", async () => {
+    const workflow = await readFile(workflowPath, "utf8");
+    const deployJob = section(workflow, "  deploy:", "\n  heartbeat:");
+    const preflight = section(
+      deployJob,
+      "- name: Preflight private preview Access state before mutation",
+      "- name: Validate the environment-specific D1 binding and apply migrations"
+    );
+    const previewDeploy = section(
+      deployJob,
+      "- name: Deploy the private preview export with pinned Wrangler",
+      "- name: Verify exact private preview deployment"
+    );
+    const privateVerification = section(
+      deployJob,
+      "- name: Verify exact private preview deployment",
+      "- name: Smoke test public production content, integrity metadata, and both contact APIs"
+    );
+    const productionSmoke = section(
+      deployJob,
+      "- name: Smoke test public production content, integrity metadata, and both contact APIs"
+    );
+
+    expect(preflight).toContain("if: needs.verify.outputs.deploy_target == 'preview'");
+    expect(preflight).toContain("node scripts/privatePreviewCheck.mjs preflight out");
+    for (const secret of [
+      "PRIVATE_PREVIEW_ACCOUNT_ID",
+      "PRIVATE_PREVIEW_DNS_ZONE_ID",
+      "PRIVATE_PREVIEW_SERVICE_TOKEN_ID",
+      "PRIVATE_PREVIEW_API_TOKEN",
+      "PRIVATE_PREVIEW_ACCESS_CLIENT_ID",
+      "PRIVATE_PREVIEW_ACCESS_CLIENT_SECRET",
+      "PRIVATE_PREVIEW_CUSTOM_HOSTNAME",
+      "PRIVATE_PREVIEW_ACCESS_TEAM_DOMAIN"
+    ]) {
+      expect(preflight).toContain(`${secret}: $` + `{{ secrets.${secret} }}`);
+      expect(workflow).not.toContain(`${secret}: $` + `{{ vars.${secret} }}`);
+    }
+    expect(preflight).not.toContain("CLOUDFLARE_API_TOKEN");
+    expect(preflight).toContain("CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}");
+    expect(preflight).toContain('"$PRIVATE_PREVIEW_ACCOUNT_ID" != "$CLOUDFLARE_ACCOUNT_ID"');
+    expect(preflight).toContain('"$CLOUDFLARE_PAGES_PROJECT_NAME" != "smart-portfolio"');
+    expect(preflight).toContain('"$CANDIDATE_BRANCH" != "develop"');
+    expect(deployJob.indexOf("Preflight private preview Access state before mutation")).toBeLessThan(
+      deployJob.indexOf("Validate the environment-specific D1 binding and apply migrations")
+    );
+    expect(previewDeploy).toContain("if: needs.verify.outputs.deploy_target == 'preview'");
+    expect(deployJob).toContain("WRANGLER_OUTPUT_FILE_PATH");
+    expect(previewDeploy).toContain('> "$private_preview_wrangler_log" 2>&1');
+    expect(previewDeploy).toContain("private-preview status=wrangler_uploaded");
+    expect(deployJob).toContain("PRIVATE_PREVIEW_D1_LOG");
+    expect(deployJob).toContain('> "$PRIVATE_PREVIEW_D1_LOG" 2>&1');
+    expect(deployJob.indexOf("Recheck private preview branch immediately before D1")).toBeGreaterThan(
+      deployJob.indexOf("Preflight private preview Access state before mutation")
+    );
+    expect(deployJob.indexOf("Recheck private preview Access state immediately before Wrangler")).toBeLessThan(
+      deployJob.indexOf("Recheck private preview branch immediately before Wrangler")
+    );
+    const credentialedWranglerPreflight = section(
+      deployJob,
+      "- name: Recheck private preview Access state immediately before Wrangler",
+      "- name: Recheck private preview branch immediately before Wrangler"
+    );
+    expect(credentialedWranglerPreflight).not.toContain("git fetch");
+    expect(privateVerification).toContain("node scripts/privatePreviewCheck.mjs verify-upload out");
+    expect(privateVerification).toContain("if: needs.verify.outputs.deploy_target == 'preview'");
+    expect(productionSmoke).toContain("if: needs.verify.outputs.deploy_target == 'production'");
+    expect(productionSmoke).toContain("node scripts/checkDeployedContent.mjs smoke");
+    expect(productionSmoke).not.toContain("PRIVATE_PREVIEW_");
+  });
+
   it("allows repository writes only for the guarded existing develop heartbeat", async () => {
     const workflow = await readFile(workflowPath, "utf8");
     const deployJob = section(workflow, "  deploy:", "\n  heartbeat:");

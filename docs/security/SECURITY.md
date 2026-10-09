@@ -80,6 +80,14 @@ Build-time inputs and deploy credentials belong in GitHub Actions configuration,
 
 Generated JSON is a build input. The exported artifact and its integrity metadata are deployment outputs, not private storage. Review all build inputs as public-safe before publication.
 
+### Private preview deployment boundary
+
+The preview-only checker under `scripts/privatePreviewCheck.mjs` separates provider inventory, anonymous denial, and Access service-token requests. Provider API credentials never accompany a Pages request; the Access client pair never accompanies a provider request or redirect; and the existing public deployment checker receives neither. Service credentials are limited to the two established preview hosts before mutation and to the exact API-verified hash host after upload. All three transports use fixed HTTPS destinations, manual redirect handling, bounded whole-operation reads, and nonblocking cancellation on a failed or stalled body. They accept only read-only GET requests and do not forward caller headers. Private API evidence is written through no-follow private files in a fresh operation directory outside every Git worktree; Wrangler and D1 command output stays in separate mode-restricted runner-temporary files. None is an artifact or public log payload.
+
+The checker is deliberately fail-closed. It drains bounded V4 array pagination, covers account and custom-zone Access scope, requires a root `*.smart-portfolio-bds.pages.dev` policy for a future hash before mutation, audits more-specific Pages applications and public path overrides, requires strict service-token authentication and an exact service-token `non_identity` policy, validates proxied custom-preview DNS, denies anonymous access to every advertised historical alias, and proves exact post-upload artifact identity. Historical records are not required to have succeeded, because their advertised hosts still need protection. The account entitlement response is collected as private evidence but cannot satisfy activation because the provider has not supplied a reviewed Access feature-key mapping. It therefore blocks preview D1 mutation and upload with `entitlement_mapping_unreviewed`. This is a repository behavior, not proof that an existing preview is private.
+
+Do not add preview credentials to browser code, `wrangler.jsonc`, public GitHub variables, `checkDeployedContent.mjs`, or an unreviewed redirect flow. The configured custom preview host also does not authorize Contact or Turnstile interaction; that requires a separate reviewed hostname/origin change and controlled test.
+
 ### Contact boundary
 
 `public/_routes.json` contains exactly:

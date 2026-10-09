@@ -44,6 +44,7 @@ Smart-Porfolio/
 |   |-- lib/
 |   |-- artifactIntegrity.mjs
 |   |-- checkDeployedContent.mjs
+|   |-- privatePreviewCheck.mjs
 |   |-- nextBuildAdapter.mjs
 |   |-- normalizeNextStaticExport.mjs
 |   |-- writeContentVersion.mjs
@@ -76,7 +77,7 @@ Smart-Porfolio/
 | `functions/` | Cloudflare Pages Functions for contact verification and delivery. `functions/_shared/contact.ts` is the stable public facade; focused modules under `functions/_shared/contact/` own configuration, request parsing, provider verification, domain checks, D1 reservations, signed tickets, and delivery. These are not Next.js route handlers. |
 | `migrations/` | Append-only Cloudflare D1 schema changes applied before the corresponding Pages deployment. |
 | `public/` | Public images, favicons, Pages security headers, and the exact Function route allowlist copied into the static export. |
-| `scripts/` | Content ingestion, local automation, deployment manifests, artifact integrity, deployment smoke checks, and script-level tests. |
+| `scripts/` | Content ingestion, local automation, deployment manifests, artifact integrity, public deployment smoke checks, the credential-isolated private-preview checker, and script-level tests. |
 | `tests/e2e/` | Playwright Chromium regressions for deterministic skeleton alignment, inert visual fixtures, and transitions; responsive navigation; recommendation overlays; Projects visual views; Experience and Research detail behavior; and footer first-render, route, restoration, and scroll behavior. |
 | `src/` | Next.js routes, React components, typed content, selectors, validation, theme helpers, and CSS. |
 | `next.config.mjs` | Static export and unoptimized image configuration. |
