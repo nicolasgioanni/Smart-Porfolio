@@ -70,12 +70,16 @@ describe("recommendation styles", () => {
     );
   });
 
-  it("wraps long recommendation identities while keeping verification visually quiet until interaction", () => {
+  it("wraps long recommendation identities while keeping verification stable, semantic, and background-free", () => {
     const identityRule = portfolioStyles.match(/\.recommendation-card__identity-row\s*\{[^}]*}/s)?.[0] ?? "";
     const nameRule = portfolioStyles.match(/\.recommendation-card__name\s*\{[^}]*}/s)?.[0] ?? "";
     const verificationRule = portfolioStyles.match(/\.recommendation-verification-link\s*\{[^}]*}/s)?.[0] ?? "";
     const verificationTextRule =
       portfolioStyles.match(/\.recommendation-verification-link__text\s*\{[^}]*}/s)?.[0] ?? "";
+    const verificationLinkInteractionRule =
+      portfolioStyles.match(
+        /\.recommendation-verification-link:hover,\s*\.recommendation-verification-link:focus-visible\s*\{[^}]*}/s
+      )?.[0] ?? "";
     const verificationInteractionRule =
       portfolioStyles.match(
         /\.recommendation-verification-link:hover \.recommendation-verification-link__text,\s*\.recommendation-verification-link:focus-visible \.recommendation-verification-link__text\s*\{[^}]*}/s
@@ -87,11 +91,24 @@ describe("recommendation styles", () => {
     expect(nameRule).toMatch(/min-width:\s*0/);
     expect(verificationRule).toMatch(/font-weight:\s*var\(--font-weight-regular\)/);
     expect(verificationRule).toMatch(/text-decoration:\s*none/);
+    expect(verificationRule).toMatch(/color:\s*var\(--color-recommendation-verification\)/);
+    expect(verificationRule).not.toMatch(/(?:background|transform|box-shadow):/);
     expect(verificationTextRule).toMatch(/font-weight:\s*var\(--font-weight-regular\)/);
     expect(verificationTextRule).toMatch(/text-decoration-line:\s*none/);
     expect(verificationInteractionRule).toMatch(/font-weight:\s*var\(--font-weight-bold\)/);
     expect(verificationInteractionRule).toMatch(/text-decoration-line:\s*underline/);
+    expect(verificationLinkInteractionRule).toMatch(
+      /color:\s*var\(--color-recommendation-verification-interaction\)/
+    );
     expect(verificationInteractionRule).not.toContain("recommendation-verification-link__icon");
+    expect(portfolioStyles).toMatch(
+      /\.recommendation-verification-link:visited\s*\{[^}]*color:\s*var\(--color-recommendation-verification\)/
+    );
+    expect(portfolioStyles).toMatch(
+      /\.recommendation-verification-link__text::after\s*\{[^}]*font-weight:\s*var\(--font-weight-bold\)/
+    );
+    expect(tokenStyles.match(/--color-recommendation-verification:/g)).toHaveLength(3);
+    expect(tokenStyles.match(/--color-recommendation-verification-interaction:/g)).toHaveLength(3);
   });
 
   it("keeps detail rows fixed while elevating the active card and dimming only measured overlaps", () => {

@@ -1878,7 +1878,7 @@
   margin-inline-start: auto;
   padding-inline: var(--space-1);
   border-radius: var(--radius-pill);
-  color: var(--color-muted);
+  color: var(--color-recommendation-verification);
   font-size: var(--font-size-caption);
   font-weight: var(--font-weight-regular);
   line-height: var(--line-height-heading);
@@ -1886,9 +1886,13 @@
   white-space: nowrap;
 }
 
+.recommendation-verification-link:visited {
+  color: var(--color-recommendation-verification);
+}
+
 .recommendation-verification-link:hover,
 .recommendation-verification-link:focus-visible {
-  color: var(--color-muted);
+  color: var(--color-recommendation-verification-interaction);
 }
 
 .recommendation-verification-link__icon {
