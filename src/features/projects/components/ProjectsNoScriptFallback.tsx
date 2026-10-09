@@ -1,5 +1,5 @@
 import { PageContainer } from "@/components/layout/PageContainer";
-import { ProjectList } from "@/components/portfolio/projects/ProjectList";
+import { ProjectList } from "@/features/projects/components/ProjectList";
 import type { ProjectItem } from "@/content/types";
 import { routeHeaderContent } from "@/lib/content/routeHeaderContent";
 import { siteRoutes } from "@/lib/routing/siteRoutes";

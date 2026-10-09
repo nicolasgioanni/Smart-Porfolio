@@ -1,34 +1,23 @@
-export type ProjectDiagramNode = {
-  detail?: string;
-  label: string;
-  x: number;
-  y: number;
-};
-
-export type ProjectDiagram = {
-  attribution?: string;
-  description: string;
-  nodes: readonly ProjectDiagramNode[];
-  title: string;
-};
-
-export type ProjectVisual = {
-  concept: {
-    alt: string;
-    height: number;
-    src: string;
-    width: number;
-  };
-  diagram: ProjectDiagram;
-};
+export type ProjectDiagramNode = { detail?: string; label: string; x: number; y: number };
+export type ProjectDiagram = { attribution?: string; description: string; nodes: readonly ProjectDiagramNode[]; title: string };
+export type ProjectPreviewMobileAsset = { height: number; src: string; width: number };
+export type ProjectPreview =
+  | { alt: string; fit: "contain" | "cover"; height: number; kind: "screenshot"; mobile?: ProjectPreviewMobileAsset; src: string; width: number }
+  | { fallback: { alt: string; src: string }; height: number; kind: "leetnotes"; width: number };
+export type ProjectPreviewBadge = { label: "Live site" | "Installable" | "Scheduled"; tone: "installable" | "live" | "scheduled" };
+export type ProjectVisual = { badge?: ProjectPreviewBadge; diagram: ProjectDiagram; preview: ProjectPreview };
 
 export const projectVisualRegistry = {
   "compliance-label-assistant": {
-    concept: {
-      alt: "A bottle label passing through a scanning frame into a field review panel.",
-      height: 992,
+    badge: { label: "Live site", tone: "live" },
+    preview: {
+      alt: "Compliance Label Assistant homepage introducing label review and linking to its verification tool.",
+      fit: "cover",
+      height: 800,
+      kind: "screenshot",
+      mobile: { height: 360, src: "/images/projects/compliance-label-assistant-mobile.webp", width: 480 },
       src: "/images/projects/compliance-label-assistant-concept.webp",
-      width: 1586
+      width: 1280
     },
     diagram: {
       description: "A label image moves through AI extraction and rule comparison before a reviewer sees the result.",
@@ -42,11 +31,15 @@ export const projectVisualRegistry = {
     }
   },
   notepal: {
-    concept: {
-      alt: "Documents, image cards, and media converging into a structured study notebook.",
-      height: 992,
+    badge: { label: "Live site", tone: "live" },
+    preview: {
+      alt: "NotePal homepage with its study tools introduction and Enter NotePal action.",
+      fit: "cover",
+      height: 795,
+      kind: "screenshot",
+      mobile: { height: 354, src: "/images/projects/notepal-mobile.webp", width: 472 },
       src: "/images/projects/notepal-concept.webp",
-      width: 1586
+      width: 1272
     },
     diagram: {
       attribution: "Co-developed with Parth Gupta.",
@@ -61,11 +54,15 @@ export const projectVisualRegistry = {
     }
   },
   "tergion-technologies": {
-    concept: {
-      alt: "A business intake form connected to contact records and a confirmation envelope.",
-      height: 992,
+    badge: { label: "Live site", tone: "live" },
+    preview: {
+      alt: "Tergion Technologies homepage introducing business systems and an example lead-to-CRM workflow.",
+      fit: "cover",
+      height: 800,
+      kind: "screenshot",
+      mobile: { height: 360, src: "/images/projects/tergion-technologies-mobile.webp", width: 480 },
       src: "/images/projects/tergion-technologies-concept.webp",
-      width: 1586
+      width: 1280
     },
     diagram: {
       description: "An inquiry is validated, synchronized to CRM records, and followed by a confirmation email.",
@@ -79,11 +76,15 @@ export const projectVisualRegistry = {
     }
   },
   leetnotes: {
-    concept: {
-      alt: "Spreadsheet cells becoming organized study notes and language-aware code files.",
-      height: 992,
-      src: "/images/projects/leetnotes-concept.webp",
-      width: 1586
+    badge: { label: "Scheduled", tone: "scheduled" },
+    preview: {
+      fallback: {
+        alt: "LeetNotes sheet-to-files preview with the selected Two Sum row and generated study files.",
+        src: "/images/projects/leetnotes-concept.webp"
+      },
+      height: 561,
+      kind: "leetnotes",
+      width: 896
     },
     diagram: {
       description: "Spreadsheet notes are normalized, converted to notes and solutions, then synchronized to GitHub.",
@@ -97,11 +98,14 @@ export const projectVisualRegistry = {
     }
   },
   clair: {
-    concept: {
-      alt: "Scattered files arranged into clearly labelled folders on a desktop workspace.",
-      height: 992,
+    badge: { label: "Installable", tone: "installable" },
+    preview: {
+      alt: "Clair desktop file organizer showing category and extension checkboxes with reusable presets.",
+      fit: "contain",
+      height: 463,
+      kind: "screenshot",
       src: "/images/projects/clair-concept.webp",
-      width: 1586
+      width: 793
     },
     diagram: {
       description: "A chosen folder uses a reusable preset and file-extension rules to create organized folders.",

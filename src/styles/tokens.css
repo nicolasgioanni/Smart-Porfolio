@@ -130,6 +130,7 @@
   --color-success-border: rgba(111, 214, 158, 0.58);
   --color-success-surface: #173d2e;
   --color-focus-ring: #fcfaf5;
+  --color-media-interaction: #8fb8ff;
   --color-contact-field-focus: #f4f1ea;
   --color-control-border: #908f89;
   --color-control-border-strong: #b9b7af;
@@ -210,6 +211,7 @@
   --color-success-border: rgba(39, 126, 73, 0.46);
   --color-success-surface: #daefdf;
   --color-focus-ring: #174d73;
+  --color-media-interaction: #174d73;
   --color-contact-field-focus: #1f587c;
   --color-control-border: #6a7d8c;
   --color-control-border-strong: #4d6679;
@@ -290,6 +292,7 @@
   --color-success-border: rgba(98, 207, 151, 0.56);
   --color-success-surface: #193a2d;
   --color-focus-ring: #8cb7ff;
+  --color-media-interaction: #8cb7ff;
   --color-contact-field-focus: #8cb7ff;
   --color-control-border: #7d828c;
   --color-control-border-strong: #a0a5ae;

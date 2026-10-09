@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ProjectSkillShowcase,
   projectSkillDialogFadeMs
-} from "@/components/portfolio/projects/ProjectSkillShowcase";
+} from "@/features/projects/components/ProjectSkillShowcase";
 
 const motionPreference = vi.hoisted(() => ({ reduced: false }));
 

@@ -112,7 +112,7 @@ describe("package and CI deployment automation", () => {
     expect(priorityTestDirectories).toEqual([
       "src/components/overlay",
       "src/components/portfolio/experience",
-      "src/components/portfolio/projects",
+      "src/features/projects",
       "src/components/portfolio/recommendations",
       "src/components/portfolio/shared",
       "src/components/theme",
@@ -133,8 +133,8 @@ describe("package and CI deployment automation", () => {
         "src/components/portfolio/shared/DetailDisclosureList.test.tsx",
         "src/components/portfolio/shared/detailDisclosureStyles.test.ts",
         "src/components/portfolio/experience/ExperienceShowcase.test.tsx",
-        "src/components/portfolio/projects/ProjectSkillShowcase.test.tsx",
-        "src/components/portfolio/projects/ProjectShowcase.test.tsx",
+        "src/features/projects/components/ProjectSkillShowcase.test.tsx",
+        "src/features/projects/components/ProjectShowcase.test.tsx",
         "src/components/portfolio/recommendations/RecommendationsList.test.tsx",
         "src/features/research/components/ResearchShowcase.test.tsx",
         "src/components/overlay/ModalDialog.test.tsx"

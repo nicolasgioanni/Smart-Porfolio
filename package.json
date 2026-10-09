@@ -34,6 +34,7 @@
     "test:e2e:experience": "playwright test experience.spec.ts --project=chromium",
     "test:e2e:research": "playwright test research.spec.ts research-mobile-video.spec.ts --project=chromium",
     "test:e2e:research:webkit": "playwright test research.spec.ts research-mobile-video.spec.ts --project=webkit-mobile --grep @mobile-video",
+    "test:e2e:projects:webkit": "playwright test projects.spec.ts --project=webkit-mobile --grep @mobile-projects",
     "test:e2e:contact": "playwright test contact.spec.ts --project=chromium",
     "test:e2e:priority": "playwright test skeleton-alignment.spec.ts skeletons.transition.spec.ts navigation.spec.ts footer.spec.ts contact.spec.ts recommendations.spec.ts experience.spec.ts projects.spec.ts research.spec.ts research-mobile-video.spec.ts --project=chromium",
     "test:e2e:full": "playwright test --project=chromium",

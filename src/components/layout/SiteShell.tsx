@@ -4,7 +4,7 @@ import { SiteFooter } from "@/components/layout/SiteFooter";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { StaticPortfolioRouteGate } from "@/components/layout/StaticPortfolioRouteGate";
 import { HomeOverview } from "@/components/portfolio/home/HomeOverview";
-import { ProjectsNoScriptFallback } from "@/components/portfolio/projects/ProjectsNoScriptFallback";
+import { ProjectsNoScriptFallback } from "@/features/projects/components/ProjectsNoScriptFallback";
 import { selectProjectDetailContent } from "@/lib/content/selectDetailContent";
 import { selectHomeContent } from "@/lib/content/selectHomeContent";
 import type { ThemeName } from "@/lib/theme/resolveThemeName";

@@ -4,7 +4,7 @@ import { ContactPageSkeleton } from "@/components/loading/ContactPageSkeleton";
 import { ExperiencePageSkeleton } from "@/components/loading/ExperiencePageSkeleton";
 import { HomePageSkeleton } from "@/components/loading/HomePageSkeleton";
 import { LegalPageSkeleton, legalSkeletonProfiles } from "@/components/loading/LegalPageSkeleton";
-import { ProjectsPageSkeleton } from "@/components/loading/ProjectsPageSkeleton";
+import { ProjectsPageSkeleton } from "@/features/projects/loading/ProjectsPageSkeleton";
 import { RecommendationsPageSkeleton } from "@/components/loading/RecommendationsPageSkeleton";
 import { ResearchPageSkeleton } from "@/features/research/loading/ResearchPageSkeleton";
 import { ResumePageSkeleton } from "@/components/loading/ResumePageSkeleton";

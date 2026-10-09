@@ -1,4 +1,4 @@
-import type { ProjectDiagram as ProjectDiagramContent } from "@/lib/projects/projectVisualRegistry";
+import type { ProjectDiagram as ProjectDiagramContent } from "@/features/projects/selectors/projectVisualRegistry";
 
 type ProjectDiagramProps = {
   diagram: ProjectDiagramContent;

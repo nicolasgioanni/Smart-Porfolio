@@ -127,9 +127,9 @@ Production candidates use strict remote mode. The workflow generates once, runs 
 
 ## Project presentation boundary
 
-The workbook remains the authority for project records, summaries, ordering, visibility, and destinations. `src/lib/projects/projectVisualRegistry.ts` adds typed local illustration metadata and diagram content for established IDs without changing `ProjectItem` or the workbook schema. Unknown IDs fall back to authored content and images. `projectActions.ts` supplies the shared source-first action selection used by Home, the gallery, and their loading footprints.
+The workbook remains the authority for project records, summaries, ordering, visibility, and destinations. `src/features/projects/selectors/projectVisualRegistry.ts` adds typed local screenshot or native-preview metadata, badges, and diagram content for established IDs without changing `ProjectItem` or the workbook schema. Unknown IDs fall back to authored content and images. `projectActions.ts` supplies source-first action selection used by Home, the gallery, and feature loading footprints.
 
-`ProjectList` and `ProjectCard` remain server-composed around `PortfolioCard`, `FeaturedGrid`, and `GlassButton`. Only each `ProjectVisualTabs` boundary owns client selection; it starts at Concept on every route mount and does not fetch data. Native disclosures retain diagrams without JavaScript. Home stays compact and keeps its existing skill-dialog behavior. The [project showcase guide](../content/PROJECT_SHOWCASE.md) owns the five-row migration, reviewed source evidence, image prompts, and attribution.
+`ProjectList` and `ProjectCard` remain server-composed around `PortfolioCard`, `FeaturedGrid`, and `GlassButton`. Only each `ProjectVisualTabs` boundary owns client selection; it starts on the preview on every route mount and does not fetch data. Its source-safe sibling keeps a linked native disclosure for no-JavaScript export. Home stays compact and keeps its existing skill-dialog behavior. The [project showcase guide](../content/PROJECT_SHOWCASE.md) owns the five-row migration, preview provenance, and attribution.
 
 ## Content selection and UI mapping
 

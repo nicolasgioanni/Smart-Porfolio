@@ -341,6 +341,23 @@
 
 .detail-card-skeleton--project {
   min-height: 410px;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.detail-card-skeleton__project-header-content,
+.detail-card-skeleton__project-visual-content,
+.detail-card-skeleton__project-footer {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.detail-card-skeleton__project-visual-content {
+  align-content: start;
+}
+
+.detail-card-skeleton__project-footer {
+  gap: var(--space-2);
+  align-content: start;
 }
 
 .detail-card-skeleton__project-visual {
@@ -349,14 +366,6 @@
 
 .detail-card-skeleton__project-visual .skeleton-block {
   height: 100% !important;
-}
-
-.detail-card-skeleton__project-tabs {
-  display: flex;
-  gap: 1px;
-  align-items: end;
-  padding-inline: var(--space-2);
-  border-bottom: 1px solid var(--color-line);
 }
 
 .detail-card-skeleton__header,

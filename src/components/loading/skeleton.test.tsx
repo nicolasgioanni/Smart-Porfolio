@@ -33,7 +33,7 @@ import { HomePageSkeleton } from "@/components/loading/HomePageSkeleton";
 import { legalSkeletonProfiles } from "@/components/loading/LegalPageSkeleton";
 import { PageSkeleton } from "@/components/loading/PageSkeleton";
 import { SectionHeader } from "@/components/layout/SectionHeader";
-import { getProjectSkeletonProfiles } from "@/components/loading/projectSkeletonProfiles";
+import { getProjectSkeletonProfiles } from "@/features/projects/loading/projectSkeletonProfiles";
 import { researchSkeletonProfiles } from "@/features/research/loading/ResearchPageSkeleton";
 import { RouteHeaderSkeleton } from "@/components/loading/RouteHeaderSkeleton";
 import { RouteSkeleton, routeSkeletons, skeletonRoutePaths } from "@/app/RouteSkeleton";

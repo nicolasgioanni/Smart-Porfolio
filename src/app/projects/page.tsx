@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { siteRoutes } from "@/lib/routing/siteRoutes";
-import { ProjectList } from "@/components/portfolio/projects/ProjectList";
+import { ProjectList } from "@/features/projects/components/ProjectList";
 import { createPageMetadata } from "@/lib/content/createPageMetadata";
 import { getPortfolioContent } from "@/lib/content/getPortfolioContent";
 import { routeHeaderContent } from "@/lib/content/routeHeaderContent";

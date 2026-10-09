@@ -32,7 +32,9 @@ type Viewport = {
 
 type ProjectFootprint = {
   actions: number;
-  tabs: number;
+  attribution: number;
+  badge: number;
+  controls: number;
   visual: number;
 };
 
@@ -552,14 +554,26 @@ test("matches the Home hero's 720, 860, and 980 responsive boundaries", async ({
   }
 });
 
-test("matches real Project and Research detail footprints at compact, phone, tablet, and desktop widths", async ({ page }) => {
-  for (const viewport of [primaryViewports[0]!, primaryViewports[1]!, primaryViewports[3]!, primaryViewports.at(-1)!]) {
+test("matches real Project and Research detail footprints at compact, visual, column-boundary, and desktop widths", async ({ page }) => {
+  const projectResponsiveViewports: readonly Viewport[] = [
+    primaryViewports[0]!,
+    primaryViewports[1]!,
+    { height: 900, name: "visual-boundary-720", width: 720 },
+    { height: 900, name: "visual-boundary-721", width: 721 },
+    primaryViewports[3]!,
+    { height: 900, name: "column-boundary-981", width: 981 },
+    primaryViewports.at(-1)!
+  ];
+
+  for (const viewport of projectResponsiveViewports) {
     await preparePage(page, viewport, siteRoutes.projects);
     const resolvedProjectFootprints = await page.locator(".project-card--showcase").evaluateAll((cards): ProjectFootprint[] =>
       cards.map((card) => ({
         actions: card.querySelectorAll(".project-card__actions > a").length,
-        tabs: card.querySelectorAll(".project-visual-tabs__tab").length,
-        visual: card.querySelectorAll(".project-visual-tabs, .project-card__image").length
+        attribution: card.querySelectorAll(".project-card__attribution").length,
+        badge: card.querySelectorAll(".project-card__badge").length,
+        controls: card.querySelectorAll(".project-visual-switcher__toggle").length,
+        visual: card.querySelectorAll(".project-visual-switcher, .project-card__image").length
       }))
     );
     const { fixturePage: projectFixturePage, skeleton: projectSkeleton } = await mountStaticRouteSkeleton(
@@ -572,14 +586,42 @@ test("matches real Project and Research detail footprints at compact, phone, tab
       await expect(projectCards).toHaveCount(resolvedProjectFootprints.length);
       for (const [index, footprint] of resolvedProjectFootprints.entries()) {
         const card = projectCards.nth(index);
-        await expect(card.locator(".detail-card-skeleton__project-tabs > .skeleton-block")).toHaveCount(footprint.tabs);
+        await expect(card.locator(".detail-card-skeleton__project-header > .skeleton-block")).toHaveCount(1 + footprint.badge);
+        await expect(card.locator(".detail-card-skeleton__project-controls > .skeleton-block")).toHaveCount(footprint.controls);
         await expect(card.locator(".detail-card-skeleton__project-visual")).toHaveCount(footprint.visual);
         await expect(card.locator(".detail-card-skeleton__actions > .skeleton-block")).toHaveCount(footprint.actions);
+        await expect(card.locator(".detail-card-skeleton__project-attribution")).toHaveCount(footprint.attribution);
+        if (footprint.visual > 0 && footprint.controls > 0) {
+          const geometry = await card.evaluate((element) => {
+            const visual = element.querySelector<HTMLElement>(".detail-card-skeleton__project-visual");
+            const controls = element.querySelector<HTMLElement>(".detail-card-skeleton__project-controls");
+            const actions = element.querySelector<HTMLElement>(".detail-card-skeleton__actions");
+            if (!visual || !controls || !actions) throw new Error("Project skeleton is missing its visual, control, or actions row.");
+            const visualBox = visual.getBoundingClientRect();
+            const controlsBox = controls.getBoundingClientRect();
+            const actionsBox = actions.getBoundingClientRect();
+            return {
+              actionsAfterControls: actionsBox.top >= controlsBox.bottom - 1,
+              controlsAfterVisual: controlsBox.top >= visualBox.bottom - 1,
+              ratio: visualBox.width / visualBox.height
+            };
+          });
+          expect(geometry.controlsAfterVisual, `Projects skeleton control should follow visual at ${viewport.name}`).toBe(true);
+          expect(geometry.actionsAfterControls, `Projects skeleton actions should follow control at ${viewport.name}`).toBe(true);
+          const expectedRatio = viewport.width <= 720 ? 4 / 3 : 16 / 10;
+          expect(Math.abs(geometry.ratio - expectedRatio), `Projects skeleton visual ratio at ${viewport.name}`).toBeLessThan(0.02);
+        }
       }
       await assertViewportHasNoOverflow(projectFixturePage, `Projects skeleton does not overflow at ${viewport.name}`);
     } finally {
       await projectFixturePage.close();
     }
+
+    // Project media has its own 720px frame boundary and 980px column
+    // boundary. Research has no contract at those extra widths, so retain its
+    // established compact/tablet/desktop matrix rather than expanding this
+    // shared, expensive fixture test.
+    if (![320, 390, 980, 1280].includes(viewport.width)) continue;
 
     await preparePage(page, viewport, siteRoutes.research);
     const resolvedResearchFootprints = await page

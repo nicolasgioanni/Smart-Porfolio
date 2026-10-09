@@ -10,6 +10,6 @@ This register records externally sourced public assets that ship with the static
 
 All files under `public/` are anonymously retrievable. Before publishing another mark, verify its public status, use only the approved visual portion, document transformations here, and reference it through a safe root-relative content path.
 
-## Project illustrations
+## Project previews
 
-The five generated Concept illustrations, optimization details, complete prompts, and supporting source-code evidence are recorded in [Project showcase](PROJECT_SHOWCASE.md#generated-concept-artwork). They are original conceptual artwork rather than product screenshots or third-party marks.
+Three published homepage captures retain their existing desktop `*-concept.webp` paths for workbook compatibility and add reviewed local `*-mobile.webp` variants for the narrow `4:3` frame. One supplied Clair desktop screenshot remains unchanged and intentionally has no narrow derivative. The typed registry records the exact current source dimensions and selects the narrow image with `<picture>` at `720px` and below; do not claim a device-pixel ratio the reviewed bytes do not provide. Their provenance, dimensions, limits, and display treatment are recorded in [Project showcase](PROJECT_SHOWCASE.md#provenance-and-editorial-boundaries). LeetNotes retains its separately captured raster fallback while its enhanced preview is repository-native HTML/SVG.

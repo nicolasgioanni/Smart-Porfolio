@@ -1,5 +1,5 @@
 import { PageSkeleton } from "@/components/loading/PageSkeleton";
-import { getHomeProjectSkeletonProfiles, type HomeProjectSkeletonProfile } from "@/components/loading/projectSkeletonProfiles";
+import { getHomeProjectSkeletonProfiles, type HomeProjectSkeletonProfile } from "@/features/projects/loading/projectSkeletonProfiles";
 import { SkeletonBlock } from "@/components/loading/SkeletonBlock";
 import { SkeletonText } from "@/components/loading/SkeletonText";
 import { getPortfolioContent } from "@/lib/content/getPortfolioContent";

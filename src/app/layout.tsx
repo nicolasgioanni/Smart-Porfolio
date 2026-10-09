@@ -7,6 +7,7 @@ import "@/styles/glass.css";
 import "@/styles/dialog.css";
 import "@/styles/navigation.css";
 import "@/styles/portfolio.css";
+import "@/features/projects/projects.css";
 import "@/styles/detail.css";
 import "@/styles/experience.css";
 import "@/features/research/research.css";

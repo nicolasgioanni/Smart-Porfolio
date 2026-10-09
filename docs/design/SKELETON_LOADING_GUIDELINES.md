@@ -33,7 +33,7 @@ Reusable primitives and compositions include:
 | --- | --- |
 | Home | Profile shell, core content sections, three skills cards, and recommendation footprint. |
 | Research | Page introduction, compact audience selector, one abstract/divider/video module for CytoCV, and two vertically centered abstract-only modules for AML and Guide Donor Scheduler. |
-| Projects | Canonical page introduction and content-derived gallery cards with title, sentence, folder tabs, media, and source/demo action footprints. |
+| Projects | Canonical page introduction and content-derived gallery cards with title, optional status badge, sentence, media, one switcher-control footprint, and source/demo/download action footprints. |
 | Experience | Page introduction, compact audience selector, and six logo-led template role cards with evidence-row footprints. |
 | Recommendations | Page introduction and five recommendation-card footprints. |
 | Resume | Page introduction and private-resume request panel. |

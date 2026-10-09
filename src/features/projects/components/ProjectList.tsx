@@ -1,7 +1,7 @@
 import type { ProjectItem } from "@/content/types";
 import { EmptyState } from "@/components/portfolio/shared/EmptyState";
 import { FeaturedGrid } from "@/components/portfolio/shared/FeaturedGrid";
-import { ProjectCard } from "@/components/portfolio/projects/ProjectCard";
+import { ProjectCard } from "@/features/projects/components/ProjectCard";
 
 type ProjectListProps = {
   items: ProjectItem[];

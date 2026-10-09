@@ -32,7 +32,7 @@ The contact body portal enters from 8 pixels above with a 200ms opacity/transfor
 
 ## Project visuals
 
-Concept illustrations and How it works diagrams are static. Switching a card's visual view does not animate, autoplay, or change its reserved media height. The same immediate behavior applies with reduced motion. Preserve independent per-card selection and normal document scrolling.
+Project previews and How it works diagrams are static. Their fixed media footprint contains a perspective scene whose unflattened rotor turns from `rotateY(0deg)` to `rotateY(-180deg)` over `520ms cubic-bezier(.65, 0, .35, 1)`; returning to the preview reverses from the current transform. Each rounded, clipped face hides its reverse side, so the hover wrapper, perspective scene, and rotor remain separate. The labels in the centered switcher crossfade over `180ms` with opacity only; no label change alters button width or surrounding geometry. A fine-pointer hover can lift only the complete media wrapper by `3px` over `280ms`, while its restrained semantic outline appears through opacity. Reduced motion makes the rotor and labels immediate and removes that lift while preserving independent per-card selection, focus, and normal document scrolling.
 
 ## Home role rotation
 

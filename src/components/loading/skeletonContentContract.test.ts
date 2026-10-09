@@ -1,7 +1,7 @@
 import type { ExperienceItem, GeneratedPortfolioContent, PortfolioLink, ProfileContent, ProjectItem } from "@/content/types";
 import { describe, expect, it } from "vitest";
 import { experienceSkeletonProfiles } from "@/components/loading/ExperiencePageSkeleton";
-import { getProjectSkeletonProfiles } from "@/components/loading/projectSkeletonProfiles";
+import { getProjectSkeletonProfiles } from "@/features/projects/loading/projectSkeletonProfiles";
 import { researchSkeletonProfiles } from "@/features/research/loading/ResearchPageSkeleton";
 import { selectResearchDetailContent } from "@/features/research/content/selectResearchDetailContent";
 import { getExperienceModeContent } from "@/lib/content/experienceNarratives";
