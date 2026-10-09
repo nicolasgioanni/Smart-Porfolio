@@ -4,7 +4,7 @@
 
 - Start with the scoped map in [`.agents/README.md`](.agents/README.md). Read [system decisions](.agents/knowledge/SYSTEM_DECISIONS.md) for compact durable context, then only the linked product documentation needed for the task.
 - Use the architecture skill for module, route, and documentation ownership; content pipeline for source data and assets; interface contracts for components, themes, motion, dialogs, and accessibility; validation for tests and CI; release security for endpoints and deployment.
-- Use Astra for coordination, review, decomposition, and evidence synthesis. Use GPT-5.6 Terra at High or Extra High for implementation.
+- Use GPT-5.6 Sol for coordination, architecture, review, decomposition, and evidence synthesis. Use GPT-5.6 Terra at High or Extra High for implementation.
 
 ## Shared invariants
 
@@ -13,6 +13,9 @@
 - Keep Research-owned components, selectors, loading composition, and styles under `src/features/research/`. Shared components must receive Research composition through props, and `src/app/RouteSkeleton.tsx` owns cross-feature skeleton routing.
 - Read the relevant installed Next.js guide in `node_modules/next/dist/docs/` before a framework-sensitive code change.
 - Update the guide that owns a changed contract and its links. Documentation, AGENTS.md, and `.agents` guidance are validated by `npm run docs:check`.
+- Treat `main` and `develop` as permanent branches. Never delete, rename, force-update, or recreate either local or remote ref, and never weaken their protection. Exclude both refs from branch-cleanup work.
+- Before creating a new improvement branch and worktree, the coordinating checkout must `git fetch origin`, advance local `main` with a fast-forward-only update from `origin/main`, and record the resulting fixed baseline SHA. Use one focused `codex/` branch for one cohesive idea. To continue that same improvement, retain its existing worktree and original recorded baseline without refresh, re-recording, or sync. After recording the baseline, ignore later upstream changes: do not merge, rebase, cherry-pick, pull, or otherwise sync newer `main` or changes from other branches, agents, or pull requests into the worktree.
+- Run targeted development checks while changing a contract, then run each relevant final gate once near handoff. Review the complete diff, make one or more logical commits, push the focused branch, and open an authorized pull request into `main`. The PR description must cover its purpose, design, tests, documentation, risks, and reviewer notes. Stop at the open PR for this workflow; do not merge or enable auto-merge.
 
 ## Required specialist rules
 

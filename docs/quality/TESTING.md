@@ -192,6 +192,7 @@ After `build:generated`, verify `/projects` without JavaScript against the expor
 | `scripts/checkDeployedContent.test.mjs` | Independent deployed content and commit comparison, missing or malformed manifest behavior, and post-deployment smoke requests with exact contact Function method rejection |
 | Artifact tests inside `scripts/packageScripts.test.mjs` | Content-version creation, hidden file inclusion, manifest structure, commit binding, digest verification, and tamper rejection |
 | `scripts/localAutomation.test.mjs` | Project discovery, environment copy safety, dependency-state hashing, stale content, and port selection |
+| `scripts/permanentBranchRuleset.test.mjs` | Tracked GitHub permanent-branch ruleset name, active exact-ref scope, deletion and non-fast-forward rules only, and empty bypass list |
 
 The workflow contract tests inspect checked-in workflow text and execute the manifest helpers. They do not start a GitHub Actions runner or perform a Cloudflare upload.
 
@@ -233,7 +234,7 @@ Scheduled runs and non-forced manual runs perform the strict content work before
 
 ### Tier boundaries and diagnostics
 
-The stable `verify` job selects `priority` for pull requests and `full` for every candidate that can produce a deployment artifact. The priority tier runs its portable browser selection once, then adds its Linux-only visual skeleton comparison as a separate step; the full tier runs `test:e2e:full` once and does not duplicate individual suites. Stale, unchanged scheduled, and non-forced manual candidates select no tier. `main` branch protection was independently verified on 2026-09-11 to require the current `verify` status check on pull requests; the workflow name and job name must remain stable. If a verify step fails, the job uploads any available `playwright-report/` and `test-results/` files as a seven-day `playwright-diagnostics-<run-id>-<attempt>` artifact. That failure-only artifact is distinct from, and never used as, the one-day `cloudflare-pages-build` deployment artifact.
+The stable `verify` job selects `priority` for pull requests and `full` for every candidate that can produce a deployment artifact. The priority tier runs its portable browser selection once, then adds its Linux-only visual skeleton comparison as a separate step; the full tier runs `test:e2e:full` once and does not duplicate individual suites. Stale, unchanged scheduled, and non-forced manual candidates select no tier. The priority unit tier parses the tracked permanent-branch ruleset, but that test cannot prove GitHub has applied it. `main` retains its separate pull-request rule requiring the current `verify` status check; the workflow name and job name must remain stable. If a verify step fails, the job uploads any available `playwright-report/` and `test-results/` files as a seven-day `playwright-diagnostics-<run-id>-<attempt>` artifact. That failure-only artifact is distinct from, and never used as, the one-day `cloudflare-pages-build` deployment artifact.
 
 ## Post-deployment smoke tests
 
