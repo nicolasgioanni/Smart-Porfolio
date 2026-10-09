@@ -12,6 +12,9 @@
 - Preserve static rendering and progressive enhancement. Client code adds interaction; it does not fetch portfolio content.
 - Read the relevant installed Next.js guide in `node_modules/next/dist/docs/` before a framework-sensitive code change.
 - Update the guide that owns a changed contract and its links. Documentation, AGENTS.md, and `.agents` guidance are validated by `npm run docs:check`.
+- Treat `main` and `develop` as permanent branches. Never delete, rename, force-update, or recreate either local or remote ref, and never weaken their protection. Exclude both refs from branch-cleanup work.
+- Use one focused worktree branch for one cohesive idea. Reuse its existing worktree when continuing that idea; before creating a new worktree, the coordinating checkout may fetch and fast-forward `main` once, then keep that baseline fixed for the work.
+- Run targeted development checks while changing a contract, then run each relevant final gate once near handoff. Review the complete diff, make one logical commit, push the focused branch, and open an authorized pull request into `main`; do not merge or enable auto-merge unless separately authorized.
 
 ## Required specialist rules
 

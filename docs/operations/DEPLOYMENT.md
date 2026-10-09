@@ -35,7 +35,7 @@ The repository cannot verify Cloudflare or GitHub dashboard state. Operators mus
 - No legacy provider continues to publish the custom domain.
 - Cloudflare runtime secrets and separate D1 bindings exist in the correct production and preview environments.
 - WAF rate limiting covers both contact endpoints, and the selected Cloudflare plan or provider-compatible control preserves the JSON API contract.
-- `main` branch protection was independently verified on 2026-09-11: pull requests require the current `verify` status from GitHub Actions app `15368`, require the branch to be current, require zero human approvals, enforce rules for administrators, and block force-push and deletion. Keep `develop` unprotected while its guarded schedule heartbeat remains enabled. Re-verify this external setting after any GitHub policy change.
+- The tracked [permanent-branch ruleset](../../.github/rulesets/protect-permanent-branches.json) declares active deletion and non-fast-forward protection for the exact `main` and `develop` refs with no bypass actors. It permits ordinary updates, including the guarded non-force `develop` heartbeat. `main`'s separate pull-request and current-`verify` requirements must remain configured. GitHub API readback independently confirmed this [active ruleset](https://github.com/nicolasgioanni/Smart-Porfolio/rules/24763569) and the classic `main` rule on 2026-10-09 UTC; re-check live settings after any GitHub policy change.
 - Custom-domain bindings, redirects, certificates, and DNS remain healthy.
 
 Provider-dashboard uploads and deploy hooks bypass the repository quality gate and are not part of the supported release path.
@@ -311,18 +311,20 @@ The one-day GitHub artifact is not a long-term rollback archive. Use Cloudflare 
 
 See [Operations](OPERATIONS.md) for the release, incident, and rollback runbooks.
 
-## Branch protection and heartbeat
+## Permanent-branch protection and heartbeat
 
-The `main` protection rule was independently read from GitHub on 2026-09-11. Its verified policy is:
+`main` and `develop` are permanent branches. Never delete, rename, force-update, recreate, or weaken protection for either their local or remote refs; exclude both branches from cleanup work. The checked-in [protect-permanent-branches ruleset](../../.github/rulesets/protect-permanent-branches.json) is the reproducible GitHub Rulesets payload. Its active scope contains only `refs/heads/main` and `refs/heads/develop`, it has no bypass actors, and it blocks only deletion and non-fast-forward updates. It deliberately has no creation or ordinary-update restriction.
+
+The legacy `main` policy remains separately required:
 
 1. Pull-request-based changes with the `verify` status required; require the branch to be current before merge.
 2. No human review approval is required by this policy.
 3. Force-push and branch deletion are blocked.
 4. GitHub Actions has no bypass to write deployment state to `main`.
 
-This policy must be checked in GitHub settings after any change because it is not encoded by the workflow. `develop` has no equivalent rule so the narrowly guarded schedule heartbeat can continue to update that branch.
+The ruleset supplements rather than replaces that `main` policy. Do not delete or relax the main pull-request/current-`verify` rules while applying it. GitHub API readback on 2026-10-09 UTC confirmed the active ruleset has exact `main` and `develop` scope, empty bypass actors, and only deletion and non-fast-forward rules; it also confirmed that the classic `main` rule enforces administrators, blocks deletion and force-pushes, requires the current `verify` check from GitHub Actions app `15368`, and requires zero approvals. A committed JSON payload and its local test do not prove future live state, so operators must inspect the active GitHub rulesets and classic branch rule after each policy change.
 
-The daily schedule also starts `develop-schedule-heartbeat`. It compares the newest activity on `main` and `develop`. If neither has activity within 30 days, the checked-in job first confirms that remote `develop` already exists, then writes only `.github/schedule-heartbeat`, verifies that no other path changed, and commits as `github-actions[bot]`. It checks that `develop` did not change while the job prepared the commit and uses a normal non-force push to `develop`; a concurrent update is rejected rather than retried or overwritten. The job is coded to make no other ref update, uses its own non-canceling concurrency group, and cannot deploy. Do not apply the intended `main` rule to `develop` while this heartbeat is active; its current external state is not verified here.
+The daily schedule also starts `develop-schedule-heartbeat`. It compares the newest activity on `main` and `develop`. If neither has activity within 30 days, the checked-in job first confirms that remote `develop` already exists, then writes only `.github/schedule-heartbeat`, verifies that no other path changed, and commits as `github-actions[bot]`. It checks that `develop` did not change while the job prepared the commit and uses a normal non-force push to `develop`; a concurrent update is rejected rather than retried or overwritten. The job is coded to make no other ref update, uses its own non-canceling concurrency group, and cannot deploy. The permanent-branch ruleset permits this ordinary fast-forward update while still preventing deletion and non-fast-forward rewrites.
 
 ## Related guides
 
