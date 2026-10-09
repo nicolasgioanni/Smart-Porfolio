@@ -11,6 +11,7 @@ import {
   parseAndValidatePortfolioCsv,
   parsePortfolioWorkbook,
   portfolioWorkbookSheetNames,
+  resolvePortfolioWorkbookRedirectUrl,
   validatePortfolioWorkbookPayload,
   validatePortfolioWorkbookUrl
 } from "./lib/portfolioContentGeneration";
@@ -24,6 +25,7 @@ export const portfolioWorkbookDownloadTimeoutMs = 15_000;
 export const portfolioWorkbookDownloadMaxAttempts = 2;
 export const portfolioWorkbookDownloadRetryDelayMs = 1_000;
 export const portfolioWorkbookMaxBytes = 5 * 1024 * 1024;
+export const portfolioWorkbookMaxRedirects = 5;
 
 const sheetConfigs: Array<{ name: PortfolioSheetName; fileName: string }> = [
   ...portfolioWorkbookSheetNames.map((name) => ({ name, fileName: `${name}.csv` })),
@@ -56,6 +58,28 @@ function workbookDownloadTimeoutError(): WorkbookDownloadError {
 
 function isRetryableWorkbookStatus(status: number): boolean {
   return status === 408 || status === 429 || (status >= 500 && status <= 599);
+}
+
+function isWorkbookRedirectStatus(status: number): boolean {
+  return status === 301 || status === 302 || status === 303 || status === 307 || status === 308;
+}
+
+function discardWorkbookResponseBody(response: WorkbookFetchResponse): void {
+  if (!response.body) return;
+
+  try {
+    void response.body.cancel().catch(() => undefined);
+  } catch {
+    // A cancelled or locked body has no further cleanup that can help this attempt.
+  }
+}
+
+function cancelWorkbookBodyReader(reader: ReadableStreamDefaultReader<Uint8Array>): void {
+  try {
+    void reader.cancel().catch(() => undefined);
+  } catch {
+    // A cancelled reader has no further cleanup that can help this attempt.
+  }
 }
 
 function wait(delayMs: number): Promise<void> {
@@ -99,9 +123,11 @@ async function readLimitedWorkbookBody(response: WorkbookFetchResponse, signal: 
   if (contentLengthHeader) {
     const contentLength = Number(contentLengthHeader);
     if (!Number.isSafeInteger(contentLength) || contentLength < 0) {
+      discardWorkbookResponseBody(response);
       throw new WorkbookDownloadError("The workbook download returned an invalid Content-Length header");
     }
     if (contentLength > portfolioWorkbookMaxBytes) {
+      discardWorkbookResponseBody(response);
       throw new WorkbookDownloadError("The workbook download exceeds the allowed size limit");
     }
   }
@@ -117,29 +143,39 @@ async function readLimitedWorkbookBody(response: WorkbookFetchResponse, signal: 
   const reader = response.body.getReader();
   const chunks: Uint8Array[] = [];
   let totalBytes = 0;
+  let completed = false;
+  let cancelled = false;
+  const cancelReader = () => {
+    if (cancelled) return;
+    cancelled = true;
+    cancelWorkbookBodyReader(reader);
+  };
 
-  while (true) {
-    const { done, value } = await rejectOnDownloadAbort(reader.read(), signal, () => {
-      void reader.cancel().catch(() => undefined);
-    });
-    if (done) break;
-    if (!value) continue;
+  try {
+    while (true) {
+      const { done, value } = await rejectOnDownloadAbort(reader.read(), signal, cancelReader);
+      if (done) break;
+      if (!value) continue;
 
-    totalBytes += value.byteLength;
-    if (totalBytes > portfolioWorkbookMaxBytes) {
-      await reader.cancel().catch(() => undefined);
-      throw new WorkbookDownloadError("The workbook download exceeds the allowed size limit");
+      totalBytes += value.byteLength;
+      if (totalBytes > portfolioWorkbookMaxBytes) {
+        cancelReader();
+        throw new WorkbookDownloadError("The workbook download exceeds the allowed size limit");
+      }
+      chunks.push(value);
     }
-    chunks.push(value);
-  }
 
-  const bytes = new Uint8Array(totalBytes);
-  let offset = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset);
-    offset += chunk.byteLength;
+    const bytes = new Uint8Array(totalBytes);
+    let offset = 0;
+    for (const chunk of chunks) {
+      bytes.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    completed = true;
+    return bytes;
+  } finally {
+    if (!completed) cancelReader();
   }
-  return bytes;
 }
 
 async function downloadPortfolioWorkbookAttempt(
@@ -154,26 +190,69 @@ async function downloadPortfolioWorkbookAttempt(
   }, portfolioWorkbookDownloadTimeoutMs);
 
   try {
-    let response: WorkbookFetchResponse;
+    let currentUrl = workbookUrl;
+    const visitedUrls = new Set([currentUrl]);
+    let redirectCount = 0;
+    let response: WorkbookFetchResponse | undefined;
 
-    try {
-      response = await rejectOnDownloadAbort(
-        fetchImplementation(workbookUrl, {
+    while (!response) {
+      let attemptedResponse: WorkbookFetchResponse;
+
+      try {
+        const request = fetchImplementation(currentUrl, {
           credentials: "omit",
-          redirect: "follow",
+          redirect: "manual",
           signal: controller.signal,
           headers: {
             Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/octet-stream"
           }
-        }),
-        controller.signal
-      );
-    } catch {
-      if (timedOut) throw workbookDownloadTimeoutError();
-      throw new WorkbookDownloadError("Failed to download the public XLSX workbook", true);
+        });
+        attemptedResponse = await rejectOnDownloadAbort(
+          request,
+          controller.signal,
+          () => {
+            void request.then(discardWorkbookResponseBody, () => undefined);
+          }
+        );
+      } catch {
+        if (timedOut) throw workbookDownloadTimeoutError();
+        throw new WorkbookDownloadError("Failed to download the public XLSX workbook", true);
+      }
+
+      if (!isWorkbookRedirectStatus(attemptedResponse.status)) {
+        response = attemptedResponse;
+        continue;
+      }
+
+      discardWorkbookResponseBody(attemptedResponse);
+
+      if (redirectCount >= portfolioWorkbookMaxRedirects) {
+        throw new WorkbookDownloadError("The workbook download exceeded the allowed redirect limit");
+      }
+
+      const location = attemptedResponse.headers.get("location");
+      if (!location) {
+        throw new WorkbookDownloadError("The workbook download returned a redirect without a destination");
+      }
+
+      let redirectedUrl: string;
+      try {
+        redirectedUrl = resolvePortfolioWorkbookRedirectUrl(location, currentUrl);
+      } catch {
+        throw new WorkbookDownloadError("The workbook download redirected to an invalid destination");
+      }
+
+      if (visitedUrls.has(redirectedUrl)) {
+        throw new WorkbookDownloadError("The workbook download returned a redirect loop");
+      }
+
+      visitedUrls.add(redirectedUrl);
+      currentUrl = redirectedUrl;
+      redirectCount += 1;
     }
 
     if (!response.ok) {
+      discardWorkbookResponseBody(response);
       throw new WorkbookDownloadError(
         "Failed to download the public XLSX workbook",
         isRetryableWorkbookStatus(response.status)

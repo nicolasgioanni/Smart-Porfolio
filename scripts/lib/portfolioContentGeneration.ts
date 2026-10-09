@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { isIP } from "node:net";
 import ExcelJS, {
   type Cell,
   type CellFormulaValue,
@@ -160,20 +161,122 @@ const requiredKeyRows: Partial<Record<PortfolioWorkbookSheetName, readonly strin
   site_settings: ["site_title", "site_description", "default_theme"]
 };
 
-export function validatePortfolioWorkbookUrl(value: string): string {
+function isPublicIpv4Address(hostname: string): boolean {
+  const octets = hostname.split(".").map(Number);
+  const [first, second, third] = octets;
+
+  if (octets.length !== 4 || octets.some((octet) => !Number.isInteger(octet) || octet < 0 || octet > 255)) {
+    return false;
+  }
+
+  return !(
+    first === 0 ||
+    first === 10 ||
+    first === 127 ||
+    first >= 224 ||
+    (first === 100 && second >= 64 && second <= 127) ||
+    (first === 169 && second === 254) ||
+    (first === 172 && second >= 16 && second <= 31) ||
+    (first === 192 && second === 0 && (third === 0 || third === 2)) ||
+    (first === 192 && second === 168) ||
+    (first === 192 && second === 88 && third === 99) ||
+    (first === 198 && (second === 18 || second === 19)) ||
+    (first === 198 && second === 51 && third === 100) ||
+    (first === 203 && second === 0 && third === 113)
+  );
+}
+
+function isPublicIpv6Address(hostname: string): boolean {
+  const normalizedHostname = hostname.toLowerCase();
+  const [beforeCompression, afterCompression] = normalizedHostname.split("::", 2);
+  const leadingHextets = beforeCompression ? beforeCompression.split(":") : [];
+  const trailingHextets = afterCompression ? afterCompression.split(":") : [];
+  const hextets = [
+    ...leadingHextets,
+    ...Array.from({ length: 8 - leadingHextets.length - trailingHextets.length }, () => "0"),
+    ...trailingHextets
+  ].map((hextet) => Number.parseInt(hextet, 16));
+  const [firstHextet, secondHextet, thirdHextet] = hextets;
+
+  if (
+    !Number.isInteger(firstHextet) ||
+    !Number.isInteger(secondHextet) ||
+    !Number.isInteger(thirdHextet) ||
+    // Treat documented and protocol-assignment space conservatively instead of
+    // trying to maintain a complete global-unicast reachability classifier.
+    (firstHextet === 0x2001 && secondHextet <= 0x01ff) ||
+    (firstHextet === 0x2001 && secondHextet === 0x0db8) ||
+    firstHextet === 0x2002 ||
+    (firstHextet === 0x3fff && (secondHextet & 0xf000) === 0)
+  ) {
+    return false;
+  }
+
+  return firstHextet >= 0x2000 && firstHextet < 0x4000;
+}
+
+function isAllowedWorkbookHost(hostname: string): boolean {
+  const normalizedHostname = hostname.toLowerCase().replace(/\.$/, "");
+  const normalizedIpLiteral =
+    normalizedHostname.startsWith("[") && normalizedHostname.endsWith("]")
+      ? normalizedHostname.slice(1, -1)
+      : normalizedHostname;
+  const ipVersion = isIP(normalizedIpLiteral);
+
+  if (ipVersion === 4) return isPublicIpv4Address(normalizedIpLiteral);
+  if (ipVersion === 6) return isPublicIpv6Address(normalizedIpLiteral);
+
+  if (
+    !normalizedHostname ||
+    normalizedHostname === "localhost" ||
+    normalizedHostname.endsWith(".localhost") ||
+    !normalizedHostname.includes(".")
+  ) {
+    return false;
+  }
+
+  return normalizedHostname.split(".").every(
+    (label) =>
+      label.length > 0 &&
+      label.length <= 63 &&
+      /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(label)
+  );
+}
+
+function parsePortfolioWorkbookUrl(value: string, baseUrl?: string): URL {
   let parsedUrl: URL;
+  const normalizedValue = baseUrl ? value : value.trim();
 
   try {
-    parsedUrl = new URL(value.trim());
+    if (!normalizedValue || /\s/.test(normalizedValue)) throw new Error("invalid URL whitespace");
+    parsedUrl = new URL(normalizedValue, baseUrl);
   } catch {
-    throw new Error("PORTFOLIO_WORKBOOK_URL must be an anonymous HTTPS URL");
+    throw new Error("The workbook URL must be an anonymous HTTPS URL on an allowed public destination");
   }
 
-  if (parsedUrl.protocol !== "https:" || parsedUrl.username || parsedUrl.password) {
-    throw new Error("PORTFOLIO_WORKBOOK_URL must be an anonymous HTTPS URL");
+  if (
+    parsedUrl.protocol !== "https:" ||
+    parsedUrl.username ||
+    parsedUrl.password ||
+    parsedUrl.port ||
+    !isAllowedWorkbookHost(parsedUrl.hostname)
+  ) {
+    throw new Error("The workbook URL must be an anonymous HTTPS URL on an allowed public destination");
   }
 
-  return parsedUrl.href;
+  return parsedUrl;
+}
+
+export function validatePortfolioWorkbookUrl(value: string): string {
+  try {
+    return parsePortfolioWorkbookUrl(value).href;
+  } catch {
+    throw new Error("PORTFOLIO_WORKBOOK_URL must be an anonymous HTTPS URL on an allowed public destination");
+  }
+}
+
+export function resolvePortfolioWorkbookRedirectUrl(location: string, currentUrl: string): string {
+  return parsePortfolioWorkbookUrl(location, currentUrl).href;
 }
 
 export function validatePortfolioWorkbookPayload(bytes: Uint8Array, contentType: string | null): void {

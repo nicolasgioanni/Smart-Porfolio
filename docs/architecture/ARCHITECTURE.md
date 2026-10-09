@@ -110,7 +110,7 @@ Portfolio data is already present in the generated page output. Hydration adds i
 
 ## Generated-content boundary
 
-The generator converts either checked-in templates or one complete workbook download into `src/content/generated/portfolio.generated.json`. Application code imports that file only through `getPortfolioContent()`, which validates the generated shape again before selectors and components consume it.
+The generator converts either checked-in templates or one bounded workbook download into `src/content/generated/portfolio.generated.json`. Its remote source boundary validates each destination before a manually handled redirect, keeps per-attempt time and body budgets, and only passes one completed snapshot to workbook parsing; [Content pipeline](../content/CONTENT_PIPELINE.md#remote-download-boundary) owns those transport details and their DNS-resolution limitation. Application code imports the generated file only through `getPortfolioContent()`, which validates the generated shape again before selectors and components consume it.
 
 Research is a vertically owned feature under `src/features/research/`: its components, content resolvers and selector, loading composition, tests, and styles stay together. `src/app/RouteSkeleton.tsx` composes feature and shared loading states, while app layout supplies the Research no-JavaScript fallback to `SiteShell`; shared components do not import feature modules.
 

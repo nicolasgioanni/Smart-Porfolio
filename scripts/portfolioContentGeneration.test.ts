@@ -12,6 +12,7 @@ import {
   portfolioWorkbookDownloadMaxAttempts,
   portfolioWorkbookDownloadRetryDelayMs,
   portfolioWorkbookDownloadTimeoutMs,
+  portfolioWorkbookMaxRedirects,
   portfolioWorkbookMaxBytes
 } from "./fetchPortfolioContent";
 import {
@@ -85,6 +86,29 @@ function responseFromChunks(chunks: Uint8Array[]): Response {
     }
   });
   return new Response(stream, { status: 200, headers: { "content-type": xlsxContentType } });
+}
+
+function redirectResponse(
+  location: string,
+  options: { onCancel?: () => void; status?: number } = {}
+): Pick<Response, "ok" | "status" | "statusText" | "headers" | "body" | "arrayBuffer"> {
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new Uint8Array([0x72, 0x65, 0x64, 0x69, 0x72, 0x65, 0x63, 0x74]));
+    },
+    cancel() {
+      options.onCancel?.();
+    }
+  });
+
+  return {
+    ok: false,
+    status: options.status ?? 302,
+    statusText: "Found",
+    headers: new Headers({ location }),
+    body: stream as Response["body"],
+    arrayBuffer: async () => new ArrayBuffer(0)
+  };
 }
 
 function textBytes(value: string): Uint8Array {
@@ -374,7 +398,7 @@ describe("strict XLSX download boundary", () => {
     expect(calls).toHaveLength(1);
     expect(calls[0]!.url).toBe(workbookUrl);
     expect(calls[0]!.init.credentials).toBe("omit");
-    expect(calls[0]!.init.redirect).toBe("follow");
+    expect(calls[0]!.init.redirect).toBe("manual");
     expect(calls[0]!.init.signal).toBeInstanceOf(AbortSignal);
     const requestHeaders = new Headers(calls[0]!.init.headers);
     expect(requestHeaders.has("authorization")).toBe(false);
@@ -442,6 +466,140 @@ describe("strict XLSX download boundary", () => {
     }
   });
 
+  it("accepts only anonymous HTTPS workbook destinations with an allowed public host or literal", () => {
+    expect(validatePortfolioWorkbookUrl("https://8.8.8.8/portfolio.xlsx")).toBe("https://8.8.8.8/portfolio.xlsx");
+    expect(validatePortfolioWorkbookUrl("https://192.0.3.1/portfolio.xlsx")).toBe("https://192.0.3.1/portfolio.xlsx");
+    expect(validatePortfolioWorkbookUrl("https://[2606:4700:4700::1111]/portfolio.xlsx")).toBe(
+      "https://[2606:4700:4700::1111]/portfolio.xlsx"
+    );
+    expect(validatePortfolioWorkbookUrl("https://[2001:4860::1]/portfolio.xlsx")).toBe(
+      "https://[2001:4860::1]/portfolio.xlsx"
+    );
+    expect(validatePortfolioWorkbookUrl("https://[2001:200::1]/portfolio.xlsx")).toBe(
+      "https://[2001:200::1]/portfolio.xlsx"
+    );
+    expect(validatePortfolioWorkbookUrl("https://[2001:4860:0000:0000:0000:0000:0000:0001]/portfolio.xlsx")).toBe(
+      "https://[2001:4860::1]/portfolio.xlsx"
+    );
+
+    for (const value of [
+      "https://user:secret@example.test/portfolio.xlsx",
+      "https://localhost/portfolio.xlsx",
+      "https://localhost./portfolio.xlsx",
+      "https://127.0.0.1/portfolio.xlsx",
+      "https://192.168.1.1/portfolio.xlsx",
+      "https://192.0.0.1/portfolio.xlsx",
+      "https://192.0.2.1/portfolio.xlsx",
+      "https://[::1]/portfolio.xlsx",
+      "https://[fe80::1]/portfolio.xlsx",
+      "https://[::ffff:192.168.1.1]/portfolio.xlsx",
+      "https://[2001:2::1]/portfolio.xlsx",
+      "https://[2001:100::1]/portfolio.xlsx",
+      "https://[2001:0001:01ff:0000:0000:0000:0000:0001]/portfolio.xlsx",
+      "https://[2001:db8::1]/portfolio.xlsx",
+      "https://[2002:c0a8:0101::1]/portfolio.xlsx",
+      "https://[3fff::1]/portfolio.xlsx",
+      "https://[3fff:0fff::1]/portfolio.xlsx",
+      "https://example.test:444/portfolio.xlsx"
+    ]) {
+      expect(() => validatePortfolioWorkbookUrl(value)).toThrow(/anonymous HTTPS URL on an allowed public destination/);
+    }
+  });
+
+  it("follows a bounded anonymous Google export redirect chain without forwarding credentials", async () => {
+    const bytes = await createWorkbookBytes();
+    const { outputFile } = await createTemporaryPaths();
+    const calls: Array<{ url: string; init: RequestInit }> = [];
+    let cancelledRedirectBodies = 0;
+    const googleExportUrl = "https://docs.google.com/spreadsheets/d/example/export?format=xlsx";
+    const googleusercontentUrl = "https://content.googleusercontent.com/downloads/portfolio.xlsx";
+
+    await generatePortfolioContent({
+      environment: { PORTFOLIO_WORKBOOK_URL: googleExportUrl, PORTFOLIO_REQUIRE_REMOTE_CONTENT: "true" },
+      fetchImplementation: async (url, init) => {
+        calls.push({ url, init });
+        if (url === googleExportUrl) {
+          return redirectResponse(googleusercontentUrl, { onCancel: () => { cancelledRedirectBodies += 1; } });
+        }
+        return responseFromBytes(bytes, { contentType: xlsxContentType });
+      },
+      outputFile,
+      templatesDirectory,
+      log: () => undefined
+    });
+
+    expect(calls.map((call) => call.url)).toEqual([googleExportUrl, googleusercontentUrl]);
+    expect(calls.every((call) => call.init.redirect === "manual" && call.init.credentials === "omit")).toBe(true);
+    expect(cancelledRedirectBodies).toBe(1);
+  });
+
+  it("rejects invalid, looping, and excessive redirect destinations without exposing their values", async () => {
+    const invalidDestinations = [
+      "not a URL",
+      "http://downloads.example.test/portfolio.xlsx",
+      "https://user:redirect-secret@downloads.example.test/portfolio.xlsx",
+      "https://localhost/portfolio.xlsx",
+      "https://127.0.0.1/portfolio.xlsx",
+      "https://[::1]/portfolio.xlsx"
+    ];
+
+    for (const location of invalidDestinations) {
+      const { outputFile } = await createTemporaryPaths();
+      let cancelled = 0;
+      let errorMessage = "";
+
+      try {
+        await generatePortfolioContent({
+          environment: { PORTFOLIO_WORKBOOK_URL: workbookUrl, PORTFOLIO_REQUIRE_REMOTE_CONTENT: "true" },
+          fetchImplementation: async () => redirectResponse(location, { onCancel: () => { cancelled += 1; } }),
+          outputFile,
+          templatesDirectory,
+          log: () => undefined
+        });
+      } catch (error: unknown) {
+        errorMessage = error instanceof Error ? error.message : String(error);
+      }
+
+      expect(errorMessage).toBe("The workbook download redirected to an invalid destination");
+      expect(errorMessage).not.toContain(location);
+      expect(errorMessage).not.toContain("redirect-secret");
+      expect(cancelled).toBe(1);
+      expect(await fileDoesNotExist(outputFile)).toBe(true);
+    }
+
+    const { outputFile: loopOutputFile } = await createTemporaryPaths();
+    let loopCalls = 0;
+    await expect(
+      generatePortfolioContent({
+        environment: { PORTFOLIO_WORKBOOK_URL: workbookUrl, PORTFOLIO_REQUIRE_REMOTE_CONTENT: "true" },
+        fetchImplementation: async (url) => {
+          loopCalls += 1;
+          return redirectResponse(url === workbookUrl ? "https://docs.google.com/spreadsheets/d/example/export?format=xlsx" : workbookUrl);
+        },
+        outputFile: loopOutputFile,
+        templatesDirectory,
+        log: () => undefined
+      })
+    ).rejects.toThrow(/redirect loop/);
+    expect(loopCalls).toBe(2);
+
+    const { outputFile: limitOutputFile } = await createTemporaryPaths();
+    let limitCalls = 0;
+    await expect(
+      generatePortfolioContent({
+        environment: { PORTFOLIO_WORKBOOK_URL: workbookUrl, PORTFOLIO_REQUIRE_REMOTE_CONTENT: "true" },
+        fetchImplementation: async () => {
+          limitCalls += 1;
+          return redirectResponse(`https://redirect-${limitCalls}.example.test/portfolio.xlsx`);
+        },
+        outputFile: limitOutputFile,
+        templatesDirectory,
+        log: () => undefined
+      })
+    ).rejects.toThrow(/redirect limit/);
+    expect(limitCalls).toBe(portfolioWorkbookMaxRedirects + 1);
+  });
+
   it("fails closed on HTTP errors and never exposes the workbook URL", async () => {
     const { outputFile } = await createTemporaryPaths();
     let errorMessage = "";
@@ -495,6 +653,52 @@ describe("strict XLSX download boundary", () => {
     await rejection;
     expect(receivedSignals).toHaveLength(portfolioWorkbookDownloadMaxAttempts);
     expect(receivedSignals.every((signal) => signal.aborted)).toBe(true);
+    expect(await fileDoesNotExist(outputFile)).toBe(true);
+  });
+
+  it("discards a late response body when a fetch implementation ignores an aborted attempt", async () => {
+    vi.useFakeTimers();
+    const { outputFile } = await createTemporaryPaths();
+    let resolveFirstAttempt: ((response: Response) => void) | undefined;
+    let cancelCount = 0;
+    let fetchCount = 0;
+    const generation = generatePortfolioContent({
+      environment: { PORTFOLIO_WORKBOOK_URL: workbookUrl, PORTFOLIO_REQUIRE_REMOTE_CONTENT: "true" },
+      fetchImplementation: () => {
+        fetchCount += 1;
+        if (fetchCount === 1) {
+          return new Promise<Response>((resolve) => {
+            resolveFirstAttempt = resolve;
+          });
+        }
+        return Promise.reject(new Error("transient network failure"));
+      },
+      outputFile,
+      templatesDirectory,
+      log: () => undefined
+    });
+
+    await vi.advanceTimersByTimeAsync(portfolioWorkbookDownloadTimeoutMs);
+    expect(fetchCount).toBe(1);
+
+    resolveFirstAttempt!(
+      new Response(
+        new ReadableStream<Uint8Array>({
+          cancel() {
+            cancelCount += 1;
+          }
+        }),
+        { status: 200 }
+      )
+    );
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(cancelCount).toBe(1);
+
+    const rejection = expect(generation).rejects.toThrow(/Failed to download the public XLSX workbook/);
+    await vi.advanceTimersByTimeAsync(portfolioWorkbookDownloadRetryDelayMs);
+    await rejection;
+    expect(fetchCount).toBe(2);
     expect(await fileDoesNotExist(outputFile)).toBe(true);
   });
 
@@ -621,6 +825,54 @@ describe("strict XLSX download boundary", () => {
     }
   });
 
+  it("does not await cancellation after a declared or streamed size rejection", async () => {
+    const oversizedChunk = new Uint8Array(portfolioWorkbookMaxBytes + 1);
+    const scenarios = [
+      () => new Response(
+        new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(new Uint8Array([0x50, 0x4b, 0x03, 0x04]));
+          },
+          cancel() {
+            return new Promise<void>(() => undefined);
+          }
+        }),
+        { status: 200, headers: { "content-length": String(portfolioWorkbookMaxBytes + 1) } }
+      ),
+      () => new Response(
+        new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(oversizedChunk);
+          },
+          cancel() {
+            return new Promise<void>(() => undefined);
+          }
+        }),
+        { status: 200 }
+      )
+    ];
+
+    for (const responseFactory of scenarios) {
+      const { outputFile } = await createTemporaryPaths();
+      const result = await Promise.race([
+        generatePortfolioContent({
+          environment: { PORTFOLIO_WORKBOOK_URL: workbookUrl, PORTFOLIO_REQUIRE_REMOTE_CONTENT: "true" },
+          fetchImplementation: async () => responseFactory(),
+          outputFile,
+          templatesDirectory,
+          log: () => undefined
+        }).then(
+          () => "resolved",
+          (error: unknown) => error instanceof Error ? error.message : String(error)
+        ),
+        new Promise<string>((resolve) => setTimeout(() => resolve("pending"), 100))
+      ]);
+
+      expect(result).toMatch(/exceeds the allowed size limit/);
+      expect(await fileDoesNotExist(outputFile)).toBe(true);
+    }
+  });
+
   it("rejects HTML/login/permission bodies, non-ZIP data, invalid XLSX, and an empty workbook", async () => {
     const scenarios: Array<{ bytes: Uint8Array; contentType?: string; error: RegExp }> = [
       {
@@ -650,6 +902,15 @@ describe("strict XLSX download boundary", () => {
 });
 
 describe("XLSX workbook structure and cells", () => {
+  it("rejects a malformed archive before ExcelJS receives workbook bytes", async () => {
+    const bytes = await createWorkbookBytes();
+    const truncatedArchive = bytes.slice(0, -22);
+    const xlsxGetter = vi.spyOn(ExcelJS.Workbook.prototype, "xlsx", "get");
+
+    await expect(parsePortfolioWorkbook(truncatedArchive)).rejects.toThrow(/not a valid XLSX workbook/);
+    expect(xlsxGetter).not.toHaveBeenCalled();
+  });
+
   it("rejects too many resolved archive entries before workbook parsing", async () => {
     const archive = await JSZip.loadAsync(await createWorkbookBytes());
     let entryIndex = 0;
