@@ -40,6 +40,12 @@ describe("package and CI deployment automation", () => {
     expect(nextConfigSource).toMatch(/output:\s*"export"/);
     expect(packageJson.scripts["dev:pages"]).toContain("npx --no-install wrangler");
     expect(packageJson.scripts["docs:check"]).toBe("node scripts/validateDocumentation.mjs");
+    expect(packageJson.scripts["infrastructure:check"]).toBe(
+      "node scripts/terraform/ownershipConfiguration.mjs"
+    );
+    expect(packageJson.scripts["test:infrastructure"]).toBe(
+      "vitest run scripts/terraform/ownershipConfiguration.test.mjs scripts/terraform/safePlanGuard.test.mjs"
+    );
     expect(packageJson.scripts.verify).toBe(
       "npm run docs:check && npm run lint && npm run typecheck && npm run test && npm run build"
     );

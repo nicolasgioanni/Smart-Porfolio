@@ -176,6 +176,26 @@ describe("documentation validation", () => {
     }
   });
 
+  it("includes optional infrastructure documentation in repository link checks", async () => {
+    const root = await createFixture({
+      "README.md": "# Project\n\n[Infrastructure](infra/README.md)\n",
+      "docs/GUIDE.md": "# Guide\n",
+      "infra/README.md": "# Infrastructure\n\n[Adoption](ADOPTION.md)\n",
+      "infra/ADOPTION.md": "# Adoption\n",
+    });
+
+    try {
+      const result = await validateDocumentation({ projectRoot: root });
+      expect(result.errors).toEqual([]);
+      expect(result.checkedFiles).toEqual(expect.arrayContaining([
+        "infra/README.md",
+        "infra/ADOPTION.md",
+      ]));
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
  it("rejects an invalid repository skill identity", async () => {
     const root = await createFixture({
       "README.md": "# Project\n",

@@ -12,3 +12,5 @@ For an endpoint or runtime-control change, read [Security](../../../docs/securit
 For every endpoint, define and test methods, media types, schema, body and time limits, origins, authentication or verification, privacy, abuse controls, errors, headers, and release checks. Keep secrets server-only and retain the existing environment separation.
 
 Preserve the exact-candidate, verified-artifact deployment path and its stale-revision, integrity, binding, migration, and smoke-test checks. Do not imply that GitHub branch protection or provider controls are enabled unless their live configuration has been independently verified.
+
+For Terraform ownership or infrastructure adoption, read [Terraform ownership](../../../docs/infrastructure/TERRAFORM_OWNERSHIP.md) and [adoption](../../../infra/ADOPTION.md). Keep state, resource IDs, provider evidence, saved plans, and approvals outside every Git worktree. Treat checked-in manifests and operator-supplied inventory as policy inputs rather than live proof. Do not add import, apply, or automatic activation behavior without separately authorized authenticated provider and state verification.

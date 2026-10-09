@@ -59,6 +59,7 @@ Deep dives:
 - [Architecture](docs/architecture/ARCHITECTURE.md)
 - [Content pipeline](docs/content/CONTENT_PIPELINE.md)
 - [Deployment](docs/operations/DEPLOYMENT.md)
+- [Terraform ownership](docs/infrastructure/TERRAFORM_OWNERSHIP.md)
 - [Search indexing](docs/operations/SEARCH_INDEXING.md)
 - [Contact system](docs/security/CONTACT_SYSTEM.md)
 

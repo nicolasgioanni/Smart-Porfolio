@@ -61,7 +61,7 @@ Run:
 npm run docs:check
 ```
 
-`scripts/validateDocumentation.mjs` reads `README.md`, every Markdown file under `docs/`, the optional root `AGENTS.md`, and every Markdown file under `.agents/`. It checks:
+`scripts/validateDocumentation.mjs` reads `README.md`, every Markdown file under `docs/`, the optional root `AGENTS.md`, and every Markdown file under `.agents/` and `infra/`. It checks:
 
 - Exactly one H1 per document.
 - Balanced fenced code blocks.
@@ -75,6 +75,10 @@ npm run docs:check
 - Rejection of prose that presents generated output directories as committed source.
 
 The validator uses only Node.js standard-library APIs and does not check external-link availability. Its fixture tests live in `scripts/validateDocumentation.test.mjs`.
+
+## Proposed Terraform ownership coverage
+
+`npm run infrastructure:check` verifies the four root layout, source-only isolation, exact provider pins and locks, the permanent-branch ruleset scope, no bypass actor, and `prevent_destroy`. `npm run test:infrastructure` exercises the offline saved-plan guard with complete no-op input and destructive, replacement, import, unknown, cross-root, wrong-environment, stale-binding, malformed-input, and command-override failures. These offline checks do not authenticate a provider, read live state, detect drift, import resources, or authorize apply. See [Terraform ownership](../infrastructure/TERRAFORM_OWNERSHIP.md).
 
 ## Content pipeline coverage
 
