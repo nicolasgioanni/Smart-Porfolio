@@ -1,0 +1,168 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Private Terraform runtime inventory contract",
+  "description": "Operator-supplied policy input stored outside every Git worktree. Its values are not proof of authenticated provider or state identity; future activation must independently derive and refresh that evidence.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "collectedAt", "evidence", "roots"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "collectedAt": { "$ref": "#/$defs/utcTimestamp" },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "refreshedAt"],
+      "properties": {
+        "source": { "const": "operator-supplied policy input; authenticated provider APIs and state must be checked separately" },
+        "refreshedAt": { "$ref": "#/$defs/utcTimestamp" }
+      }
+    },
+    "roots": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "oneOf": [
+          { "$ref": "#/$defs/sharedRoot" },
+          { "$ref": "#/$defs/previewRoot" },
+          { "$ref": "#/$defs/productionRoot" },
+          { "$ref": "#/$defs/githubRoot" }
+        ]
+      }
+    }
+  },
+  "$defs": {
+    "utcTimestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?Z$"
+    },
+    "workspace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "organization", "project", "executionMode"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "organization": { "type": "string", "minLength": 1 },
+        "project": { "type": "string", "minLength": 1 },
+        "executionMode": { "const": "local" }
+      }
+    },
+    "state": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["versionId", "lineage", "serial", "sha256"],
+      "properties": {
+        "versionId": { "type": "string", "minLength": 1 },
+        "lineage": { "type": "string", "minLength": 1 },
+        "serial": { "type": "integer", "minimum": 0 },
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    },
+    "cloudflareProvider": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cloudflare"],
+      "properties": {
+        "cloudflare": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["accountId"],
+          "properties": { "accountId": { "type": "string", "minLength": 1 } }
+        }
+      }
+    },
+    "githubProvider": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["github"],
+      "properties": {
+        "github": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["ownerId", "ownerLogin", "repositoryId", "repository"],
+          "properties": {
+            "ownerId": { "type": "string", "minLength": 1 },
+            "ownerLogin": { "type": "string", "minLength": 1 },
+            "repositoryId": { "type": "string", "minLength": 1 },
+            "repository": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+    "cloudflareResource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["address", "resourceId", "accountId", "environment"],
+      "properties": {
+        "address": { "const": "cloudflare_d1_database.contact_rate_limit" },
+        "resourceId": { "type": "string", "minLength": 1 },
+        "accountId": { "type": "string", "minLength": 1 },
+        "environment": { "enum": ["preview", "production"] }
+      }
+    },
+    "githubResource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["address", "resourceId", "rulesetId", "ownerId", "repositoryId", "repository", "environment"],
+      "properties": {
+        "address": { "const": "github_repository_ruleset.permanent_branches" },
+        "resourceId": { "type": "string", "minLength": 1 },
+        "rulesetId": { "anyOf": [{ "type": "string", "pattern": "^\\d+$" }, { "type": "integer", "minimum": 0 }] },
+        "ownerId": { "type": "string", "minLength": 1 },
+        "repositoryId": { "type": "string", "minLength": 1 },
+        "repository": { "type": "string", "minLength": 1 },
+        "environment": { "const": "github-governance" }
+      }
+    },
+    "sharedRoot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "workspace", "state", "providers", "resources"],
+      "properties": {
+        "name": { "const": "shared" },
+        "workspace": { "$ref": "#/$defs/workspace" },
+        "state": { "$ref": "#/$defs/state" },
+        "providers": { "$ref": "#/$defs/cloudflareProvider" },
+        "resources": { "type": "array", "maxItems": 0 }
+      }
+    },
+    "previewRoot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "workspace", "state", "providers", "resources"],
+      "properties": {
+        "name": { "const": "preview" },
+        "workspace": { "$ref": "#/$defs/workspace" },
+        "state": { "$ref": "#/$defs/state" },
+        "providers": { "$ref": "#/$defs/cloudflareProvider" },
+        "resources": { "type": "array", "minItems": 1, "maxItems": 1, "items": { "allOf": [{ "$ref": "#/$defs/cloudflareResource" }, { "properties": { "environment": { "const": "preview" } } }] } }
+      }
+    },
+    "productionRoot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "workspace", "state", "providers", "resources"],
+      "properties": {
+        "name": { "const": "production" },
+        "workspace": { "$ref": "#/$defs/workspace" },
+        "state": { "$ref": "#/$defs/state" },
+        "providers": { "$ref": "#/$defs/cloudflareProvider" },
+        "resources": { "type": "array", "minItems": 1, "maxItems": 1, "items": { "allOf": [{ "$ref": "#/$defs/cloudflareResource" }, { "properties": { "environment": { "const": "production" } } }] } }
+      }
+    },
+    "githubRoot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "workspace", "state", "providers", "resources"],
+      "properties": {
+        "name": { "const": "github-governance" },
+        "workspace": { "$ref": "#/$defs/workspace" },
+        "state": { "$ref": "#/$defs/state" },
+        "providers": { "$ref": "#/$defs/githubProvider" },
+        "resources": { "type": "array", "minItems": 1, "maxItems": 1, "items": { "$ref": "#/$defs/githubResource" } }
+      }
+    }
+  }
+}

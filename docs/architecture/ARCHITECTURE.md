@@ -178,6 +178,10 @@ The repository-enforced address quota does not authenticate mailbox ownership an
 
 The deployment design makes GitHub Actions the sole deployment owner. Operators must keep Cloudflare Pages Git integration disabled. The workflow sends Direct Upload only an artifact that passed the repository gate.
 
+### Proposed Terraform ownership boundary
+
+The repository also contains a proposed Terraform ownership layout, but it is not an active deployment or infrastructure control plane. It has four isolated roots for shared scope, preview D1, production D1, and GitHub governance; it does not configure a backend, import a resource, apply a plan, or run automatically. The release workflow remains the owner of D1 migrations and Pages deployment. The [Terraform ownership guide](../infrastructure/TERRAFORM_OWNERSHIP.md) distinguishes checked-in policy from authenticated live account, workspace, and state evidence.
+
 A deployable candidate follows this sequence:
 
 1. Resolve the exact candidate commit and target branch.
@@ -255,6 +259,7 @@ The two-step ticket flow avoids sending a consumed Turnstile token twice and kee
 | Function routing and static headers | `public/_routes.json` and `public/_headers` |
 | Cloudflare project configuration | `wrangler.jsonc` |
 | Candidate and deployment behavior | `.github/workflows/ci.yml` |
+| Proposed Terraform ownership and offline review guard | `infra/ownership-manifest.json` and `scripts/terraform/` |
 | Artifact and manifest behavior | `scripts/artifactIntegrity.mjs`, `writeContentVersion.mjs`, and `checkDeployedContent.mjs` |
 | License | `LICENSE` |
 

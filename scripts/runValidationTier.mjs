@@ -20,6 +20,8 @@ export const priorityTestDirectories = [
 
 export const priorityTestTargets = [
   "scripts/validateDocumentation.test.mjs",
+  "scripts/terraform/ownershipConfiguration.test.mjs",
+  "scripts/terraform/safePlanGuard.test.mjs",
   "scripts/contactTransport.integration.test.ts",
   "scripts/updateContactTlds.test.mjs",
   "scripts/packageScripts.test.mjs",

@@ -1,0 +1,73 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Private Terraform saved-plan approval contract",
+  "description": "Approval record stored outside every Git worktree that binds a reviewed offline plan. It never authorizes apply and does not prove live identity.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "root", "sourceCommit", "configSha256", "lockSha256", "inventorySha256", "savedPlanSha256", "planJsonSha256", "terraform", "providers", "workspace"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "root": { "enum": ["shared", "preview", "production", "github-governance"] },
+    "sourceCommit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "configSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "lockSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "inventorySha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "savedPlanSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "planJsonSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "terraform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "binarySha256"],
+      "properties": {
+        "version": { "const": "1.16.5" },
+        "binarySha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    },
+    "providers": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+      "minProperties": 1,
+      "maxProperties": 1
+    },
+    "workspace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "stateVersionId", "lineage", "serial"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "stateVersionId": { "type": "string", "minLength": 1 },
+        "lineage": { "type": "string", "minLength": 1 },
+        "serial": { "type": "integer", "minimum": 0 }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "root": { "enum": ["shared", "preview", "production"] } }, "required": ["root"] },
+      "then": {
+        "properties": {
+          "providers": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["registry.terraform.io/cloudflare/cloudflare"],
+            "properties": { "registry.terraform.io/cloudflare/cloudflare": { "const": "5.27.0" } }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "root": { "const": "github-governance" } }, "required": ["root"] },
+      "then": {
+        "properties": {
+          "providers": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["registry.terraform.io/integrations/github"],
+            "properties": { "registry.terraform.io/integrations/github": { "const": "6.13.0" } }
+          }
+        }
+      }
+    }
+  ]
+}

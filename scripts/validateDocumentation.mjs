@@ -381,6 +381,7 @@ export async function validateDocumentation({
   const readmePath = path.join(resolvedProjectRoot, "README.md");
   const agentGuidancePath = path.join(resolvedProjectRoot, "AGENTS.md");
   const agentDirectory = path.join(resolvedProjectRoot, ".agents");
+  const infrastructureDirectory = path.join(resolvedProjectRoot, "infra");
   const docsStats = await stat(docsDirectory);
   if (!docsStats.isDirectory()) throw new Error("docs must be a directory");
 
@@ -390,6 +391,7 @@ export async function validateDocumentation({
     ...(await listMarkdownFiles(docsDirectory)),
     ...(optionalAgentGuidancePath ? [optionalAgentGuidancePath] : []),
     ...(await listOptionalMarkdownFiles(agentDirectory)),
+    ...(await listOptionalMarkdownFiles(infrastructureDirectory)),
   ];
   const documents = await Promise.all(
     markdownFiles.map(async (filePath) => ({

@@ -18,6 +18,7 @@ This documentation explains how Smart Portfolio is authored, built, tested, depl
 | Agent or automated contributor | [Agent workflow](development/AGENT_WORKFLOW.md) | [Local development](development/LOCAL_DEVELOPMENT.md), the selected repository skill, and [testing](quality/TESTING.md) |
 | Design contributor | [Design system](design/DESIGN_SYSTEM.md) | [Accessibility](design/ACCESSIBILITY.md), [animation guidelines](design/ANIMATION_GUIDELINES.md), and [skeleton loading guidelines](design/SKELETON_LOADING_GUIDELINES.md) |
 | Deployment operator restoring this service or adapting a fork | [Deployment](operations/DEPLOYMENT.md) | [Operations](operations/OPERATIONS.md), [testing](quality/TESTING.md), and [troubleshooting](development/TROUBLESHOOTING.md) |
+| Infrastructure reviewer planning a future ownership adoption | [Terraform ownership](infrastructure/TERRAFORM_OWNERSHIP.md) | [Terraform adoption](../infra/ADOPTION.md), [deployment](operations/DEPLOYMENT.md), and [security](security/SECURITY.md) |
 | Security reviewer | [Security](security/SECURITY.md) | [Contact system](security/CONTACT_SYSTEM.md), [architecture](architecture/ARCHITECTURE.md), and [security checklist](security/SECURITY_CHECKLIST.md) |
 
 ## Dependency and setup contract
@@ -78,6 +79,7 @@ This is an npm repository: `package.json`, `package-lock.json`, and `.nvmrc` are
 | [Deployment](operations/DEPLOYMENT.md) | GitHub and Cloudflare setup, environment separation, release governance, and first deployment. |
 | [Operations](operations/OPERATIONS.md) | Event behavior, candidate selection, exact-artifact deployment, manifests, smoke tests, retries, and rollback considerations. |
 | [Troubleshooting](development/TROUBLESHOOTING.md) | Symptoms, likely causes, diagnostics, safe corrections, and actions to avoid. |
+| [Terraform ownership](infrastructure/TERRAFORM_OWNERSHIP.md) | Proposed independent ownership roots, evidence boundaries, offline saved-plan guard, and no-activation procedure. |
 
 ## Security and data handling
 

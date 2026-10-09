@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "description": "Logical Terraform ownership only. Resource identifiers, HCP Terraform workspace identifiers, state snapshots, and authenticated evidence stay outside every Git worktree in private operator records.",
+  "roots": [
+    {
+      "name": "shared",
+      "directory": "infra/roots/shared",
+      "environment": "shared",
+      "providers": ["registry.terraform.io/cloudflare/cloudflare"],
+      "resourceAddresses": [],
+      "status": "reserved_without_managed_resources"
+    },
+    {
+      "name": "preview",
+      "directory": "infra/roots/preview",
+      "environment": "preview",
+      "providers": ["registry.terraform.io/cloudflare/cloudflare"],
+      "resourceAddresses": ["cloudflare_d1_database.contact_rate_limit"],
+      "status": "adoption_requires_reviewed_exact_id"
+    },
+    {
+      "name": "production",
+      "directory": "infra/roots/production",
+      "environment": "production",
+      "providers": ["registry.terraform.io/cloudflare/cloudflare"],
+      "resourceAddresses": ["cloudflare_d1_database.contact_rate_limit"],
+      "status": "adoption_requires_reviewed_exact_id"
+    },
+    {
+      "name": "github-governance",
+      "directory": "infra/roots/github-governance",
+      "environment": "github-governance",
+      "providers": ["registry.terraform.io/integrations/github"],
+      "resourceAddresses": ["github_repository_ruleset.permanent_branches"],
+      "status": "adoption_requires_reviewed_exact_id"
+    }
+  ],
+  "resources": [
+    {
+      "root": "preview",
+      "address": "cloudflare_d1_database.contact_rate_limit",
+      "environment": "preview",
+      "provider": "registry.terraform.io/cloudflare/cloudflare",
+      "expectedName": "smart-portfolio-contact-rate-limit-preview",
+      "adoption": "reviewed_exact_id_required",
+      "migrations": "release_workflow_owned"
+    },
+    {
+      "root": "production",
+      "address": "cloudflare_d1_database.contact_rate_limit",
+      "environment": "production",
+      "provider": "registry.terraform.io/cloudflare/cloudflare",
+      "expectedName": "smart-portfolio-contact-rate-limit-production",
+      "adoption": "reviewed_exact_id_required",
+      "migrations": "release_workflow_owned"
+    },
+    {
+      "root": "github-governance",
+      "address": "github_repository_ruleset.permanent_branches",
+      "environment": "github-governance",
+      "provider": "registry.terraform.io/integrations/github",
+      "expectedName": "protect-permanent-branches",
+      "adoption": "reviewed_exact_id_required",
+      "rules": ["deletion", "non_fast_forward"],
+      "targetRefs": ["refs/heads/main", "refs/heads/develop"]
+    }
+  ]
+}

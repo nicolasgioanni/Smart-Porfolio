@@ -2,6 +2,8 @@
 
 Smart Portfolio is deployed to Cloudflare Pages by GitHub Actions. The repository produces a Next.js static export and supplies two Cloudflare Pages Functions at `/api/contact/verify` and `/api/contact`.
 
+Terraform ownership configuration is proposed separately and has no apply or import path in this deployment workflow. It does not replace this workflow's ownership of Pages deployment or D1 migrations. See [Terraform ownership](../infrastructure/TERRAFORM_OWNERSHIP.md) before considering any separately authorized adoption.
+
 This guide defines the deployment architecture and initial configuration. Use [Operations](OPERATIONS.md) for recurring releases, monitoring, rollback, and incident response. Use [Troubleshooting](../development/TROUBLESHOOTING.md) when a local or hosted check fails.
 
 ## Current deployment targets

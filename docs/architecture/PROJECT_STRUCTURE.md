@@ -30,6 +30,10 @@ Smart-Porfolio/
 |   `-- api/
 |       |-- contact.ts
 |       `-- contact/verify.ts
+|-- infra/
+|   |-- ownership-manifest.json
+|   |-- roots/
+|   `-- schemas/
 |-- migrations/
 |   |-- 0001_contact_rate_reservations.sql
 |   `-- 0002_contact_payload_fingerprint.sql
@@ -74,6 +78,7 @@ Smart-Porfolio/
 | `.agents/skills/portfolio-skeleton-regression/` | Repository-scoped guidance for deterministic skeleton alignment, visual, and transition regression work. |
 | `docs/` | Guides, references, checklists, and README assets. |
 | `functions/` | Cloudflare Pages Functions for contact verification and delivery. `functions/_shared/contact.ts` is the stable public facade; focused modules under `functions/_shared/contact/` own configuration, request parsing, provider verification, domain checks, D1 reservations, signed tickets, and delivery. These are not Next.js route handlers. |
+| `infra/` | Proposed Terraform ownership roots, logical ownership policy, public schemas, and adoption guidance. It holds no state, resource IDs, credentials, private evidence, plans, or activation backend. |
 | `migrations/` | Append-only Cloudflare D1 schema changes applied before the corresponding Pages deployment. |
 | `public/` | Public images, favicons, Pages security headers, and the exact Function route allowlist copied into the static export. |
 | `scripts/` | Content ingestion, local automation, deployment manifests, artifact integrity, deployment smoke checks, and script-level tests. |

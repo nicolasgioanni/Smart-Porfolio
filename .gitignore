@@ -14,3 +14,9 @@ test-results
 *.tsbuildinfo
 .DS_Store
 .local
+infra/**/.terraform/
+infra/**/*.tfstate
+infra/**/*.tfstate.*
+infra/**/*.tfplan
+infra/**/*.tfvars
+infra/**/*.tfvars.json
