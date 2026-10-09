@@ -1,0 +1,587 @@
+name: Reusable security scans
+
+on:
+  workflow_call:
+    inputs:
+      candidate_ref:
+        description: Immutable revision or reviewed branch to scan
+        required: true
+        type: string
+      event_name:
+        description: Calling event name, used only for the dependency-review eligibility boundary
+        required: true
+        type: string
+      is_fork:
+        description: Whether the candidate is a pull request from a fork
+        required: true
+        type: boolean
+    outputs:
+      aggregate_status:
+        description: Count-only aggregate result
+        value: ${{ jobs.security_aggregate.outputs.status }}
+
+permissions:
+  contents: read
+
+jobs:
+  resolve_candidate:
+    name: resolve-security-scan-candidate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      sha: ${{ steps.candidate.outputs.sha }}
+    steps:
+      - name: Check out the requested candidate once
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ inputs.candidate_ref }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Record the immutable scan revision
+        id: candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  preflight:
+    name: security-scan-preflight
+    needs: resolve_candidate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out the immutable scan candidate
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ needs.resolve_candidate.outputs.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Reject unreviewed scanner bypass configuration
+        shell: bash
+        run: node scripts/securityScanSummary.mjs validate-suppressions .github/security-scan-suppressions.json .
+
+  npm_audits:
+    name: npm-audits
+    needs: [resolve_candidate, preflight]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      full_summary: ${{ steps.full.outputs.summary }}
+      production_summary: ${{ steps.production.outputs.summary }}
+    steps:
+      - name: Check out the immutable scan candidate
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ needs.resolve_candidate.outputs.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up the pinned audit runtime without dependency installation
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: 22.23.3
+
+      - name: Prepare an isolated trusted lockfile audit input
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$(npm --version)" == "10.9.9" ]]
+          audit_dir="$RUNNER_TEMP/npm-audit-input"
+          mkdir -p "$audit_dir" "$RUNNER_TEMP/npm-audit-home" "$RUNNER_TEMP/security-scan-summaries"
+          cp package.json package-lock.json "$audit_dir/"
+          printf '%s\n' 'registry=https://registry.npmjs.org/' 'ignore-scripts=true' 'fund=false' > "$RUNNER_TEMP/npm-audit.npmrc"
+          : > "$RUNNER_TEMP/npm-audit-global.npmrc"
+
+      - name: Audit the copied lockfile including development dependencies
+        id: full
+        shell: bash
+        run: |
+          set -euo pipefail
+          report_dir="$(mktemp -d "$RUNNER_TEMP/security-scans.XXXXXX")"
+          set +e
+          (
+            cd "$RUNNER_TEMP/npm-audit-input"
+            HOME="$RUNNER_TEMP/npm-audit-home" NPM_CONFIG_USERCONFIG="$RUNNER_TEMP/npm-audit.npmrc" NPM_CONFIG_GLOBALCONFIG="$RUNNER_TEMP/npm-audit-global.npmrc" NPM_CONFIG_IGNORE_SCRIPTS=true NPM_CONFIG_REGISTRY=https://registry.npmjs.org/ npm audit --package-lock-only --ignore-scripts --json
+          ) > "$report_dir/npm-audit-full.json" 2> "$report_dir/npm-audit-full.stderr"
+          audit_status=$?
+          set -e
+          node scripts/securityScanSummary.mjs summarize npm-audit-full npm 10.9.9 "$audit_status" "$report_dir/npm-audit-full.json" "$GITHUB_OUTPUT" - "$RUNNER_TEMP/security-scan-summaries/npm-audit-full.json"
+
+      - name: Audit the copied production lockfile even when the full audit found issues
+        id: production
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          report_dir="$(mktemp -d "$RUNNER_TEMP/security-scans.XXXXXX")"
+          set +e
+          (
+            cd "$RUNNER_TEMP/npm-audit-input"
+            HOME="$RUNNER_TEMP/npm-audit-home" NPM_CONFIG_USERCONFIG="$RUNNER_TEMP/npm-audit.npmrc" NPM_CONFIG_GLOBALCONFIG="$RUNNER_TEMP/npm-audit-global.npmrc" NPM_CONFIG_IGNORE_SCRIPTS=true NPM_CONFIG_REGISTRY=https://registry.npmjs.org/ npm audit --package-lock-only --omit=dev --ignore-scripts --json
+          ) > "$report_dir/npm-audit-production.json" 2> "$report_dir/npm-audit-production.stderr"
+          audit_status=$?
+          set -e
+          node scripts/securityScanSummary.mjs summarize npm-audit-production npm 10.9.9 "$audit_status" "$report_dir/npm-audit-production.json" "$GITHUB_OUTPUT" - "$RUNNER_TEMP/security-scan-summaries/npm-audit-production.json"
+
+      - name: Fail npm audits after both sanitized summaries are recorded
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          status=0
+          node scripts/securityScanSummary.mjs enforce-summary "$RUNNER_TEMP/security-scan-summaries/npm-audit-full.json" || status=1
+          node scripts/securityScanSummary.mjs enforce-summary "$RUNNER_TEMP/security-scan-summaries/npm-audit-production.json" || status=1
+          exit "$status"
+
+  dependency_review:
+    name: dependency-review
+    needs: [resolve_candidate, preflight]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      summary: ${{ steps.summary.outputs.summary }}
+    steps:
+      - name: Check out the scan candidate
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ needs.resolve_candidate.outputs.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Review dependency changes on pull requests
+        id: review
+        if: inputs.event_name == 'pull_request'
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: low
+          comment-summary-in-pr: never
+
+      - name: Record the dependency-review outcome without publishing findings
+        id: summary
+        if: ${{ always() }}
+        shell: bash
+        env:
+          DEPENDENCY_REVIEW_EVENT: ${{ inputs.event_name }}
+          DEPENDENCY_REVIEW_OUTCOME: ${{ steps.review.outcome }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/security-scan-summaries"
+          if [[ "$DEPENDENCY_REVIEW_EVENT" != "pull_request" ]]; then
+            node scripts/securityScanSummary.mjs manual dependency-review dependency-review-action 5.0.0 0 0 not-applicable not-a-pull-request "$GITHUB_OUTPUT" "$RUNNER_TEMP/security-scan-summaries/dependency-review.json"
+          elif [[ "$DEPENDENCY_REVIEW_OUTCOME" == "success" ]]; then
+            node scripts/securityScanSummary.mjs manual dependency-review dependency-review-action 5.0.0 1 0 clean - "$GITHUB_OUTPUT" "$RUNNER_TEMP/security-scan-summaries/dependency-review.json"
+          else
+            node scripts/securityScanSummary.mjs manual dependency-review dependency-review-action 5.0.0 1 0 error - "$GITHUB_OUTPUT" "$RUNNER_TEMP/security-scan-summaries/dependency-review.json"
+          fi
+
+      - name: Fail the dependency-review lane after its sanitized summary
+        if: ${{ always() }}
+        run: node scripts/securityScanSummary.mjs enforce-summary "$RUNNER_TEMP/security-scan-summaries/dependency-review.json"
+
+  gitleaks:
+    name: gitleaks
+    needs: [resolve_candidate, preflight]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      summary: ${{ steps.summary.outputs.summary }}
+    steps:
+      - name: Check out the full candidate history
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ needs.resolve_candidate.outputs.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install the verified Gitleaks binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          tool_dir="$RUNNER_TEMP/security-tools"
+          archive="$tool_dir/gitleaks_8.30.1_linux_x64.tar.gz"
+          mkdir -p "$tool_dir"
+          curl --fail --location --proto '=https' --tlsv1.2 --silent --show-error https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz --output "$archive"
+          printf '%s  %s\n' 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb "$archive" | sha256sum --check --status
+          tar --extract --gzip --file "$archive" --directory "$tool_dir" gitleaks
+          printf '%s\n' '[extend]' 'useDefault = true' > "$tool_dir/gitleaks.toml"
+          : > "$tool_dir/gitleaks.ignore"
+          [[ "$("$tool_dir/gitleaks" version)" == "8.30.1" ]]
+
+      - name: Scan every HEAD ancestor commit without printing findings
+        id: summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          report_dir="$(mktemp -d "$RUNNER_TEMP/security-scans.XXXXXX")"
+          mkdir -p "$RUNNER_TEMP/security-scan-summaries"
+          set +e
+          "$RUNNER_TEMP/security-tools/gitleaks" detect --source . --log-opts=HEAD --config "$RUNNER_TEMP/security-tools/gitleaks.toml" --gitleaks-ignore-path "$RUNNER_TEMP/security-tools/gitleaks.ignore" --ignore-gitleaks-allow --redact=100 --report-format json --report-path "$report_dir/gitleaks.json" --exit-code 0 > "$report_dir/gitleaks.stdout" 2> "$report_dir/gitleaks.stderr"
+          scan_status=$?
+          set -e
+          node scripts/securityScanSummary.mjs summarize gitleaks gitleaks 8.30.1 "$scan_status" "$report_dir/gitleaks.json" "$GITHUB_OUTPUT" - "$RUNNER_TEMP/security-scan-summaries/gitleaks.json"
+
+      - name: Fail the Gitleaks lane after its sanitized summary
+        if: ${{ always() }}
+        run: node scripts/securityScanSummary.mjs enforce-summary "$RUNNER_TEMP/security-scan-summaries/gitleaks.json"
+
+  codeql:
+    name: codeql
+    needs: [resolve_candidate, preflight]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+    outputs:
+      summary: ${{ steps.summary.outputs.summary }}
+    steps:
+      - name: Check out the scan candidate
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ needs.resolve_candidate.outputs.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Initialize exact CodeQL analysis
+        uses: github/codeql-action/init@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+        with:
+          languages: javascript-typescript
+          build-mode: none
+          tools: 2.27.1
+          config: |
+            query-filters:
+              - exclude:
+                  id: js/alert-suppression
+
+      - name: Analyze without automatic upload
+        id: analyze
+        uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+        with:
+          category: /language:javascript-typescript
+          output: ${{ runner.temp }}/security-scans/codeql
+          upload: never
+
+      - name: Normalize the local SARIF result before any eligible upload
+        id: summary
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          report_dir="$(mktemp -d "$RUNNER_TEMP/security-scans.XXXXXX")"
+          mkdir -p "$RUNNER_TEMP/security-scan-summaries"
+          mapfile -t report_paths < <(find "$RUNNER_TEMP/security-scans/codeql" -type f -name '*.sarif' -print 2>/dev/null || true)
+          if [[ "${{ steps.analyze.outcome }}" == "success" && "${#report_paths[@]}" -eq 1 ]]; then
+            cp -- "${report_paths[0]}" "$report_dir/codeql.sarif"
+            scan_status=0
+          else
+            : > "$report_dir/codeql.sarif"
+            scan_status=1
+          fi
+          node scripts/securityScanSummary.mjs summarize codeql codeql 2.27.1 "$scan_status" "$report_dir/codeql.sarif" "$GITHUB_OUTPUT" - "$RUNNER_TEMP/security-scan-summaries/codeql.json"
+
+      - name: Upload validated SARIF only for trusted clean candidates
+        if: ${{ always() && inputs.is_fork == false && (inputs.event_name == 'push' || inputs.event_name == 'schedule' || inputs.event_name == 'workflow_dispatch') && contains(steps.summary.outputs.summary, '"status":"clean"') }}
+        uses: github/codeql-action/upload-sarif@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+        with:
+          sarif_file: ${{ runner.temp }}/security-scans/codeql
+          category: /language:javascript-typescript
+
+      - name: Fail the CodeQL lane after its sanitized summary
+        if: ${{ always() }}
+        run: node scripts/securityScanSummary.mjs enforce-summary "$RUNNER_TEMP/security-scan-summaries/codeql.json"
+
+  actionlint:
+    name: actionlint
+    needs: [resolve_candidate, preflight]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      summary: ${{ steps.summary.outputs.summary }}
+    steps:
+      - name: Check out the immutable scan candidate
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ needs.resolve_candidate.outputs.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Install the verified actionlint binary and trusted configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          tool_dir="$RUNNER_TEMP/security-tools"
+          archive="$tool_dir/actionlint_1.7.12_linux_amd64.tar.gz"
+          mkdir -p "$tool_dir"
+          curl --fail --location --proto '=https' --tlsv1.2 --silent --show-error https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz --output "$archive"
+          printf '%s  %s\n' 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8 "$archive" | sha256sum --check --status
+          tar --extract --gzip --file "$archive" --directory "$tool_dir" actionlint
+          printf '%s\n' '{}' > "$tool_dir/actionlint.yaml"
+          actionlint_banner="$("$tool_dir/actionlint" -version)"
+          actionlint_version="${actionlint_banner%%$'\n'*}"
+          [[ "$actionlint_version" == "1.7.12" ]]
+
+      - name: Lint every tracked GitHub workflow syntax file
+        id: summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          report_dir="$(mktemp -d "$RUNNER_TEMP/security-scans.XXXXXX")"
+          mkdir -p "$RUNNER_TEMP/security-scan-summaries"
+          workflow_list="$report_dir/actionlint-targets.zlist"
+          if ! git ls-files -z -- '.github/workflows/*.yml' '.github/workflows/*.yaml' > "$workflow_list"; then
+            : > "$report_dir/actionlint.json"
+            scan_status=2
+            workflow_files=()
+          else
+            mapfile -d '' -t workflow_files < "$workflow_list"
+            lint_root="$RUNNER_TEMP/actionlint-targets"
+            actionlint_targets=()
+            for workflow_file in "${workflow_files[@]}"; do
+              lint_target="$lint_root/$workflow_file"
+              mkdir -p "$(dirname "$lint_target")"
+              # actionlint 1.7.12 predates GitHub's $/ self-repository syntax. The
+              # compatibility copy changes only that path prefix for syntax parsing.
+              sed -E 's#^([[:space:]]*uses:[[:space:]]*)\$/#\1./#' "$workflow_file" > "$lint_target"
+              actionlint_targets+=("$lint_target")
+            done
+            if (( ${#actionlint_targets[@]} == 0 )); then
+              : > "$report_dir/actionlint.json"
+              scan_status=1
+            else
+              set +e
+              "$RUNNER_TEMP/security-tools/actionlint" -config-file "$RUNNER_TEMP/security-tools/actionlint.yaml" -shellcheck '' -pyflakes '' -format '{{json .}}' "${actionlint_targets[@]}" > "$report_dir/actionlint.json" 2> "$report_dir/actionlint.stderr"
+              scan_status=$?
+              set -e
+            fi
+          fi
+          node scripts/securityScanSummary.mjs summarize actionlint actionlint 1.7.12 "$scan_status" "$report_dir/actionlint.json" "$GITHUB_OUTPUT" "${#workflow_files[@]}" "$RUNNER_TEMP/security-scan-summaries/actionlint.json"
+
+      - name: Fail the actionlint lane after its sanitized summary
+        if: ${{ always() }}
+        run: node scripts/securityScanSummary.mjs enforce-summary "$RUNNER_TEMP/security-scan-summaries/actionlint.json"
+
+  zizmor:
+    name: zizmor
+    needs: [resolve_candidate, preflight]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      summary: ${{ steps.summary.outputs.summary }}
+    steps:
+      - name: Check out the immutable scan candidate
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ needs.resolve_candidate.outputs.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Install the verified zizmor binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          tool_dir="$RUNNER_TEMP/security-tools"
+          archive="$tool_dir/zizmor-x86_64-unknown-linux-gnu.tar.gz"
+          mkdir -p "$tool_dir"
+          curl --fail --location --proto '=https' --tlsv1.2 --silent --show-error https://github.com/zizmorcore/zizmor/releases/download/v1.30.1/zizmor-x86_64-unknown-linux-gnu.tar.gz --output "$archive"
+          printf '%s  %s\n' e65324f4430c2717591937edcec90ccbefaf14c174f8ec9415e03ca875b46e1a "$archive" | sha256sum --check --status
+          tar --extract --gzip --file "$archive" --directory "$tool_dir" zizmor
+          [[ "$("$tool_dir/zizmor" --version | awk '{print $2}')" == "1.30.1" ]]
+
+      - name: Audit every tracked workflow and composite action
+        id: summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          report_dir="$(mktemp -d "$RUNNER_TEMP/security-scans.XXXXXX")"
+          mkdir -p "$RUNNER_TEMP/security-scan-summaries"
+          target_list="$report_dir/zizmor-targets.zlist"
+          if ! git ls-files -z -- '.github/workflows/*.yml' '.github/workflows/*.yaml' 'action.yml' 'action.yaml' '*/action.yml' '*/action.yaml' > "$target_list"; then
+            : > "$report_dir/zizmor.json"
+            scan_status=2
+            zizmor_targets=()
+          else
+            mapfile -d '' -t zizmor_targets < "$target_list"
+            if (( ${#zizmor_targets[@]} == 0 )); then
+              : > "$report_dir/zizmor.json"
+              scan_status=1
+            else
+              set +e
+              "$RUNNER_TEMP/security-tools/zizmor" --no-config --no-ignores --strict-collection --no-exit-codes --format json "${zizmor_targets[@]}" > "$report_dir/zizmor.json" 2> "$report_dir/zizmor.stderr"
+              scan_status=$?
+              set -e
+            fi
+          fi
+          node scripts/securityScanSummary.mjs summarize zizmor zizmor 1.30.1 "$scan_status" "$report_dir/zizmor.json" "$GITHUB_OUTPUT" "${#zizmor_targets[@]}" "$RUNNER_TEMP/security-scan-summaries/zizmor.json"
+
+      - name: Fail the zizmor lane after its sanitized summary
+        if: ${{ always() }}
+        run: node scripts/securityScanSummary.mjs enforce-summary "$RUNNER_TEMP/security-scan-summaries/zizmor.json"
+
+  terraform_validate:
+    name: terraform-validate
+    needs: [resolve_candidate, preflight]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      summary: ${{ steps.summary.outputs.summary }}
+    steps:
+      - name: Check out the scan candidate
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ needs.resolve_candidate.outputs.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Install the verified Terraform binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          tool_dir="$RUNNER_TEMP/security-tools"
+          archive="$tool_dir/terraform_1.16.5_linux_amd64.zip"
+          mkdir -p "$tool_dir"
+          curl --fail --location --proto '=https' --tlsv1.2 --silent --show-error https://releases.hashicorp.com/terraform/1.16.5/terraform_1.16.5_linux_amd64.zip --output "$archive"
+          printf '%s  %s\n' 2bc2fcfff033265c9e02ca0351f01794eb122f62a9b2a49a3294b9e49eaab5e4 "$archive" | sha256sum --check --status
+          unzip -q -o "$archive" -d "$tool_dir"
+          [[ "$("$tool_dir/terraform" version -json | jq -r '.terraform_version')" == "1.16.5" ]]
+
+      - name: Admit roots before Terraform can initialize providers
+        id: summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          report_dir="$(mktemp -d "$RUNNER_TEMP/security-scans.XXXXXX")"
+          mkdir -p "$RUNNER_TEMP/security-scan-summaries"
+          set +e
+          node scripts/securityScanSummary.mjs terraform-roots . "$report_dir/roots.json"
+          discovery_status=$?
+          set -e
+          if [[ "$discovery_status" -eq 0 ]] && node scripts/securityScanSummary.mjs terraform-admission . "$report_dir/roots.json" .github/terraform-provider-allowlist.json; then
+            printf '[]' > "$report_dir/terraform-index.json"
+            scan_status=0
+          else
+            printf '{}' > "$report_dir/terraform-index.json"
+            scan_status=1
+          fi
+          node scripts/securityScanSummary.mjs terraform-report "$report_dir/terraform-index.json" "$report_dir/terraform-report.json"
+          node scripts/securityScanSummary.mjs summarize terraform-validate terraform 1.16.5 "$scan_status" "$report_dir/terraform-report.json" "$GITHUB_OUTPUT" - "$RUNNER_TEMP/security-scan-summaries/terraform-validate.json"
+
+      - name: Fail the Terraform lane after its sanitized summary
+        if: ${{ always() }}
+        run: node scripts/securityScanSummary.mjs enforce-summary "$RUNNER_TEMP/security-scan-summaries/terraform-validate.json"
+
+  trivy_config:
+    name: trivy-config
+    needs: [resolve_candidate, preflight]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      summary: ${{ steps.summary.outputs.summary }}
+    steps:
+      - name: Check out the scan candidate
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ needs.resolve_candidate.outputs.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Install the verified Trivy binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          tool_dir="$RUNNER_TEMP/security-tools"
+          archive="$tool_dir/trivy_0.75.0_Linux-64bit.tar.gz"
+          mkdir -p "$tool_dir"
+          curl --fail --location --proto '=https' --tlsv1.2 --silent --show-error https://github.com/aquasecurity/trivy/releases/download/v0.75.0/trivy_0.75.0_Linux-64bit.tar.gz --output "$archive"
+          printf '%s  %s\n' c6e65abddb348e25f10549df887045629cf28cc72453cd1c63acb717316b3f3f "$archive" | sha256sum --check --status
+          tar --extract --gzip --file "$archive" --directory "$tool_dir" trivy
+          [[ "$("$tool_dir/trivy" version --format json | jq -r '.Version')" == "0.75.0" ]]
+
+      - name: Scan every tracked supported configuration target
+        id: summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          report_dir="$(mktemp -d "$RUNNER_TEMP/security-scans.XXXXXX")"
+          mkdir -p "$RUNNER_TEMP/security-scan-summaries"
+          set +e
+          node scripts/securityScanSummary.mjs trivy-targets . "$report_dir/trivy-targets.json"
+          discovery_status=$?
+          set -e
+          if [[ "$discovery_status" -ne 0 ]]; then
+            printf '{}' > "$report_dir/trivy.json"
+            scan_status=1
+          elif ! jq -e 'type == "array" and all(.[]; type == "object" and (.kind == "terraform-module" or .kind == "file") and (.path | type == "string" and length > 0))' "$report_dir/trivy-targets.json" > /dev/null 2> "$report_dir/trivy-targets.stderr"; then
+            printf '{}' > "$report_dir/trivy.json"
+            scan_status=1
+          else
+            target_count="$(jq 'length' "$report_dir/trivy-targets.json")"
+            if [[ "$target_count" == "0" ]]; then
+              node scripts/securityScanSummary.mjs not-applicable trivy-config trivy 0.75.0 no-config-targets "$GITHUB_OUTPUT" "$RUNNER_TEMP/security-scan-summaries/trivy-config.json"
+              exit 0
+            fi
+            # Trivy 0.75.0 accepts exactly one directory. The immutable checkout root
+            # contains only the candidate; normalization later proves every tracked
+            # supported target produced recognized coverage in this single scan.
+            set +e
+            "$RUNNER_TEMP/security-tools/trivy" config --config="" --ignorefile="" --skip-check-update --disable-telemetry --skip-version-check --quiet --format json --output "$report_dir/trivy.json" . > "$report_dir/trivy.stdout" 2> "$report_dir/trivy.stderr"
+            scan_status=$?
+            set -e
+          fi
+          node scripts/securityScanSummary.mjs trivy-report "$report_dir/trivy-targets.json" "$report_dir/trivy.json" "$report_dir/trivy-report.json"
+          node scripts/securityScanSummary.mjs summarize trivy-config trivy 0.75.0 "$scan_status" "$report_dir/trivy-report.json" "$GITHUB_OUTPUT" - "$RUNNER_TEMP/security-scan-summaries/trivy-config.json"
+
+      - name: Fail the Trivy lane after its sanitized summary
+        if: ${{ always() }}
+        run: node scripts/securityScanSummary.mjs enforce-summary "$RUNNER_TEMP/security-scan-summaries/trivy-config.json"
+
+  security_aggregate:
+    name: security-scan-aggregate
+    if: ${{ always() }}
+    needs:
+      - resolve_candidate
+      - preflight
+      - npm_audits
+      - dependency_review
+      - gitleaks
+      - codeql
+      - actionlint
+      - zizmor
+      - terraform_validate
+      - trivy_config
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      status: ${{ steps.aggregate.outputs.status }}
+    steps:
+      - name: Check out the scan candidate
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ needs.resolve_candidate.outputs.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Fail closed on findings, skipped jobs, or malformed summaries
+        id: aggregate
+        env:
+          SECURITY_PREFLIGHT_RESULT: ${{ needs.preflight.result }}
+          SECURITY_NPM_AUDIT_FULL_RESULT: ${{ needs.npm_audits.result }}
+          SECURITY_NPM_AUDIT_FULL_SUMMARY: ${{ needs.npm_audits.outputs.full_summary }}
+          SECURITY_NPM_AUDIT_PRODUCTION_RESULT: ${{ needs.npm_audits.result }}
+          SECURITY_NPM_AUDIT_PRODUCTION_SUMMARY: ${{ needs.npm_audits.outputs.production_summary }}
+          SECURITY_DEPENDENCY_REVIEW_RESULT: ${{ needs.dependency_review.result }}
+          SECURITY_DEPENDENCY_REVIEW_SUMMARY: ${{ needs.dependency_review.outputs.summary }}
+          SECURITY_GITLEAKS_RESULT: ${{ needs.gitleaks.result }}
+          SECURITY_GITLEAKS_SUMMARY: ${{ needs.gitleaks.outputs.summary }}
+          SECURITY_CODEQL_RESULT: ${{ needs.codeql.result }}
+          SECURITY_CODEQL_SUMMARY: ${{ needs.codeql.outputs.summary }}
+          SECURITY_ACTIONLINT_RESULT: ${{ needs.actionlint.result }}
+          SECURITY_ACTIONLINT_SUMMARY: ${{ needs.actionlint.outputs.summary }}
+          SECURITY_ZIZMOR_RESULT: ${{ needs.zizmor.result }}
+          SECURITY_ZIZMOR_SUMMARY: ${{ needs.zizmor.outputs.summary }}
+          SECURITY_TERRAFORM_VALIDATE_RESULT: ${{ needs.terraform_validate.result }}
+          SECURITY_TERRAFORM_VALIDATE_SUMMARY: ${{ needs.terraform_validate.outputs.summary }}
+          SECURITY_TRIVY_CONFIG_RESULT: ${{ needs.trivy_config.result }}
+          SECURITY_TRIVY_CONFIG_SUMMARY: ${{ needs.trivy_config.outputs.summary }}
+        run: node scripts/securityScanSummary.mjs aggregate-env "$GITHUB_OUTPUT"

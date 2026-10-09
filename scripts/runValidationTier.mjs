@@ -23,6 +23,8 @@ export const priorityTestTargets = [
   "scripts/contactTransport.integration.test.ts",
   "scripts/updateContactTlds.test.mjs",
   "scripts/packageScripts.test.mjs",
+  "scripts/securityScanSummary.test.mjs",
+  "scripts/securityScanWorkflow.test.mjs",
   "scripts/runValidationTier.test.mjs",
   "scripts/checkDeployedContent.test.mjs",
   "scripts/renderRouteSkeleton.test.mjs",

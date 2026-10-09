@@ -11,4 +11,4 @@ For an endpoint or runtime-control change, read [Security](../../../docs/securit
 
 For every endpoint, define and test methods, media types, schema, body and time limits, origins, authentication or verification, privacy, abuse controls, errors, headers, and release checks. Keep secrets server-only and retain the existing environment separation.
 
-Preserve the exact-candidate, verified-artifact deployment path and its stale-revision, integrity, binding, migration, and smoke-test checks. Do not imply that GitHub branch protection or provider controls are enabled unless their live configuration has been independently verified.
+Preserve the exact-candidate, verified-artifact deployment path and its stale-revision, integrity, binding, migration, smoke-test, and security-scan aggregate checks. For scan-lane changes, retain runner-temporary raw reports, count-only job outputs, exact pins, full-history secret scanning, and fail-closed aggregate behavior. Do not imply that GitHub branch protection, required workflows, or provider controls are enabled unless their live configuration has been independently verified.

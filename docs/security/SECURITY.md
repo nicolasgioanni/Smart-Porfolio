@@ -28,6 +28,7 @@ Documentation is not evidence that an external control is active. Treat the impl
 | Production and preview non-secret Function values | `wrangler.jsonc` |
 | Contact-rate reservation schema | `migrations/` |
 | Build-time public values and deployment flow | `.github/workflows/ci.yml` |
+| Dedicated scanner lanes and aggregate contract | `.github/workflows/security-scans.yml`, `scripts/securityScanSummary.mjs` |
 | Research media paths and PNG sanitation | `src/lib/content/validatePortfolioContent.ts`, `src/lib/content/researchGraphicalAbstracts.ts`, `scripts/lib/pngMetadata.mjs` |
 | Contact behavior reference | `docs/security/CONTACT_SYSTEM.md` |
 
@@ -49,6 +50,18 @@ Contributed PNG sanitation is a local publication tool, but its inputs remain un
 ExcelJS remains exactly `4.4.0` because no newer release is available. Its only override is the nested `exceljs > uuid` `11.1.1` remediation; do not broaden that override to unrelated UUID consumers. `npm ls exceljs uuid` and the locked audit establish that the remediation resolves to `11.1.1`.
 
 GHSA-w5hq-g745-h8pq concerns caller-buffer behavior in UUID v3, v5, and v6. The package-contract test establishes the required resolved version. The real XLSX data-bar test calls ExcelJS's UUID v4 extension path, verifies the generated identifier is serialized into worksheet XML, and verifies that ExcelJS restores the identical identifier on read. That test proves ExcelJS compatibility and serialization for the override; it does not by itself exercise or prove the advisory's v3/v5/v6 caller-buffer remediation. Re-evaluate and remove the narrow override when upgrading ExcelJS.
+
+## Dedicated security scan lanes
+
+`.github/workflows/security-scans.yml` is a reusable, source-reviewed scan gate. The CI candidate resolver records one immutable SHA before `verify` and this gate start; a pull request uses its synthetic merge SHA, while push events use their event SHA. The independent weekly workflow resolves `main` once and does not perform workbook comparison. Each scanner checks out that resolved SHA with persisted checkout credentials disabled. Fork pull requests receive no repository or cloud secret, and the workflow does not use `pull_request_target`.
+
+The gate runs lockfile-only full and production `npm audit` with a runner-owned registry configuration and lifecycle scripts disabled; Dependency Review for pull requests; Gitleaks over the `HEAD` ancestor history; local CodeQL SARIF validation; actionlint; zizmor; Terraform admission/validation; and Trivy configuration checks. Because pinned actionlint `1.7.12` predates GitHub's `$/` self-repository workflow syntax, it receives a runner-temporary syntax projection that changes only that prefix; zizmor inspects the original tracked files. It emits only lane, pinned tool/version, target count, finding count, and status to job outputs. Raw reports and scanner stderr stay in runner temporary directories and are not uploaded as artifacts. Each lane records that safe summary before failing on findings or errors, and the always-running aggregate rejects failed, skipped, missing, malformed, or non-clean summaries. Dependency Review outside a pull request, absent Terraform, and no supported Trivy targets are the only approved not-applicable results.
+
+The current locked dependency graph has blocking audit findings. The full and production audit lanes intentionally remain failing until the dependencies are remediated; this guide does not reproduce advisory details or scanner output. Candidate-controlled scanner configuration, ignore files, and Trivy/tfsec inline ignore directives are rejected before scanning. The checked-in suppression registry is empty. If a supported central exception mechanism is added, each entry must identify one exact rule and fingerprint with a reason, owner, and unexpired date; wildcards, malformed entries, and tool-native bypasses must fail the gate.
+
+There are no Terraform or supported Trivy configuration targets in this baseline. A zero-target result is an explicit not-applicable state, not evidence that unsupported infrastructure is covered. Any future Terraform root fails before provider initialization until a separately reviewed parser, provider allowlist, and lockfile admission contract can safely approve it. Trivy future coverage must prove recognized configuration results and executed-check evidence for every inventory target; an empty result set cannot claim coverage.
+
+CodeQL runs locally on fork candidates and validates pinned SARIF before any upload. Only trusted non-fork push, schedule, and manual events can upload a clean, validated SARIF result. The workflow source is reviewed repository control evidence, not an immutable provider-enforced authorization boundary: branch/ruleset protection, required-workflow activation, and GitHub token policy remain external operator controls that must be checked separately.
 
 ## Threat model
 

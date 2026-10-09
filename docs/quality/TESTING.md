@@ -45,6 +45,8 @@ Smart Portfolio uses a layered quality gate for documentation, static content, R
 | `npm run build:generated` | Next.js static export, segment-cache normalization, and content-version write | Consumes existing generated JSON without another content fetch |
 | `npm audit` | Locked full dependency graph audit | Covers development and deployment dependencies |
 | `npm audit --omit=dev` | Locked production dependency graph audit | Covers the deployed runtime dependency graph |
+| `scripts/securityScanSummary.test.mjs` | Scanner-summary schemas, exact identities, exit classification, suppression admission, SARIF, and Trivy coverage accounting | No scanner report or credential fixture is committed |
+| `scripts/securityScanWorkflow.test.mjs` | Reusable scanner pins, candidate binding, permissions, scanner options, lane enforcement, aggregate behavior, and schedule isolation | Static workflow contract; it does not run remote scanners |
 | `npm run db:migrate:local` | Pending tracked migrations against Wrangler's local D1 state | Never targets preview or production |
 | `npm run verify` | Docs check, lint, typecheck, full Vitest suite, and normal build | Compatibility local gate; does not install Chromium |
 | `npm run verify:priority` | Docs check, lint, typecheck, priority Vitest and browser suites, and normal build | Portable pull-request-sized local gate; install Chromium first. Linux CI runs the visual skeleton comparison as its separate priority-only step |
@@ -191,6 +193,12 @@ After `build:generated`, verify `/projects` without JavaScript against the expor
 | `scripts/localAutomation.test.mjs` | Project discovery, environment copy safety, dependency-state hashing, stale content, and port selection |
 
 The workflow contract tests inspect checked-in workflow text and execute the manifest helpers. They do not start a GitHub Actions runner or perform a Cloudflare upload.
+
+## Dedicated security scan coverage
+
+`securityScanSummary.test.mjs` rejects wrong lane identities or versions, missing and malformed reports, operational exit codes, zero-target clean summaries, skipped jobs, partial CodeQL execution, malformed SARIF, suppressed CodeQL findings, unsafe Trivy target paths, absent Trivy coverage evidence, and invalid suppression metadata. Its fixtures contain only minimal synthetic schema shapes; no scanner output, advisory evidence, credentials, or URLs are committed.
+
+`securityScanWorkflow.test.mjs` protects full-history Gitleaks scope, isolated lockfile audits, exact binary digests, CodeQL local-before-upload behavior, actionlint and zizmor discovery, Terraform pre-init admission, Trivy inventory accounting, every lane timeout, and aggregate fail-closed inputs. Both files are registered in the priority tier. The actual CI scanners use temporary reports and count-only outputs, so a local unit pass is implementation evidence rather than a claim that provider-hosted scanning ran.
 
 ## CI quality gates
 

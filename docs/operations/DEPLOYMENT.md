@@ -20,7 +20,7 @@ HTTP checks on 2026-08-27 observed successful responses from the public custom d
 
 ## Ownership and trust boundaries
 
-The checked-in deployment path is `.github/workflows/ci.yml`. It builds and deploys through Wrangler Direct Upload. There is no Vercel, Netlify, or Cloudflare Git-integration configuration in the repository.
+The checked-in deployment path is `.github/workflows/ci.yml`; its reusable security gate is `.github/workflows/security-scans.yml`. CI resolves one immutable candidate SHA before the verification and security jobs start, then builds and deploys through Wrangler Direct Upload. There is no Vercel, Netlify, or Cloudflare Git-integration configuration in the repository.
 
 The repository can verify:
 
@@ -42,7 +42,7 @@ Provider-dashboard uploads and deploy hooks bypass the repository quality gate a
 
 ## Trigger and branch behavior
 
-The workflow has one verification job, one conditional deploy job, and one schedule-only heartbeat job.
+The workflow has a shared candidate resolver, one verification job, one reusable security aggregate, one conditional deploy job, and one schedule-only heartbeat job. The verification and security jobs use the same resolved candidate SHA; a deploy needs both to succeed.
 
 | Event | Candidate | Content source | Verification tier | Deployment |
 | --- | --- | --- | --- | --- |
@@ -59,6 +59,14 @@ Scheduled and manual runs explicitly check out `main`, regardless of the branch 
 
 For any non-PR candidate, the verify job fetches the current remote branch tip and compares it with the checked-out SHA. A stale candidate produces no build artifact and no deployment. The deploy job repeats that branch-tip comparison immediately before Wrangler runs.
 
+## Security scan gate
+
+The reusable scan workflow runs for pull requests and pushes to `main` or `develop` through CI, plus a separate Monday `11:43 UTC` scheduled/manual workflow that resolves `main` without invoking the content-comparison path. It has no cloud deployment credential. Every checkout uses `persist-credentials: false`; scanner reports remain in runner temporary storage, and job outputs are count-only summaries. Fork pull requests run the unprivileged lanes without repository or cloud secrets and never upload SARIF. Trusted non-fork runs may upload only a clean, validated local CodeQL SARIF.
+
+The deploy job requires successful `verify` and `security-scan-aggregate` results. Findings, a scanner error, a skipped lane, a missing or malformed report, or a non-approved not-applicable result blocks deployment before artifact use, D1 migration, or Wrangler. The source declares this gate, but it does not activate GitHub required-workflow policy or prove that a repository rule requires it; verify that external setting separately.
+
+The baseline has no Terraform or supported Trivy configuration target. Those lanes report explicit not-applicable results only for a successful zero-target inventory. A future Terraform target is blocked before provider initialization pending a separately reviewed provider admission implementation. This intentionally does not claim generic infrastructure coverage.
+
 ## Permissions and credentials
 
 The workflow-level permission is:
@@ -70,7 +78,7 @@ permissions:
 
 The verify and deploy jobs therefore have read-only repository access. Cloudflare deployment authority comes from the restricted API token passed directly to Wrangler, not from a GitHub repository write permission.
 
-The schedule-only heartbeat job is the sole exception. It declares `contents: write`, but the checked-in job is coded and guarded to update only `.github/schedule-heartbeat` on the existing `develop` branch after the inactivity threshold is met. That source-level guard does not replace external branch or ruleset protection.
+The schedule-only heartbeat job is the sole exception. It declares `contents: write`, but the checked-in job prepares its single local payload without repository credentials, then uses an environment-backed Git askpass helper only for the final remote checks and normal push to the existing `develop` branch. It never places that token in a remote URL or command argument. That source-level guard does not replace external branch or ruleset protection.
 
 ### GitHub repository variables
 

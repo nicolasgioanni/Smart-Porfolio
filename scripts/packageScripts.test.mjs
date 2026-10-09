@@ -153,13 +153,15 @@ describe("package and CI deployment automation", () => {
     expect(workflow).toMatch(
       /workflow_dispatch:\s+inputs:\s+force_deploy:[\s\S]*?type: boolean\s+default: true/
     );
-    expect(workflow).toMatch(/jobs:\s+verify:\s+name: verify/);
+    expect(workflow).toMatch(/jobs:\s+resolve_candidate:\s+name: resolve-candidate[\s\S]*?verify:\s+name: verify\s+needs: resolve_candidate/);
     expect(workflow.match(/node-version: 22/g)).toHaveLength(2);
     expect([...workflow.matchAll(/^\s+uses: ([^\n]+)$/gm)].map(([, action]) => action.trim())).toEqual([
+      "actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0",
       "actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0",
       "actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0",
       "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
       "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
+      "$/.github/workflows/security-scans.yml",
       "actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0",
       "actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0",
       "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1",
@@ -180,7 +182,7 @@ describe("package and CI deployment automation", () => {
 
   it("runs priority template verification for pull requests without deployment credentials", async () => {
     const workflow = await readFile(workflowPath, "utf8");
-    const verifyJob = section(workflow, "  verify:", "\n  deploy:");
+    const verifyJob = section(workflow, "  verify:", "\n  security_aggregate:");
     const pullRequestGeneration = section(
       verifyJob,
       "- name: Generate validated local template content for pull requests",
@@ -223,7 +225,7 @@ describe("package and CI deployment automation", () => {
 
   it("generates one strict workbook snapshot for latest main and develop candidates", async () => {
     const workflow = await readFile(workflowPath, "utf8");
-    const verifyJob = section(workflow, "  verify:", "\n  deploy:");
+    const verifyJob = section(workflow, "  verify:", "\n  security_aggregate:");
     const workbookStep = section(
       verifyJob,
       "- name: Fetch and generate the strict public workbook snapshot",
@@ -285,7 +287,7 @@ describe("package and CI deployment automation", () => {
 
   it("polls deployed no-cache metadata and skips expensive work only for the exact candidate", async () => {
     const workflow = await readFile(workflowPath, "utf8");
-    const verifyJob = section(workflow, "  verify:", "\n  deploy:");
+    const verifyJob = section(workflow, "  verify:", "\n  security_aggregate:");
     const comparisonStep = section(
       verifyJob,
       "- name: Compare the validated snapshot with production",
@@ -375,16 +377,16 @@ describe("package and CI deployment automation", () => {
 
   it("deploys only the immutable green artifact with pinned local Wrangler", async () => {
     const workflow = await readFile(workflowPath, "utf8");
-    const verifyJob = section(workflow, "  verify:", "\n  deploy:");
+    const verifyJob = section(workflow, "  verify:", "\n  security_aggregate:");
     const deployJob = section(workflow, "  deploy:", "\n  heartbeat:");
 
     expect(verifyJob).toContain("node scripts/artifactIntegrity.mjs create out");
     expect(verifyJob).toContain("node scripts/artifactIntegrity.mjs verify out");
     expect(verifyJob).toContain("name: cloudflare-pages-build");
     expect(verifyJob).toMatch(/path: out\/\s+include-hidden-files: true\s+if-no-files-found: error/);
-    expect(deployJob).toContain("needs: verify");
+    expect(deployJob).toContain("needs: [verify, security_aggregate]");
     expect(deployJob).toContain(
-      "if: needs.verify.result == 'success' && needs.verify.outputs.should_deploy == 'true'"
+      "if: needs.verify.result == 'success' && needs.security_aggregate.result == 'success' && needs.verify.outputs.should_deploy == 'true'"
     );
     expect(deployJob).toContain("ref: ${{ needs.verify.outputs.candidate_sha }}");
     expect(deployJob).toContain('run: node scripts/artifactIntegrity.mjs verify out "$CANDIDATE_SHA"');
@@ -430,9 +432,10 @@ describe("package and CI deployment automation", () => {
 
     expect(workflow.match(/contents: write/g)).toHaveLength(1);
     expect(workflow).not.toMatch(
-      /(?:actions|checks|deployments|id-token|issues|packages|pull-requests|security-events|statuses): write/
+      /(?:actions|checks|deployments|id-token|issues|packages|pull-requests|statuses): write/
     );
     expect(deployJob).toMatch(/permissions:\s+contents: read/);
+    expect(workflow).toContain("security-events: write");
     expect(heartbeatJob).toContain("if: github.event_name == 'schedule'");
     expect(heartbeatJob).toMatch(
       /concurrency:\s+group: develop-schedule-heartbeat\s+cancel-in-progress: false/
@@ -447,7 +450,11 @@ describe("package and CI deployment automation", () => {
     expect(heartbeatJob).toContain("git switch --track --create develop refs/remotes/origin/develop");
     expect(heartbeatJob).toContain('git merge-base --is-ancestor "$develop_sha" HEAD');
     expect(heartbeatJob).toContain('remote_develop_sha="$(git ls-remote origin refs/heads/develop | awk \'{print $1}\')"');
+    expect(heartbeatJob).toContain('SCHEDULE_HEARTBEAT_TOKEN: ${{ github.token }}');
+    expect(heartbeatJob).toContain('askpass="$RUNNER_TEMP/schedule-heartbeat-askpass"');
+    expect(heartbeatJob).toContain('export GIT_ASKPASS="$askpass"');
     expect(heartbeatJob).toContain('git push origin "HEAD:refs/heads/develop"');
+    expect(heartbeatJob).not.toContain('x-access-token:${SCHEDULE_HEARTBEAT_TOKEN}@');
     expect(heartbeatJob).not.toContain("automation-heartbeat");
     expect(heartbeatJob).not.toContain("git push --force");
     const developRefCheck = heartbeatJob.indexOf(

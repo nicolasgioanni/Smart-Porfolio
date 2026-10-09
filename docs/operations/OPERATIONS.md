@@ -190,10 +190,13 @@ Repository checks cannot prove these controls. The live WAF state is unverified 
 
 ## Monitoring the daily schedule
 
-The schedule starts two independent jobs:
+The CI schedule starts three independent jobs:
 
 - `verify`, which performs the content comparison and deploys only when required.
+- `security-scan-aggregate`, which uses the same once-resolved CI candidate and blocks any deployment on an unsafe scanner status.
 - `develop-schedule-heartbeat`, which checks activity and may refresh the existing `develop` branch.
+
+A separate weekly `Scheduled security scans` workflow resolves `main` once and runs independently of workbook comparison. Its count-only result is review evidence; the workflow source cannot prove external GitHub required-workflow or branch-rule activation.
 
 The heartbeat does not depend on the verify result and does not deploy. It writes only after 30 days without newer activity on `main` or `develop`, and only after confirming remote `develop` already exists. It accepts only the `.github/schedule-heartbeat` path, rechecks the remote `develop` SHA before a normal non-force push, and fails rather than overwriting a concurrent update. Its `contents: write` permission is intentionally isolated from the verification and deployment jobs. The checked-in workflow is coded and guarded to update only `develop`; that source-level constraint does not make other refs impossible for every possible token or future workflow change. Configure GitHub branch or ruleset protection for `main` and `develop` as defense in depth, and verify its live configuration separately.
 
@@ -208,6 +211,7 @@ Use the first failing stage to decide whether production could have changed:
 | Candidate marked stale | None | Review the newer branch run |
 | Target or content validation | None | Correct configuration or workbook data |
 | Documentation, lint, typecheck, or tests | None | Fix the reported repository failure |
+| Security scan aggregate | None | Remediate the reported dependency or configuration issue; do not publish raw scanner output in tickets |
 | Static build or manifest creation | None | Reproduce locally with the documented command |
 | Artifact upload, download, or verification | None | Inspect artifact transfer and candidate SHA |
 | Branch recheck | None | Review the newer branch run |

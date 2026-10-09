@@ -19,8 +19,30 @@ permissions:
   contents: read
 
 jobs:
+  resolve_candidate:
+    name: resolve-candidate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      candidate_sha: ${{ steps.candidate.outputs.candidate_sha }}
+    steps:
+      - name: Check out the shared immutable candidate
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'main' || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Record the shared immutable candidate
+        id: candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "candidate_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
   verify:
     name: verify
+    needs: resolve_candidate
     runs-on: ubuntu-24.04
     outputs:
       candidate_branch: ${{ steps.candidate.outputs.candidate_branch }}
@@ -35,8 +57,9 @@ jobs:
       - name: Check out the exact candidate
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
-          ref: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'main' || github.sha }}
+          ref: ${{ needs.resolve_candidate.outputs.candidate_sha }}
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up Node.js
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
@@ -278,10 +301,22 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+  security_aggregate:
+    name: security-scan-aggregate
+    needs: resolve_candidate
+    uses: $/.github/workflows/security-scans.yml
+    permissions:
+      contents: read
+      security-events: write
+    with:
+      candidate_ref: ${{ needs.resolve_candidate.outputs.candidate_sha }}
+      event_name: ${{ github.event_name }}
+      is_fork: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork || false }}
+
   deploy:
     name: deploy-${{ needs.verify.outputs.deploy_target }}
-    needs: verify
-    if: needs.verify.result == 'success' && needs.verify.outputs.should_deploy == 'true'
+    needs: [verify, security_aggregate]
+    if: needs.verify.result == 'success' && needs.security_aggregate.result == 'success' && needs.verify.outputs.should_deploy == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -294,6 +329,7 @@ jobs:
         with:
           ref: ${{ needs.verify.outputs.candidate_sha }}
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up Node.js
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
@@ -408,13 +444,39 @@ jobs:
         with:
           ref: develop
           fetch-depth: 0
+          persist-credentials: false
 
-      - name: Refresh the existing develop branch after 30 inactive days
+      - name: Prepare a local heartbeat payload without repository credentials
         shell: bash
         run: |
           set -euo pipefail
           heartbeat_path=".github/schedule-heartbeat"
+          worktree_status="$(git status --porcelain=v1 --untracked-files=all)"
+          if [[ -n "$worktree_status" ]]; then
+            echo "Refusing to prepare a heartbeat from a dirty checkout."
+            exit 1
+          fi
+          date -u +'%Y-%m-%dT%H:%M:%SZ' > "$heartbeat_path"
+
+      - name: Check inactivity and push the prepared fast-forward with scoped Git auth
+        shell: bash
+        env:
+          SCHEDULE_HEARTBEAT_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          heartbeat_path=".github/schedule-heartbeat"
           now_epoch="$(date -u +%s)"
+          askpass="$RUNNER_TEMP/schedule-heartbeat-askpass"
+          cat > "$askpass" <<'EOF'
+          #!/usr/bin/env sh
+          case "$1" in
+            *Username*) printf '%s\n' x-access-token ;;
+            *Password*) printf '%s\n' "$SCHEDULE_HEARTBEAT_TOKEN" ;;
+          esac
+          EOF
+          chmod 700 "$askpass"
+          export GIT_ASKPASS="$askpass"
+          export GIT_TERMINAL_PROMPT=0
 
           if ! git ls-remote --exit-code --heads origin develop > /dev/null; then
             echo "Refusing to create a keepalive branch: origin/develop must already exist."
@@ -428,11 +490,9 @@ jobs:
           develop_sha="$(git rev-parse refs/remotes/origin/develop)"
           develop_epoch="$(git log -1 --format=%ct refs/remotes/origin/develop)"
           latest_activity_epoch="$main_epoch"
-
           if (( develop_epoch > latest_activity_epoch )); then
             latest_activity_epoch="$develop_epoch"
           fi
-
           if (( now_epoch - latest_activity_epoch < 30 * 24 * 60 * 60 )); then
             echo "Main or develop has activity within the last 30 days."
             exit 0
@@ -444,13 +504,11 @@ jobs:
           else
             git switch --track --create develop refs/remotes/origin/develop
           fi
-
           if [[ "$(git rev-parse HEAD)" != "$develop_sha" ]]; then
             echo "Refusing to prepare a keepalive from a non-current develop revision."
             exit 1
           fi
 
-          date -u +'%Y-%m-%dT%H:%M:%SZ' > "$heartbeat_path"
           worktree_status="$(git status --porcelain=v1 --untracked-files=all)"
           unexpected=""
           while IFS= read -r status_line; do
@@ -460,33 +518,27 @@ jobs:
               unexpected+="$status_line"$'\n'
             fi
           done <<< "$worktree_status"
-
           if [[ -n "$unexpected" ]]; then
-            echo "Refusing to commit unexpected heartbeat paths:"
-            echo "$unexpected"
+            echo "Refusing to commit unexpected heartbeat paths."
             exit 1
           fi
 
           git add -- "$heartbeat_path"
           staged="$(git diff --cached --name-only)"
           if [[ "$staged" != "$heartbeat_path" ]]; then
-            echo "Refusing to commit a heartbeat with an unexpected staged path: $staged"
+            echo "Refusing to commit a heartbeat with an unexpected staged path."
             exit 1
           fi
-
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "chore(ci): refresh scheduled workflow heartbeat"
-
           if ! git merge-base --is-ancestor "$develop_sha" HEAD; then
             echo "Refusing to push a keepalive that is not a fast-forward of develop."
             exit 1
           fi
-
           remote_develop_sha="$(git ls-remote origin refs/heads/develop | awk '{print $1}')"
           if [[ "$remote_develop_sha" != "$develop_sha" ]]; then
             echo "Refusing to update develop because it changed during the keepalive run."
             exit 1
           fi
-
           git push origin "HEAD:refs/heads/develop"
