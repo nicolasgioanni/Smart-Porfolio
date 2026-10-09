@@ -28,7 +28,7 @@ Documentation is not evidence that an external control is active. Treat the impl
 | Production and preview non-secret Function values | `wrangler.jsonc` |
 | Contact-rate reservation schema | `migrations/` |
 | Build-time public values and deployment flow | `.github/workflows/ci.yml` |
-| Research media paths and PNG sanitation | `src/lib/content/validatePortfolioContent.ts`, `src/lib/content/researchGraphicalAbstracts.ts`, `scripts/lib/pngMetadata.mjs` |
+| Research media paths and PNG sanitation | `src/lib/content/validatePortfolioContent.ts`, `src/features/research/content/researchGraphicalAbstracts.ts`, `scripts/lib/pngMetadata.mjs` |
 | Contact behavior reference | `docs/security/CONTACT_SYSTEM.md` |
 
 ## CSV parsing boundary

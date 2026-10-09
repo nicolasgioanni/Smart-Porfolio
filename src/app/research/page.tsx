@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { siteRoutes } from "@/lib/routing/siteRoutes";
-import { ResearchShowcase } from "@/components/portfolio/research/ResearchShowcase";
+import { ResearchShowcase } from "@/features/research/components/ResearchShowcase";
+import { selectResearchDetailContent } from "@/features/research/content/selectResearchDetailContent";
 import { createPageMetadata } from "@/lib/content/createPageMetadata";
 import { getPortfolioContent } from "@/lib/content/getPortfolioContent";
-import { selectResearchDetailContent } from "@/lib/content/selectDetailContent";
 
 export function generateMetadata(): Metadata {
   return createPageMetadata(getPortfolioContent(), {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getResearchGraphicalAbstract } from "@/lib/content/researchGraphicalAbstracts";
+import { getResearchGraphicalAbstract } from "@/features/research/content/researchGraphicalAbstracts";
 
 describe("getResearchGraphicalAbstract", () => {
   it.each([

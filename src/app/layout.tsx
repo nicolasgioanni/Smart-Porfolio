@@ -9,13 +9,15 @@ import "@/styles/navigation.css";
 import "@/styles/portfolio.css";
 import "@/styles/detail.css";
 import "@/styles/experience.css";
-import "@/styles/research.css";
+import "@/features/research/research.css";
 import "@/styles/motion.css";
 import "@/styles/skeletons.css";
 import "@/styles/contact.css";
 import "@/styles/interactions.css";
 import "@/styles/utilities.css";
 import { SiteShell } from "@/components/layout/SiteShell";
+import { ResearchShowcase } from "@/features/research/components/ResearchShowcase";
+import { selectResearchDetailContent } from "@/features/research/content/selectResearchDetailContent";
 import { siteRoutes } from "@/lib/routing/siteRoutes";
 import { ThemePreferenceScript } from "@/components/theme/ThemePreferenceScript";
 import { createPageMetadata } from "@/lib/content/createPageMetadata";
@@ -45,6 +47,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const content = getPortfolioContent();
   const initialTheme = resolveThemeName(content.siteSettings.defaultTheme);
+  const researchFallback = <ResearchShowcase items={selectResearchDetailContent(content)} motionEnabled={false} />;
 
   return (
     <html lang={SITE_LANGUAGE} data-scroll-behavior="smooth" data-theme={initialTheme} suppressHydrationWarning>
@@ -52,7 +55,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <ThemePreferenceScript initialTheme={initialTheme} />
       </head>
       <body className={`${spaceGrotesk.className} ${spaceGrotesk.variable}`}>
-        <SiteShell content={content} initialTheme={initialTheme}>
+        <SiteShell content={content} initialTheme={initialTheme} researchFallback={researchFallback}>
           {children}
         </SiteShell>
       </body>

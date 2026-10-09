@@ -34,13 +34,13 @@ import { legalSkeletonProfiles } from "@/components/loading/LegalPageSkeleton";
 import { PageSkeleton } from "@/components/loading/PageSkeleton";
 import { SectionHeader } from "@/components/layout/SectionHeader";
 import { getProjectSkeletonProfiles } from "@/components/loading/projectSkeletonProfiles";
-import { researchSkeletonProfiles } from "@/components/loading/ResearchPageSkeleton";
+import { researchSkeletonProfiles } from "@/features/research/loading/ResearchPageSkeleton";
 import { RouteHeaderSkeleton } from "@/components/loading/RouteHeaderSkeleton";
-import { RouteSkeleton, routeSkeletons, skeletonRoutePaths } from "@/components/loading/RouteSkeleton";
+import { RouteSkeleton, routeSkeletons, skeletonRoutePaths } from "@/app/RouteSkeleton";
 import { SkeletonBlock } from "@/components/loading/SkeletonBlock";
 import { SkeletonText } from "@/components/loading/SkeletonText";
 import { siteRoutePaths, type SiteRoutePath } from "@/lib/routing/siteRoutes";
-import { getResearchVisibleResources } from "@/lib/content/researchNarratives";
+import { getResearchVisibleResources } from "@/features/research/content/researchNarratives";
 import { routeHeaderContent } from "@/lib/content/routeHeaderContent";
 
 const routeLoadingComponents = {
@@ -163,12 +163,12 @@ describe("skeleton components", () => {
         )
       ).toEqual([4, 3, 3]);
       expect(container.querySelectorAll(".research-skeleton__video-toolbar > .skeleton-block")).toHaveLength(3);
-      expect(container.querySelectorAll(".research-skeleton__media-stack")).toHaveLength(3);
-      expect(container.querySelectorAll(".research-skeleton__media-row--abstract")).toHaveLength(3);
-      expect(container.querySelectorAll(".research-skeleton__media-row--explainer")).toHaveLength(3);
-      expect(container.querySelectorAll(".research-skeleton__media-divider")).toHaveLength(3);
-      expect(container.querySelectorAll(".research-skeleton__explainer")).toHaveLength(2);
-      expect(container.querySelectorAll(".research-project-skeleton__media-control")).toHaveLength(2);
+      expect(container.querySelectorAll(".research-skeleton__media-stack")).toHaveLength(1);
+      expect(container.querySelectorAll(".research-skeleton__media-row--abstract")).toHaveLength(1);
+      expect(container.querySelectorAll(".research-skeleton__media-row--video")).toHaveLength(1);
+      expect(container.querySelectorAll(".research-skeleton__media-divider")).toHaveLength(1);
+      expect(container.querySelectorAll(".research-skeleton__single-media")).toHaveLength(2);
+      expect(container.querySelectorAll('[class*="research-skeleton__explainer"]')).toHaveLength(0);
       expect(container.querySelectorAll(".research-skeleton__abstract-frame")).toHaveLength(3);
       expect(resolvedResourceCounts).toEqual(resourceCounts);
       expect(renderedResourceCounts).toEqual(resolvedResourceCounts);

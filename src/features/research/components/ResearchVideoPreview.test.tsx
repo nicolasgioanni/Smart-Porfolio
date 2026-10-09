@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ResearchVideoPreview } from "@/components/portfolio/research/ResearchVideoPreview";
+import { ResearchVideoPreview } from "@/features/research/components/ResearchVideoPreview";
 
 const motionPreference = vi.hoisted(() => ({ reduced: false }));
 const nativeDialogPrototype = HTMLDialogElement.prototype;
@@ -139,18 +139,20 @@ describe("ResearchVideoPreview", () => {
     expect(markup).toContain("kind=\"captions\"");
     expect(markup).toContain(`src="${video.captionsSrc}"`);
     expect(markup).toContain("default=\"\"");
-    expect(markup).toContain("Read transcript");
+    expect(markup).toContain("Your browser cannot play this video.");
+    expect(markup).not.toContain("Read transcript");
+    expect(markup).not.toContain(video.transcriptSrc);
+    expect(markup).not.toContain("transcript for the narrated workflow");
     expect(markup).not.toContain("research-video-player__top-bar");
     expect(markup).not.toContain("Loading video metadata.");
     expect(markup).not.toContain("research-video-player__status");
     expect(markup).not.toContain("autoplay");
   });
 
-  it("enhances to the shared custom controls while keeping the direct transcript link", () => {
+  it("enhances to the shared custom controls without exposing the retained transcript asset", () => {
     const { container } = render(<ResearchVideoPreview poster={graphicalAbstract} title="Example Research" video={video} />);
     const player = getInlineVideo(container);
     const playerRoot = getInlinePlayer(container);
-    const transcript = screen.getByTestId("read-transcript");
     const bottomControls = screen.getByTestId("research-video-bottom-controls");
 
     expect(playerRoot).toHaveAttribute("data-enhanced", "true");
@@ -161,7 +163,8 @@ describe("ResearchVideoPreview", () => {
     expect(player.querySelector("source")).toHaveAttribute("type", "video/mp4");
     expect(player.querySelector("track")).toHaveAttribute("kind", "captions");
     expect(player.querySelector("track")).toHaveAttribute("default");
-    expect(transcript).toHaveAttribute("href", video.transcriptSrc);
+    expect(screen.queryByRole("link", { name: "Read transcript" })).not.toBeInTheDocument();
+    expect(container.querySelector(`[href="${video.transcriptSrc}"]`)).toBeNull();
     expect(screen.queryByRole("link", { name: /download/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Open enlarged player" })).not.toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Play video" })).toHaveLength(1);
@@ -725,14 +728,15 @@ describe("ResearchVideoPreview", () => {
     expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
   });
 
-  it("announces rejected playback and completed playback without removing the fallback link", async () => {
+  it("announces rejected and completed playback without transcript-directed recovery copy", async () => {
     vi.mocked(HTMLMediaElement.prototype.play).mockRejectedValueOnce(new Error("blocked"));
     const { container } = render(<ResearchVideoPreview poster={graphicalAbstract} title="Example Research" video={video} />);
     const player = getInlineVideo(container);
 
     fireEvent.click(screen.getAllByRole("button", { name: "Play video" })[0]!);
-    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Video playback is unavailable"));
-    expect(screen.getByTestId("read-transcript")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Video playback is unavailable."));
+    expect(screen.getByRole("status")).not.toHaveTextContent(/transcript/i);
+    expect(screen.queryByRole("link", { name: "Read transcript" })).not.toBeInTheDocument();
 
     fireEvent.play(player);
     fireEvent.waiting(player);
@@ -747,6 +751,6 @@ describe("ResearchVideoPreview", () => {
 
     fireEvent.click(screen.getAllByRole("button", { name: "Play video" })[0]!);
     await Promise.resolve();
-    expect(screen.queryByText("Video playback is unavailable. Read the transcript for the narrated workflow.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Video playback is unavailable.")).not.toBeInTheDocument();
   });
 });

@@ -6,7 +6,7 @@ import { HomePageSkeleton } from "@/components/loading/HomePageSkeleton";
 import { LegalPageSkeleton, legalSkeletonProfiles } from "@/components/loading/LegalPageSkeleton";
 import { ProjectsPageSkeleton } from "@/components/loading/ProjectsPageSkeleton";
 import { RecommendationsPageSkeleton } from "@/components/loading/RecommendationsPageSkeleton";
-import { ResearchPageSkeleton } from "@/components/loading/ResearchPageSkeleton";
+import { ResearchPageSkeleton } from "@/features/research/loading/ResearchPageSkeleton";
 import { ResumePageSkeleton } from "@/components/loading/ResumePageSkeleton";
 import { siteRoutes, type SiteRoutePath } from "@/lib/routing/siteRoutes";
 

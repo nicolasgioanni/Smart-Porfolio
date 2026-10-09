@@ -12,7 +12,6 @@ import {
   normalizePortfolioContent,
   type RawPortfolioSheets
 } from "@/lib/content/normalizePortfolioContent";
-import { getResearchGraphicalAbstract } from "@/lib/content/researchGraphicalAbstracts";
 import {
   groupSkillsByCategory,
   selectHeaderLinks,
@@ -859,10 +858,6 @@ describe("portfolio normalization", () => {
     expect(content.research[0]?.graphicalAbstract).toBeUndefined();
     expect(content.research[0]?.graphicalAbstractAlt).toBeUndefined();
     expect(content.research[0]?.video).toBeUndefined();
-    expect(getResearchGraphicalAbstract(content.research[0]!)).toMatchObject({
-      source: "curated",
-      src: "/images/research/cytocv-graphical-abstract.png"
-    });
   });
 
   it("requires complete popup copy when a skill provides any popup field", () => {

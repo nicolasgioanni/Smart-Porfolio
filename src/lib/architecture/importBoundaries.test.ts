@@ -31,7 +31,13 @@ describe("architecture import boundaries", () => {
     );
   });
 
-  it("rejects generated, function, and script imports from component modules", async () => {
+  it("rejects feature, generated, function, and script imports from shared component modules", async () => {
+    await expectRestrictedImport("src/components/example.tsx", "@/features/research/components/ResearchShowcase",
+      "Components must receive content through supported application and library boundaries."
+    );
+    await expectRestrictedImport("src/components/example.tsx", "../../features/research/components/ResearchShowcase",
+      "Components must receive content through supported application and library boundaries."
+    );
     await expectRestrictedImport("src/components/example.tsx", "@/content/generated/portfolio.generated.json",
       "Components must receive content through supported application and library boundaries."
     );
@@ -50,5 +56,22 @@ describe("architecture import boundaries", () => {
     await expect(lintImport("src/lib/content/example.ts", "@/lib/content/displayHelpers")).resolves.toEqual([]);
     await expect(lintImport("src/components/example.tsx", "@/lib/content/displayHelpers")).resolves.toEqual([]);
     await expect(lintImport("src/components/example.tsx", "@/content/types")).resolves.toEqual([]);
+    await expect(lintImport("src/app/example.tsx", "@/features/research/components/ResearchShowcase")).resolves.toEqual([]);
+  });
+
+  it("permits feature-aware component tests without relaxing their external-source guards", async () => {
+    await expect(
+      lintImport("src/components/example.test.tsx", "@/features/research/components/ResearchShowcase")
+    ).resolves.toEqual([]);
+    await expectRestrictedImport(
+      "src/components/example.test.tsx",
+      "@/content/generated/portfolio.generated.json",
+      "Components must receive content through supported application and library boundaries."
+    );
+    await expectRestrictedImport(
+      "src/components/example.test.tsx",
+      "../../scripts/generateContent",
+      "Components must receive content through supported application and library boundaries."
+    );
   });
 });

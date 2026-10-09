@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
-const researchStyles = readFileSync(path.join(process.cwd(), "src", "styles", "research.css"), "utf8");
+const researchStyles = readFileSync(path.join(process.cwd(), "src", "features", "research", "research.css"), "utf8");
 
 function rule(selector: string) {
   return researchStyles.match(new RegExp(`(^|\\n)\\s*${selector}\\s*\\{[^}]*}`, "ms"))?.[0] ?? "";
@@ -39,6 +39,7 @@ describe("research showcase styles", () => {
     const visualSurfaces = [...researchStyles.matchAll(/--visual-surface:\s*([^;]+);/g)].map(([, surface]) => surface.trim());
     const visualRule = researchStyles.match(/\.research-project__visual\s*\{[^}]*}/s)?.[0] ?? "";
     const mediaStackRule = researchStyles.match(/\.research-media-stack\s*\{[^}]*}/s)?.[0] ?? "";
+    const singleMediaRule = researchStyles.match(/\.research-project__single-media\s*\{[^}]*}/s)?.[0] ?? "";
     const mediaRowRule = researchStyles.match(/\.research-project__media-row\s*\{[^}]*}/s)?.[0] ?? "";
     const mediaDividerRule = researchStyles.match(/\.research-project__media-divider\s*\{[^}]*}/s)?.[0] ?? "";
     const abstractRule = rule("\\.research-abstract");
@@ -50,6 +51,10 @@ describe("research showcase styles", () => {
     expect(visualRule).toMatch(/background:\s*var\(--visual-surface\)/);
     expect(mediaStackRule).toMatch(/background:\s*var\(--visual-surface\)/);
     expect(mediaStackRule).toMatch(/grid-template-rows:\s*minmax\(min-content, 1fr\) 1px minmax\(min-content, 1fr\)/);
+    expect(singleMediaRule).toMatch(/align-content:\s*center/);
+    expect(singleMediaRule).toMatch(/justify-items:\s*center/);
+    expect(singleMediaRule).toMatch(/height:\s*100%/);
+    expect(singleMediaRule).toMatch(/padding:\s*var\(--space-4\)/);
     expect(mediaRowRule).toMatch(/align-content:\s*center/);
     expect(mediaRowRule).toMatch(/justify-items:\s*center/);
     expect(mediaRowRule).toMatch(/padding:\s*var\(--space-4\)/);
@@ -57,42 +62,13 @@ describe("research showcase styles", () => {
     expect(mediaDividerRule).toMatch(/background:\s*rgba\(220, 235, 255, 0\.12\)/);
     expect(abstractRule).toMatch(/background:\s*var\(--visual-surface\)/);
     expect(thumbnailRule).toMatch(/object-fit:\s*contain/);
+    expect(researchStyles).toMatch(
+      /@media \(max-width: 920px\)[\s\S]*?\.research-project__single-media\s*\{[^}]*align-content:\s*start[^}]*height:\s*auto[^}]*min-height:\s*0/s
+    );
   });
 
-  it("keeps connected explainer scenes complete while twelve-second timelines animate actual subjects", () => {
-    const sceneRule = researchStyles.match(/\.research-explainer__scene\s*\{[^}]*}/s)?.[0] ?? "";
-    const labelRule = researchStyles.match(/\.research-explainer__scene-label\s*\{[^}]*}/s)?.[0] ?? "";
-    const guideDonorLabelRule = researchStyles.match(/\.research-explainer__scene-label--guide-row,[\s\S]*?\.research-explainer__scene-label--donor-row\s*\{[^}]*}/s)?.[0] ?? "";
-    const controlRule = rule("\\.research-explainer__playback-control");
-    const diagramSymbolRule = rule("\\.research-explainer__base-letter");
-    const subjectSetupRule = researchStyles.match(/\.research-explainer\[data-animation-ready="true"\] \.research-explainer__pixel-patches,[\s\S]*?\.research-explainer\[data-animation-ready="true"\] \.research-explainer__export-token\s*\{[^}]*}/s)?.[0] ?? "";
-    const subjectRunRule = researchStyles.match(/\.research-explainer\[data-animation-ready="true"\]\[data-playback="playing"\] \.research-explainer__pixel-patches,[\s\S]*?\.research-explainer\[data-animation-ready="true"\]\[data-playback="playing"\] \.research-explainer__export-token\s*\{[^}]*}/s)?.[0] ?? "";
-
-    expect(sceneRule).toMatch(/overflow:\s*hidden/);
-    expect(labelRule).toMatch(/font-size:\s*var\(--font-size-small\)/);
-    expect(guideDonorLabelRule).toMatch(/font-size:\s*var\(--font-size-small\)/);
-    expect(controlRule).toMatch(/font-size:\s*var\(--font-size-control-glyph\)/);
-    expect(diagramSymbolRule).toMatch(/font-size:\s*var\(--font-size-diagram-symbol\)/);
-    expect(subjectSetupRule).toMatch(/animation-duration:\s*12s/);
-    expect(subjectSetupRule).toMatch(/animation-play-state:\s*paused/);
-    expect(subjectRunRule).toMatch(/animation-play-state:\s*running/);
-    for (const subject of [
-      "pixel-patches",
-      "data-token",
-      "detector-ring",
-      "test-token",
-      "change-marker--requested",
-      "guide-bracket",
-      "donor-token",
-      "export-token"
-    ]) {
-      expect(subjectSetupRule).toContain(`research-explainer__${subject}`);
-    }
-    expect(researchStyles).toMatch(/@keyframes research-explainer-aml-clean-flow[\s\S]*?translate3d/);
-    expect(researchStyles).toMatch(/@keyframes research-explainer-detector-outer[\s\S]*?rotate/);
-    expect(researchStyles).toMatch(/@keyframes research-explainer-export-guide[\s\S]*?translate3d/);
-    expect(researchStyles).toMatch(/@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.research-explainer\[data-animation-ready="true"\]\[data-playback\] \.research-explainer__pixel-patches[\s\S]*?\.research-explainer\[data-animation-ready="true"\]\[data-playback\] \.research-explainer__export-token\s*\{[^}]*animation:\s*none/);
-
+  it("contains no legacy Research explainer presentation or animation", () => {
+    expect(researchStyles).not.toMatch(/research-explainer|@keyframes research-explainer/);
   });
 
   it("keeps full-card elevation exclusive to fine-pointer hover", () => {
