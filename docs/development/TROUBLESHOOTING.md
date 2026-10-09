@@ -344,6 +344,14 @@ The verified SHA is no longer the branch tip. This is an intentional stale-candi
 
 Confirm `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are present in GitHub Actions and that the token has Pages and D1 edit access in the intended account. Confirm the project variable is still `smart-portfolio`. Do not replace the restricted token with a personal token.
 
+### The live Pages project preflight rejects deployment
+
+The narrowly scoped preflight reads only the reviewed account's `smart-portfolio` Pages project. It rejects inaccessible or redirected responses and any project whose assigned subdomain is not `smart-portfolio-bds.pages.dev` or whose production branch is not `main`. Correct the provider configuration or the intended reviewed configuration, then start a new green run. Do not bypass the preflight or print API responses, account identifiers, or tokens while diagnosing it.
+
+### Local `pages dev --no-bundle` cannot resolve an emitted Worker module
+
+The locked Wrangler `4.131.0` deploy path collects the emitted `out/_worker.js` module directory when Pages deploy uses `--no-bundle`. Its local `pages dev --no-bundle` path can instead fail resolving Wrangler's generated middleware facade for that directory. The regression suite therefore runs the exact emitted module bytes through Miniflare and uses ordinary local Pages development to verify Pages routing and static fallback. Do not remove `--no-bundle` from the deployment command to work around the local-development limitation. Revalidate both boundaries when changing the locked Wrangler version.
+
 ### D1 target validation rejects the deployment
 
 The selected binding is absent, all-zero, malformed, or shares a remote ID with the other environment. Restore the reviewed database ID, or deliberately create a replacement and update only that environment's `database_id`. Review the diff, apply the tracked migrations, and rerun verification. Never disable the validation step to deploy without quota storage; the contact handler is designed to fail closed.

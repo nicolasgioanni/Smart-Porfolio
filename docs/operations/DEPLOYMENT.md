@@ -57,7 +57,7 @@ The workflow has one verification job, one conditional deploy job, and one sched
 
 Scheduled and manual runs explicitly check out `main`, regardless of the branch shown in the dispatch interface. Push candidates use the pushed branch. Pull requests set no deployment branch and build a verification-only template snapshot.
 
-For any non-PR candidate, the verify job fetches the current remote branch tip and compares it with the checked-out SHA. A stale candidate produces no build artifact and no deployment. The deploy job repeats that branch-tip comparison immediately before Wrangler runs.
+For any non-PR candidate, the verify job fetches the current remote branch tip and compares it with the checked-out SHA. A stale candidate produces no build artifact and no deployment. The deploy job repeats that branch-tip comparison immediately before each D1 migration mutation and again immediately before the Pages upload. Each check is credential-free. Immediately after it, a purpose-built Cloudflare API preflight requires the exact reviewed project, assigned `smart-portfolio-bds.pages.dev` subdomain, and `main` production branch before the adjacent mutation can run.
 
 ## Permissions and credentials
 
@@ -197,14 +197,15 @@ flowchart TD
     C --> D[Run quality gates]
     D --> E[Build from generated JSON]
     E --> F[Write content version]
-    F --> G[Create and verify artifact manifest]
-    G --> H[Upload artifact]
-    H --> I[Verify downloaded artifact]
-    I --> J[Recheck branch SHA]
-    J --> K[Validate D1 target]
+    F --> G[Compile Pages Functions into out]
+    G --> H[Create manifest and sealed release envelope]
+    H --> I[Upload sealed artifact]
+    I --> J[Verify downloaded artifact and trusted seal]
+    J --> K[Recheck branch SHA before D1 migration]
     K --> L[Apply D1 migrations]
-    L --> M[Deploy with Wrangler]
-    M --> N[Smoke test stable Pages alias]
+    L --> M[Recheck branch SHA before Pages upload]
+    M --> N[Deploy exact artifact with no bundle]
+    N --> O[Smoke test stable Pages alias]
 ```
 
 `npm run build:generated` invokes Next.js, whose local build-completion adapter normalizes any Windows-emitted nested segment-cache filenames to Next's flat static-export URL layout, and then writes the content version without running the `prebuild` content generator. The normalization is a no-op on the already-flat Linux output and fails on malformed trees or collisions. This keeps generation at one accepted workbook snapshot even if its download needs the single bounded retry. The deploy job does not rebuild or download the workbook.
@@ -216,11 +217,11 @@ The verify job always runs documentation integrity, ESLint with zero warnings, a
 | Pull request to `main` or `develop` | `npm run test:priority` | Install Chromium, then `npm run test:e2e:priority` and the Linux skeleton visual regression | `npm run build:generated` from local-template content |
 | Latest `develop` or `main` push, or a manual or scheduled deployment that is not a no-op | `npm run test` | Install Chromium, then `npm run test:e2e:full` | `npm run build:generated` from the accepted strict workbook snapshot |
 
-Pull-request verification is deliberately deployment-free. A full candidate creates an artifact integrity manifest only after the full checks and exact build succeed; the deploy job revalidates that downloaded artifact before running Wrangler.
+Pull-request verification is deliberately deployment-free. A full candidate compiles the two Pages Functions into `out/_worker.js`, writes `out/_routes.json`, and runs the exact emitted module directory through Miniflare against the final static output before creating the artifact integrity manifest. It then creates a private release envelope only after the full checks and exact build succeed. The envelope seals the static-manifest bytes, every emitted Worker module and route record, the exact reviewed runtime configuration, and every tracked migration. Its digest is passed through the verify job output, so replacing both files and their manifest cannot establish a new trusted seal. The envelope is transferred beside, never inside, `out/`; it is not public Pages output. Before credentials, deploy revalidates the download and stages only sealed `out/`, `wrangler.jsonc`, migrations, and the envelope in a workspace with no source `functions/` tree.
 
 For production and preview builds, `DEPLOYMENT_COMMIT_SHA` binds deployment metadata to the candidate. Production receives only the production Turnstile site key. Preview receives only the optional preview key.
 
-The deploy job checks out the same SHA so `functions/`, `migrations/`, and `wrangler.jsonc` match the tested source. It installs the locked local Wrangler version with `npm ci`, downloads the verified `out/` artifact, validates it, rechecks the branch tip, validates the environment-specific D1 ID, applies any pending migrations, and runs Wrangler from the repository root. Migration targeting uses the fixed database names rather than an interchangeable binding name.
+The deploy job checks out the same SHA so `migrations/` and `wrangler.jsonc` can be checked against the sealed release envelope. It installs the locked local Wrangler with `npm ci --ignore-scripts` before any Cloudflare credentials enter the job, downloads the sealed artifact, and validates its static files, compiled Worker, configuration, and migrations before credentials are available. It runs Wrangler only from the sealed staging workspace, so the locked Wrangler directory-worker path cannot discover or compile a repository `functions/` tree. Before each D1 or Pages mutation, a credential-free branch-tip check is followed directly by the narrow Cloudflare project preflight; that preflight accepts only the reviewed project, assigned subdomain, and `main` production branch. The subsequent mutation receives the credentials. Pages uploads the exact precompiled Worker and static export with Wrangler `--no-bundle`; deploy never recompiles Functions. Migration targeting uses the fixed database names rather than an interchangeable binding name.
 
 ## D1 migration lifecycle
 
@@ -266,7 +267,7 @@ Before upload, `scripts/artifactIntegrity.mjs` creates `out/artifact-integrity.j
 
 The creator rejects symbolic links and unsupported entries. Verification requires the expected commit SHA, agreement with `content-version.json`, the same file count and ordered paths, and exact size and digest matches. The verify job validates the manifest before upload, and the deploy job validates the downloaded artifact again. Hidden export files are included. The Actions artifact is named `cloudflare-pages-build` and is retained for one day.
 
-The integrity manifest covers `out/`. The Pages Functions are source-bound through the exact candidate checkout and branch recheck rather than being copied into that static artifact.
+The integrity manifest covers the complete `out/` deployment directory, including the emitted `out/_worker.js` module directory and generated `out/_routes.json`. The private release envelope also seals the reviewed `wrangler.jsonc` source and migration records against the exact candidate checkout. Pages receives neither the envelope nor source `functions/`; it receives the verified directory with `--no-bundle`.
 
 ## Exact automated smoke scope
 
@@ -274,15 +275,16 @@ After Wrangler returns, `scripts/checkDeployedContent.mjs` tests the stable assi
 
 Each successful attempt proves:
 
-1. `/` returns a successful response whose content type includes `text/html` and whose canonical link resolves to `https://nicolasmgioanni.dev/` without a query string or fragment.
+1. `/` returns a successful response whose content type includes `text/html`, whose body exactly matches the verified local `index.html`, and whose canonical link resolves to `https://nicolasmgioanni.dev/` without a query string or fragment.
 2. `/robots.txt` returns a successful response whose content type includes `text/plain`, and its text exactly matches `robots.txt` in the verified local artifact.
 3. `/sitemap.xml` returns a successful response with an XML-compatible content type, and its text exactly matches `sitemap.xml` in the verified local artifact.
 4. `/content-version.json` contains the expected content hash and candidate commit SHA.
 5. `/artifact-integrity.json` exactly matches the verified local manifest.
 6. `GET /api/contact/verify` returns HTTP `405`, an `application/json` content type, and `{ "ok": false, "error": "method_not_allowed" }`.
 7. `GET /api/contact` returns the same exact method-rejection contract.
+8. The root static response carries the reviewed CSP, Permissions-Policy, Referrer-Policy, HSTS, content-type protection, and frame-denial headers. Both Function method rejections carry their own no-store, referrer, and content-type protection headers.
 
-The automated smoke test does not request every static route, test the custom domain, inspect the static security headers, submit a valid Turnstile token, inspect D1 rows, exercise DNS validation, send email, exercise WAF rules, or prove end-to-end contact delivery. Those checks remain part of release and operations verification.
+The automated smoke test does not request every static route, test the custom domain, submit a valid Turnstile token, inspect D1 rows, exercise DNS validation, send email, exercise WAF rules, or prove end-to-end contact delivery. Those checks remain part of release and operations verification.
 
 ## Routing and response headers
 
@@ -299,7 +301,8 @@ Pages `_headers` rules do not apply to Function responses. Both Functions set th
 
 Failure behavior depends on where the run stops:
 
-- A stale candidate, invalid target, content failure, quality-gate failure, build failure, artifact failure, or pre-migration branch mismatch does not change the active Pages deployment or D1 schema.
+- A stale candidate, invalid target, content failure, quality-gate failure, build failure, envelope or artifact failure, or the branch or live-project check before D1 does not change the active Pages deployment or D1 schema.
+- A branch or live-project check before Pages upload can fail after successful D1 migrations. It stops the upload and leaves the forward-compatible schema active.
 - A D1 target-validation failure changes neither database nor Pages. A migration failure rolls back the failing migration and stops before Pages upload; earlier migrations may already be active.
 - A successful migration followed by a Pages upload failure leaves the forward-compatible schema active while the prior Pages deployment normally remains active. D1 migrations are not undone by Pages rollback.
 - A Wrangler failure normally leaves the prior successful deployment active, but the Cloudflare result remains authoritative.

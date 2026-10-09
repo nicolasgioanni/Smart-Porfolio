@@ -243,10 +243,7 @@ describe("package and CI deployment automation", () => {
     expect(verifyJob).not.toMatch(/PORTFOLIO_[A-Z_]+_CSV_URL/);
     expect(verifyJob).toContain("Validate the immutable Cloudflare Pages target");
     expect(verifyJob).toContain(
-      '[[ "$CLOUDFLARE_PAGES_PROJECT_NAME" != "smart-portfolio" ]]'
-    );
-    expect(verifyJob).toContain(
-      '[[ "$CLOUDFLARE_PAGES_DOMAIN" != "smart-portfolio-bds.pages.dev" ]]'
+      'node scripts/releaseEnvelope.mjs target "$CLOUDFLARE_PAGES_PROJECT_NAME" "$CLOUDFLARE_PAGES_DOMAIN"'
     );
     expect(verifyJob.indexOf("Validate the immutable Cloudflare Pages target")).toBeLessThan(
       verifyJob.indexOf("Fetch and generate the strict public workbook snapshot")
@@ -270,7 +267,7 @@ describe("package and CI deployment automation", () => {
     const previewBuild = section(
       workflow,
       "- name: Build the exact develop preview snapshot",
-      "- name: Create and verify the artifact integrity manifest"
+      "- name: Compile the exact Pages Functions artifact"
     );
 
     expect(productionBuild).toContain(
@@ -331,7 +328,7 @@ describe("package and CI deployment automation", () => {
     expect(verifyJob).toContain('verification_tier="full"');
     expect(verifyJob).toContain('echo "verification_tier=$verification_tier" >> "$GITHUB_OUTPUT"');
     expect(verifyJob).toMatch(
-      /- name: Upload the exact verified static export\s+if: steps\.decision\.outputs\.should_deploy == 'true'/
+      /- name: Upload the exact sealed release artifact\s+if: steps\.decision\.outputs\.should_deploy == 'true'/
     );
 
     expect(verifyJob).toContain("runs-on: ubuntu-24.04");
@@ -373,26 +370,46 @@ describe("package and CI deployment automation", () => {
     expect(verifyJob.match(/name: cloudflare-pages-build/g)).toHaveLength(1);
   });
 
-  it("deploys only the immutable green artifact with pinned local Wrangler", async () => {
+  it("deploys only a complete sealed release envelope with the precompiled Worker", async () => {
     const workflow = await readFile(workflowPath, "utf8");
     const verifyJob = section(workflow, "  verify:", "\n  deploy:");
     const deployJob = section(workflow, "  deploy:", "\n  heartbeat:");
 
     expect(verifyJob).toContain("node scripts/artifactIntegrity.mjs create out");
     expect(verifyJob).toContain("node scripts/artifactIntegrity.mjs verify out");
+    expect(verifyJob).toContain("npx --no-install wrangler pages functions build functions");
+    expect(verifyJob).toContain("--outdir out/_worker.js");
+    expect(verifyJob).toContain("--output-routes-path out/_routes.json");
+    expect(verifyJob).toContain("node scripts/verifyCompiledPagesWorker.mjs out");
+    expect(verifyJob).toContain("node scripts/releaseEnvelope.mjs create");
+    expect(verifyJob).toContain("release_envelope_digest=$release_envelope_digest");
+    expect(verifyJob).toContain("release_envelope_digest: ${{ steps.envelope.outputs.release_envelope_digest }}");
     expect(verifyJob).toContain("name: cloudflare-pages-build");
-    expect(verifyJob).toMatch(/path: out\/\s+include-hidden-files: true\s+if-no-files-found: error/);
+    expect(verifyJob).toMatch(
+      /path: \|\s+out\/\s+release-envelope\/release-envelope\.json\s+include-hidden-files: true\s+if-no-files-found: error/
+    );
     expect(deployJob).toContain("needs: verify");
     expect(deployJob).toContain(
       "if: needs.verify.result == 'success' && needs.verify.outputs.should_deploy == 'true'"
     );
     expect(deployJob).toContain("ref: ${{ needs.verify.outputs.candidate_sha }}");
-    expect(deployJob).toContain('run: node scripts/artifactIntegrity.mjs verify out "$CANDIDATE_SHA"');
+    expect(deployJob).toContain("npm ci --ignore-scripts");
+    expect(deployJob).not.toMatch(/Install the locked local deployment tool\n\s+run: npm ci\n/);
+    expect(deployJob).toContain('node scripts/artifactIntegrity.mjs verify release-artifact/out "$CANDIDATE_SHA"');
+    expect(deployJob).toContain("node scripts/releaseEnvelope.mjs verify");
+    expect(deployJob).toContain("release-artifact/release-envelope/release-envelope.json");
+    expect(deployJob).toContain("RELEASE_ENVELOPE_DIGEST: ${{ needs.verify.outputs.release_envelope_digest }}");
+    expect(deployJob).toContain("Stage only verified deployment inputs before credentials");
+    expect(deployJob).toContain("node scripts/releaseEnvelope.mjs stage");
+    expect(deployJob).toContain("release-deployment");
     expect(deployJob).not.toContain("npm run build");
     expect(deployJob).not.toContain("npm run generate:content");
+    expect(deployJob).not.toContain("pages functions build");
     expect(deployJob).toContain("group: cloudflare-${{ needs.verify.outputs.deploy_target }}");
-    expect(deployJob).toContain("cancel-in-progress: true");
-    expect(deployJob).toContain("Recheck the deployment branch immediately before Wrangler");
+    expect(deployJob).toContain("cancel-in-progress: false");
+    expect(workflow.match(/persist-credentials: false/g)).toHaveLength(2);
+    expect(deployJob).toContain("Recheck the candidate immediately before D1 migration mutation");
+    expect(deployJob).toContain("Recheck the candidate immediately before Pages upload");
     expect(deployJob).toContain(
       "CLOUDFLARE_PAGES_PROJECT_NAME: ${{ needs.verify.outputs.pages_project_name }}"
     );
@@ -401,7 +418,8 @@ describe("package and CI deployment automation", () => {
     );
     expect(deployJob).not.toContain("vars.CLOUDFLARE_PAGES_PROJECT_NAME");
     expect(deployJob).not.toContain("vars.CLOUDFLARE_PAGES_DOMAIN");
-    expect(deployJob).toContain("npx --no-install wrangler pages deploy out");
+    expect(deployJob).toContain('node "$GITHUB_WORKSPACE/node_modules/wrangler/wrangler-dist/cli.js" pages deploy out');
+    expect(deployJob).toContain("--no-bundle");
     expect(deployJob).not.toContain("npx --yes");
     expect(deployJob).toContain('--branch "$CANDIDATE_BRANCH"');
     expect(verifyJob).toContain(
@@ -418,9 +436,73 @@ describe("package and CI deployment automation", () => {
       'node scripts/checkDeployedContent.mjs url "$CLOUDFLARE_PAGES_DOMAIN" "$CANDIDATE_BRANCH"'
     );
     expect(deployJob).not.toContain(".${CLOUDFLARE_PAGES_PROJECT_NAME}.pages.dev");
-    expect(deployJob.indexOf("Recheck the deployment branch immediately before Wrangler")).toBeLessThan(
-      deployJob.indexOf("npx --no-install wrangler pages deploy out")
+    const migrationFreshness = section(
+      deployJob,
+      "- name: Recheck the candidate immediately before D1 migration mutation",
+      "- name: Confirm live Pages project immediately before D1 migration"
     );
+    const migrationPreflight = section(
+      deployJob,
+      "- name: Confirm live Pages project immediately before D1 migration",
+      "- name: Apply the sealed D1 migration"
+    );
+    const migrationStep = section(
+      deployJob,
+      "- name: Apply the sealed D1 migration",
+      "- name: Recheck the candidate immediately before Pages upload"
+    );
+    const pagesFreshness = section(
+      deployJob,
+      "- name: Recheck the candidate immediately before Pages upload",
+      "- name: Confirm live Pages project immediately before Pages upload"
+    );
+    const pagesPreflight = section(
+      deployJob,
+      "- name: Confirm live Pages project immediately before Pages upload",
+      "- name: Upload the sealed Pages artifact"
+    );
+    const pagesUploadStep = section(
+      deployJob,
+      "- name: Upload the sealed Pages artifact",
+      "- name: Smoke test static content, integrity metadata, and both contact APIs"
+    );
+    expect(migrationFreshness).toContain('node scripts/deploymentCandidate.mjs assert "$CANDIDATE_BRANCH" "$CANDIDATE_SHA"');
+    expect(migrationFreshness).not.toContain("CLOUDFLARE_");
+    expect(migrationPreflight).toContain('node "$GITHUB_WORKSPACE/scripts/cloudflarePagesPreflight.mjs"');
+    expect(migrationPreflight).not.toContain("deploymentCandidate.mjs");
+    expect(migrationStep).toContain("working-directory: release-deployment");
+    expect(migrationStep).toContain("wrangler/wrangler-dist/cli.js\" d1 migrations apply");
+    expect(migrationStep).not.toContain("deploymentCandidate.mjs");
+    expect(pagesFreshness).toContain('node scripts/deploymentCandidate.mjs assert "$CANDIDATE_BRANCH" "$CANDIDATE_SHA"');
+    expect(pagesFreshness).not.toContain("CLOUDFLARE_");
+    expect(pagesPreflight).toContain('node "$GITHUB_WORKSPACE/scripts/cloudflarePagesPreflight.mjs"');
+    expect(pagesPreflight).not.toContain("deploymentCandidate.mjs");
+    expect(pagesUploadStep).toContain("working-directory: release-deployment");
+    expect(pagesUploadStep).toMatch(/wrangler\/wrangler-dist\/cli\.js" pages deploy out[\s\S]*?--no-bundle/);
+    expect(pagesUploadStep).not.toContain("deploymentCandidate.mjs");
+    const sealedValidation = section(
+      deployJob,
+      "- name: Validate the downloaded sealed release artifact before credentials",
+      "- name: Stage only verified deployment inputs before credentials"
+    );
+    const stagedWorkspace = section(
+      deployJob,
+      "- name: Stage only verified deployment inputs before credentials",
+      "- name: Recheck the candidate immediately before D1 migration mutation"
+    );
+    const dependencyInstallation = section(
+      deployJob,
+      "- name: Install the locked local deployment tool without lifecycle scripts",
+      "- name: Download the immutable sealed release artifact"
+    );
+    expect(dependencyInstallation).toContain("npm ci --ignore-scripts");
+    expect(dependencyInstallation).not.toContain("CLOUDFLARE_");
+    expect(sealedValidation).not.toContain("CLOUDFLARE_API_TOKEN");
+    expect(sealedValidation).not.toContain("CLOUDFLARE_ACCOUNT_ID");
+    expect(stagedWorkspace).not.toContain("CLOUDFLARE_");
+    expect(stagedWorkspace).toContain("node scripts/releaseEnvelope.mjs stage");
+    expect(deployJob.match(/^\s+CLOUDFLARE_API_TOKEN:/gm)).toHaveLength(4);
+    expect(deployJob.match(/^\s+CLOUDFLARE_ACCOUNT_ID:/gm)).toHaveLength(4);
   });
 
   it("allows repository writes only for the guarded existing develop heartbeat", async () => {

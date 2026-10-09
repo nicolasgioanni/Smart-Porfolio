@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { artifactManifestFileName } from "./artifactIntegrity.mjs";
-import { compareDeployedContent, smokeDeployment } from "./checkDeployedContent.mjs";
+import { assertStaticHeaders, compareDeployedContent, smokeDeployment } from "./checkDeployedContent.mjs";
 
 const contentHash = "a".repeat(64);
 const commitSha = "b".repeat(40);
@@ -29,6 +29,33 @@ const sitemapXml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 <url><loc>https://nicolasmgioanni.dev/</loc></url>
 </urlset>`;
+const rootHtml = '<!doctype html><html><head><title>Portfolio</title><link rel="canonical" href="https://nicolasmgioanni.dev"></head></html>';
+const staticHeaders = {
+  "Content-Type": "text/html; charset=utf-8",
+  "Content-Security-Policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com",
+  "Permissions-Policy": "camera=(), geolocation=(), microphone=(), payment=(), usb=()",
+  "Referrer-Policy": "strict-origin-when-cross-origin",
+  "Strict-Transport-Security": "max-age=31536000",
+  "X-Content-Type-Options": "nosniff",
+  "X-Frame-Options": "DENY"
+};
+const metadataHeaders = {
+  "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+  Pragma: "no-cache"
+};
+const functionHeaders = {
+  "Cache-Control": "no-store, max-age=0",
+  "Referrer-Policy": "no-referrer",
+  "X-Content-Type-Options": "nosniff"
+};
+const rootHeadersContract = `/*
+  Content-Security-Policy: ${staticHeaders["Content-Security-Policy"]}
+  Permissions-Policy: ${staticHeaders["Permissions-Policy"]}
+  Referrer-Policy: ${staticHeaders["Referrer-Policy"]}
+  Strict-Transport-Security: ${staticHeaders["Strict-Transport-Security"]}
+  X-Content-Type-Options: ${staticHeaders["X-Content-Type-Options"]}
+  X-Frame-Options: ${staticHeaders["X-Frame-Options"]}
+`;
 
 let artifactDirectory;
 
@@ -123,10 +150,12 @@ describe("deployed candidate comparison", () => {
 });
 
 describe("deployment smoke checks", () => {
-  it("matches deployed SEO artifacts and requires both contact Functions to reject GET requests", async () => {
+  it("matches verified root content, baseline headers, SEO artifacts, and both contact Functions", async () => {
     artifactDirectory = await mkdtemp(path.join(os.tmpdir(), "portfolio-smoke-"));
     await Promise.all([
+      writeFile(path.join(artifactDirectory, "index.html"), rootHtml, "utf8"),
       writeFile(path.join(artifactDirectory, artifactManifestFileName), JSON.stringify(manifest), "utf8"),
+      writeFile(path.join(artifactDirectory, "_headers"), rootHeadersContract, "utf8"),
       writeFile(path.join(artifactDirectory, "robots.txt"), robotsText, "utf8"),
       writeFile(path.join(artifactDirectory, "sitemap.xml"), sitemapXml, "utf8")
     ]);
@@ -139,15 +168,10 @@ describe("deployment smoke checks", () => {
         requestedPaths.push(url.pathname);
 
         if (url.pathname === "/") {
-          return new Response(
-            '<!doctype html><html><head><title>Portfolio</title><link rel="canonical" href="https://nicolasmgioanni.dev"></head></html>',
-            {
-              headers: { "Content-Type": "text/html; charset=utf-8" }
-            }
-          );
+          return new Response(rootHtml, { headers: staticHeaders });
         }
-        if (url.pathname === "/content-version.json") return Response.json(version);
-        if (url.pathname === `/${artifactManifestFileName}`) return Response.json(manifest);
+        if (url.pathname === "/content-version.json") return Response.json(version, { headers: metadataHeaders });
+        if (url.pathname === `/${artifactManifestFileName}`) return Response.json(manifest, { headers: metadataHeaders });
         if (url.pathname === "/robots.txt") {
           return new Response(robotsText, { headers: { "Content-Type": "text/plain; charset=utf-8" } });
         }
@@ -155,7 +179,7 @@ describe("deployment smoke checks", () => {
           return new Response(sitemapXml, { headers: { "Content-Type": "application/xml; charset=utf-8" } });
         }
         if (url.pathname === "/api/contact/verify" || url.pathname === "/api/contact") {
-          return Response.json({ ok: false, error: "method_not_allowed" }, { status: 405 });
+          return Response.json({ ok: false, error: "method_not_allowed" }, { status: 405, headers: functionHeaders });
         }
         throw new Error(`Unexpected smoke-check URL: ${url}`);
       })
@@ -173,5 +197,18 @@ describe("deployment smoke checks", () => {
       "/api/contact/verify",
       "/api/contact"
     ]);
+  });
+
+  it("rejects a root CSP that weakens the verified static header contract", async () => {
+    artifactDirectory = await mkdtemp(path.join(os.tmpdir(), "portfolio-smoke-"));
+    await writeFile(path.join(artifactDirectory, "_headers"), rootHeadersContract, "utf8");
+    const weakenedHeaders = new Headers({
+      ...staticHeaders,
+      "Content-Security-Policy": `${staticHeaders["Content-Security-Policy"]}; script-src https://unreviewed.example`
+    });
+
+    await expect(assertStaticHeaders(new Response(rootHtml, { headers: weakenedHeaders }), artifactDirectory)).rejects.toThrow(
+      /Content-Security-Policy/
+    );
   });
 });

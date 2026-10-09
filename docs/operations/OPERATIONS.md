@@ -44,7 +44,7 @@ Do not infer a successful source deployment from the content hash alone. Code-on
 1. Open or update a pull request targeting `main` or `develop`.
 2. Confirm the `verify` job generated template content and passed documentation integrity, lint, typecheck, the priority unit and browser suites, and the static build.
 3. Merge or push the reviewed change to `develop`.
-4. Confirm the workflow selected `deploy_target=preview`, validated the preview D1 binding, applied pending preview migrations, and deployed the current `develop` SHA.
+4. Confirm the workflow selected `deploy_target=preview`, probed and sealed the emitted Worker, preview configuration, and migrations, staged only those sealed inputs before credentials, preflighted the live reviewed Pages identity, applied pending preview migrations, and deployed the current `develop` SHA without rebuilding Functions.
 5. Review `https://develop.smart-portfolio-bds.pages.dev` manually. Complete the visible gate, observe its automatic transition or use Continue, and confirm the three data-entry steps, two acknowledgments, 500-character limit, responsive behavior, focus, and error states without selecting Send request. The gate may consume a Turnstile token, but this no-delivery inspection must not call `/api/contact`, reserve D1 quota, or send email. Confirm the standalone completion layout through verified component coverage.
 6. Confirm the preview workflow and the pull-request verification workflow both pass for the exact candidate before merge. The automated smoke check covers only the scope listed in [Deployment](DEPLOYMENT.md#exact-automated-smoke-scope).
 
@@ -55,9 +55,9 @@ The preview build receives only `NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY`. If tha
 1. Merge the reviewed green change into `main` through the repository's approved change flow.
 2. Confirm the push workflow resolves the current `main` SHA.
 3. Confirm strict workbook generation succeeds before the quality gates.
-4. Confirm the deploy job downloads and revalidates `cloudflare-pages-build` instead of rebuilding.
-5. Confirm the final branch-tip check passes before D1 migration and Wrangler.
-6. Confirm the production D1 target check and pending migrations succeed before Pages upload.
+4. Confirm the deploy job downloads, revalidates, and stages `cloudflare-pages-build` and its trusted release-envelope digest instead of rebuilding or recompiling.
+5. Confirm the final credential-free branch-tip check and live Pages preflight pass immediately before D1 migration and again immediately before Pages upload. The preflight must report the reviewed project, assigned domain, and `main` production branch.
+6. Confirm the sealed production D1 target and pending migrations succeed before Pages upload.
 7. Confirm the assigned-domain smoke step passes.
 8. Verify the public custom domain, key static routes, security headers, and the contact page manually. Completing the gate is permitted, but do not select Send request.
 9. Record the active `contentHash`, `commitSha`, workflow run, D1 migration result, and any manual checks in the release record.
@@ -136,7 +136,7 @@ On representative static pages, confirm the Cloudflare response includes the int
 - `X-Content-Type-Options`
 - `X-Frame-Options`
 
-The repository does not automatically smoke-test these headers after deployment.
+The automated smoke checks these headers on `/`; this wider route sampling remains a manual release check.
 
 ### Verify contact routing without delivery
 
@@ -210,7 +210,9 @@ Use the first failing stage to decide whether production could have changed:
 | Documentation, lint, typecheck, or tests | None | Fix the reported repository failure |
 | Static build or manifest creation | None | Reproduce locally with the documented command |
 | Artifact upload, download, or verification | None | Inspect artifact transfer and candidate SHA |
-| Branch recheck | None | Review the newer branch run |
+| Branch recheck before D1 | None | Review the newer branch run |
+| Live Pages project preflight before D1 | None | Restore the reviewed project, assigned subdomain, or `main` production branch before retrying |
+| Branch or live Pages project check before upload | D1 migrations may already be active; Pages remains unchanged | Restore the reviewed state and confirm schema compatibility before retrying |
 | D1 target validation | None | Restore the reviewed database ID or correct environment isolation before retrying |
 | D1 migration | The failing migration is rolled back; an earlier migration may already be active | Inspect the selected database and migration ledger before retrying |
 | Wrangler | Usually prior deployment remains active | Check Cloudflare deployment history before retrying |

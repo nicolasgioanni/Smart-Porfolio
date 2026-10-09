@@ -119,7 +119,7 @@ export async function createArtifactManifest(rootDirectory) {
   return manifest;
 }
 
-export async function verifyArtifactManifest(rootDirectory, expectedCommitSha) {
+export async function verifyArtifactManifest(rootDirectory, expectedCommitSha, { quiet = false } = {}) {
   const resolvedRoot = path.resolve(rootDirectory);
   let manifestValue;
   try {
@@ -155,7 +155,7 @@ export async function verifyArtifactManifest(rootDirectory, expectedCommitSha) {
     }
   }
 
-  console.log(`Verified SHA-256 integrity for ${actualFiles.length} artifact files.`);
+  if (!quiet) console.log(`Verified SHA-256 integrity for ${actualFiles.length} artifact files.`);
   return manifest;
 }
 

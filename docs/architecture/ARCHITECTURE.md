@@ -58,7 +58,7 @@ The build-time content path, static delivery path, and runtime contact path rema
 | Content authoring | Public-safe workbook or local templates | Source rows | Owner workflow or local repository |
 | Content generation | One source snapshot | Validated generated JSON and semantic hash | Local process or GitHub Actions |
 | Static application | Generated JSON, components, styles, public assets | `out/` static export | Next.js build |
-| Deployment | Tested export, exact commit, Functions, Wrangler config | Cloudflare Pages deployment | GitHub Actions |
+| Deployment | Tested static export, emitted Functions, exact commit, reviewed runtime config, and migrations | Cloudflare Pages deployment | GitHub Actions |
 | Contact verification | Turnstile token and opaque submission ID | Signed host-only verification ticket | `/api/contact/verify` Pages Function |
 | Contact delivery | Verification ticket and contact payload | DNS result, D1 reservation, and two Resend acceptances | `/api/contact` Pages Function |
 
@@ -188,15 +188,15 @@ A deployable candidate follows this sequence:
 2. Generate one validated content snapshot.
 3. Compare its canonical normalized content subset hash and exact commit SHA with the active production manifest when the event permits a no-op.
 4. Run documentation validation, lint, typecheck, focused footer and navigation regressions, the full Vitest suite, and the skeleton, navigation, footer, recommendation, experience, and research Playwright Chromium suites before the static build.
-5. Write `content-version.json` and `artifact-integrity.json`.
-6. Upload and download the immutable Actions artifact.
-7. Verify every artifact digest and the candidate commit.
-8. Recheck that a production candidate is still current.
-9. Validate the selected D1 target and apply pending migrations.
-10. Deploy the static export and Functions from repository root with pinned Wrangler.
-11. Smoke-test static content, both manifests, and GET rejection from both contact Functions.
+5. Write `content-version.json`, compile Pages Functions into `out/_worker.js`, and write `out/_routes.json`.
+6. Create the artifact manifest and a private release envelope that seals the static-manifest bytes, emitted Worker modules, reviewed runtime configuration, and migration records.
+7. Run the exact emitted Worker modules against the final static output, then upload and download the immutable static directory and private envelope.
+8. Verify both against the verify job's trusted seal digest and stage only sealed output, configuration, and migrations in a credential-free workspace without source Functions.
+9. Recheck candidate freshness and the live provider project identity immediately before each D1 migration mutation and Pages upload.
+10. Apply pending migrations to the sealed selected D1 target, then deploy the exact staged static export and emitted Worker directory with pinned Wrangler `--no-bundle`; no Function source is rebuilt in deploy.
+11. Smoke-test static bytes and applicable static and Function response headers, both manifests, and GET rejection from both contact Functions.
 
-The active `/content-version.json` remains the deployed source of truth. A failure before Wrangler upload leaves it unchanged. A post-upload smoke failure can occur after the new manifest is already active, so operators must inspect the deployed result and choose retry or rollback deliberately. See [Operations](../operations/OPERATIONS.md) for event behavior, retry, and rollback considerations.
+The active `/content-version.json` remains the deployed source of truth. A failed candidate, envelope, or pre-mutation freshness check leaves the active deployment unchanged. A post-upload smoke failure can occur after the new manifest is already active, so operators must inspect the deployed result and choose retry or rollback deliberately. See [Operations](../operations/OPERATIONS.md) for event behavior, retry, and rollback considerations.
 
 ## Public and private data
 
@@ -231,7 +231,7 @@ Hashing a canonical normalized content subset prevents timestamps, workbook meta
 
 ### Exact-artifact deployment
 
-Transferring and verifying the tested `out/` artifact costs additional workflow steps. It prevents the deploy job from rebuilding or fetching different content after verification.
+Transferring and verifying the tested `out/` artifact plus a private release envelope costs additional workflow steps. The trusted envelope digest binds the static-manifest bytes, generated Worker module directory, runtime configuration, and migrations to the verified candidate. It prevents the deploy job from rebuilding, rebundling, or fetching different deployment inputs after verification.
 
 ### Isolated contact Functions
 
@@ -259,7 +259,7 @@ The two-step ticket flow avoids sending a consumed Turnstile token twice and kee
 | Function routing and static headers | `public/_routes.json` and `public/_headers` |
 | Cloudflare project configuration | `wrangler.jsonc` |
 | Candidate and deployment behavior | `.github/workflows/ci.yml` |
-| Artifact and manifest behavior | `scripts/artifactIntegrity.mjs`, `writeContentVersion.mjs`, and `checkDeployedContent.mjs` |
+| Artifact, envelope, and smoke behavior | `scripts/artifactIntegrity.mjs`, `releaseEnvelope.mjs`, `writeContentVersion.mjs`, and `checkDeployedContent.mjs` |
 | License | `LICENSE` |
 
 ## Extension constraints

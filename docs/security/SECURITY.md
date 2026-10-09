@@ -242,7 +242,9 @@ Repository configuration can prove the intended non-secret values, but not the p
 
 ## Deployment security
 
-Every production artifact must contain the exact `_routes.json` and `_headers` files. Deployment smoke testing sends unauthenticated `GET` requests to both Function paths and requires `405` JSON responses. This establishes that both routes are deployed and reject the wrong method.
+Every production artifact must contain the exact `_routes.json`, `_headers`, and emitted `_worker.js` module directory. The verify job probes the emitted Worker against the final static output before sealing. Before credentials are available, the deploy job verifies the private release envelope against the trusted digest emitted by verify and stages only sealed configuration, migrations, and artifact files in a workspace without source Functions. The envelope seals static-manifest bytes, all emitted Worker module bytes and routes, the selected reviewed `wrangler.jsonc` configuration, and each migration record. The Pages upload uses that verified directory with `--no-bundle`; deploy does not rebuild or recompile Functions. The credentialed job installs the locked dependency graph with lifecycle scripts disabled. Credentials enter only the two narrow live-project preflights and their adjacent Cloudflare mutation commands; the general Git freshness checks remain credential-free.
+
+Deployment smoke testing compares the root document with the verified artifact, checks the applicable static security headers, and sends unauthenticated `GET` requests to both Function paths. It requires `405` JSON responses with the Function response headers. This establishes that both routes are deployed and reject the wrong method.
 
 The smoke test does not establish successful POST handling, exact-origin behavior, live Turnstile validation, ticket cookie acceptance, D1 migration state, DNS behavior, WAF state, Resend delivery, sender-domain verification, recipient correctness, or mailbox receipt. Those items require controlled deployed checks. See [Deployment](../operations/DEPLOYMENT.md) for the activation sequence.
 

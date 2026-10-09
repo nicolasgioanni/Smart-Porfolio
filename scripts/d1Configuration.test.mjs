@@ -75,19 +75,26 @@ describe("contact D1 configuration", () => {
     expect(gitignore).toMatch(/^\.wrangler$/m);
   });
 
-  it("migrates the selected database before uploading the Pages deployment", async () => {
+  it("seals the selected D1 binding and stages only sealed inputs before credential-scoped mutations", async () => {
     const workflow = await readFile(path.join(projectRoot, ".github", "workflows", "ci.yml"), "utf8");
-    const migrationStep = workflow.indexOf("Validate the environment-specific D1 binding and apply migrations");
-    const deployStep = workflow.indexOf("Deploy the verified export and Pages Function with pinned Wrangler");
+    const envelopeValidation = workflow.indexOf("Validate the downloaded sealed release artifact before credentials");
+    const migrationStep = workflow.indexOf("Recheck the candidate immediately before D1 migration mutation");
+    const deployStep = workflow.indexOf("Recheck the candidate immediately before Pages upload");
 
+    expect(envelopeValidation).toBeGreaterThan(-1);
     expect(migrationStep).toBeGreaterThan(-1);
     expect(deployStep).toBeGreaterThan(migrationStep);
+    expect(envelopeValidation).toBeLessThan(migrationStep);
     expect(workflow).toContain(
-      "wrangler d1 migrations apply smart-portfolio-contact-rate-limit-preview --env preview --remote"
+      "wrangler/wrangler-dist/cli.js\" d1 migrations apply smart-portfolio-contact-rate-limit-preview --env preview --remote"
     );
     expect(workflow).toContain(
-      "wrangler d1 migrations apply smart-portfolio-contact-rate-limit-production --remote"
+      "wrangler/wrangler-dist/cli.js\" d1 migrations apply smart-portfolio-contact-rate-limit-production --remote"
     );
-    expect(workflow).toContain("still has the non-deployable placeholder database ID");
+    expect(workflow).toContain("node scripts/releaseEnvelope.mjs verify");
+    expect(workflow).toContain("node scripts/releaseEnvelope.mjs stage");
+    expect(workflow).toContain("node scripts/deploymentCandidate.mjs assert");
+    expect(workflow).toContain("node \"$GITHUB_WORKSPACE/scripts/cloudflarePagesPreflight.mjs\"");
+    expect(workflow.match(/working-directory: release-deployment/g)).toHaveLength(4);
   });
 });

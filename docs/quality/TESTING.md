@@ -188,8 +188,12 @@ After `build:generated`, verify `/projects` without JavaScript against the expor
 
 | Test | What it verifies |
 | --- | --- |
-| `scripts/packageScripts.test.mjs` | Node and tool pins, workflow triggers, single-snapshot conditions, branch isolation, permissions, exact-candidate no-op behavior, artifact transfer, target validation, develop-only heartbeat boundaries and race rejection, no-cache metadata, and Wrangler invocation |
-| `scripts/checkDeployedContent.test.mjs` | Independent deployed content and commit comparison, missing or malformed manifest behavior, and post-deployment smoke requests with exact contact Function method rejection |
+| `scripts/packageScripts.test.mjs` | Node and tool pins, workflow triggers, single-snapshot conditions, branch isolation, permissions, credential-free deployment installation, exact-candidate freshness, sealed artifact transfer, target validation, heartbeat boundaries, and exact Wrangler invocation |
+| `scripts/releaseEnvelope.test.mjs` | Trusted seal verification and rejection of changed static files, replacement manifests, Worker modules, runtime configuration, migrations, and deployment targets |
+| `scripts/deploymentCandidate.test.mjs` | Branch-tip freshness and rejection of stale deployment candidates |
+| `scripts/cloudflarePagesPreflight.test.mjs` | Bounded exact-provider preflight, including wrong or missing production branch, wrong project or assigned domain, redirects, inaccessible responses, and malformed bodies |
+| `scripts/pagesFunctions.integration.test.mjs` | Locked Wrangler compilation and the exact emitted Worker module's API routing and static fallback in Miniflare and local Pages runtime |
+| `scripts/checkDeployedContent.test.mjs` | Independent deployed content and commit comparison, missing or malformed manifest behavior, static byte and response-header smoke checks, and Function method-rejection headers |
 | Artifact tests inside `scripts/packageScripts.test.mjs` | Content-version creation, hidden file inclusion, manifest structure, commit binding, digest verification, and tamper rejection |
 | `scripts/localAutomation.test.mjs` | Project discovery, environment copy safety, dependency-state hashing, stale content, and port selection |
 
@@ -223,9 +227,9 @@ Latest pushes to `main` or `develop`:
 4. Run the complete Vitest suite once, including local D1 integration coverage.
 5. Install Chromium once and run the complete browser suite once. This includes the direct skeleton alignment matrix, held-navigation semantics, and Linux zero-difference visual matrix.
 6. Build with `build:generated` and the branch-specific public Turnstile key.
-7. Create, verify, and upload the artifact manifest.
-8. Enter the conditional deploy job, validate the selected D1 binding, and apply pending migrations.
-9. Upload the Pages artifact only after migration succeeds.
+7. Compile and directly probe the final emitted Pages Worker, then create the static manifest and private release envelope and upload both with the verify job's seal digest.
+8. Enter the conditional deploy job, validate and stage only the downloaded sealed inputs before credentials. Recheck candidate freshness without credentials, then preflight the exact live Pages project immediately before each mutation.
+9. Apply migrations only to the sealed target, then upload the staged static directory and emitted Worker with `--no-bundle`.
 
 ### Scheduled and manual checks
 
@@ -237,13 +241,12 @@ The stable `verify` job selects `priority` for pull requests and `full` for ever
 
 ## Post-deployment smoke tests
 
-The deploy job runs `scripts/checkDeployedContent.mjs` against the stable assigned-domain alias. It verifies root HTML, exact content and commit metadata, exact artifact-manifest equality, and the exact HTTP `405` JSON contract for GET requests to both contact Functions.
+The deploy job runs `scripts/checkDeployedContent.mjs` against the stable assigned-domain alias. It verifies root HTML byte identity, applicable root security headers, exact content and commit metadata, exact artifact-manifest equality, and the exact HTTP `405` JSON and response-header contract for GET requests to both contact Functions.
 
 It does not test:
 
 - Every static route.
 - The custom domain.
-- Static security headers.
 - Valid contact POST requests.
 - Turnstile completion.
 - D1 migration or reservation behavior.

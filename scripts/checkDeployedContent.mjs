@@ -9,6 +9,13 @@ const contentHashPattern = /^[a-f0-9]{64}$/;
 const gitShaPattern = /^[a-f0-9]{40}$/;
 const pagesDomainPattern = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.pages\.dev$/;
 const canonicalHomepageUrl = new URL("https://nicolasmgioanni.dev/");
+const requiredStaticHeaders = {
+  "permissions-policy": "camera=(), geolocation=(), microphone=(), payment=(), usb=()",
+  "referrer-policy": "strict-origin-when-cross-origin",
+  "strict-transport-security": "max-age=31536000",
+  "x-content-type-options": "nosniff",
+  "x-frame-options": "DENY"
+};
 
 export function resolvePagesDeploymentUrl(pagesDomain, branch) {
   if (typeof pagesDomain !== "string" || !pagesDomainPattern.test(pagesDomain)) {
@@ -58,6 +65,36 @@ async function writeOutput(name, value, environment = process.env) {
   }
 }
 
+async function readRootContentSecurityPolicy(artifactDirectory) {
+  const headers = await readFile(path.join(path.resolve(artifactDirectory), "_headers"), "utf8");
+  const rootRule = headers.split(/\r?\n\r?\n/).find((rule) => /^\/\*\s*(?:\r?\n|$)/.test(rule));
+  const policy = rootRule?.match(/^\s*Content-Security-Policy:\s*(.+?)\s*$/im)?.[1];
+  if (!policy) throw new Error("Verified artifact is missing the root Content-Security-Policy contract");
+  return policy;
+}
+
+export async function assertStaticHeaders(response, artifactDirectory) {
+  assert.equal(
+    response.headers.get("content-security-policy"),
+    await readRootContentSecurityPolicy(artifactDirectory),
+    "Deployment root Content-Security-Policy does not match the verified artifact"
+  );
+  for (const [header, expectedValue] of Object.entries(requiredStaticHeaders)) {
+    assert.equal(response.headers.get(header), expectedValue, `Deployment root has an unexpected ${header} header`);
+  }
+}
+
+function assertNoCacheMetadataHeaders(response, name) {
+  assert.match(response.headers.get("cache-control") ?? "", /\bno-store\b/i, `${name} must disable caching`);
+  assert.equal(response.headers.get("pragma"), "no-cache", `${name} must set Pragma: no-cache`);
+}
+
+function assertFunctionHeaders(response, endpoint) {
+  assert.match(response.headers.get("cache-control") ?? "", /\bno-store\b/i, `/${endpoint} must disable caching`);
+  assert.equal(response.headers.get("referrer-policy"), "no-referrer", `/${endpoint} must not leak referrers`);
+  assert.equal(response.headers.get("x-content-type-options"), "nosniff", `/${endpoint} must disable content sniffing`);
+}
+
 export async function compareDeployedContent(
   baseUrl,
   expectedContentHash,
@@ -98,7 +135,13 @@ async function smokeAttempt(baseUrl, artifactDirectory, expectedContentHash, exp
   if (!rootResponse.headers.get("content-type")?.includes("text/html")) {
     throw new Error("Deployment root did not return HTML");
   }
+  await assertStaticHeaders(rootResponse, artifactDirectory);
   const rootHtml = await rootResponse.text();
+  assert.equal(
+    rootHtml,
+    await readFile(path.join(path.resolve(artifactDirectory), "index.html"), "utf8"),
+    "Deployment root content does not match the verified upload"
+  );
   const canonicalTag = (rootHtml.match(/<link\b[^>]*>/gi) ?? []).find((tag) =>
     /\brel\s*=\s*(["'])canonical\1/i.test(tag)
   );
@@ -117,11 +160,13 @@ async function smokeAttempt(baseUrl, artifactDirectory, expectedContentHash, exp
   assert.equal(deployedCanonical.hash, "", "Deployment root canonical must not contain a fragment");
 
   const versionResponse = await fetchNoCache(endpointUrl(baseUrl, "content-version.json", cacheBust));
+  assertNoCacheMetadataHeaders(versionResponse, "content-version.json");
   const deployedVersion = parseContentVersion(await versionResponse.json());
   assert.equal(deployedVersion.contentHash, expectedContentHash, "Deployed content hash is stale");
   assert.equal(deployedVersion.commitSha, expectedCommitSha, "Deployed commit SHA is stale");
 
   const manifestResponse = await fetchNoCache(endpointUrl(baseUrl, artifactManifestFileName, cacheBust));
+  assertNoCacheMetadataHeaders(manifestResponse, artifactManifestFileName);
   const deployedManifest = await manifestResponse.json();
   const localManifest = JSON.parse(
     await readFile(path.join(path.resolve(artifactDirectory), artifactManifestFileName), "utf8")
@@ -164,6 +209,7 @@ async function smokeAttempt(baseUrl, artifactDirectory, expectedContentHash, exp
       /^application\/json\b/i,
       `/${endpoint} did not return JSON`
     );
+    assertFunctionHeaders(apiResponse, endpoint);
     assert.deepEqual(
       await apiResponse.json(),
       { ok: false, error: "method_not_allowed" },
