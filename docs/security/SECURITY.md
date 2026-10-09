@@ -50,6 +50,8 @@ ExcelJS remains exactly `4.4.0` because no newer release is available. Its only 
 
 GHSA-w5hq-g745-h8pq concerns caller-buffer behavior in UUID v3, v5, and v6. The package-contract test establishes the required resolved version. The real XLSX data-bar test calls ExcelJS's UUID v4 extension path, verifies the generated identifier is serialized into worksheet XML, and verifies that ExcelJS restores the identical identifier on read. That test proves ExcelJS compatibility and serialization for the override; it does not by itself exercise or prove the advisory's v3/v5/v6 caller-buffer remediation. Re-evaluate and remove the narrow override when upgrading ExcelJS.
 
+The locked Next 16 remediation keeps the framework and its ESLint plugin aligned at `16.3.8`, which remains compatible with the repository's React 19 range and preserves the static-export adapter contract. Wrangler `4.149.0` and Miniflare `5.20261006.1-alpha` are pinned as a matching local-emulator pair. The narrow root `source-map-js` `1.2.2` override satisfies the existing PostCSS range. The major-specific `brace-expansion` overrides stay within the ranges declared by their consuming `minimatch` versions; do not broaden either remediation beyond its resolved dependency path.
+
 ## Threat model
 
 Assume that a visitor can bypass all browser controls, construct arbitrary requests, replay cookies, alter JSON, omit headers, and send traffic directly to a Function. Also assume that public static files, browser bundles, repository contents, response headers, and client-visible environment values can be inspected.
