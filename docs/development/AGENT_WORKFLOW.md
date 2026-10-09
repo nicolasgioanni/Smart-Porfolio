@@ -2,10 +2,14 @@
 
 Repository-local guidance makes the architecture and validation contracts available after a clone without requiring a separate install. [AGENTS.md](../../AGENTS.md) contains shared constraints, and [.agents](../../.agents/README.md) routes work to focused skills and compact durable decisions.
 
+## Branch and baseline
+
+`main` is the production integration branch and `develop` deploys previews. Before creating a new improvement worktree, refresh `origin`, fast-forward only local `main`, record that fixed baseline, then create one `codex/` branch. Continue an existing worktree from its recorded baseline without synchronizing it to newer branches, agents, or pull requests. Keep one coherent improvement per branch, open one pull request to `main`, and stop there: do not merge or enable auto-merge.
+
 ## Start a repository task
 
 1. Read [AGENTS.md](../../AGENTS.md), then the scoped map in [.agents](../../.agents/README.md) and its system decisions before opening unrelated documentation.
-2. Create or select a focused branch and worktree for the cohesive change.
+2. Follow [Branch and baseline](#branch-and-baseline) before creating a new worktree or continuing an existing one.
 3. Complete the Windows or cross-platform setup path in [Local development](LOCAL_DEVELOPMENT.md) inside that worktree. It defines the Node and npm dependency contract, `.env` handling, local content source, and when to use the static UI or Pages Function server. Do not create a `requirements.txt`; `package.json`, `package-lock.json`, and `.nvmrc` are authoritative.
 4. Search for the closest implementation, test, selector, and style primitive. Select the smallest relevant repository skill below and read its linked authoritative product guide before making the change.
 5. For deployment, configuration, or release changes, select the release-security skill and read [Deployment](../operations/DEPLOYMENT.md) before editing the workflow, Wrangler configuration, bindings, secrets documentation, or operator instructions. Pull requests never deploy; `develop` deploys preview and `main` deploys production.
@@ -28,7 +32,7 @@ Read the linked product document only when the selected task needs its detail. T
 
 ## Model routing
 
-Use Astra for coordination, review, decomposition, and evidence synthesis. Use GPT-5.6 Terra at High or Extra High for implementation. If a requested capability is unavailable in a cloned environment, follow the same checked repository contracts with the available tooling and report the validation actually performed.
+Use GPT-5.6 Sol for coordination, architecture, review, decomposition, and evidence synthesis. Use GPT-5.6 Terra at High or Extra High for implementation. Use `main` as the integration target. If a requested capability is unavailable in a cloned environment, follow the same checked repository contracts with the available tooling and report the validation actually performed.
 
 ## Complete a change
 

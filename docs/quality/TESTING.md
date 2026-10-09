@@ -61,20 +61,25 @@ Run:
 npm run docs:check
 ```
 
-`scripts/validateDocumentation.mjs` reads `README.md`, every Markdown file under `docs/`, the optional root `AGENTS.md`, and every Markdown file under `.agents/`. It checks:
+`scripts/validateDocumentation.mjs` reads `README.md`, every Markdown file under `docs/` and `.agents/`, and Markdown under `infrastructure/` or `infra/` when either exists. It requires the root agent bootstrap (`AGENTS.md`, `.agents/README.md`, and `.agents/knowledge/SYSTEM_DECISIONS.md`) and `.agents/ownership-manifest.json`. It checks:
 
 - Exactly one H1 per document.
 - Balanced fenced code blocks.
 - Resolution and exact capitalization of relative Markdown, image, reference, HTML `href`, and HTML `src` links.
 - Rejection of relative links that escape the repository.
 - Rejection of links to local environment files or generated output directories.
-- Rejection of absolute Windows user paths.
+- Rejection of absolute Windows, macOS, and Linux user paths, credential-bearing URLs, key-shaped values, and sensitive assignments without printing their values.
 - Localhost URL use only in the approved local-development documents.
 - Rejection of workbook URL patterns and obvious unresolved placeholders.
-- Validation of repository-local agent skill frontmatter and links when `.agents/` is present.
+- Validation of repository-local agent skill frontmatter and links.
 - Rejection of prose that presents generated output directories as committed source.
+- The ordered bootstrap's combined 8 KiB budget, each agent card's 6 KiB budget, direct card links to owned code, tests, and anchored documentation, and a manifest owner or explicit reason for every relevant source, test, documentation, CI, infrastructure, and functional root file, including dotfile and extensionless configuration.
+- Rejection of relevant root or source symlinks rather than silently skipping their targets during ownership discovery.
+- Existing in-repository manifest references only: map documents, documentation, entrypoints, tests, reuse primitives, and explicit exceptions cannot traverse through a file or parent-directory symlink.
+- Known `npm run` commands in checked Markdown, unless a narrow document-and-reason manifest exception registers an illustrative command.
+- Explicit future infrastructure status: absent infrastructure is `not-implemented`; implemented `infrastructure/` or `infra/` paths need an owning card with documentation and checks.
 
-The validator uses only Node.js standard-library APIs and does not check external-link availability. Its fixture tests live in `scripts/validateDocumentation.test.mjs`.
+The portable [agent map](../development/AGENT_MAP.md) explains routing and cards; the manifest is the machine-readable ownership source. Minimal unit fixtures must explicitly set `requireOwnershipMap: false`. The validator inventories Git-tracked and nonignored files when Git is available, with a privacy-safe fixture fallback; ignored local environment files are never read for ownership coverage, while the checked-in `.env.example` template has an explicit exception. It does not check external-link availability. Its fixture tests live in `scripts/validateDocumentation.test.mjs`.
 
 ## Content pipeline coverage
 

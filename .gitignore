@@ -11,6 +11,7 @@ test-results
 !.env.example
 .dev.vars
 .dev.vars.*
+*.log
 *.tsbuildinfo
 .DS_Store
 .local

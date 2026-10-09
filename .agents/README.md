@@ -1,16 +1,19 @@
 # Repository agent system
 
-This directory contains portable guidance for work in this repository. Start with [AGENTS.md](../AGENTS.md) for shared constraints, then select only the skill that matches the change.
+Read [AGENTS.md](../AGENTS.md) and [system decisions](knowledge/SYSTEM_DECISIONS.md), then open a direct card. It links implementation, tests, and authoritative sections. `node scripts/routeAgentWork.mjs <intent>` reads only that card.
 
-| Work | Skill |
-| --- | --- |
-| System boundaries, modules, routes, or documentation ownership | [Architecture](skills/portfolio-architecture/SKILL.md) |
-| Workbook input, generated content, or public assets | [Content pipeline](skills/portfolio-content-pipeline/SKILL.md) |
-| Components, themes, motion, dialogs, or accessibility | [Interface contracts](skills/portfolio-interface-contracts/SKILL.md) |
-| Tests, regressions, or quality evidence | [Validation](skills/portfolio-validation/SKILL.md) |
-| Endpoints, deployment, configuration, or release checks | [Release security](skills/portfolio-release-security/SKILL.md) |
-| Route skeletons, visual baselines, or held navigation | [Skeleton regression](skills/portfolio-skeleton-regression/SKILL.md) |
+## Task cards
 
-The compact, durable project facts live in [system decisions](knowledge/SYSTEM_DECISIONS.md). Read a linked product document when the current task needs its details; do not load unrelated guidance by default.
+Routes: [Routes](cards/routes-metadata.md) · [Architecture](cards/architecture.md)
 
-For a fresh clone, follow the ordered [agent workflow](../docs/development/AGENT_WORKFLOW.md) after reading this map. It leads from a focused worktree through local setup, skill selection, validation, and the authorized pull-request handoff; [local development](../docs/development/LOCAL_DEVELOPMENT.md) owns the dependency and server commands.
+Portfolio: [Home/profile](cards/portfolio-home-profile.md) · [Research / Experience](cards/portfolio-evidence.md) · [Projects](cards/portfolio-projects.md) · [Recommendations / Résumé / Skills](cards/portfolio-supporting-features.md)
+
+Shared: [Theme](cards/shared-theme.md) · [Modal](cards/shared-modal.md) · [Motion](cards/shared-motion.md) · [Navigation](cards/shared-navigation.md)
+
+Systems: [Content](cards/content.md) · [Browser contact](cards/contact-browser.md) · [Functions/D1](cards/contact-functions-d1.md) · [Tests](cards/quality-tests.md) · [Deployment](cards/release-deployment.md) · [Docs](cards/docs-maintenance.md) · [Skeletons](cards/skeleton-regression.md) · [Infrastructure](cards/infrastructure-baseline.md)
+
+Skills: [architecture](skills/portfolio-architecture/SKILL.md), [content](skills/portfolio-content-pipeline/SKILL.md), [interface](skills/portfolio-interface-contracts/SKILL.md), [validation](skills/portfolio-validation/SKILL.md), [release](skills/portfolio-release-security/SKILL.md), [skeletons](skills/portfolio-skeleton-regression/SKILL.md).
+
+The compact, durable project facts live in [system decisions](knowledge/SYSTEM_DECISIONS.md). Read the linked product section only when the current task needs it; do not load unrelated guidance by default.
+
+For a fresh clone, follow [agent workflow](../docs/development/AGENT_WORKFLOW.md); [local development](../docs/development/LOCAL_DEVELOPMENT.md) owns setup and server commands.
