@@ -2,6 +2,8 @@
 
 This runbook covers recurring deployment, monitoring, incident response, and rollback for the active Smart Portfolio Cloudflare Pages service. Complete the environment setup in [Deployment](DEPLOYMENT.md) before using these procedures.
 
+Treat the workflow and scripts as repository-declared behavior and record live outcomes separately. A local build or source review does not prove a dashboard setting, external provider response, DNS result, or deployed alias. [Implementation inventory](../architecture/IMPLEMENTATION_INVENTORY.md) defines the evidence vocabulary used by this guide.
+
 ## Service map
 
 | Surface | Address or path | Expected role |

@@ -6,6 +6,8 @@ Use this guide for the complete request contract and trust boundary. See [Securi
 
 ## Source of truth
 
+The files in this table define the implemented request contract. Cloudflare secrets, Turnstile widgets, D1 bindings, DNS results, WAF rules, and Resend acceptance remain operator-managed or provider-observed state. [Implementation inventory](../architecture/IMPLEMENTATION_INVENTORY.md) defines the evidence boundary; do not infer live readiness solely from a local test or tracked configuration.
+
 | Concern | Authoritative source |
 | --- | --- |
 | Static Contact route and metadata | `src/app/contact/page.tsx` |
