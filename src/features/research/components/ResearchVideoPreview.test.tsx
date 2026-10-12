@@ -527,6 +527,17 @@ describe("ResearchVideoPreview", () => {
     await waitFor(() => expect(screen.getByTestId("research-video-captions")).toHaveTextContent("3 < 5."));
   });
 
+  it("removes WebVTT timestamps while retaining the surrounding caption text", async () => {
+    const captionTrack = new EventTarget() as EventTarget & { activeCues: Array<{ text: string }>; mode: TextTrackMode };
+    captionTrack.activeCues = [{ text: "A <00:00:01.000> B" }];
+    captionTrack.mode = "showing";
+    vi.spyOn(HTMLMediaElement.prototype, "textTracks", "get").mockReturnValue([captionTrack] as unknown as TextTrackList);
+
+    render(<ResearchVideoPreview poster={graphicalAbstract} title="Example Research" video={video} />);
+
+    await waitFor(() => expect(screen.getByTestId("research-video-captions")).toHaveTextContent("A B"));
+  });
+
   it("keeps native captions active until both picture-in-picture and native fullscreen exit", async () => {
     const captionTrack = new EventTarget() as EventTarget & { activeCues: Array<{ text: string }>; mode: TextTrackMode };
     captionTrack.activeCues = [{ text: "External presentation caption." }];

@@ -140,6 +140,37 @@ function maskInlineCode(line) {
     .replace(/<code\b[^>]*>.*?<\/code>/gi, (match) => " ".repeat(match.length));
 }
 
+function lineBreakEnd(source, index) {
+  if (source[index] === "\r") index += 1;
+  return source[index] === "\n" ? index + 1 : index;
+}
+
+function malformedLinkRecoveryIndex(source, lineBreakIndex) {
+  const nextLineStart = lineBreakEnd(source, lineBreakIndex);
+  let cursor = nextLineStart;
+  while (source[cursor] === " " || source[cursor] === "\t" || source[cursor] === "\r") cursor += 1;
+  return source[cursor] === "\n" ? lineBreakEnd(source, cursor) : nextLineStart;
+}
+
+function angleDestination(source, start) {
+  let cursor = start + 1;
+  let hasLineBreak = false;
+  while (cursor < source.length) {
+    if (source[cursor] === ">") {
+      return hasLineBreak
+        ? { recoveryIndex: cursor + 1 }
+        : { target: source.slice(start + 1, cursor), cursor: cursor + 1 };
+    }
+    if (source[cursor] === "\r" || source[cursor] === "\n") {
+      const recoveryIndex = malformedLinkRecoveryIndex(source, cursor);
+      if (recoveryIndex > lineBreakEnd(source, cursor)) return { recoveryIndex };
+      hasLineBreak = true;
+    }
+    cursor += 1;
+  }
+  return { recoveryIndex: source.length };
+}
+
 function inlineMarkdownLinks(source) {
   const links = [];
   let index = 0;
@@ -164,13 +195,13 @@ function inlineMarkdownLinks(source) {
     const targetStart = cursor;
     let target;
     if (source[cursor] === "<") {
-      const end = source.indexOf(">", cursor + 1);
-      if (end === -1 || source.slice(cursor + 1, end).includes("\n")) {
-        index = labelEnd + 1;
+      const destination = angleDestination(source, cursor);
+      if (!("target" in destination)) {
+        index = destination.recoveryIndex;
         continue;
       }
-      target = source.slice(cursor + 1, end);
-      cursor = end + 1;
+      target = destination.target;
+      cursor = destination.cursor;
     } else {
       let nestedParentheses = 0;
       while (cursor < source.length) {
@@ -195,8 +226,13 @@ function inlineMarkdownLinks(source) {
 
     let titleParentheses = 0;
     let closed = false;
+    let recoveryIndex;
     while (cursor < source.length) {
       const character = source[cursor];
+      if (character === "\r" || character === "\n") {
+        recoveryIndex = malformedLinkRecoveryIndex(source, cursor);
+        break;
+      }
       if (character === "\\") {
         cursor += 2;
         continue;
@@ -212,7 +248,13 @@ function inlineMarkdownLinks(source) {
       }
       cursor += 1;
     }
-    if (!closed) break;
+    if (!closed) {
+      if (recoveryIndex !== undefined) {
+        index = recoveryIndex;
+        continue;
+      }
+      break;
+    }
     links.push({ target: target.trim(), index });
     index = cursor - 1;
     index += 1;

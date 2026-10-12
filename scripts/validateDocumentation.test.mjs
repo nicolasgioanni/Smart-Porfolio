@@ -68,6 +68,33 @@ describe("documentation validation", () => {
     }
   });
 
+  it("does not rescan unterminated angle destinations for every later label", async () => {
+    const root = await createFixture({
+      "README.md": `# Project\n\n${"[x](<".repeat(160_000)}`,
+      "docs/README.md": "# Documentation\n",
+    });
+
+    try {
+      await expect(validateDocumentation({ projectRoot: root })).resolves.toMatchObject({ errors: [] });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("recovers from an incomplete link at a paragraph boundary and validates the next link", async () => {
+    const root = await createFixture({
+      "README.md": "# Project\n\n[unfinished](somewhere\n\n[Missing](docs/MISSING.md)\n",
+      "docs/README.md": "# Documentation\n",
+    });
+
+    try {
+      const result = await validateDocumentation({ projectRoot: root });
+      expect(result.errors).toEqual(expect.arrayContaining([expect.stringContaining("relative link target does not exist: docs/MISSING.md")]));
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("reports structural, privacy, placeholder, and relative-link failures", async () => {
     const root = await createFixture({
       "README.md": "# Project\n# Duplicate\n\n[Wrong case](docs/guide.md)\n",

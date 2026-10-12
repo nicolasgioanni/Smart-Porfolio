@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createThemePreferenceScript } from "@/components/theme/ThemePreferenceScript";
+import { themeNames } from "@/lib/theme/resolveThemeName";
 import { systemThemeMediaQuery, themeStorageKey } from "@/lib/theme/themePreference";
 
 function setSystemPreference(prefersDark: boolean) {
@@ -39,7 +40,7 @@ describe("ThemePreferenceScript", () => {
     expect(runPreferenceScript("navy")).toBe(expected);
   });
 
-  it.each(["light", "navy", "dark"] as const)("keeps a stored %s override ahead of the system", (storedTheme) => {
+  it.each(themeNames)("keeps a stored %s override ahead of the system", (storedTheme) => {
     setSystemPreference(storedTheme !== "dark");
     window.localStorage.setItem(themeStorageKey, storedTheme);
 
@@ -69,10 +70,13 @@ describe("ThemePreferenceScript", () => {
     expect(runPreferenceScript("navy")).toBe("light");
   });
 
-  it("retains the server-rendered fallback when the system query is unavailable or fails", () => {
+  it.each(themeNames)("retains the server-rendered %s fallback when the system query is unavailable", (fallback) => {
     Object.defineProperty(window, "matchMedia", { configurable: true, value: undefined });
-    expect(runPreferenceScript("light")).toBe("light");
 
+    expect(runPreferenceScript(fallback)).toBe(fallback);
+  });
+
+  it("retains the server-rendered fallback when the system query fails", () => {
     Object.defineProperty(window, "matchMedia", {
       configurable: true,
       value: vi.fn(() => {
