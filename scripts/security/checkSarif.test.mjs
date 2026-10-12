@@ -26,6 +26,12 @@ describe("CodeQL SARIF security gate", () => {
     expect(assertNoCodeqlFindings(report())).toEqual([]);
   });
 
+  it("rejects a successful report that analyzed no driver rules", () => {
+    const emptyAnalysis = report();
+    emptyAnalysis.runs[0].tool.driver.rules = [];
+    expect(() => assertNoCodeqlFindings(emptyAnalysis)).toThrow("rules are missing or empty");
+  });
+
   it("resolves a result level and severity from the driver defaults before failing the finding", () => {
     const findings = parseCodeqlSarif(report([{ ruleId: "js/sql-injection" }]));
     expect(findings).toEqual([{ ruleId: "js/sql-injection", level: "error", securitySeverity: 9.1 }]);

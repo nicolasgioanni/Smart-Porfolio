@@ -55,7 +55,7 @@ export function parseCodeqlSarif(report) {
   if (driver.name !== "CodeQL" || typeof driver.semanticVersion !== "string" || !driver.semanticVersion) {
     throw new Error("SARIF driver is not an identified CodeQL analysis.");
   }
-  if (!Array.isArray(driver.rules)) throw new Error("SARIF driver rules are missing.");
+  if (!Array.isArray(driver.rules) || driver.rules.length === 0) throw new Error("SARIF driver rules are missing or empty.");
   const ruleIds = new Set();
   for (const rule of driver.rules) {
     object(rule, "SARIF driver rule is malformed.");
