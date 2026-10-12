@@ -46,7 +46,7 @@ Run:
 npm run setup:local
 ```
 
-The helper compares package and setup hashes, validates an existing install, and runs `npm ci` when the lockfile is available. Use the force option only when a clean locked reinstall is intentional:
+The helper compares package and setup hashes, validates the installed Node.js and npm identities, and runs `npm ci` when the lockfile is available. Generated-content freshness uses recorded source, schema, environment-selection, and toolchain hashes rather than file timestamps. Use the force option only when a clean locked reinstall is intentional:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup-local.ps1 -ForceInstall

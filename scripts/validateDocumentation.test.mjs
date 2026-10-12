@@ -41,6 +41,64 @@ describe("documentation validation", () => {
     }
   });
 
+  it("parses nested and escaped Markdown destinations without unbounded regular-expression matching", async () => {
+    const root = await createFixture({
+      "README.md": `# Project\n\n[Nested guide](docs/GUIDE_(v1).md "reference")\n\n[Escaped guide](docs/GUIDE\\_(v1).md)\n\n[Incomplete](${"\\!".repeat(20_000)}`,
+      "docs/GUIDE_(v1).md": "# Guide\n",
+    });
+
+    try {
+      await expect(validateDocumentation({ projectRoot: root })).resolves.toMatchObject({ errors: [] });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("scans long unmatched Markdown labels and parentheses in linear time", async () => {
+    const unmatchedSource = `${"[".repeat(15_000)}](${"(".repeat(15_000)}`;
+    const root = await createFixture({
+      "README.md": `# Project\n\n${unmatchedSource}`,
+      "docs/README.md": "# Documentation\n",
+    });
+
+    try {
+      await expect(validateDocumentation({ projectRoot: root })).resolves.toMatchObject({ errors: [] });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not rescan unterminated angle destinations for every later label", async () => {
+    const root = await createFixture({
+      "README.md": `# Project\n\n${"[x](<".repeat(160_000)}`,
+      "docs/README.md": "# Documentation\n",
+    });
+
+    try {
+      await expect(validateDocumentation({ projectRoot: root })).resolves.toMatchObject({ errors: [] });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it.each([
+    ["bare", "[unfinished](somewhere\n\n[Missing](docs/MISSING.md)", "docs/MISSING.md"],
+    ["nested", "[unfinished](somewhere(\n\n[Missing](docs/MISSING-NESTED.md)", "docs/MISSING-NESTED.md"],
+    ["angle", "[unfinished](<somewhere\n\n[Missing](docs/MISSING-ANGLE.md)", "docs/MISSING-ANGLE.md"],
+  ])("recovers from an incomplete %s link at a paragraph boundary and validates the next link", async (_kind, source, target) => {
+    const root = await createFixture({
+      "README.md": `# Project\n\n${source}\n`,
+      "docs/README.md": "# Documentation\n",
+    });
+
+    try {
+      const result = await validateDocumentation({ projectRoot: root });
+      expect(result.errors).toEqual(expect.arrayContaining([expect.stringContaining(`relative link target does not exist: ${target}`)]));
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("reports structural, privacy, placeholder, and relative-link failures", async () => {
     const root = await createFixture({
       "README.md": "# Project\n# Duplicate\n\n[Wrong case](docs/guide.md)\n",

@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "exceptions": [
+    {
+      "advisory": "GHSA-vfj7-8cjw-p6xm",
+      "owner": "nicolasgioanni",
+      "expires": "2026-11-07",
+      "exposure": "Development-only ESLint glob expansion through @next/eslint-plugin-next; it is absent from the deployed static artifact and Pages Functions.",
+      "remediation": "Upgrade to the first @next/eslint-plugin-next release whose maintained dependency graph removes braces, then delete this exception.",
+      "package": "braces",
+      "version": "3.0.3",
+      "path": "node_modules/braces"
+    }
+  ]
+}
