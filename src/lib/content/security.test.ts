@@ -536,7 +536,7 @@ describe("static portfolio security contracts", () => {
     expect(themeSource).toMatch(/aria-label="Color theme preference"[\s\S]*role="group"/);
     expect(themeSource).toMatch(/System, follows device setting/);
     expect(layoutSource).toMatch(
-      /<html[^>]*suppressHydrationWarning>[\s\S]*<head>[\s\S]*<ThemePreferenceScript initialTheme=\{initialTheme\} \/>[\s\S]*<\/head>[\s\S]*<body/
+      /<html[^>]*data-theme=\{initialTheme\}[^>]*suppressHydrationWarning>[\s\S]*<head>[\s\S]*<ThemePreferenceScript \/>[\s\S]*<\/head>[\s\S]*<body/
     );
     expect(navigationCss).toMatch(
       /\.theme-switcher__popover\s*{(?=[^}]*padding:\s*20px\s+12px\s+12px)(?=[^}]*opacity:\s*0)(?=[^}]*pointer-events:\s*none)(?=[^}]*transform:\s*translate3d\(0,\s*-4px,\s*0\)\s*scale\(0\.985\))[^}]*}/s

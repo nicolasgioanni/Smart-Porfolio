@@ -36,14 +36,14 @@ The repository cannot verify Cloudflare or GitHub dashboard state. Operators mus
 - Cloudflare runtime secrets and separate D1 bindings exist in the correct production and preview environments.
 - WAF rate limiting covers both contact endpoints, and the selected Cloudflare plan or provider-compatible control preserves the JSON API contract.
 - The tracked [permanent-branch ruleset](../../.github/rulesets/protect-permanent-branches.json) declares one active `protect-permanent-branches` ruleset for exactly `main` and `develop`, with deletion and non-fast-forward protection and no bypass actors. GitHub readback reverified the matching live ruleset on 2026-10-12. The JSON records the configuration but cannot prove or change future live state.
-- Current GitHub branch-response evidence establishes that `main` is protected and has a `verify` requirement from GitHub Actions app `15368`. A fuller classic-policy read on 2026-09-11 observed pull-request changes, current-branch enforcement, zero required approvals, administrator enforcement, and force-push/deletion blocking. Treat those details as the retained governance target, not as currently reverified state: the accessible response did not establish them again. Do not replace or weaken the intended classic policy; the limited permanent-branch ruleset permits the guarded ordinary `develop` heartbeat. Re-verify both external controls after any GitHub policy change.
+- A signed-in, read-only GitHub UI inspection on 2026-10-12 confirmed that classic `main` protection requires pull requests and the current `verify` status from GitHub Actions, requires the branch to be current, requires no approvals, enforces the policy for administrators, and disallows force pushes and deletion. This point-in-time observation does not establish future live configuration. Do not replace or weaken the classic policy; the limited permanent-branch ruleset permits the guarded ordinary `develop` heartbeat. Recheck both external controls after any GitHub policy change.
 - Custom-domain bindings, redirects, certificates, and DNS remain healthy.
 
 Provider-dashboard uploads and deploy hooks bypass the repository quality gate and are not part of the supported release path.
 
 ## Trigger and branch behavior
 
-The workflow has one verification job, one conditional deploy job, and one schedule-only heartbeat job.
+Candidate admission and credential-free precheck precede `application-validation`. Independent source-security jobs run separately from the content decision, then the stable `verify` job aggregates their required outcomes with application validation. Deployment remains conditional on that aggregate, while the heartbeat remains schedule-only.
 
 | Event | Candidate | Content source | Verification tier | Deployment |
 | --- | --- | --- | --- | --- |
@@ -58,7 +58,7 @@ The workflow has one verification job, one conditional deploy job, and one sched
 
 Scheduled and manual runs explicitly check out `main`, regardless of the branch shown in the dispatch interface. Push candidates use the pushed branch. Pull requests set no deployment branch and build a verification-only template snapshot.
 
-For any non-PR candidate, the verify job fetches the current remote branch tip and compares it with the checked-out SHA. A stale candidate produces no build artifact and no deployment. The deploy job repeats that branch-tip comparison immediately before Wrangler runs.
+For any non-PR candidate, `candidate-precheck` fetches the current remote branch tip and compares it with the checked-out SHA before protected inputs. A stale candidate produces no build artifact or deployment. The deploy job repeats that branch-tip comparison immediately before Wrangler runs.
 
 ## Permissions and credentials
 
@@ -69,7 +69,7 @@ permissions:
   contents: read
 ```
 
-The verify and deploy jobs therefore have read-only repository access. Cloudflare deployment authority comes from the restricted API token passed directly to Wrangler, not from a GitHub repository write permission.
+Ordinary jobs retain read-only repository access. The `codeql` job adds only `security-events: write` to upload its already-validated SARIF result; pull-request dependency review adds only `pull-requests: read`. Cloudflare deployment authority remains isolated to the restricted API token passed directly to Wrangler, not to a repository write permission.
 
 The schedule-only heartbeat job is the sole exception. It declares `contents: write`, but the checked-in job is coded and guarded to update only `.github/schedule-heartbeat` on the existing `develop` branch after the inactivity threshold is met. That source-level guard and the tracked ruleset test do not replace independently verified external branch or ruleset protection.
 
@@ -210,7 +210,7 @@ flowchart TD
 
 `npm run build:generated` invokes Next.js, whose local build-completion adapter normalizes any Windows-emitted nested segment-cache filenames to Next's flat static-export URL layout, and then writes the content version without running the `prebuild` content generator. The normalization is a no-op on the already-flat Linux output and fails on malformed trees or collisions. This keeps generation at one accepted workbook snapshot even if its download needs the single bounded retry. The deploy job does not rebuild or download the workbook.
 
-The verify job always runs documentation integrity, ESLint with zero warnings, and TypeScript type checking for a candidate selected for verification. Its remaining checks depend on the selected tier:
+`application-validation` always runs documentation integrity, ESLint with zero warnings, and TypeScript type checking for a candidate selected for application verification. Its remaining checks depend on the selected tier. Independent source-security jobs run separately, and `verify` requires their explicit applicable successes before artifact metadata can reach deployment:
 
 | Candidate | Unit and contract checks | Browser checks | Build |
 | --- | --- | --- | --- |
@@ -265,7 +265,7 @@ Before upload, `scripts/artifactIntegrity.mjs` creates `out/artifact-integrity.j
 - The candidate commit SHA.
 - A sorted record for every other artifact file, including its relative path, byte size, and SHA-256 digest.
 
-The creator rejects symbolic links and unsupported entries. Verification requires the expected commit SHA, agreement with `content-version.json`, the same file count and ordered paths, and exact size and digest matches. The verify job validates the manifest before upload, and the deploy job validates the downloaded artifact again. Hidden export files are included. The Actions artifact is named `cloudflare-pages-build` and is retained for one day.
+The creator rejects symbolic links and unsupported entries. Verification requires the expected commit SHA, agreement with `content-version.json`, the same file count and ordered paths, and exact size and digest matches. `application-validation` validates the manifest before upload, and the deploy job validates the downloaded artifact again. Hidden export files are included. The Actions artifact is named `cloudflare-pages-build` and is retained for one day.
 
 The integrity manifest covers `out/`. The Pages Functions are source-bound through the exact candidate checkout and branch recheck rather than being copied into that static artifact.
 
@@ -316,14 +316,14 @@ See [Operations](OPERATIONS.md) for the release, incident, and rollback runbooks
 
 `main` and `develop` are permanent branches. Never delete, rename, force-update, or recreate either their local or remote refs, and never weaken their protection. Exclude both branches from cleanup work. The checked-in [protect-permanent-branches ruleset](../../.github/rulesets/protect-permanent-branches.json) records the one active ruleset's exact payload: it applies only to `refs/heads/main` and `refs/heads/develop`, has no bypass actors, and blocks only deletion and non-fast-forward updates. It deliberately does not restrict ordinary updates or branch creation.
 
-The following is the retained classic `main` governance target. Its details were last observed on 2026-09-11 rather than reverified by the currently accessible branch response:
+The following classic `main` policy was observed through the signed-in, read-only GitHub UI on 2026-10-12:
 
 1. Pull-request-based changes with the `verify` status required; require the branch to be current before merge.
 2. No human review approval is required by this policy.
 3. Force-push and branch deletion are blocked.
 4. GitHub Actions has no bypass to write deployment state to `main`.
 
-The ruleset supplements rather than replaces the intended classic `main` policy. GitHub readback reverified the matching live ruleset on 2026-10-12. The current branch response establishes only that `main` is protected and requires `verify` from GitHub Actions app `15368`; it does not re-establish the detailed classic-policy settings above. A committed JSON payload and its local test do not establish future live state, so operators must inspect both the active GitHub ruleset and the classic `main` policy after every governance change.
+The ruleset supplements rather than replaces the classic `main` policy. GitHub readback reverified the matching live ruleset on 2026-10-12. A committed JSON payload, its local test, and the point-in-time classic-policy observation do not establish future live state, so operators must inspect both the active GitHub ruleset and the classic `main` policy after every governance change.
 
 The daily schedule also starts `develop-schedule-heartbeat`. It compares the newest activity on `main` and `develop`. If neither has activity within 30 days, the checked-in job first confirms that remote `develop` already exists, then writes only `.github/schedule-heartbeat`, verifies that no other path changed, and commits as `github-actions[bot]`. It checks that `develop` did not change while the job prepared the commit and uses a normal non-force push to `develop`; a concurrent update is rejected rather than retried or overwritten. The job is coded to make no other ref update, uses its own non-canceling concurrency group, and cannot deploy. The permanent-branch ruleset allows this guarded ordinary fast-forward while preventing deletion and non-fast-forward rewrites.
 
