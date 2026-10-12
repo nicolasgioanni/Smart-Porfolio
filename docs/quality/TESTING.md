@@ -194,6 +194,8 @@ After `build:generated`, verify `/projects` without JavaScript against the expor
 | Test | What it verifies |
 | --- | --- |
 | `scripts/packageScripts.test.mjs` | Node and tool pins, workflow triggers, single-snapshot conditions, branch isolation, permissions, exact-candidate no-op behavior, artifact transfer, target validation, develop-only heartbeat boundaries and race rejection, no-cache metadata, and Wrangler invocation |
+| `scripts/security/installPinnedTool.test.mjs`, `scripts/security/securityScans.test.mjs`, and `scripts/security/checkSarif.test.mjs` | Checksum-pinned tool admission, temporary scanner-report handling, suppression parsing, and fail-closed CodeQL SARIF parsing. Local tests use fixtures; the pinned Linux scanner binaries execute on the Ubuntu hosted jobs. |
+| `scripts/security/ciGate.test.mjs` | Event-specific CI gate dependency graph requiring explicit success from application validation and all applicable scanner jobs. |
 | `scripts/checkDeployedContent.test.mjs` | Independent deployed content and commit comparison, missing or malformed manifest behavior, and post-deployment smoke requests with exact contact Function method rejection |
 | Artifact tests inside `scripts/packageScripts.test.mjs` | Content-version creation, hidden file inclusion, manifest structure, commit binding, digest verification, and tamper rejection |
 | `scripts/localAutomation.test.mjs` | Project discovery, environment copy safety, dependency-state hashing, stale content, and port selection |
@@ -202,21 +204,19 @@ The workflow contract tests inspect checked-in workflow text and execute the man
 
 ## CI quality gates
 
-The `verify` job installs locked dependencies before any conditional quality work.
+`candidate-admission` validates the event and reference boundary before checkout. `candidate-precheck` checks the immutable candidate and staleness without checkout credentials. `application-validation` installs locked dependencies before content or conditional application-quality work, while the independent scanner jobs run separately from content decisions.
 
 ### Pull requests: priority gate
 
 Pull requests targeting `main` or `develop`:
 
 1. Generate validated template content without workbook or Cloudflare credentials.
-2. Run documentation integrity.
-3. Run lint.
-4. Run typecheck.
-5. Run the priority Vitest contracts once, including the centralized typography-token contract.
-6. Install Chromium once and run the portable priority browser suite: skeleton alignment and held-navigation transitions, navigation, footer, locally mocked contact, Recommendations, Experience, and Research flows.
-7. Run the separate Linux-only skeleton visual comparison against the explicit template-content generated for the pull request.
-8. Build with `build:generated`.
-9. Stop without creating a deployment artifact.
+2. Run documentation integrity, the bounded dependency audit, lint, and typecheck.
+3. Run the priority Vitest contracts once, including the centralized typography-token contract.
+4. Install Chromium once and run the portable priority browser suite: skeleton alignment and held-navigation transitions, navigation, footer, locally mocked contact, Recommendations, Experience, and Research flows.
+5. Run the separate Linux-only skeleton visual comparison against the explicit template-content generated for the pull request.
+6. Build with `build:generated`.
+7. Stop without creating a deployment artifact.
 
 ### Push deployments: complete gate
 
@@ -234,11 +234,11 @@ Latest pushes to `main` or `develop`:
 
 ### Scheduled and manual checks
 
-Scheduled runs and non-forced manual runs perform the strict content work before deciding whether full verification is required. When both the candidate content hash and commit SHA match production, documentation integrity, lint, typecheck, tests, build, artifact upload, and deployment are skipped. A mismatch in either field selects the complete path, while forced manual runs always select it after strict content validation.
+Scheduled runs and non-forced manual runs perform the strict content work before deciding whether full application verification is required. When both the candidate content hash and commit SHA match production, documentation integrity, lint, typecheck, tests, build, artifact upload, and deployment are skipped. The independent workflow, history, and CodeQL scanner jobs still run. A mismatch in either field selects the complete path, while forced manual runs always select it after strict content validation.
 
 ### Tier boundaries and diagnostics
 
-The stable `verify` job selects `priority` for pull requests and `full` for every candidate that can produce a deployment artifact. The priority tier runs its portable browser selection once, then adds its Linux-only visual skeleton comparison as a separate step; the full tier runs `test:e2e:full` once and does not duplicate individual suites. Stale, unchanged scheduled, and non-forced manual candidates select no tier. `main` branch protection was independently verified on 2026-09-11 to require the current `verify` status check on pull requests; the workflow name and job name must remain stable. If a verify step fails, the job uploads any available `playwright-report/` and `test-results/` files as a seven-day `playwright-diagnostics-<run-id>-<attempt>` artifact. That failure-only artifact is distinct from, and never used as, the one-day `cloudflare-pages-build` deployment artifact.
+`application-validation` selects `priority` for pull requests and `full` for every candidate that can produce a deployment artifact. The priority tier runs its portable browser selection once, then adds its Linux-only visual skeleton comparison as a separate step; the full tier runs `test:e2e:full` once and does not duplicate individual suites. Stale, unchanged scheduled, and non-forced manual candidates select no application tier. The stable `verify` job then requires explicit success from application validation, actionlint, history and workflow scans, CodeQL, and dependency review when the event is a pull request. `main` branch protection was independently verified on 2026-09-11 to require the current `verify` status check on pull requests; the workflow name and job name must remain stable. If application validation fails, the job uploads any available `playwright-report/` and `test-results/` files as a seven-day `playwright-diagnostics-<run-id>-<attempt>` artifact. That failure-only artifact is distinct from, and never used as, the one-day `cloudflare-pages-build` deployment artifact. The legacy per-target deploy concurrency still uses `cancel-in-progress: true`; this bootstrap preserves it pending the release-ordering work.
 
 ## Post-deployment smoke tests
 
