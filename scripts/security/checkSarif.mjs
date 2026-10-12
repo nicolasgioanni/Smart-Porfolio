@@ -15,16 +15,37 @@ function severity(value, message) {
   return Number(value);
 }
 
-function ruleFor(result, rules) {
-  if (typeof result.ruleIndex === "number") {
-    if (!Number.isInteger(result.ruleIndex) || result.ruleIndex < 0 || result.ruleIndex >= rules.length) {
-      throw new Error("SARIF result ruleIndex is invalid.");
+function ruleFor(result, components) {
+  const reference = result.rule;
+  if (reference !== undefined) object(reference, "SARIF result rule reference is malformed.");
+  const component = reference?.toolComponent;
+  let selected = components[0];
+  if (component !== undefined) {
+    object(component, "SARIF rule component reference is malformed.");
+    if (component.index !== undefined) {
+      if (!Number.isInteger(component.index) || component.index < 0 || component.index >= components.length - 1) throw new Error("SARIF rule component index is invalid.");
+      selected = components[component.index + 1];
+      if (component.name !== undefined && component.name !== selected.name) throw new Error("SARIF rule component identity is inconsistent.");
+    } else {
+      const matches = components.filter((entry) => entry.name === component.name);
+      if (matches.length !== 1) throw new Error("SARIF rule component identity is missing or ambiguous.");
+      selected = matches[0];
     }
-    return rules[result.ruleIndex];
+    if (component.guid !== undefined && component.guid !== selected.guid) throw new Error("SARIF rule component GUID is inconsistent.");
   }
-  if (typeof result.ruleId !== "string" || !result.ruleId) throw new Error("SARIF result lacks ruleId and ruleIndex.");
-  const rule = rules.find((entry) => entry?.id === result.ruleId);
-  if (!rule) throw new Error("SARIF result has no driver rule.");
+  const index = reference?.index ?? result.ruleIndex;
+  const id = reference?.id ?? result.ruleId;
+  if (reference?.id !== undefined && result.ruleId !== undefined && reference.id !== result.ruleId) throw new Error("SARIF rule identity is inconsistent.");
+  let rule;
+  if (index !== undefined) {
+    if (!Number.isInteger(index) || index < 0 || index >= (selected.rules ?? []).length) throw new Error("SARIF result ruleIndex is invalid.");
+    rule = selected.rules[index];
+    if (id !== undefined && rule.id !== id) throw new Error("SARIF rule identity is inconsistent.");
+  } else {
+    if (typeof id !== "string" || !id) throw new Error("SARIF result lacks ruleId and ruleIndex.");
+    rule = (selected.rules ?? []).find((entry) => entry.id === id);
+    if (!rule) throw new Error("SARIF result has no component rule.");
+  }
   return rule;
 }
 
@@ -55,19 +76,31 @@ export function parseCodeqlSarif(report) {
   if (driver.name !== "CodeQL" || typeof driver.semanticVersion !== "string" || !driver.semanticVersion) {
     throw new Error("SARIF driver is not an identified CodeQL analysis.");
   }
-  if (!Array.isArray(driver.rules) || driver.rules.length === 0) throw new Error("SARIF driver rules are missing or empty.");
-  const ruleIds = new Set();
-  for (const rule of driver.rules) {
-    object(rule, "SARIF driver rule is malformed.");
-    if (typeof rule.id !== "string" || !rule.id || ruleIds.has(rule.id)) throw new Error("SARIF driver rules contain a missing or duplicate id.");
-    ruleIds.add(rule.id);
+  if (!Array.isArray(driver.rules)) throw new Error("SARIF driver rules are missing.");
+  if (run.tool.extensions !== undefined && !Array.isArray(run.tool.extensions)) throw new Error("SARIF extensions are malformed.");
+  const components = [driver, ...(run.tool.extensions ?? [])];
+  const componentNames = new Set();
+  let ruleCount = 0;
+  for (const component of components) {
+    object(component, "SARIF component is malformed.");
+    if (typeof component.name !== "string" || !component.name || componentNames.has(component.name)) throw new Error("SARIF component names are missing or duplicate.");
+    componentNames.add(component.name);
+    if (component.rules !== undefined && !Array.isArray(component.rules)) throw new Error("SARIF component rules are malformed.");
+    const ruleIds = new Set();
+    for (const rule of component.rules ?? []) {
+      object(rule, "SARIF component rule is malformed.");
+      if (typeof rule.id !== "string" || !rule.id || ruleIds.has(rule.id)) throw new Error("SARIF rules contain a missing or duplicate id.");
+      ruleIds.add(rule.id);
+      ruleCount += 1;
+    }
   }
+  if (ruleCount === 0) throw new Error("SARIF analyzed rules are missing or empty.");
   if (!Array.isArray(run.results)) throw new Error("SARIF results are missing.");
   failureNotifications(run.invocations);
 
   return run.results.map((rawResult) => {
     const result = object(rawResult, "SARIF result is malformed.");
-    const rule = object(ruleFor(result, driver.rules), "SARIF driver rule is malformed.");
+    const rule = object(ruleFor(result, components), "SARIF driver rule is malformed.");
     const level = result.level ?? rule.defaultConfiguration?.level;
     if (!resultLevels.has(level)) throw new Error("SARIF result has no valid level or default level.");
     const securitySeverity = result.properties?.["security-severity"] ?? rule.properties?.["security-severity"];

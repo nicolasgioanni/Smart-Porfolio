@@ -26,10 +26,35 @@ describe("CodeQL SARIF security gate", () => {
     expect(assertNoCodeqlFindings(report())).toEqual([]);
   });
 
-  it("rejects a successful report that analyzed no driver rules", () => {
+  it("rejects a successful report that analyzed no rules", () => {
     const emptyAnalysis = report();
     emptyAnalysis.runs[0].tool.driver.rules = [];
     expect(() => assertNoCodeqlFindings(emptyAnalysis)).toThrow("rules are missing or empty");
+  });
+
+  it("accepts analyzed query rules grouped into identified CodeQL packs", () => {
+    const grouped = report();
+    const rules = grouped.runs[0].tool.driver.rules;
+    grouped.runs[0].tool.driver.rules = [];
+    grouped.runs[0].tool.extensions = [{ name: "codeql/javascript-queries", semanticVersion: "2.4.7", rules }, { name: "codeql/javascript-all" }];
+    expect(assertNoCodeqlFindings(grouped)).toEqual([]);
+    grouped.runs[0].results = [{ ruleId: "js/sql-injection", rule: { id: "js/sql-injection", index: 0, toolComponent: { index: 0, name: "codeql/javascript-queries" } } }];
+    expect(parseCodeqlSarif(grouped)).toEqual([{ ruleId: "js/sql-injection", level: "error", securitySeverity: 9.1 }]);
+    expect(() => assertNoCodeqlFindings(grouped)).toThrow("1 finding");
+    grouped.runs[0].results[0].rule.toolComponent.index = 5;
+    expect(() => parseCodeqlSarif(grouped)).toThrow("component index");
+    grouped.runs[0].results[0].rule.toolComponent.index = 0;
+    grouped.runs[0].results[0].rule.toolComponent.name = "substitute-pack";
+    expect(() => parseCodeqlSarif(grouped)).toThrow("component identity");
+  });
+
+  it("rejects empty query packs and ambiguous component identities", () => {
+    const grouped = report();
+    grouped.runs[0].tool.driver.rules = [];
+    grouped.runs[0].tool.extensions = [{ name: "codeql/javascript-queries", rules: [] }];
+    expect(() => assertNoCodeqlFindings(grouped)).toThrow("rules are missing or empty");
+    grouped.runs[0].tool.extensions.push({ name: "codeql/javascript-queries", rules: [] });
+    expect(() => assertNoCodeqlFindings(grouped)).toThrow("duplicate");
   });
 
   it("resolves a result level and severity from the driver defaults before failing the finding", () => {
