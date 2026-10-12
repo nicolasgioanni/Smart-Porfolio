@@ -12,3 +12,5 @@ For an endpoint or runtime-control change, read [Security](../../../docs/securit
 For every endpoint, define and test methods, media types, schema, body and time limits, origins, authentication or verification, privacy, abuse controls, errors, headers, and release checks. Keep secrets server-only and retain the existing environment separation.
 
 Preserve the exact-candidate, verified-artifact deployment path and its stale-revision, integrity, binding, migration, and smoke-test checks. Do not imply that GitHub branch protection or provider controls are enabled unless their live configuration has been independently verified.
+
+For sealed release work, keep preparation, one accepted-snapshot build, compile/package, and runtime/export verification as separate stages. Bind source, semantic and byte snapshot identities, target-specific public-build fingerprints, build producer order, compiled Functions, routing, CSP, configuration, migrations, and SBOM without serializing secrets. Legacy deployed metadata may request full verification but never proves no-op equivalence or ordering; malformed identity fails closed.

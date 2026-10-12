@@ -239,21 +239,48 @@ The release process must migrate and verify preview before production. CI routes
 
 ### Content version
 
-Every build writes `out/content-version.json` with exactly five fields:
+Every new build writes `out/content-version.json` with the v2 identity:
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "contentHash": "<sha256>",
   "commitSha": "<40-character Git SHA>",
+  "target": "<local|preview|production>",
+  "publicBuildInputDigest": "<sha256>",
+  "producer": {
+    "kind": "github-actions",
+    "runId": "<GitHub run ID>",
+    "runNumber": 123,
+    "attempt": 1
+  },
   "generatedAt": "<content generation timestamp>",
   "deployedAt": "<build timestamp>"
 }
 ```
 
-The `contentHash` covers the canonical normalized content subset and excludes volatile metadata. When that canonical subset is unchanged, generation preserves `generatedAt`. Scheduled and non-forced manual decisions independently compare this content hash and the candidate `commitSha` with the active production manifest. Only a match on both fields is a no-op.
+The `contentHash` covers the canonical normalized content subset and excludes volatile metadata. `publicBuildInputDigest` binds the target, candidate SHA, lockfile, public Wrangler configuration digest, Node/Next/Wrangler versions, and a hash of the effective browser Turnstile key. It never publishes the key itself. Preview maps its preview variable into the one runtime input, `NEXT_PUBLIC_TURNSTILE_SITE_KEY`.
 
-`public/_headers` marks `/content-version.json` as non-cacheable. The comparison request also sends no-cache headers, adds a cache-busting query, treats `404` as no prior deployment, and fails closed on other inaccessible or malformed responses.
+The producer identifies the build-and-package job, not the earlier content-preparation job. Release ordering compares `runNumber` and then `attempt`; a local build records `{ "kind": "local", "runId": "local", "runNumber": null, "attempt": null }` and cannot be deployed. The reader accepts existing v1 metadata for migration, but v1 cannot establish a no-op equivalence or producer order. A malformed or ambiguous v2 identity fails closed.
+
+`public/_headers` marks `/content-version.json` as non-cacheable. The comparison request also sends no-cache headers, adds a cache-busting query, treats `404` as no prior deployment, rejects redirects for identity metadata, and fails closed on other inaccessible or malformed responses.
+
+### Bounded sealed-release package
+
+The release foundation separates the exact-artifact work into explicit commands. These commands do not download content, run the normal quality gates, deploy, migrate D1, send email, or sign an unsigned package:
+
+```bash
+npm run release:build -- --snapshot <accepted-generated-json> --snapshot-sha <sha256> --snapshot-record-digest <sha256> --sha <candidate-sha> --target <local|preview|production> --public-build-input-digest <sha256> --generation <local|run-id:run-number:attempt>
+npm run release:compile -- --out out --sha <candidate-sha>
+npm run release:package -- --directory <release-dir>/release --out out --snapshot-sha <sha256> --snapshot-record-digest <sha256> --sha <candidate-sha> --target <target> --public-build-input-digest <sha256> --generation <generation>
+npm run release:runtime -- --directory <release-dir>/release
+```
+
+`release:build` verifies the accepted generated JSON bytes, carries the accepted snapshot-record digest into the later sealed candidate, derives the target-specific public fingerprint, and runs `build:generated` once. The verified snapshot record separately binds the preparation producer; the `--generation` value belongs only to the build/package producer. A build rerun therefore creates a new release identity and package even when source and snapshot bytes are unchanged.
+
+`release:compile` generates per-route CSP hashes from the completed export, uses the pinned local Wrangler CLI to compile the two reviewed Functions and routing file, and creates the static artifact manifest. `release:package` seals exactly `out/`, `wrangler.jsonc`, numbered migrations, a CycloneDX SBOM, and the candidate identity. The package rejects symlinks, traversal, private deployment inputs in `out/`, unexpected entries, configuration or migration substitutions, and replacement of an unowned release directory.
+
+`release:runtime` verifies the sealed package before and after running the compiled worker in local Miniflare and a browser check through pinned `wrangler pages dev`. It uses the packaged `out/` and configuration so the command can check an exact downloaded candidate without modifying its compiled public-key bytes. These checks use isolated Turnstile/D1 fixtures and prohibit provider email delivery; they are not evidence of live Cloudflare, D1, email, or environment settings.
 
 ### Artifact integrity
 
@@ -266,7 +293,7 @@ Before upload, `scripts/artifactIntegrity.mjs` creates `out/artifact-integrity.j
 
 The creator rejects symbolic links and unsupported entries. Verification requires the expected commit SHA, agreement with `content-version.json`, the same file count and ordered paths, and exact size and digest matches. The verify job validates the manifest before upload, and the deploy job validates the downloaded artifact again. Hidden export files are included. The Actions artifact is named `cloudflare-pages-build` and is retained for one day.
 
-The integrity manifest covers `out/`. The Pages Functions are source-bound through the exact candidate checkout and branch recheck rather than being copied into that static artifact.
+The integrity manifest covers `out/`, including the compiled worker and reviewed routing file. The sealed package also binds the public Wrangler configuration and numbered migrations outside the public static directory.
 
 ## Exact automated smoke scope
 

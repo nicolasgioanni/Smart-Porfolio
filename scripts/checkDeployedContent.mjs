@@ -39,12 +39,15 @@ function endpointUrl(baseUrl, endpoint, cacheBust) {
   return url;
 }
 
-async function fetchNoCache(url, { allowNotFound = false } = {}) {
+async function fetchNoCache(url, { allowNotFound = false, rejectRedirect = false } = {}) {
   const response = await fetch(url, {
     headers: { "Cache-Control": "no-cache", Pragma: "no-cache" },
-    redirect: "follow",
+    redirect: rejectRedirect ? "manual" : "follow",
     signal: AbortSignal.timeout(20_000)
   });
+  if (rejectRedirect && response.status >= 300 && response.status < 400) {
+    throw new Error(`${url.pathname} redirected before its identity could be verified`);
+  }
   if (allowNotFound && response.status === 404) return response;
   if (!response.ok) throw new Error(`${url.pathname} returned HTTP ${response.status}`);
   return response;
@@ -68,7 +71,8 @@ export async function compareDeployedContent(
   if (!contentHashPattern.test(expectedContentHash)) throw new Error("Expected content hash is invalid");
   if (!gitShaPattern.test(expectedCommitSha)) throw new Error("Expected commit SHA is invalid");
   const response = await fetchNoCache(endpointUrl(baseUrl, "content-version.json", cacheBust), {
-    allowNotFound: true
+    allowNotFound: true,
+    rejectRedirect: true
   });
 
   if (response.status === 404) {
@@ -93,8 +97,62 @@ export async function compareDeployedContent(
   return contentMatches && commitMatches;
 }
 
+function isDeployableV2(version) {
+  return version?.schemaVersion === 2 &&
+    (version.target === "preview" || version.target === "production") &&
+    version.producer?.kind === "github-actions";
+}
+
+/** Compares only the monotonic GitHub producer fields, never timestamps. */
+export function compareProducerGeneration(left, right) {
+  if (!isDeployableV2(left) || !isDeployableV2(right)) {
+    throw new Error("Producer ordering requires deployable v2 content identities");
+  }
+  if (left.producer.runNumber !== right.producer.runNumber) {
+    return left.producer.runNumber < right.producer.runNumber ? -1 : 1;
+  }
+  if (left.producer.attempt !== right.producer.attempt) {
+    return left.producer.attempt < right.producer.attempt ? -1 : 1;
+  }
+  return 0;
+}
+
+export function sameDeploymentIdentity(left, right) {
+  return isDeployableV2(left) && isDeployableV2(right) &&
+    left.commitSha === right.commitSha &&
+    left.contentHash === right.contentHash &&
+    left.target === right.target &&
+    left.publicBuildInputDigest === right.publicBuildInputDigest &&
+    left.producer.runId === right.producer.runId &&
+    compareProducerGeneration(left, right) === 0;
+}
+
+/**
+ * Decides a deployment path without network or filesystem effects. A legacy
+ * v1 identity can request full verification, but can never establish no-op or
+ * ordering equivalence. Malformed and ambiguous identities fail closed.
+ */
+export function decideDeployment(candidateValue, deployedValue) {
+  let candidate;
+  try { candidate = parseContentVersion(candidateValue); }
+  catch { return { action: "fail-closed", reason: "candidate-identity-invalid" }; }
+  if (!isDeployableV2(candidate)) return { action: "fail-closed", reason: "candidate-is-not-deployable-v2" };
+  if (deployedValue === undefined || deployedValue === null) return { action: "full-verification", reason: "no-deployed-identity" };
+  let deployed;
+  try { deployed = parseContentVersion(deployedValue); }
+  catch { return { action: "fail-closed", reason: "deployed-identity-malformed" }; }
+  if (deployed.schemaVersion === 1) return { action: "full-verification", reason: "legacy-deployed-identity" };
+  if (!isDeployableV2(deployed)) return { action: "fail-closed", reason: "deployed-identity-not-deployable-v2" };
+  if (candidate.target !== deployed.target) return { action: "fail-closed", reason: "deployed-target-mismatch" };
+  if (sameDeploymentIdentity(candidate, deployed)) return { action: "smoke-only", reason: "exact-deployed-identity" };
+  const ordering = compareProducerGeneration(candidate, deployed);
+  if (ordering < 0) return { action: "fail-closed", reason: "candidate-generation-is-older" };
+  if (ordering === 0) return { action: "fail-closed", reason: "same-generation-has-different-identity" };
+  return { action: "full-verification", reason: "candidate-generation-is-newer" };
+}
+
 async function smokeAttempt(baseUrl, artifactDirectory, expectedContentHash, expectedCommitSha, cacheBust) {
-  const rootResponse = await fetchNoCache(endpointUrl(baseUrl, "/", cacheBust));
+  const rootResponse = await fetchNoCache(endpointUrl(baseUrl, "/", cacheBust), { rejectRedirect: true });
   if (!rootResponse.headers.get("content-type")?.includes("text/html")) {
     throw new Error("Deployment root did not return HTML");
   }
@@ -116,12 +174,12 @@ async function smokeAttempt(baseUrl, artifactDirectory, expectedContentHash, exp
   assert.equal(deployedCanonical.search, "", "Deployment root canonical must not contain a query string");
   assert.equal(deployedCanonical.hash, "", "Deployment root canonical must not contain a fragment");
 
-  const versionResponse = await fetchNoCache(endpointUrl(baseUrl, "content-version.json", cacheBust));
+  const versionResponse = await fetchNoCache(endpointUrl(baseUrl, "content-version.json", cacheBust), { rejectRedirect: true });
   const deployedVersion = parseContentVersion(await versionResponse.json());
   assert.equal(deployedVersion.contentHash, expectedContentHash, "Deployed content hash is stale");
   assert.equal(deployedVersion.commitSha, expectedCommitSha, "Deployed commit SHA is stale");
 
-  const manifestResponse = await fetchNoCache(endpointUrl(baseUrl, artifactManifestFileName, cacheBust));
+  const manifestResponse = await fetchNoCache(endpointUrl(baseUrl, artifactManifestFileName, cacheBust), { rejectRedirect: true });
   const deployedManifest = await manifestResponse.json();
   const localManifest = JSON.parse(
     await readFile(path.join(path.resolve(artifactDirectory), artifactManifestFileName), "utf8")

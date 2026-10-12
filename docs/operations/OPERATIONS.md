@@ -101,9 +101,10 @@ curl --fail --silent --show-error "$production_origin/artifact-integrity.json"
 
 Confirm:
 
-- `schemaVersion` is `1`.
+- `schemaVersion` is `2` for a current release. A v1 document is legacy metadata and must not be used to prove a no-op or producer ordering decision.
 - `contentHash` is 64 lowercase hexadecimal characters.
 - `commitSha` is the intended 40-character source revision.
+- `target`, `publicBuildInputDigest`, and the producer `runId`, `runNumber`, and `attempt` match the verified candidate. The public digest is a fingerprint, not a public-key value.
 - `generatedAt` and `deployedAt` are parseable timestamps.
 - The artifact manifest uses `sha256`, carries the same commit SHA, and contains file records.
 
