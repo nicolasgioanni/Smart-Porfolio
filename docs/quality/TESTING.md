@@ -11,7 +11,7 @@ Smart Portfolio uses a layered quality gate for documentation, static content, R
 | Test runner | Vitest 4.1.11 |
 | Default test environment | jsdom |
 | DOM assertions | Testing Library and `@testing-library/jest-dom` |
-| Browser runner | Playwright 1.x with Chromium |
+| Browser runner | Playwright 1.x with Chromium plus narrow Firefox and WebKit critical projects |
 | TypeScript mode | Strict, no emit |
 | CI runner | Verify: `ubuntu-24.04`; deploy and scheduled heartbeat: `ubuntu-latest` |
 
@@ -30,8 +30,11 @@ Smart Portfolio uses a layered quality gate for documentation, static content, R
 | `npm run test:navigation` | Focused mobile rail, header, responsive-query, theme, and navigation style tests | Use while changing navigation; release CI covers them through `test` |
 | `npm run test:skeletons` | Focused skeleton component, content, style, and page-entry tests | Protects route fallback semantics, fixture geometry, and static no-motion placeholders |
 | `npm run test:e2e:priority` | Playwright skeleton alignment and held-navigation transitions, navigation, footer, mocked-contact, Recommendations, Projects, Experience, and Research flows | Portable pull-request browser gate; uses no provider credentials or delivery endpoint and intentionally excludes Linux-only visual comparison |
-| `npm run test:e2e:full` | Every supported Playwright specification in one Chromium process | Release browser gate; includes every skeleton part and the mocked-contact flow |
+| `npm run test:e2e:full` | Every supported Playwright specification in one Chromium process | Release browser gate; includes every skeleton part, the mocked-contact flow, and axe accessibility coverage |
 | `npm run test:e2e:contact` | Playwright contact flow specification in Chromium | Mocks Turnstile and both same-origin contact endpoints; never submits to a provider |
+| `npm run test:e2e:accessibility` | Axe scan of all public routes and selected interactive states in Chromium | Requires zero violations and uses no rule suppression |
+| `npm run test:e2e:critical:firefox` | Narrow navigation, theme, dialog, and mocked-contact recovery path in Firefox | Does not run Linux skeleton screenshots |
+| `npm run test:e2e:critical:webkit` | The same narrow critical path with the iPhone 13 WebKit project | Supplements, but does not claim, physical-device Safari validation |
 | `npm run test:e2e:navigation` | Playwright navigation specification in Chromium | Uses port 3100 by default and starts its own local server |
 | `npm run test:e2e:skeletons:alignment` | Playwright resolved-page versus canonical-loader geometry specification | Covers direct header line boxes, wrap boundaries, generated Experience copy, detail footprints, overflow, themes, and reduced motion in inert same-origin fixtures |
 | `npm run test:e2e:skeletons:visual` | Linux-only Playwright screenshot specification | Captures or compares 25 reviewed skeleton geometry baselines on Ubuntu 24.04 only, rejecting browser diagnostics before any screenshot |
@@ -46,6 +49,9 @@ Smart Portfolio uses a layered quality gate for documentation, static content, R
 | `npm audit` | Locked full dependency graph audit | Covers development and deployment dependencies |
 | `npm audit --omit=dev` | Locked production dependency graph audit | Covers the deployed runtime dependency graph |
 | `npm run audit:check` | Full locked audit with exact, expiring GHSA exceptions | Blocks unlisted, expired, and production findings |
+| `npm run test:quality:properties` | Seeded contact payload, origin, ticket, and UTF-8 boundary cases | Deterministic bounded loops; no live provider or remote D1 |
+| `npm run test:quality:mutations` | Exact compiled contact-payload guard mutants against shared boundary assertions | A surviving unknown-schema, consent, or submission-ID mutant fails the test |
+| `npm run test:quality:payload` | Route, initial-JavaScript, framework, and asset-role gzip budget | Requires the generated `out/` and `.next/` directories from `build:generated` |
 | `npm run db:migrate:local` | Pending tracked migrations against Wrangler's local D1 state | Never targets preview or production |
 | `npm run verify` | One content snapshot, docs check, dependency audit, lint, typecheck, full Vitest suite, and generated-snapshot build | Compatibility local gate; does not install Chromium or download content again during the build |
 | `npm run verify:priority` | One content snapshot, docs check, dependency audit, lint, typecheck, priority Vitest and browser suites, and generated-snapshot build | Portable pull-request-sized local gate; install Chromium first. Linux CI runs the visual skeleton comparison as its separate priority-only step |
@@ -133,7 +139,7 @@ The contact browser specification also checks unchanged gate geometry across loa
 | Static security contracts | `src/lib/content/security.test.ts` | No Next.js runtime endpoints, scoped Pages routing, safe structured links, responsive and motion contracts |
 | Architecture import direction | `src/lib/architecture/importBoundaries.test.ts` | Direct alias and relative import policy for library and component layers, plus permitted shared dependencies |
 
-Many accessibility assertions verify semantic roles, names, focus behavior, keyboard handling, `aria` state, and reduced-motion fallbacks. The repository does not currently run an automated browser accessibility scanner.
+Many accessibility assertions verify semantic roles, names, focus behavior, keyboard handling, `aria` state, and reduced-motion fallbacks. `tests/e2e/accessibility.spec.ts` adds axe scans across the eleven public routes and the theme chooser, graphical-abstract dialog, contact validation/review, Research video settings, and Experience evidence state. It is intentionally a local focused command until the CI orchestration selects it.
 
 ## Browser skeleton coverage
 
@@ -306,8 +312,8 @@ Avoid snapshot tests that hide semantic changes. Prefer explicit assertions for 
 
 - No coverage percentage is generated or enforced.
 - The default CI browser gate runs Chromium, including a local mocked contact journey. The scoped mobile Research video and Projects preview commands also run WebKit locally; neither emulates physical iPhone Safari or exercises a live security provider, D1 binding, delivery service, or mailbox.
-- No automated Lighthouse or performance threshold runs in CI.
-- No automated browser accessibility scanner is configured.
+- No automated Lighthouse or Core Web Vitals measurement runs in CI. The local payload command enforces reviewed static gzip limits after a generated build.
+- The axe and cross-browser critical commands are available locally but are not selected by the current stable CI orchestration.
 - No Workers emulator integration test runs in CI.
 - No automated live contact delivery test is performed.
 - CI covers one Linux and Node-major configuration. Local `verify:full` on another operating system cannot replace the required Ubuntu 24.04 visual comparison.

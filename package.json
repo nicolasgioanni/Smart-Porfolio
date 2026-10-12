@@ -30,6 +30,9 @@
     "test:e2e:skeletons": "playwright test skeleton-alignment.spec.ts skeletons.transition.spec.ts skeletons.visual.spec.ts --project=chromium",
     "test:skeleton-guidance": "vitest run scripts/skeletonGuidance.test.mjs",
     "test:skeleton-baseline-workflow": "vitest run scripts/skeletonBaselineWorkflow.test.mjs",
+    "test:quality:properties": "vitest run scripts/quality/contactBoundary.property.test.ts",
+    "test:quality:mutations": "vitest run scripts/quality/contactGuardMutation.test.mjs",
+    "test:quality:payload": "node scripts/quality/payloadBudget.mjs --out out --next .next",
     "test:e2e:footer": "playwright test footer.spec.ts --project=chromium",
     "test:e2e:recommendations": "playwright test recommendations.spec.ts --project=chromium",
     "test:e2e:experience": "playwright test experience.spec.ts --project=chromium",
@@ -37,6 +40,9 @@
     "test:e2e:research:webkit": "playwright test research.spec.ts research-mobile-video.spec.ts --project=webkit-mobile --grep @mobile-video",
     "test:e2e:projects:webkit": "playwright test projects.spec.ts --project=webkit-mobile --grep @mobile-projects",
     "test:e2e:contact": "playwright test contact.spec.ts --project=chromium",
+    "test:e2e:accessibility": "playwright test accessibility.spec.ts --project=chromium",
+    "test:e2e:critical:firefox": "playwright test critical-quality.spec.ts --project=firefox-critical",
+    "test:e2e:critical:webkit": "playwright test critical-quality.spec.ts --project=webkit-critical",
     "test:e2e:priority": "playwright test skeleton-alignment.spec.ts skeletons.transition.spec.ts navigation.spec.ts progressiveEnhancement.spec.ts footer.spec.ts contact.spec.ts recommendations.spec.ts experience.spec.ts projects.spec.ts research.spec.ts research-mobile-video.spec.ts --project=chromium",
     "test:e2e:full": "playwright test --project=chromium",
     "verify": "node scripts/runVerification.mjs verify",
@@ -59,6 +65,7 @@
     "simple-icons": "^16.28.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
     "@eslint/js": "^9.18.0",
     "@next/eslint-plugin-next": "^16.4.0",
     "@playwright/test": "^1.62.1",

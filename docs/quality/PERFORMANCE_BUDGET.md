@@ -85,6 +85,16 @@ After a major visual or dependency change:
 4. Inspect new or changed public asset sizes.
 5. Test the production export rather than judging development-server behavior.
 
-This repository does not enforce a numeric Lighthouse score or bundle threshold. Do not claim a measured performance result without recording the tool, route, environment, and date.
+## Static export payload gate
+
+`npm run test:quality:payload` measures the existing generated `out/` and `.next/` directories against the reviewed baseline in `scripts/quality/payloadBaseline.json`. It covers every public route, checks that published initial chunks match their build sources, measures route HTML and initial JavaScript gzip sizes, requires shared framework chunks, and enforces role-specific Research media limits. It also rejects Research-only media and project markers outside the Research route.
+
+Run it only after `npm run build:generated`. The baseline records the review environment and permits the documented slack; do not raise it to turn an unexplained output increase green. Investigate the route, chunk, or asset that exceeded its reviewed bound first.
+
+### Projects baseline provenance
+
+The reviewed /projects HTML baseline is 19,625 gzip bytes from the preserved product shape at f6334b93309bd0ba355937113cc4bf7ca31b6b59, measured with Node 22.23.3 and Next 16.3.4. It retains the approved preview, badge, attribution, footer, and visual-switcher markup; this correction is not a performance optimization or a visual-baseline change. The reconciled Node 22.23.3 and Next 16.4.0 build measures 19,739 bytes, leaving its 114-byte dependency-era change visible while remaining below the unchanged 20% route slack ceiling. Every other reviewed route and asset threshold remains unchanged.
+
+The gate does not measure Lighthouse or Core Web Vitals. Do not claim a measured performance result without recording the tool, route, environment, and date.
 
 See [Performance checklist](PERFORMANCE_CHECKLIST.md), [Design system](../design/DESIGN_SYSTEM.md), and [Testing](TESTING.md).

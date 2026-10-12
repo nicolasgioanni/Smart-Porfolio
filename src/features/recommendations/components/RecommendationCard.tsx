@@ -35,7 +35,11 @@ export function RecommendationCard({
     <PortfolioCard className={["recommendation-card", `recommendation-card--${variant}`].join(" ")} variant={variant}>
       <header className="recommendation-card__header">
         <div className="recommendation-card__identity-row">
-          <h3 className="recommendation-card__name">{item.recommenderName}</h3>
+          {variant === "detail" ? (
+            <h2 className="recommendation-card__name">{item.recommenderName}</h2>
+          ) : (
+            <h3 className="recommendation-card__name">{item.recommenderName}</h3>
+          )}
           {sourceUrl ? (
             <RecommendationVerificationLink
               recommenderName={item.recommenderName}

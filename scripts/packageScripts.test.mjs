@@ -76,6 +76,15 @@ describe("package and CI deployment automation", () => {
     expect(packageJson.scripts["test:skeleton-guidance"]).toBe(
       "vitest run scripts/skeletonGuidance.test.mjs"
     );
+    expect(packageJson.scripts["test:quality:properties"]).toBe(
+      "vitest run scripts/quality/contactBoundary.property.test.ts"
+    );
+    expect(packageJson.scripts["test:quality:mutations"]).toBe(
+      "vitest run scripts/quality/contactGuardMutation.test.mjs"
+    );
+    expect(packageJson.scripts["test:quality:payload"]).toBe(
+      "node scripts/quality/payloadBudget.mjs --out out --next .next"
+    );
     expect(packageJson.scripts["test:e2e:footer"]).toBe(
       "playwright test footer.spec.ts --project=chromium"
     );
@@ -91,8 +100,20 @@ describe("package and CI deployment automation", () => {
     expect(packageJson.scripts["test:e2e:research:webkit"]).toBe(
       "playwright test research.spec.ts research-mobile-video.spec.ts --project=webkit-mobile --grep @mobile-video"
     );
+    expect(packageJson.scripts["test:e2e:projects:webkit"]).toBe(
+      "playwright test projects.spec.ts --project=webkit-mobile --grep @mobile-projects"
+    );
     expect(packageJson.scripts["test:e2e:contact"]).toBe(
       "playwright test contact.spec.ts --project=chromium"
+    );
+    expect(packageJson.scripts["test:e2e:accessibility"]).toBe(
+      "playwright test accessibility.spec.ts --project=chromium"
+    );
+    expect(packageJson.scripts["test:e2e:critical:firefox"]).toBe(
+      "playwright test critical-quality.spec.ts --project=firefox-critical"
+    );
+    expect(packageJson.scripts["test:e2e:critical:webkit"]).toBe(
+      "playwright test critical-quality.spec.ts --project=webkit-critical"
     );
     expect(packageJson.scripts["test:e2e:priority"]).toBe(
       "playwright test skeleton-alignment.spec.ts skeletons.transition.spec.ts navigation.spec.ts progressiveEnhancement.spec.ts footer.spec.ts contact.spec.ts recommendations.spec.ts experience.spec.ts projects.spec.ts research.spec.ts research-mobile-video.spec.ts --project=chromium"

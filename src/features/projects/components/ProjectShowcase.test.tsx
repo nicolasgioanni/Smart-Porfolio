@@ -71,6 +71,7 @@ describe("Project showcase", () => {
     const enhancedMarkup = renderToStaticMarkup(<ProjectCard item={complianceProject} variant="detail" />);
     const staticMarkup = renderToStaticMarkup(<ProjectCard item={complianceProject} staticVisual variant="detail" />);
     expect(enhancedMarkup).toContain('data-view="preview"');
+    expect(enhancedMarkup).toContain("<h2");
     expect(enhancedMarkup).toContain("How it works");
     expect(enhancedMarkup).toContain("Preview");
     expect(enhancedMarkup).not.toContain("project-visual-switcher__hint");
