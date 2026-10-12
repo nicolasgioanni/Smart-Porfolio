@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rename, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -42,7 +42,7 @@ async function fixture() {
   await writeFile(sbom, '{"bomFormat":"CycloneDX"}\n');
   const release = path.join(root, "release");
   await packageSealedRelease({ outDirectory: out, configPath, migrationsDirectory: migrations, releaseDirectory: release, candidate: sealedCandidate, sbomPath: sbom });
-  return { root, release, sealedCandidate };
+  return { root, out, migrations, configPath, sbom, release, sealedCandidate };
 }
 
 afterEach(async () => Promise.all(temporaryDirectories.splice(0).map((directory) => rm(directory, { force: true, recursive: true }))));
@@ -74,5 +74,50 @@ describe("sealed release package", () => {
     await mkdir(unowned, { recursive: true });
     await writeFile(path.join(unowned, "notes.txt"), "unowned");
     await expect(packageSealedRelease({ outDirectory: path.join(release, "out"), configPath: path.join(release, "wrangler.jsonc"), migrationsDirectory: path.join(release, "migrations"), releaseDirectory: unowned, candidate: sealedCandidate, sbomPath: path.join(release, "sbom.cdx.json") })).rejects.toThrow("unowned release directory");
+  });
+
+  it("restores the prior sealed package and cleans temporary directories when promotion rename fails", async () => {
+    const { root, out, migrations, configPath, sbom, release, sealedCandidate } = await fixture();
+    const original = await readFile(path.join(release, "out", "index.html"), "utf8");
+    await writeFile(path.join(out, "index.html"), "<main>replacement</main>");
+    await createArtifactManifest(out);
+    const renameCalls = [];
+    const renameEntry = async (source, destination) => {
+      renameCalls.push([source, destination]);
+      if (path.resolve(destination) === release && path.basename(source).startsWith(".release-staging-")) {
+        throw new Error("simulated promotion rename failure");
+      }
+      await rename(source, destination);
+    };
+
+    await expect(packageSealedRelease({ outDirectory: out, configPath, migrationsDirectory: migrations, releaseDirectory: release, candidate: sealedCandidate, sbomPath: sbom, renameEntry })).rejects.toThrow("simulated promotion rename failure");
+
+    expect(await readFile(path.join(release, "out", "index.html"), "utf8")).toBe(original);
+    await expect(verifySealedRelease(release)).resolves.toMatchObject({ candidate: sealedCandidate });
+    expect((await readdir(root)).filter((entry) => entry.startsWith(".release-staging-") || entry.startsWith(".release-previous-"))).toEqual([]);
+    expect(renameCalls).toHaveLength(3);
+  });
+
+  it("retains the prior sealed package outside the destination if restoration also fails", async () => {
+    const { root, out, migrations, configPath, sbom, release, sealedCandidate } = await fixture();
+    await writeFile(path.join(out, "index.html"), "<main>replacement</main>");
+    await createArtifactManifest(out);
+    let preserved;
+    const renameEntry = async (source, destination) => {
+      if (path.resolve(destination) === release && path.basename(source).startsWith(".release-staging-")) {
+        throw new Error("simulated promotion rename failure");
+      }
+      if (path.resolve(destination) === release && path.basename(source).startsWith(".release-previous-")) {
+        preserved = source;
+        throw new Error("simulated restoration rename failure");
+      }
+      await rename(source, destination);
+    };
+
+    await expect(packageSealedRelease({ outDirectory: out, configPath, migrationsDirectory: migrations, releaseDirectory: release, candidate: sealedCandidate, sbomPath: sbom, renameEntry })).rejects.toThrow("prior sealed package remains at");
+
+    expect(preserved).toBeTruthy();
+    await expect(verifySealedRelease(preserved)).resolves.toMatchObject({ candidate: sealedCandidate });
+    expect((await readdir(root)).filter((entry) => entry.startsWith(".release-staging-"))).toEqual([]);
   });
 });

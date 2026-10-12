@@ -110,7 +110,7 @@ export function parseReleaseManifest(value) {
   return { schemaVersion: 1, algorithm: "sha256", candidate, files };
 }
 
-export async function packageSealedRelease({ outDirectory, configPath, migrationsDirectory, releaseDirectory, candidate, sbomPath }) {
+export async function packageSealedRelease({ outDirectory, configPath, migrationsDirectory, releaseDirectory, candidate, sbomPath, renameEntry = rename }) {
   const out = path.resolve(outDirectory);
   const config = path.resolve(configPath);
   const migrations = path.resolve(migrationsDirectory);
@@ -129,6 +129,7 @@ export async function packageSealedRelease({ outDirectory, configPath, migration
   }
   const staging = await mkdtemp(path.join(path.dirname(release), ".release-staging-"));
   let previous;
+  let previousOwnsRelease = false;
   try {
     await Promise.all([
       copyChecked(out, path.join(staging, "out")),
@@ -143,14 +144,31 @@ export async function packageSealedRelease({ outDirectory, configPath, migration
     if (existing) {
       previous = await mkdtemp(path.join(path.dirname(release), ".release-previous-"));
       await rm(previous, { force: true, recursive: true });
-      await rename(release, previous);
+      await renameEntry(release, previous);
+      previousOwnsRelease = true;
     }
-    await rename(staging, release);
-    if (previous) await rm(previous, { force: true, recursive: true });
+    try {
+      await renameEntry(staging, release);
+    } catch (promotionError) {
+      if (!previousOwnsRelease) throw promotionError;
+      try {
+        await renameEntry(previous, release);
+        previous = undefined;
+        previousOwnsRelease = false;
+      } catch (restoreError) {
+        throw new AggregateError([promotionError, restoreError], `release promotion failed; prior sealed package remains at ${previous}`);
+      }
+      throw promotionError;
+    }
+    if (previous) {
+      await rm(previous, { force: true, recursive: true });
+      previous = undefined;
+      previousOwnsRelease = false;
+    }
     return manifest;
   } finally {
     await rm(staging, { force: true, recursive: true });
-    if (previous) await rm(previous, { force: true, recursive: true });
+    if (previous && !previousOwnsRelease) await rm(previous, { force: true, recursive: true });
   }
 }
 
