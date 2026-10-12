@@ -329,6 +329,66 @@ jobs:
             exit 1
           fi
 
+      - name: Prepare private preview evidence paths
+        if: needs.verify.outputs.deploy_target == 'preview'
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          private_preview_evidence_dir="$(mktemp -d "$RUNNER_TEMP/private-preview-evidence.XXXXXX")"
+          private_preview_wrangler_output="$(mktemp "$RUNNER_TEMP/private-preview-wrangler-output.XXXXXX")"
+          private_preview_d1_log="$(mktemp "$RUNNER_TEMP/private-preview-d1-log.XXXXXX")"
+          chmod 700 "$private_preview_evidence_dir"
+          chmod 600 "$private_preview_wrangler_output"
+          chmod 600 "$private_preview_d1_log"
+          {
+            echo "PRIVATE_PREVIEW_EVIDENCE_DIR=$private_preview_evidence_dir"
+            echo "WRANGLER_OUTPUT_FILE_PATH=$private_preview_wrangler_output"
+            echo "PRIVATE_PREVIEW_D1_LOG=$private_preview_d1_log"
+          } >> "$GITHUB_ENV"
+
+      - name: Preflight private preview Access state before mutation
+        if: needs.verify.outputs.deploy_target == 'preview'
+        env:
+          PRIVATE_PREVIEW_ACCOUNT_ID: ${{ secrets.PRIVATE_PREVIEW_ACCOUNT_ID }}
+          PRIVATE_PREVIEW_DNS_ZONE_ID: ${{ secrets.PRIVATE_PREVIEW_DNS_ZONE_ID }}
+          PRIVATE_PREVIEW_SERVICE_TOKEN_ID: ${{ secrets.PRIVATE_PREVIEW_SERVICE_TOKEN_ID }}
+          PRIVATE_PREVIEW_API_TOKEN: ${{ secrets.PRIVATE_PREVIEW_API_TOKEN }}
+          PRIVATE_PREVIEW_ACCESS_CLIENT_ID: ${{ secrets.PRIVATE_PREVIEW_ACCESS_CLIENT_ID }}
+          PRIVATE_PREVIEW_ACCESS_CLIENT_SECRET: ${{ secrets.PRIVATE_PREVIEW_ACCESS_CLIENT_SECRET }}
+          PRIVATE_PREVIEW_CUSTOM_HOSTNAME: ${{ secrets.PRIVATE_PREVIEW_CUSTOM_HOSTNAME }}
+          PRIVATE_PREVIEW_ACCESS_TEAM_DOMAIN: ${{ secrets.PRIVATE_PREVIEW_ACCESS_TEAM_DOMAIN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_PAGES_PROJECT_NAME: ${{ needs.verify.outputs.pages_project_name }}
+          CANDIDATE_BRANCH: ${{ needs.verify.outputs.candidate_branch }}
+          CANDIDATE_SHA: ${{ needs.verify.outputs.candidate_sha }}
+          CONTENT_HASH: ${{ needs.verify.outputs.content_hash }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$PRIVATE_PREVIEW_ACCOUNT_ID" != "$CLOUDFLARE_ACCOUNT_ID" || \
+                "$CLOUDFLARE_PAGES_PROJECT_NAME" != "smart-portfolio" || \
+                "$CANDIDATE_BRANCH" != "develop" ]]; then
+            echo "private-preview status=deployment_binding_mismatch"
+            exit 1
+          fi
+          node scripts/privatePreviewCheck.mjs preflight out "$CONTENT_HASH" "$CANDIDATE_SHA"
+
+      - name: Recheck private preview branch immediately before D1
+        if: needs.verify.outputs.deploy_target == 'preview'
+        shell: bash
+        env:
+          CANDIDATE_BRANCH: ${{ needs.verify.outputs.candidate_branch }}
+          CANDIDATE_SHA: ${{ needs.verify.outputs.candidate_sha }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "+refs/heads/$CANDIDATE_BRANCH:refs/remotes/origin/$CANDIDATE_BRANCH"
+          latest_sha="$(git rev-parse "refs/remotes/origin/$CANDIDATE_BRANCH")"
+          if [[ "$latest_sha" != "$CANDIDATE_SHA" ]]; then
+            echo "Refusing private preview for a stale candidate revision."
+            exit 1
+          fi
+
       - name: Validate the environment-specific D1 binding and apply migrations
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -363,12 +423,59 @@ jobs:
           NODE
 
           if [[ "$DEPLOY_TARGET" == "preview" ]]; then
-            npx --no-install wrangler d1 migrations apply smart-portfolio-contact-rate-limit-preview --env preview --remote
+            if ! npx --no-install wrangler d1 migrations apply smart-portfolio-contact-rate-limit-preview --env preview --remote > "$PRIVATE_PREVIEW_D1_LOG" 2>&1; then
+              echo "private-preview status=d1_migrations_failed"
+              exit 1
+            fi
+            echo "private-preview status=d1_migrations_applied"
           else
             npx --no-install wrangler d1 migrations apply smart-portfolio-contact-rate-limit-production --remote
           fi
 
-      - name: Deploy the verified export and Pages Function with pinned Wrangler
+      - name: Recheck private preview Access state immediately before Wrangler
+        if: needs.verify.outputs.deploy_target == 'preview'
+        env:
+          CANDIDATE_BRANCH: ${{ needs.verify.outputs.candidate_branch }}
+          CANDIDATE_SHA: ${{ needs.verify.outputs.candidate_sha }}
+          PRIVATE_PREVIEW_ACCOUNT_ID: ${{ secrets.PRIVATE_PREVIEW_ACCOUNT_ID }}
+          PRIVATE_PREVIEW_DNS_ZONE_ID: ${{ secrets.PRIVATE_PREVIEW_DNS_ZONE_ID }}
+          PRIVATE_PREVIEW_SERVICE_TOKEN_ID: ${{ secrets.PRIVATE_PREVIEW_SERVICE_TOKEN_ID }}
+          PRIVATE_PREVIEW_API_TOKEN: ${{ secrets.PRIVATE_PREVIEW_API_TOKEN }}
+          PRIVATE_PREVIEW_ACCESS_CLIENT_ID: ${{ secrets.PRIVATE_PREVIEW_ACCESS_CLIENT_ID }}
+          PRIVATE_PREVIEW_ACCESS_CLIENT_SECRET: ${{ secrets.PRIVATE_PREVIEW_ACCESS_CLIENT_SECRET }}
+          PRIVATE_PREVIEW_CUSTOM_HOSTNAME: ${{ secrets.PRIVATE_PREVIEW_CUSTOM_HOSTNAME }}
+          PRIVATE_PREVIEW_ACCESS_TEAM_DOMAIN: ${{ secrets.PRIVATE_PREVIEW_ACCESS_TEAM_DOMAIN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_PAGES_PROJECT_NAME: ${{ needs.verify.outputs.pages_project_name }}
+          CONTENT_HASH: ${{ needs.verify.outputs.content_hash }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$PRIVATE_PREVIEW_ACCOUNT_ID" != "$CLOUDFLARE_ACCOUNT_ID" || \
+                "$CLOUDFLARE_PAGES_PROJECT_NAME" != "smart-portfolio" || \
+                "$CANDIDATE_BRANCH" != "develop" ]]; then
+            echo "private-preview status=deployment_binding_mismatch"
+            exit 1
+          fi
+          node scripts/privatePreviewCheck.mjs preflight out "$CONTENT_HASH" "$CANDIDATE_SHA"
+
+      - name: Recheck private preview branch immediately before Wrangler
+        if: needs.verify.outputs.deploy_target == 'preview'
+        shell: bash
+        env:
+          CANDIDATE_BRANCH: ${{ needs.verify.outputs.candidate_branch }}
+          CANDIDATE_SHA: ${{ needs.verify.outputs.candidate_sha }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "+refs/heads/$CANDIDATE_BRANCH:refs/remotes/origin/$CANDIDATE_BRANCH"
+          latest_sha="$(git rev-parse "refs/remotes/origin/$CANDIDATE_BRANCH")"
+          if [[ "$latest_sha" != "$CANDIDATE_SHA" ]]; then
+            echo "Refusing private preview for a stale candidate revision."
+            exit 1
+          fi
+
+      - name: Deploy the verified production export and Pages Function with pinned Wrangler
+        if: needs.verify.outputs.deploy_target == 'production'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -381,7 +488,47 @@ jobs:
           --branch "$CANDIDATE_BRANCH"
           --commit-hash "$CANDIDATE_SHA"
 
-      - name: Smoke test static content, integrity metadata, and both contact APIs
+      - name: Deploy the private preview export with pinned Wrangler
+        if: needs.verify.outputs.deploy_target == 'preview'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_PAGES_PROJECT_NAME: ${{ needs.verify.outputs.pages_project_name }}
+          CANDIDATE_BRANCH: ${{ needs.verify.outputs.candidate_branch }}
+          CANDIDATE_SHA: ${{ needs.verify.outputs.candidate_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          private_preview_wrangler_log="$(mktemp "$RUNNER_TEMP/private-preview-wrangler-log.XXXXXX")"
+          if ! npx --no-install wrangler pages deploy out \
+            --project-name "$CLOUDFLARE_PAGES_PROJECT_NAME" \
+            --branch "$CANDIDATE_BRANCH" \
+            --commit-hash "$CANDIDATE_SHA" > "$private_preview_wrangler_log" 2>&1; then
+            echo "private-preview status=wrangler_failed"
+            exit 1
+          fi
+          echo "private-preview status=wrangler_uploaded"
+
+      - name: Verify exact private preview deployment
+        if: needs.verify.outputs.deploy_target == 'preview'
+        env:
+          PRIVATE_PREVIEW_ACCOUNT_ID: ${{ secrets.PRIVATE_PREVIEW_ACCOUNT_ID }}
+          PRIVATE_PREVIEW_DNS_ZONE_ID: ${{ secrets.PRIVATE_PREVIEW_DNS_ZONE_ID }}
+          PRIVATE_PREVIEW_SERVICE_TOKEN_ID: ${{ secrets.PRIVATE_PREVIEW_SERVICE_TOKEN_ID }}
+          PRIVATE_PREVIEW_API_TOKEN: ${{ secrets.PRIVATE_PREVIEW_API_TOKEN }}
+          PRIVATE_PREVIEW_ACCESS_CLIENT_ID: ${{ secrets.PRIVATE_PREVIEW_ACCESS_CLIENT_ID }}
+          PRIVATE_PREVIEW_ACCESS_CLIENT_SECRET: ${{ secrets.PRIVATE_PREVIEW_ACCESS_CLIENT_SECRET }}
+          PRIVATE_PREVIEW_CUSTOM_HOSTNAME: ${{ secrets.PRIVATE_PREVIEW_CUSTOM_HOSTNAME }}
+          PRIVATE_PREVIEW_ACCESS_TEAM_DOMAIN: ${{ secrets.PRIVATE_PREVIEW_ACCESS_TEAM_DOMAIN }}
+          CANDIDATE_SHA: ${{ needs.verify.outputs.candidate_sha }}
+          CONTENT_HASH: ${{ needs.verify.outputs.content_hash }}
+        run: >-
+          node scripts/privatePreviewCheck.mjs verify-upload out "$CONTENT_HASH" "$CANDIDATE_SHA"
+          "$WRANGLER_OUTPUT_FILE_PATH"
+
+      - name: Smoke test public production content, integrity metadata, and both contact APIs
+        if: needs.verify.outputs.deploy_target == 'production'
         env:
           CLOUDFLARE_PAGES_DOMAIN: ${{ needs.verify.outputs.pages_domain }}
           CANDIDATE_BRANCH: ${{ needs.verify.outputs.candidate_branch }}
