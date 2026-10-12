@@ -55,7 +55,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang={SITE_LANGUAGE} data-scroll-behavior="smooth" data-theme={initialTheme} suppressHydrationWarning>
       <head>
-        <ThemePreferenceScript initialTheme={initialTheme} />
+        <ThemePreferenceScript />
       </head>
       <body className={`${spaceGrotesk.className} ${spaceGrotesk.variable}`}>
         <SiteShell content={content} initialTheme={initialTheme}>

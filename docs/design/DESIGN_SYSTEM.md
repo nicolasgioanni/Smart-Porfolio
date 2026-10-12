@@ -43,6 +43,8 @@ The `navy` identifier intentionally remains stable for generated content, `data-
 
 `src/lib/theme/themeTransition.ts` is the single hydrated write boundary. It progressively uses the browser View Transitions API for a `160ms` opacity-only root snapshot fade after interaction or a live preference update. It never delays or animates the prepaint script or first hydration reconciliation, and it falls back to the same immediate token swap when motion is reduced, the document is hidden, the palette is unchanged, or the API is unavailable or fails. Components continue to consume semantic palette tokens rather than declaring their own theme transition rules.
 
+Viewport or document-state changes may abort a native transition. The shared helper handles rejections from `ready`, `updateCallbackDone`, and `finished` without undoing the palette write; the chooser still receives the original `finished` promise for its own interaction lifecycle.
+
 Components must use semantic variables such as `--color-ink`, `--color-muted`, `--color-line`, and `--color-surface`. Do not read a palette-specific variable from a component rule when a semantic token expresses the role.
 
 My mode keeps its midnight-navy canvas and solid surface hierarchy. Its principal cream accent is `#F4F1EA`, with `#FCFAF5` for strong text and `#CECDC7` for secondary text. Buttons, brand marks, links, focus rings, borders, and surface tints use those cream values through semantic tokens; alpha values remain role-specific.

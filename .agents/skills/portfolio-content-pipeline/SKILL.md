@@ -9,7 +9,7 @@ Use this skill for source-workbook schema, template CSV, generation, content map
 
 Read [system decisions](../../knowledge/SYSTEM_DECISIONS.md), [Content pipeline](../../../docs/content/CONTENT_PIPELINE.md), and the relevant schema or mapping guide before editing. The workbook is an authoring surface, not a runtime dependency: validate and generate content at build time, then render the generated result.
 
-Keep parser limits, header validation, normalization, semantic hashing, URL policy, and public-safe boundaries intact. Reuse the existing generation and resolver paths instead of adding component-level source access. Test a changed boundary with its closest parser or resolver contract, then generate content and run the relevant route checks.
+Keep parser limits, header validation, normalization, semantic hashing, URL policy, and public-safe boundaries intact. The anonymous workbook path manually validates redirects, resolves and pins public DNS answers per hop, and cancels rejected or timed-out streams without waiting for cleanup; preserve those bounds. Reuse the existing generation and resolver paths instead of adding component-level source access. Test a changed boundary with its closest parser or resolver contract, then generate content and run the relevant route checks.
 
 For Projects, read [Project showcase](../../../docs/content/PROJECT_SHOWCASE.md). Keep the workbook authoritative for membership, copy, order, and destinations; local preview and diagram registries must not insert missing project records. Include the canonical CSV import handoff when changing the lineup.
 

@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
-import { existsSync } from "node:fs";
-import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { constants, existsSync } from "node:fs";
+import { copyFile, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import net from "node:net";
 import path from "node:path";
 import { spawn, spawnSync } from "node:child_process";
@@ -283,12 +283,13 @@ export async function copyEnvExampleIfMissing(projectRoot) {
   const envLocalPath = path.join(projectRoot, ".env");
   const envExamplePath = path.join(projectRoot, ".env.example");
 
-  if (existsSync(envLocalPath) || !existsSync(envExamplePath)) {
-    return false;
+  try {
+    await copyFile(envExamplePath, envLocalPath, constants.COPYFILE_EXCL);
+    return true;
+  } catch (error) {
+    if (error && typeof error === "object" && (error.code === "EEXIST" || error.code === "ENOENT")) return false;
+    throw error;
   }
-
-  await writeFile(envLocalPath, await readFile(envExamplePath, "utf8"), "utf8");
-  return true;
 }
 
 export async function removePathIfPresent(targetPath) {
