@@ -40,13 +40,16 @@ describe("package and CI deployment automation", () => {
     expect(nextConfigSource).toMatch(/output:\s*"export"/);
     expect(packageJson.scripts["dev:pages"]).toContain("npx --no-install wrangler");
     expect(packageJson.scripts["docs:check"]).toBe("node scripts/validateDocumentation.mjs");
-    expect(packageJson.scripts.verify).toBe(
-      "npm run docs:check && npm run lint && npm run typecheck && npm run test && npm run build"
-    );
+    expect(packageJson.scripts["audit:check"]).toBe("node scripts/checkDependencyAudit.mjs");
+    expect(packageJson.scripts["generate:content"]).toBe("node scripts/generateContent.mjs");
+    expect(packageJson.scripts.verify).toBe("node scripts/runVerification.mjs verify");
     expect(packageJson.scripts["test:priority"]).toBe(
       "node scripts/runValidationTier.mjs priority"
     );
-    expect(packageJson.devDependencies.wrangler).toBe("4.131.0");
+    expect(packageJson.dependencies.next).toBe("^16.4.0");
+    expect(packageJson.devDependencies["@next/eslint-plugin-next"]).toBe("^16.4.0");
+    expect(packageJson.devDependencies.wrangler).toBe("4.148.0");
+    expect(packageJson.devDependencies.miniflare).toBe("5.20261006.0-alpha");
     expect(packageJson.devDependencies.vitest).toBe("4.1.11");
     expect(packageJson.devDependencies["@playwright/test"]).toMatch(/^\^1\./);
     expect(packageJson.scripts["test:footer"]).toBe(
@@ -97,12 +100,8 @@ describe("package and CI deployment automation", () => {
     expect(packageJson.scripts["test:e2e:full"]).toBe(
       "playwright test --project=chromium"
     );
-    expect(packageJson.scripts["verify:priority"]).toBe(
-      "npm run docs:check && npm run lint && npm run typecheck && npm run test:priority && npm run test:e2e:priority && npm run build"
-    );
-    expect(packageJson.scripts["verify:full"]).toBe(
-      "npm run docs:check && npm run lint && npm run typecheck && npm run test && npm run test:e2e:full && npm run build"
-    );
+    expect(packageJson.scripts["verify:priority"]).toBe("node scripts/runVerification.mjs priority");
+    expect(packageJson.scripts["verify:full"]).toBe("node scripts/runVerification.mjs full");
   });
 
   it("keeps priority coverage on trust boundaries and lets the full browser suite discover every specification", async () => {
@@ -175,6 +174,7 @@ describe("package and CI deployment automation", () => {
     expect(workflow).not.toMatch(/^\s+(?:deployment|deployment_status|workflow_run|repository_dispatch):/m);
     expect(workflow).not.toContain("--no-verify");
     expect(workflow).not.toMatch(/SKIP_(?:TESTS|BUILD|VERIFY|DEPLOY)/);
+    expect(workflow.match(/persist-credentials: false/g)).toHaveLength(2);
   });
 
   it("runs priority template verification for pull requests without deployment credentials", async () => {
@@ -196,6 +196,7 @@ describe("package and CI deployment automation", () => {
     expect(verifyJob).toContain('PORTFOLIO_REQUIRE_REMOTE_CONTENT: "false"');
     expect(pullRequestGeneration).toContain('PORTFOLIO_WORKBOOK_URL: ""');
     expect(verifyJob).toContain("run: npm run lint");
+    expect(verifyJob).toContain("run: npm run audit:check");
     expect(verifyJob).toContain("run: npm run typecheck");
     expect(verifyJob).toContain("run: npm run test:priority");
     expect(verifyJob).toContain("run: npx --no-install playwright install --with-deps chromium");

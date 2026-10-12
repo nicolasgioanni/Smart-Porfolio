@@ -37,6 +37,7 @@ jobs:
         with:
           ref: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'main' || github.sha }}
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up Node.js
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
@@ -197,6 +198,10 @@ jobs:
         if: steps.decision.outputs.should_verify == 'true'
         run: npm run docs:check
 
+      - name: Dependency audit
+        if: steps.decision.outputs.should_verify == 'true'
+        run: npm run audit:check
+
       - name: Lint
         if: steps.decision.outputs.should_verify == 'true'
         run: npm run lint
@@ -294,6 +299,7 @@ jobs:
         with:
           ref: ${{ needs.verify.outputs.candidate_sha }}
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up Node.js
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0

@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
-import { mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import net from "node:net";
 import path from "node:path";
 import { spawn, spawnSync } from "node:child_process";
@@ -8,8 +8,16 @@ import readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 
 export const setupStateRelativePath = path.join(".local", "setup-state.json");
+export const generatedContentStateRelativePath = path.join(".local", "generated-content-state.json");
 export const generatedContentRelativePath = path.join("src", "content", "generated", "portfolio.generated.json");
 export const templateDirectoryRelativePath = path.join("src", "content", "templates");
+
+const generatedContentSchemaVersion = 1;
+const generatedContentToolchainPaths = [
+  "package.json",
+  "package-lock.json",
+  path.join("scripts", "fetchPortfolioContent.ts")
+];
 
 export function findProjectRoot(startDirectory = process.cwd()) {
   let currentDirectory = path.resolve(startDirectory);
@@ -37,6 +45,14 @@ export async function hashFile(filePath) {
   if (!existsSync(filePath)) return null;
   const content = await readFile(filePath);
   return createHash("sha256").update(content).digest("hex");
+}
+
+async function hashProjectPaths(projectRoot, relativePaths) {
+  const entries = [];
+  for (const relativePath of [...relativePaths].sort()) {
+    entries.push([relativePath.replaceAll("\\", "/"), await hashFile(path.join(projectRoot, relativePath))]);
+  }
+  return createHash("sha256").update(JSON.stringify(entries), "utf8").digest("hex");
 }
 
 export async function getPackageHashes(projectRoot) {
@@ -88,7 +104,9 @@ export function getNodeMajorVersion(nodeVersion = process.versions.node) {
 
 export function hasDependencyInstall(projectRoot) {
   const nodeModulesPath = path.join(projectRoot, "node_modules");
-  return existsSync(nodeModulesPath) && (existsSync(path.join(nodeModulesPath, ".package-lock.json")) || existsSync(path.join(nodeModulesPath, "next")));
+  return existsSync(path.join(nodeModulesPath, ".package-lock.json")) &&
+    existsSync(path.join(nodeModulesPath, "next", "package.json")) &&
+    existsSync(path.join(nodeModulesPath, "next", "dist", "bin", "next"));
 }
 
 export async function createPackageState(projectRoot, nodeVersion = process.versions.node, npmVersion = commandVersion("npm") ?? "unknown") {
@@ -108,7 +126,10 @@ export async function isDependencyInstallCurrent(projectRoot, state = null) {
   if (!currentState) return false;
 
   const hashes = await getPackageHashes(projectRoot);
-  return currentState.packageJsonHash === hashes.packageJsonHash && currentState.packageLockHash === hashes.packageLockHash;
+  return currentState.packageJsonHash === hashes.packageJsonHash &&
+    currentState.packageLockHash === hashes.packageLockHash &&
+    currentState.nodeVersion === process.versions.node &&
+    currentState.npmVersion === (commandVersion("npm") ?? "unknown");
 }
 
 export async function getTemplateCsvFiles(projectRoot) {
@@ -118,21 +139,101 @@ export async function getTemplateCsvFiles(projectRoot) {
   return entries.filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith(".csv")).map((entry) => path.join(templateDirectory, entry.name));
 }
 
-export async function isGeneratedContentStale(projectRoot) {
-  const generatedContentPath = path.join(projectRoot, generatedContentRelativePath);
-  if (!existsSync(generatedContentPath)) return true;
-
-  const generatedStat = await stat(generatedContentPath);
-  const templateFiles = await getTemplateCsvFiles(projectRoot);
-
-  for (const templateFile of templateFiles) {
-    const templateStat = await stat(templateFile);
-    if (templateStat.mtimeMs > generatedStat.mtimeMs) {
-      return true;
-    }
+async function getFilesRecursively(directory, root = directory) {
+  if (!existsSync(directory)) return [];
+  const files = [];
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const entryPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) files.push(...await getFilesRecursively(entryPath, root));
+    else if (entry.isFile() && !/\.(?:test|spec)\.[cm]?[jt]sx?$/.test(entry.name)) files.push(path.relative(root, entryPath));
   }
+  return files;
+}
 
-  return false;
+async function getContentImplementationPaths(projectRoot) {
+  const directories = [path.join("scripts", "lib"), path.join("src", "content"), path.join("src", "lib", "content"), path.join("src", "lib", "csv")];
+  const nested = await Promise.all(directories.map(async (relativeDirectory) =>
+    (await getFilesRecursively(path.join(projectRoot, relativeDirectory))).map((file) => path.join(relativeDirectory, file))
+  ));
+  return [...generatedContentToolchainPaths, ...nested.flat()];
+}
+
+async function getContentEnvironmentHash(projectRoot) {
+  const environmentPath = path.join(projectRoot, ".env");
+  const environmentText = existsSync(environmentPath) ? await readFile(environmentPath, "utf8") : "";
+  const selected = environmentText.split(/\r?\n/).filter((line) => /^PORTFOLIO_(?:WORKBOOK_URL|REQUIRE_REMOTE_CONTENT)=/.test(line));
+  const effective = [
+    ...selected,
+    `process:PORTFOLIO_WORKBOOK_URL=${process.env.PORTFOLIO_WORKBOOK_URL ?? ""}`,
+    `process:PORTFOLIO_REQUIRE_REMOTE_CONTENT=${process.env.PORTFOLIO_REQUIRE_REMOTE_CONTENT ?? ""}`
+  ];
+  return createHash("sha256").update(effective.join("\n"), "utf8").digest("hex");
+}
+
+export function getGeneratedContentStatePath(projectRoot) {
+  return path.join(projectRoot, generatedContentStateRelativePath);
+}
+
+export async function createGeneratedContentState(projectRoot, nodeVersion = process.versions.node) {
+  const templateFiles = await getTemplateCsvFiles(projectRoot);
+  const templatePaths = templateFiles.map((filePath) => path.relative(projectRoot, filePath));
+  const implementationPaths = await getContentImplementationPaths(projectRoot);
+  const npmVersion = commandVersion("npm") ?? "unknown";
+  const [sourceHash, implementationHash, environmentHash, generatedContentHash] = await Promise.all([
+    hashProjectPaths(projectRoot, templatePaths),
+    hashProjectPaths(projectRoot, implementationPaths),
+    getContentEnvironmentHash(projectRoot),
+    hashFile(path.join(projectRoot, generatedContentRelativePath))
+  ]);
+  const inputFingerprint = createHash("sha256")
+    .update(JSON.stringify({ generatedContentSchemaVersion, nodeVersion, npmVersion, sourceHash, implementationHash, environmentHash }), "utf8")
+    .digest("hex");
+
+  return {
+    schemaVersion: generatedContentSchemaVersion,
+    nodeVersion,
+    npmVersion,
+    sourceHash,
+    implementationHash,
+    environmentHash,
+    generatedContentHash,
+    inputFingerprint
+  };
+}
+
+export async function writeGeneratedContentState(projectRoot, state) {
+  const resolvedState = state ?? await createGeneratedContentState(projectRoot);
+  const statePath = getGeneratedContentStatePath(projectRoot);
+  await mkdir(path.dirname(statePath), { recursive: true });
+  await writeFile(statePath, `${JSON.stringify(resolvedState, null, 2)}\n`, "utf8");
+  return resolvedState;
+}
+
+async function hasValidGeneratedContent(projectRoot) {
+  const generatedContentPath = path.join(projectRoot, generatedContentRelativePath);
+  if (!existsSync(generatedContentPath)) return false;
+
+  try {
+    const content = JSON.parse(await readFile(generatedContentPath, "utf8"));
+    return (
+      typeof content?.metadata?.contentHash === "string" &&
+      /^[a-f0-9]{64}$/.test(content.metadata.contentHash) &&
+      typeof content.metadata.generatedAt === "string" &&
+      !Number.isNaN(Date.parse(content.metadata.generatedAt))
+    );
+  } catch {
+    return false;
+  }
+}
+
+export async function isGeneratedContentStale(projectRoot) {
+  if (!(await hasValidGeneratedContent(projectRoot))) return true;
+
+  const recordedState = await readJsonFile(getGeneratedContentStatePath(projectRoot), null);
+  if (!recordedState || recordedState.schemaVersion !== generatedContentSchemaVersion) return true;
+
+  const currentState = await createGeneratedContentState(projectRoot);
+  return recordedState.inputFingerprint !== currentState.inputFingerprint || recordedState.generatedContentHash !== currentState.generatedContentHash;
 }
 
 export async function runCommand(command, args, options = {}) {

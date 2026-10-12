@@ -14,6 +14,9 @@ describe("priority validation tier", () => {
     expect(priorityTestTargets).toContain("functions");
     expect(priorityTestTargets).toEqual(expect.arrayContaining([
       "scripts/contactTransport.integration.test.ts",
+      "scripts/checkDependencyAudit.test.mjs",
+      "scripts/localAutomation.test.mjs",
+      "scripts/runVerification.test.mjs",
       "scripts/updateContactTlds.test.mjs",
       "src/components/contact/ContactNotifications.test.tsx",
       "src/components/contact/useContactStepTransition.test.tsx",

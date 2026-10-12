@@ -45,11 +45,12 @@ Smart Portfolio uses a layered quality gate for documentation, static content, R
 | `npm run build:generated` | Next.js static export, segment-cache normalization, and content-version write | Consumes existing generated JSON without another content fetch |
 | `npm audit` | Locked full dependency graph audit | Covers development and deployment dependencies |
 | `npm audit --omit=dev` | Locked production dependency graph audit | Covers the deployed runtime dependency graph |
+| `npm run audit:check` | Full locked audit with exact, expiring GHSA exceptions | Blocks unlisted, expired, and production findings |
 | `npm run db:migrate:local` | Pending tracked migrations against Wrangler's local D1 state | Never targets preview or production |
-| `npm run verify` | Docs check, lint, typecheck, full Vitest suite, and normal build | Compatibility local gate; does not install Chromium |
-| `npm run verify:priority` | Docs check, lint, typecheck, priority Vitest and browser suites, and normal build | Portable pull-request-sized local gate; install Chromium first. Linux CI runs the visual skeleton comparison as its separate priority-only step |
-| `npm run verify:full` | Docs check, lint, typecheck, complete Vitest and Playwright suites, and normal build | Release-candidate gate; its Linux-only visual comparison must run on Ubuntu 24.04 |
-| `npm run verify:local` | Dependency preparation, explicit content generation, then `verify` | The final normal build invokes generation again |
+| `npm run verify` | One content snapshot, docs check, dependency audit, lint, typecheck, full Vitest suite, and generated-snapshot build | Compatibility local gate; does not install Chromium or download content again during the build |
+| `npm run verify:priority` | One content snapshot, docs check, dependency audit, lint, typecheck, priority Vitest and browser suites, and generated-snapshot build | Portable pull-request-sized local gate; install Chromium first. Linux CI runs the visual skeleton comparison as its separate priority-only step |
+| `npm run verify:full` | One content snapshot, docs check, dependency audit, lint, typecheck, complete Vitest and Playwright suites, and generated-snapshot build | Release-candidate gate; its Linux-only visual comparison must run on Ubuntu 24.04 |
+| `npm run verify:local` | Dependency preparation, then `verify` | The shared runner creates one snapshot and uses `build:generated` |
 
 Use the cross-platform `verify:local:node` alias when PowerShell is unavailable.
 
