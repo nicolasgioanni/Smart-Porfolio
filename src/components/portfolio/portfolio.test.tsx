@@ -16,16 +16,16 @@ import { PageIntro } from "@/components/layout/PageIntro";
 import { SectionHeader } from "@/components/layout/SectionHeader";
 import { EmptyState } from "@/components/portfolio/shared/EmptyState";
 import { FeaturedGrid } from "@/components/portfolio/shared/FeaturedGrid";
-import { HomeEducationSummary } from "@/components/portfolio/home/HomeEducationSummary";
-import { HomeFeaturedExperience } from "@/components/portfolio/home/HomeFeaturedExperience";
-import { HomeFeaturedProjects } from "@/features/projects/components/HomeFeaturedProjects";
-import { HomeFeaturedResearch } from "@/components/portfolio/home/HomeFeaturedResearch";
-import { HomeOverview } from "@/components/portfolio/home/HomeOverview";
-import { HomeRecommendations } from "@/components/portfolio/home/HomeRecommendations";
-import { PortfolioHero } from "@/components/portfolio/home/PortfolioHero";
-import { RecommendationsList } from "@/components/portfolio/recommendations/RecommendationsList";
+import { HomeEducationSummary } from "@/features/home/components/HomeEducationSummary";
+import { HomeFeaturedExperience } from "@/features/home/components/HomeFeaturedExperience";
+import { HomeFeaturedProjects } from "@/features/home/components/HomeFeaturedProjects";
+import { HomeFeaturedResearch } from "@/features/home/components/HomeFeaturedResearch";
+import { HomeOverview } from "@/features/home/components/HomeOverview";
+import { HomeRecommendations } from "@/features/home/components/HomeRecommendations";
+import { PortfolioHero } from "@/features/home/components/PortfolioHero";
+import { RecommendationsList } from "@/features/recommendations/components/RecommendationsList";
 import { ResearchList } from "@/features/research/components/ResearchList";
-import { createProfileOverviewContent } from "@/lib/content/profileOverview";
+import { createProfileOverviewContent } from "@/features/home/content/profileOverview";
 
 const linkedInRecommendationsUrl =
   "https://www.linkedin.com/in/nicolas-gioanni/details/recommendations/";

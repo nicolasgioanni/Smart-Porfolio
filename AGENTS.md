@@ -10,7 +10,7 @@
 
 - Search for an existing component, selector, validator, style primitive, and test helper before adding one. Keep domain content with its feature and extract only clearly repeated behavior.
 - Preserve static rendering and progressive enhancement. Client code adds interaction; it does not fetch portfolio content.
-- Keep Research-owned components, selectors, loading composition, and styles under `src/features/research/`. Shared components must receive Research composition through props, and `src/app/RouteSkeleton.tsx` owns cross-feature skeleton routing.
+- Keep domain components, selectors, loading compositions, and styles under their `src/features/` owner. Routes compose; shared components receive domain composition through props; libraries stay neutral. `src/app/RouteSkeleton.tsx` owns cross-feature skeleton routing. Preserve the documented feature import graph and its cycle checks.
 - Read the relevant installed Next.js guide in `node_modules/next/dist/docs/` before a framework-sensitive code change.
 - Update the guide that owns a changed contract and its links. Documentation, AGENTS.md, and `.agents` guidance are validated by `npm run docs:check`.
 
@@ -29,7 +29,7 @@
 
 <!-- BEGIN:nextjs-agent-rules -->
 
-# This is NOT the Next.js you know
+## This is NOT the Next.js you know
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
 

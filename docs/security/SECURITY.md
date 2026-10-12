@@ -23,8 +23,8 @@ Documentation is not evidence that an external control is active. Treat the impl
 | Contact public contract | `functions/_shared/contact.ts` |
 | Contact request validation, tickets, provider calls, and Function headers | `functions/_shared/contact/` |
 | Contact endpoint order and responses | `functions/api/contact/verify.ts`, `functions/api/contact.ts` |
-| Browser request and retry behavior | `src/components/contact/ContactForm.tsx` |
-| Turnstile widget configuration | `src/components/contact/TurnstileWidget.tsx` |
+| Browser request and retry behavior | `src/features/contact/components/ContactForm.tsx` |
+| Turnstile widget configuration | `src/features/contact/components/TurnstileWidget.tsx` |
 | Production and preview non-secret Function values | `wrangler.jsonc` |
 | Contact-rate reservation schema | `migrations/` |
 | Build-time public values and deployment flow | `.github/workflows/ci.yml` |
@@ -46,9 +46,21 @@ Contributed PNG sanitation is a local publication tool, but its inputs remain un
 
 `package-lock.json` is the reviewed dependency graph, and CI installs it with `npm ci`. Run both `npm audit` and `npm audit --omit=dev` after a dependency change: the first covers the full quality-gate graph, while the second covers the deployed runtime graph.
 
+`npm run audit:check` blocks every advisory unless its exact GHSA identifier has a current, reviewed exception in [`security/audit-exceptions.json`](../../security/audit-exceptions.json). The sole current exception, `GHSA-vfj7-8cjw-p6xm`, affects the development-only ESLint glob path through `braces`; it is absent from the deployed static artifact and Pages Functions. At this dependency set, npm offers only a semver-major downgrade of `@next/eslint-plugin-next` to `14.2.35`, which is incompatible with the tested Next 16.4 pair. The exception names its owner, expiry, exposure, and removal condition. It does not permit production, static-build, or unlisted findings.
+
 ExcelJS remains exactly `4.4.0` because no newer release is available. Its only override is the nested `exceljs > uuid` `11.1.1` remediation; do not broaden that override to unrelated UUID consumers. `npm ls exceljs uuid` and the locked audit establish that the remediation resolves to `11.1.1`.
 
 GHSA-w5hq-g745-h8pq concerns caller-buffer behavior in UUID v3, v5, and v6. The package-contract test establishes the required resolved version. The real XLSX data-bar test calls ExcelJS's UUID v4 extension path, verifies the generated identifier is serialized into worksheet XML, and verifies that ExcelJS restores the identical identifier on read. That test proves ExcelJS compatibility and serialization for the override; it does not by itself exercise or prove the advisory's v3/v5/v6 caller-buffer remediation. Re-evaluate and remove the narrow override when upgrading ExcelJS.
+
+## CI security admission and scanners
+
+The CI workflow admits an event before checking out code or reading protected content inputs. It accepts only the exact `nicolasgioanni/Smart-Porfolio` repository, a `ci.yml` workflow reference bound to the triggering event ref, and an exact workflow SHA for trusted branch, scheduled, and manual revisions. Pushes must target `main` or `develop`; pull requests must target one of those branches; scheduled and manual runs must use `ci.yml` from `refs/heads/main`. Scheduled and manual candidates are pinned to the triggering `github.sha`, then a credential-free freshness check rejects protected inputs for a revision that is no longer the branch head.
+
+`application-validation` owns generated content, quality checks, and the candidate artifact. Independent `security-tools`, `security-scans`, and `codeql` jobs run without workbook or Cloudflare credentials, including scheduled runs whose published content is unchanged. The stable `verify` job requires explicit success from application validation and every applicable security job before it relays artifact metadata to deployment.
+
+`security-tools` installs the checksum-verified pinned `actionlint` binary and uses its repository workflow discovery so new tracked workflows are included. `security-scans` installs pinned Gitleaks and Zizmor binaries, scans reachable Git history and workflow semantics, and keeps scanner reports in private runner temporary files. This source job also runs the existing dependency audit on unchanged scheduled candidates, so new advisories and expired exceptions remain blocking without rerunning application checks. `codeql` runs JavaScript/TypeScript `security-extended` analysis in `build-mode: none`; a local SARIF gate rejects malformed output, empty analyzed-rule sets across the driver and identified query-pack extensions, scanner errors, and every finding before a passing report can be uploaded. Pull requests also run the pinned dependency-review action and reject newly introduced high-severity dependency vulnerabilities. These hosted controls are repository-enforced workflow behavior; a local review does not prove a hosted run passed.
+
+The pinned-tool manifest retains Terraform and OPA entries for a later infrastructure baseline. This repository currently has no activated IaC validation or posture scan, and the manifest alone does not establish one.
 
 ## Threat model
 

@@ -234,7 +234,7 @@ See [Deployment](../operations/DEPLOYMENT.md) for branch, artifact, Cloudflare, 
 | Field normalization | `src/lib/content/normalizePortfolioContent.ts` |
 | Content validation and URL policy | `src/lib/content/validatePortfolioContent.ts` |
 | Runtime generated-content import | `src/lib/content/getPortfolioContent.ts` |
-| Home and detail selectors | `src/lib/content/selectHomeContent.ts` |
+| Home and detail selectors | `src/features/home/content/selectHomeContent.ts` |
 | Ordering | `src/lib/content/sortPortfolioContent.ts` |
 | Content generation tests | `scripts/portfolioContentGeneration.test.ts` |
 | Mapping and selector tests | `src/lib/content/content.test.ts` |

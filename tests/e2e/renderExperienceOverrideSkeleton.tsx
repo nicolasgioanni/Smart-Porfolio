@@ -5,7 +5,7 @@ import { experienceOverrideSummary } from "./experienceOverride";
 // This isolated server renderer uses the classic runtime through tsx.
 (globalThis as typeof globalThis & { React: typeof React }).React = React;
 
-const { ExperiencePageSkeleton } = await import("../../src/components/loading/ExperiencePageSkeleton");
+const { ExperiencePageSkeleton } = await import("../../src/features/experience/loading/ExperiencePageSkeleton");
 
 process.stdout.write(
   renderToStaticMarkup(

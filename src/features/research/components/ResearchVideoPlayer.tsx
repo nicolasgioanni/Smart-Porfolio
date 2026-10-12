@@ -88,11 +88,51 @@ function formatDuration(seconds: number): string {
   return `${hours > 0 ? `${hours}:` : ""}${minuteText}:${String(remainderSeconds).padStart(2, "0")}`;
 }
 
+function webVttTimestampEnd(value: string, start: number): number | undefined {
+  let cursor = start + 1;
+  const componentLengths: number[] = [];
+  for (;;) {
+    const componentStart = cursor;
+    while (/[0-9]/.test(value[cursor] ?? "")) cursor += 1;
+    if (cursor === componentStart) return undefined;
+    componentLengths.push(cursor - componentStart);
+    if (value[cursor] !== ":") break;
+    cursor += 1;
+  }
+  if (componentLengths.length < 2 || componentLengths.length > 3 || componentLengths.at(-1) !== 2 || value[cursor] !== ".") {
+    return undefined;
+  }
+  cursor += 1;
+  const fractionStart = cursor;
+  while (/[0-9]/.test(value[cursor] ?? "")) cursor += 1;
+  if (cursor - fractionStart !== 3 || value[cursor] !== ">") return undefined;
+  return cursor;
+}
+
+function textWithoutCueMarkup(value: string): string {
+  let text = "";
+  for (let index = 0; index < value.length; index += 1) {
+    const timestampEnd = value[index] === "<" ? webVttTimestampEnd(value, index) : undefined;
+    if (timestampEnd !== undefined) {
+      index = timestampEnd;
+      continue;
+    }
+    if (value[index] !== "<" || !/[A-Za-z!/]/.test(value[index + 1] ?? "")) {
+      text += value[index];
+      continue;
+    }
+    const tagEnd = value.indexOf(">", index + 1);
+    if (tagEnd === -1) break;
+    index = tagEnd;
+  }
+  return text;
+}
+
 function getActiveCueText(track: TextTrack | undefined): string {
   if (!track?.activeCues) return "";
 
   return Array.from(track.activeCues)
-    .map((cue) => ("text" in cue ? String(cue.text) : "").replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim())
+    .map((cue) => textWithoutCueMarkup("text" in cue ? String(cue.text) : "").replace(/\s+/g, " ").trim())
     .filter(Boolean)
     .join(" ");
 }

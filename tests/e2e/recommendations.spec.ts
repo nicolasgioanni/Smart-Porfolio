@@ -3,9 +3,9 @@ import { captureBrowserConsole, expectNoBrowserConsoleIssues } from "./browserCo
 import { readGeneratedPortfolioContent } from "./generatedContent";
 import { settleLayout } from "./settleLayout";
 import { selectThemeWithChooser } from "./themePreference";
-import { selectHomeContent } from "../../src/lib/content/selectHomeContent";
-import { selectRecommendationDetailContent } from "../../src/lib/content/selectRecommendationContent";
-import { getRecommendationVerificationUrl } from "../../src/lib/content/recommendationVerification";
+import { selectHomeContent } from "../../src/features/home/content/selectHomeContent";
+import { selectRecommendationDetailContent } from "../../src/features/recommendations/content/selectRecommendationContent";
+import { getRecommendationVerificationUrl } from "../../src/features/recommendations/content/recommendationVerification";
 
 type RecommendationGeometry = {
   bottom: number;

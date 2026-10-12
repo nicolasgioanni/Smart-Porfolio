@@ -1,9 +1,6 @@
 "use client";
 
-import {
-  InteractiveSkillShowcase,
-  interactiveSkillDialogFadeMs
-} from "@/components/portfolio/skills/InteractiveSkillShowcase";
+import { InteractiveSkillShowcase, interactiveSkillDialogFadeMs } from "@/features/skills/components/InteractiveSkillShowcase";
 import type { ProjectSkill } from "@/content/types";
 
 export const projectSkillDialogFadeMs = interactiveSkillDialogFadeMs;

@@ -103,4 +103,22 @@ describe("theme transition", () => {
     await expect(transition.finished).rejects.toThrow("Interrupted by a newer palette");
     expect(document.documentElement).toHaveAttribute("data-theme", "dark");
   });
+
+  it("handles rejected readiness lifecycles when a native palette transition is aborted", async () => {
+    const ready = Promise.reject(new DOMException("Transition was aborted because of invalid state", "InvalidStateError"));
+    const updateCallbackDone = Promise.reject(new DOMException("Transition was aborted because of invalid state", "InvalidStateError"));
+    installViewTransition(
+      vi.fn((update: ViewTransitionCallback) => {
+        update();
+        return { finished: Promise.resolve(), ready, updateCallbackDone };
+      })
+    );
+
+    const transition = applyTheme("dark", { animate: true });
+
+    expect(transition.animated).toBe(true);
+    await expect(transition.finished).resolves.toBeUndefined();
+    await Promise.resolve();
+    expect(document.documentElement).toHaveAttribute("data-theme", "dark");
+  });
 });

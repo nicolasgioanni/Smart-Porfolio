@@ -1,4 +1,5 @@
-import { readFile, stat, writeFile } from "node:fs/promises";
+import { constants } from "node:fs";
+import { open, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { pngParserLimits, stripPngMetadata } from "./lib/pngMetadata.mjs";
@@ -17,13 +18,21 @@ async function main() {
     throw new Error("Input and output paths must be different.");
   }
 
-  const inputStat = await stat(inputPath);
-  if (!inputStat.isFile()) throw new Error("PNG input must be a file.");
-  if (inputStat.size > pngParserLimits.maxInputBytes) {
-    throw new Error(`PNG input exceeds the ${pngParserLimits.maxInputBytes / (1024 * 1024)} MiB limit.`);
+  const input = await open(inputPath, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+  let source;
+  try {
+    const inputStat = await input.stat();
+    if (!inputStat.isFile()) throw new Error("PNG input must be a file.");
+    if (inputStat.size > pngParserLimits.maxInputBytes) {
+      throw new Error(`PNG input exceeds the ${pngParserLimits.maxInputBytes / (1024 * 1024)} MiB limit.`);
+    }
+    source = await input.readFile();
+    if (source.length > pngParserLimits.maxInputBytes) {
+      throw new Error(`PNG input exceeds the ${pngParserLimits.maxInputBytes / (1024 * 1024)} MiB limit.`);
+    }
+  } finally {
+    await input.close();
   }
-
-  const source = await readFile(inputPath);
   const result = stripPngMetadata(source);
   await writeFile(outputPath, result.buffer, { flag: "wx" });
 

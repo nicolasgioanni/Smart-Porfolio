@@ -33,7 +33,7 @@ describe("static portfolio security contracts", () => {
     const runtimeFetchFiles = sourceFiles.filter((filePath) => readFileSync(filePath, "utf8").includes("fetch("));
 
     expect(runtimeFetchFiles.map((filePath) => path.relative(projectRoot, filePath).replaceAll("\\", "/"))).toEqual([
-      "src/components/contact/ContactForm.tsx"
+      "src/features/contact/components/ContactForm.tsx"
     ]);
     const contactFormSource = readFileSync(runtimeFetchFiles[0], "utf8");
     expect(contactFormSource).toContain('fetch("/api/contact/verify"');
@@ -60,7 +60,7 @@ describe("static portfolio security contracts", () => {
 
   it("renders structured recommendation quote links without parsing spreadsheet markup", () => {
     const recommendationTextSource = readFileSync(
-      path.join(projectRoot, "src", "components", "portfolio", "recommendations", "ExpandableRecommendationText.tsx"),
+      path.join(projectRoot, "src", "features", "recommendations", "components", "ExpandableRecommendationText.tsx"),
       "utf8"
     );
 
@@ -140,9 +140,9 @@ describe("static portfolio security contracts", () => {
   });
 
   it("keeps the profile overview hierarchy compact, responsive, and free of resume timelines", () => {
-    const portfolioCss = readFileSync(path.join(projectRoot, "src", "styles", "portfolio.css"), "utf8");
+    const portfolioCss = ["recommendations/recommendations", "home/portfolio", "skills/skills", "resume/resume", "projects/projects"].map((file) => readFileSync(path.join(projectRoot, "src", "features", `${file}.css`), "utf8")).join("\n");
     const profileOverviewSource = readFileSync(
-      path.join(projectRoot, "src", "components", "portfolio", "profile", "ProfileOverviewDetails.tsx"),
+      path.join(projectRoot, "src", "features", "home", "components", "ProfileOverviewDetails.tsx"),
       "utf8"
     );
     const disabledResourceButtonSource = readFileSync(
@@ -339,7 +339,7 @@ describe("static portfolio security contracts", () => {
 
   it("keeps personal profile values out of the reusable overview component", () => {
     const profileOverviewSource = readFileSync(
-      path.join(projectRoot, "src", "components", "portfolio", "profile", "ProfileOverviewDetails.tsx"),
+      path.join(projectRoot, "src", "features", "home", "components", "ProfileOverviewDetails.tsx"),
       "utf8"
     );
 
@@ -356,11 +356,11 @@ describe("static portfolio security contracts", () => {
   });
 
   it("keeps project, skill, and recommendation Home cards structured and motion-safe", () => {
-    const portfolioCss = readFileSync(path.join(projectRoot, "src", "styles", "portfolio.css"), "utf8");
+    const portfolioCss = ["recommendations/recommendations", "home/portfolio", "skills/skills", "resume/resume", "projects/projects"].map((file) => readFileSync(path.join(projectRoot, "src", "features", `${file}.css`), "utf8")).join("\n");
     const dialogCss = readFileSync(path.join(projectRoot, "src", "styles", "dialog.css"), "utf8");
     const tokensCss = readFileSync(path.join(projectRoot, "src", "styles", "tokens.css"), "utf8");
     const projectSource = readFileSync(
-      path.join(projectRoot, "src", "features", "projects", "components", "HomeProjectCard.tsx"),
+      path.join(projectRoot, "src", "features", "home", "components", "HomeProjectCard.tsx"),
       "utf8"
     );
     const projectActionsSource = readFileSync(
@@ -372,7 +372,7 @@ describe("static portfolio security contracts", () => {
       "utf8"
     );
     const interactiveSkillSource = readFileSync(
-      path.join(projectRoot, "src", "components", "portfolio", "skills", "InteractiveSkillShowcase.tsx"),
+      path.join(projectRoot, "src", "features", "skills", "components", "InteractiveSkillShowcase.tsx"),
       "utf8"
     );
     const modalDialogSource = readFileSync(
@@ -380,7 +380,7 @@ describe("static portfolio security contracts", () => {
       "utf8"
     );
     const recommendationSource = readFileSync(
-      path.join(projectRoot, "src", "components", "portfolio", "recommendations", "RecommendationCard.tsx"),
+      path.join(projectRoot, "src", "features", "recommendations", "components", "RecommendationCard.tsx"),
       "utf8"
     );
     const skillsGridRule = portfolioCss.match(/\.skills-cloud--compact\s*{[^}]*}/s)?.[0] ?? "";
@@ -536,7 +536,7 @@ describe("static portfolio security contracts", () => {
     expect(themeSource).toMatch(/aria-label="Color theme preference"[\s\S]*role="group"/);
     expect(themeSource).toMatch(/System, follows device setting/);
     expect(layoutSource).toMatch(
-      /<html[^>]*suppressHydrationWarning>[\s\S]*<head>[\s\S]*<ThemePreferenceScript initialTheme=\{initialTheme\} \/>[\s\S]*<\/head>[\s\S]*<body/
+      /<html[^>]*data-theme=\{initialTheme\}[^>]*suppressHydrationWarning>[\s\S]*<head>[\s\S]*<ThemePreferenceScript \/>[\s\S]*<\/head>[\s\S]*<body/
     );
     expect(navigationCss).toMatch(
       /\.theme-switcher__popover\s*{(?=[^}]*padding:\s*20px\s+12px\s+12px)(?=[^}]*opacity:\s*0)(?=[^}]*pointer-events:\s*none)(?=[^}]*transform:\s*translate3d\(0,\s*-4px,\s*0\)\s*scale\(0\.985\))[^}]*}/s
