@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { constants, createWriteStream } from "node:fs";
-import { access, chmod, lstat, mkdir, mkdtemp, open, readFile, readdir, realpath, rm, writeFile } from "node:fs/promises";
+import { access, chmod, mkdir, mkdtemp, open, readFile, readdir, realpath, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { finished } from "node:stream/promises";
 import { fileURLToPath } from "node:url";
@@ -90,6 +90,28 @@ async function workflowFiles(directory) {
   return files;
 }
 
+async function readBoundedRegularFile(pathname, maximumBytes) {
+  let handle;
+  try {
+    handle = await open(pathname, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+    const metadata = await handle.stat();
+    if (!metadata.isFile() || metadata.size > maximumBytes) throw new Error("invalid");
+    const chunks = [];
+    const buffer = Buffer.allocUnsafe(64 * 1024);
+    let bytesReadTotal = 0;
+    for (;;) {
+      const { bytesRead } = await handle.read(buffer, 0, Math.min(buffer.length, maximumBytes + 1 - bytesReadTotal), bytesReadTotal);
+      if (bytesRead === 0) break;
+      bytesReadTotal += bytesRead;
+      if (bytesReadTotal > maximumBytes) throw new Error("invalid");
+      chunks.push(Buffer.from(buffer.subarray(0, bytesRead)));
+    }
+    return Buffer.concat(chunks);
+  } finally {
+    await handle?.close().catch(() => {});
+  }
+}
+
 export async function assertNoUnmanagedSuppressions(root = projectRoot) {
   for (const pathname of [
     path.join(root, ".gitleaksignore"),
@@ -102,9 +124,12 @@ export async function assertNoUnmanagedSuppressions(root = projectRoot) {
     if (await pathExists(pathname)) throw new Error("Repository contains an unmanaged scanner suppression source.");
   }
   for (const pathname of await workflowFiles(path.join(root, ".github"))) {
-    const metadata = await lstat(pathname);
-    if (!metadata.isFile() || metadata.size > 1024 * 1024) throw new Error("Workflow scanner input is invalid.");
-    const source = await readFile(pathname, "utf8");
+    let source;
+    try {
+      source = new TextDecoder("utf-8", { fatal: true }).decode(await readBoundedRegularFile(pathname, 1024 * 1024));
+    } catch {
+      throw new Error("Workflow scanner input is invalid.");
+    }
     if (/gitleaks\s*:\s*allow|zizmor\s*:\s*ignore\s*\[/i.test(source)) {
       throw new Error("Repository contains an unmanaged inline scanner suppression.");
     }
@@ -176,30 +201,12 @@ export async function capturePrivateOutput(command, args, { cwd, stdoutPath, std
 }
 
 async function readReport(pathname) {
-  let handle;
   try {
-    const metadata = await lstat(pathname);
-    if (!metadata.isFile() || metadata.isSymbolicLink() || metadata.size > maxReportBytes) throw new Error("invalid");
-    handle = await open(pathname, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
-    const openedMetadata = await handle.stat();
-    if (!openedMetadata.isFile() || openedMetadata.size > maxReportBytes) throw new Error("invalid");
-    const chunks = [];
-    const buffer = Buffer.allocUnsafe(64 * 1024);
-    let bytesReadTotal = 0;
-    for (;;) {
-      const { bytesRead } = await handle.read(buffer, 0, Math.min(buffer.length, maxReportBytes + 1 - bytesReadTotal), bytesReadTotal);
-      if (bytesRead === 0) break;
-      bytesReadTotal += bytesRead;
-      if (bytesReadTotal > maxReportBytes) throw new Error("invalid");
-      chunks.push(Buffer.from(buffer.subarray(0, bytesRead)));
-    }
-    const report = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+    const report = JSON.parse((await readBoundedRegularFile(pathname, maxReportBytes)).toString("utf8"));
     if (!Array.isArray(report) || report.some((entry) => !isObject(entry))) throw new Error("invalid");
     return report;
   } catch {
     return null;
-  } finally {
-    await handle?.close().catch(() => {});
   }
 }
 

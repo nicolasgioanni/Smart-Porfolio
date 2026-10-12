@@ -88,11 +88,25 @@ function formatDuration(seconds: number): string {
   return `${hours > 0 ? `${hours}:` : ""}${minuteText}:${String(remainderSeconds).padStart(2, "0")}`;
 }
 
+function textWithoutCueMarkup(value: string): string {
+  let text = "";
+  for (let index = 0; index < value.length; index += 1) {
+    if (value[index] !== "<" || !/[A-Za-z!/]/.test(value[index + 1] ?? "")) {
+      text += value[index];
+      continue;
+    }
+    const tagEnd = value.indexOf(">", index + 1);
+    if (tagEnd === -1) break;
+    index = tagEnd;
+  }
+  return text;
+}
+
 function getActiveCueText(track: TextTrack | undefined): string {
   if (!track?.activeCues) return "";
 
   return Array.from(track.activeCues)
-    .map((cue) => ("text" in cue ? String(cue.text) : "").replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim())
+    .map((cue) => textWithoutCueMarkup("text" in cue ? String(cue.text) : "").replace(/\s+/g, " ").trim())
     .filter(Boolean)
     .join(" ");
 }

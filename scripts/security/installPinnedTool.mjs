@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
-import { execFile } from "node:child_process";
-import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { execFile, spawn } from "node:child_process";
+import { chmod, mkdir, mkdtemp, readFile, rename, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 
 const execFileAsync = promisify(execFile);
 const manifestPath = new URL("./pinnedTools.json", import.meta.url);
+const payloadWriterPath = fileURLToPath(new URL("./writePinnedPayload.mjs", import.meta.url));
 const digestPattern = /^[a-f0-9]{64}$/;
 
 function validateTool(name, descriptor) {
@@ -50,8 +51,27 @@ export async function downloadPinnedTool(descriptor, fetchImpl = globalThis.fetc
   return body;
 }
 
-export async function installPinnedTool(name, destination, { fetchImpl, commandRunner = execFileAsync } = {}) {
-  const tools = await readPinnedTools();
+async function writeVerifiedPayload(destination, payload) {
+  await new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (error) => {
+      if (settled) return;
+      settled = true;
+      if (error) reject(error);
+      else resolve();
+    };
+    const writer = spawn(process.execPath, [payloadWriterPath, destination], {
+      stdio: ["pipe", "ignore", "ignore"]
+    });
+    writer.once("error", () => finish(new Error("Pinned payload writer could not start.")));
+    writer.stdin.once("error", () => finish(new Error("Pinned payload writer could not receive verified bytes.")));
+    writer.once("close", (code) => finish(code === 0 ? undefined : new Error("Pinned payload writer rejected verified bytes.")));
+    writer.stdin.end(payload);
+  });
+}
+
+export async function installPinnedTool(name, destination, { fetchImpl, commandRunner = execFileAsync, readTools = readPinnedTools } = {}) {
+  const tools = await readTools();
   const descriptor = tools[name];
   if (!descriptor) throw new Error(`Unknown pinned tool: ${name}.`);
   const root = path.resolve(destination);
@@ -60,7 +80,7 @@ export async function installPinnedTool(name, destination, { fetchImpl, commandR
   const staging = await mkdtemp(path.join(os.tmpdir(), `smart-portfolio-${name}-`));
   try {
     const payloadPath = path.join(staging, "download");
-    await writeFile(payloadPath, payload, { mode: 0o600 });
+    await writeVerifiedPayload(payloadPath, payload);
     const installRoot = path.join(staging, "install");
     await mkdir(installRoot);
     if (descriptor.archive === "tar.gz") {
@@ -68,7 +88,7 @@ export async function installPinnedTool(name, destination, { fetchImpl, commandR
     } else if (descriptor.archive === "zip") {
       await commandRunner("unzip", ["-q", payloadPath, "-d", installRoot]);
     } else {
-      await writeFile(path.join(installRoot, descriptor.executable), payload, { mode: 0o700 });
+      await rename(payloadPath, path.join(installRoot, descriptor.executable));
     }
     const executable = path.join(installRoot, descriptor.executable);
     const executableBytes = await readFile(executable).catch(() => null);

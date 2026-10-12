@@ -41,6 +41,19 @@ describe("documentation validation", () => {
     }
   });
 
+  it("parses nested and escaped Markdown destinations without unbounded regular-expression matching", async () => {
+    const root = await createFixture({
+      "README.md": `# Project\n\n[Nested guide](docs/GUIDE_(v1).md "reference")\n\n[Escaped guide](docs/GUIDE\\_(v1).md)\n\n[Incomplete](${"\\!".repeat(20_000)}`,
+      "docs/GUIDE_(v1).md": "# Guide\n",
+    });
+
+    try {
+      await expect(validateDocumentation({ projectRoot: root })).resolves.toMatchObject({ errors: [] });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("reports structural, privacy, placeholder, and relative-link failures", async () => {
     const root = await createFixture({
       "README.md": "# Project\n# Duplicate\n\n[Wrong case](docs/guide.md)\n",
