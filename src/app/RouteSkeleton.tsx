@@ -1,17 +1,17 @@
 import type { ComponentType } from "react";
 import type { ProjectItem, ResearchItem } from "@/content/types";
-import { ContactPageSkeleton } from "@/components/loading/ContactPageSkeleton";
-import { ExperiencePageSkeleton } from "@/components/loading/ExperiencePageSkeleton";
-import { HomePageSkeleton } from "@/components/loading/HomePageSkeleton";
-import { LegalPageSkeleton, legalSkeletonProfiles } from "@/components/loading/LegalPageSkeleton";
+import { ContactPageSkeleton } from "@/features/contact/loading/ContactPageSkeleton";
+import { ExperiencePageSkeleton } from "@/features/experience/loading/ExperiencePageSkeleton";
+import { HomePageSkeleton } from "@/features/home/loading/HomePageSkeleton";
+import { LegalPageSkeleton, legalSkeletonProfiles } from "@/features/legal/loading/LegalPageSkeleton";
 import { ProjectsPageSkeleton } from "@/features/projects/loading/ProjectsPageSkeleton";
 import { getHomeProjectSkeletonProfiles } from "@/features/projects/loading/projectSkeletonProfiles";
-import { RecommendationsPageSkeleton } from "@/components/loading/RecommendationsPageSkeleton";
+import { RecommendationsPageSkeleton } from "@/features/recommendations/loading/RecommendationsPageSkeleton";
 import { ResearchPageSkeleton } from "@/features/research/loading/ResearchPageSkeleton";
-import { ResumePageSkeleton } from "@/components/loading/ResumePageSkeleton";
+import { ResumePageSkeleton } from "@/features/resume/loading/ResumePageSkeleton";
 import { siteRoutes, type SiteRoutePath } from "@/lib/routing/siteRoutes";
 import { getPortfolioContent } from "@/lib/content/getPortfolioContent";
-import { selectHomeItems } from "@/lib/content/selectHomeContent";
+import { selectHomeItems } from "@/features/home/content/selectHomeContent";
 
 type RouteSkeletonComponent = ComponentType;
 

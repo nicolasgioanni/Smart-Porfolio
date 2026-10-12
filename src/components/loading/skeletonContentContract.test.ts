@@ -1,18 +1,16 @@
 import type { ExperienceItem, GeneratedPortfolioContent, PortfolioLink, ProfileContent, ProjectItem } from "@/content/types";
 import { describe, expect, it } from "vitest";
-import { experienceSkeletonProfiles } from "@/components/loading/ExperiencePageSkeleton";
+import { experienceSkeletonProfiles } from "@/features/experience/loading/ExperiencePageSkeleton";
 import { getProjectSkeletonProfiles } from "@/features/projects/loading/projectSkeletonProfiles";
 import { researchSkeletonProfiles } from "@/features/research/loading/ResearchPageSkeleton";
 import { selectResearchDetailContent } from "@/features/research/content/selectResearchDetailContent";
-import { getExperienceModeContent } from "@/lib/content/experienceNarratives";
+import { getExperienceModeContent } from "@/features/experience/content/experienceNarratives";
 import { getResearchFormalTitle, getResearchModeContent, getResearchVisibleResources } from "@/features/research/content/researchNarratives";
-import { getProfileIdentityItems } from "@/lib/content/profileOverview";
+import { getProfileIdentityItems } from "@/features/home/content/profileOverview";
 import { resolveRouteHeaderContent, routeHeaderContent } from "@/lib/content/routeHeaderContent";
 import { siteRoutePaths, siteRoutes } from "@/lib/routing/siteRoutes";
-import {
-  selectExperienceDetailContent,
-  selectProjectDetailContent
-} from "@/lib/content/selectDetailContent";
+import { selectExperienceDetailContent } from "@/features/experience/content/selectExperienceDetailContent";
+import { selectProjectDetailContent } from "@/features/projects/content/selectProjectDetailContent";
 import { researchSkeletonFixtures } from "../../../tests/fixtures/researchSkeletonContent";
 
 const projectContentFixture: ProjectItem[] = [

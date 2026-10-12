@@ -95,7 +95,7 @@ describe("package and CI deployment automation", () => {
       "playwright test contact.spec.ts --project=chromium"
     );
     expect(packageJson.scripts["test:e2e:priority"]).toBe(
-      "playwright test skeleton-alignment.spec.ts skeletons.transition.spec.ts navigation.spec.ts footer.spec.ts contact.spec.ts recommendations.spec.ts experience.spec.ts projects.spec.ts research.spec.ts research-mobile-video.spec.ts --project=chromium"
+      "playwright test skeleton-alignment.spec.ts skeletons.transition.spec.ts navigation.spec.ts progressiveEnhancement.spec.ts footer.spec.ts contact.spec.ts recommendations.spec.ts experience.spec.ts projects.spec.ts research.spec.ts research-mobile-video.spec.ts --project=chromium"
     );
     expect(packageJson.scripts["test:e2e:full"]).toBe(
       "playwright test --project=chromium"
@@ -110,9 +110,13 @@ describe("package and CI deployment automation", () => {
     expect(priorityTestTargets).toContain("functions");
     expect(priorityTestDirectories).toEqual([
       "src/components/overlay",
-      "src/components/portfolio/experience",
+      "src/features/home",
+      "src/features/contact",
+      "src/features/legal",
+      "src/features/skills",
+      "src/features/experience",
       "src/features/projects",
-      "src/components/portfolio/recommendations",
+      "src/features/recommendations",
       "src/components/portfolio/shared",
       "src/components/theme",
       "src/features/research",
@@ -130,10 +134,10 @@ describe("package and CI deployment automation", () => {
         "src/styles/themePalette.test.ts",
         "src/components/portfolio/shared/DetailDisclosureList.test.tsx",
         "src/components/portfolio/shared/detailDisclosureStyles.test.ts",
-        "src/components/portfolio/experience/ExperienceShowcase.test.tsx",
+        "src/features/experience/components/ExperienceShowcase.test.tsx",
         "src/features/projects/components/ProjectSkillShowcase.test.tsx",
         "src/features/projects/components/ProjectShowcase.test.tsx",
-        "src/components/portfolio/recommendations/RecommendationsList.test.tsx",
+        "src/features/recommendations/components/RecommendationsList.test.tsx",
         "src/features/research/components/ResearchShowcase.test.tsx",
         "src/components/overlay/ModalDialog.test.tsx"
       ])

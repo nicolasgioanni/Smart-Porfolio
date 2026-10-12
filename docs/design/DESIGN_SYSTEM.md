@@ -21,11 +21,11 @@ Smart Portfolio uses a restrained, solid-surface visual language to organize evi
 | Glass primitives and controls | `src/styles/glass.css` and `src/components/glass/` |
 | Modal lifecycle and motion | `src/styles/dialog.css` and `src/components/overlay/ModalDialog.tsx` |
 | Navigation and theme disclosure | `src/styles/navigation.css` and navigation components |
-| Portfolio pages and cards | `src/styles/portfolio.css`, `src/styles/detail.css`, `src/styles/experience.css`, `src/features/research/research.css`, and portfolio or feature components |
+| Portfolio pages and cards | `src/styles/content.css`, `src/styles/detail.css`, feature-owned styles under `src/features/`, and neutral shared components |
 | Interaction states | `src/styles/interactions.css` |
 | Motion | `src/styles/motion.css` and motion components |
 | Loading states | `src/styles/skeletons.css` and loading components |
-| Contact experience | `src/styles/contact.css` and contact components |
+| Contact experience | `src/features/contact/contact.css` and contact components |
 
 `src/app/layout.tsx` imports these files in cascade order. Do not introduce a second global entry point that changes their order implicitly.
 

@@ -1,7 +1,7 @@
 import { expect, test, type Locator, type Page } from "./browserTest";
 import { siteRoutePaths } from "../../src/lib/routing/siteRoutes";
-import { formatProfileOverviewDateRange } from "../../src/lib/content/profileOverview";
-import { selectHomeContent } from "../../src/lib/content/selectHomeContent";
+import { formatProfileOverviewDateRange } from "../../src/lib/formatting/profileContent";
+import { selectHomeContent } from "../../src/features/home/content/selectHomeContent";
 import { captureBrowserConsole, expectNoBrowserConsoleIssues } from "./browserConsole";
 import { readGeneratedPortfolioContent } from "./generatedContent";
 import { reloadWithStoredTheme } from "./themePreference";
