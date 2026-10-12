@@ -54,6 +54,20 @@ describe("documentation validation", () => {
     }
   });
 
+  it("scans long unmatched Markdown labels and parentheses in linear time", async () => {
+    const unmatchedSource = `${"[".repeat(15_000)}](${"(".repeat(15_000)}`;
+    const root = await createFixture({
+      "README.md": `# Project\n\n${unmatchedSource}`,
+      "docs/README.md": "# Documentation\n",
+    });
+
+    try {
+      await expect(validateDocumentation({ projectRoot: root })).resolves.toMatchObject({ errors: [] });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("reports structural, privacy, placeholder, and relative-link failures", async () => {
     const root = await createFixture({
       "README.md": "# Project\n# Duplicate\n\n[Wrong case](docs/guide.md)\n",

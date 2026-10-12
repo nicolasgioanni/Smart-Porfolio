@@ -142,14 +142,22 @@ function maskInlineCode(line) {
 
 function inlineMarkdownLinks(source) {
   const links = [];
-  for (let index = 0; index < source.length; index += 1) {
+  let index = 0;
+  while (index < source.length) {
     const labelStart = source[index] === "!" && source[index + 1] === "[" ? index + 1 : index;
-    if (source[labelStart] !== "[") continue;
+    if (source[labelStart] !== "[") {
+      index += 1;
+      continue;
+    }
     let labelEnd = labelStart + 1;
     while (labelEnd < source.length && source[labelEnd] !== "]") {
       labelEnd += source[labelEnd] === "\\" ? 2 : 1;
     }
-    if (source[labelEnd] !== "]" || source[labelEnd + 1] !== "(") continue;
+    if (source[labelEnd] !== "]") break;
+    if (source[labelEnd + 1] !== "(") {
+      index = labelEnd + 1;
+      continue;
+    }
 
     let cursor = labelEnd + 2;
     while (/\s/.test(source[cursor] ?? "")) cursor += 1;
@@ -157,7 +165,10 @@ function inlineMarkdownLinks(source) {
     let target;
     if (source[cursor] === "<") {
       const end = source.indexOf(">", cursor + 1);
-      if (end === -1 || source.slice(cursor + 1, end).includes("\n")) continue;
+      if (end === -1 || source.slice(cursor + 1, end).includes("\n")) {
+        index = labelEnd + 1;
+        continue;
+      }
       target = source.slice(cursor + 1, end);
       cursor = end + 1;
     } else {
@@ -177,7 +188,10 @@ function inlineMarkdownLinks(source) {
       }
       target = source.slice(targetStart, cursor);
     }
-    if (!target) continue;
+    if (!target) {
+      index = cursor + 1;
+      continue;
+    }
 
     let titleParentheses = 0;
     let closed = false;
@@ -198,9 +212,10 @@ function inlineMarkdownLinks(source) {
       }
       cursor += 1;
     }
-    if (!closed) continue;
+    if (!closed) break;
     links.push({ target: target.trim(), index });
     index = cursor - 1;
+    index += 1;
   }
   return links;
 }

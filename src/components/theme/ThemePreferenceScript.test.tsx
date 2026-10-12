@@ -12,8 +12,9 @@ function setSystemPreference(prefersDark: boolean) {
   });
 }
 
-function runPreferenceScript(initialTheme: "navy" | "light" | "dark") {
-  Function(createThemePreferenceScript(initialTheme))();
+function runPreferenceScript(serverTheme: string) {
+  document.documentElement.dataset.theme = serverTheme;
+  Function(createThemePreferenceScript())();
   return document.documentElement.dataset.theme;
 }
 
@@ -68,9 +69,9 @@ describe("ThemePreferenceScript", () => {
     expect(runPreferenceScript("navy")).toBe("light");
   });
 
-  it("retains the generated fallback when the system query is unavailable or fails", () => {
+  it("retains the server-rendered fallback when the system query is unavailable or fails", () => {
     Object.defineProperty(window, "matchMedia", { configurable: true, value: undefined });
-    expect(runPreferenceScript("navy")).toBe("navy");
+    expect(runPreferenceScript("light")).toBe("light");
 
     Object.defineProperty(window, "matchMedia", {
       configurable: true,
@@ -79,5 +80,11 @@ describe("ThemePreferenceScript", () => {
       })
     });
     expect(runPreferenceScript("dark")).toBe("dark");
+  });
+
+  it("rejects an invalid server fallback before using it", () => {
+    Object.defineProperty(window, "matchMedia", { configurable: true, value: undefined });
+
+    expect(runPreferenceScript("unsupported")).toBe("navy");
   });
 });

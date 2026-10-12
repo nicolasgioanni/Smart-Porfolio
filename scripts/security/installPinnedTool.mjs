@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
-import { execFile, spawn } from "node:child_process";
-import { chmod, mkdir, mkdtemp, readFile, rename, rm } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { constants } from "node:fs";
+import { chmod, mkdir, mkdtemp, open, readFile, rename, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -8,8 +9,45 @@ import { fileURLToPath } from "node:url";
 
 const execFileAsync = promisify(execFile);
 const manifestPath = new URL("./pinnedTools.json", import.meta.url);
-const payloadWriterPath = fileURLToPath(new URL("./writePinnedPayload.mjs", import.meta.url));
 const digestPattern = /^[a-f0-9]{64}$/;
+const maximumPayloadBytes = 100 * 1024 * 1024;
+const downloadTimeoutMs = 30_000;
+const pinnedToolHosts = new Set(["github.com", "releases.hashicorp.com"]);
+const githubReleaseAssetHosts = new Set(["objects.githubusercontent.com", "release-assets.githubusercontent.com"]);
+
+function parsePinnedToolUrl(value, errorMessage) {
+  let url;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error(errorMessage);
+  }
+  if (url.protocol !== "https:" || url.username || url.password || !url.pathname.startsWith("/")) {
+    throw new Error(errorMessage);
+  }
+  return url;
+}
+
+function pinnedToolSourceUrl(value) {
+  const url = parsePinnedToolUrl(value, "Pinned tool does not use an approved HTTPS source.");
+  if (!pinnedToolHosts.has(url.hostname) || url.search || url.hash) {
+    throw new Error("Pinned tool does not use an approved HTTPS source.");
+  }
+  if (url.hostname === "github.com" && !/^\/[^/]+\/[^/]+\/releases\/download\/[^/]+\/[^/]+$/.test(url.pathname)) {
+    throw new Error("Pinned tool does not use an approved HTTPS source.");
+  }
+  return url;
+}
+
+function pinnedToolRedirectUrl(sourceUrl, value) {
+  const url = parsePinnedToolUrl(value, "Pinned tool redirected outside its approved download hosts.");
+  const isGithubReleaseAsset = sourceUrl.hostname === "github.com" && githubReleaseAssetHosts.has(url.hostname);
+  const isHashicorpRedirect = sourceUrl.hostname === "releases.hashicorp.com" && url.hostname === "releases.hashicorp.com";
+  if (!isGithubReleaseAsset && !isHashicorpRedirect) {
+    throw new Error("Pinned tool redirected outside its approved download hosts.");
+  }
+  return url;
+}
 
 function validateTool(name, descriptor) {
   if (!/^[a-z0-9-]+$/.test(name) || !descriptor || typeof descriptor !== "object" || Array.isArray(descriptor)) {
@@ -17,8 +55,10 @@ function validateTool(name, descriptor) {
   }
   const expectedKeys = ["archive", "executable", "sha256", "url"];
   if (Object.keys(descriptor).sort().join(",") !== expectedKeys.join(",")) throw new Error(`Pinned tool ${name} has unsupported fields.`);
-  const url = new URL(descriptor.url);
-  if (url.protocol !== "https:" || !["github.com", "releases.hashicorp.com"].includes(url.hostname) || !url.pathname.startsWith("/") || url.search || url.hash) {
+  let url;
+  try {
+    url = pinnedToolSourceUrl(descriptor.url);
+  } catch {
     throw new Error(`Pinned tool ${name} does not use an approved HTTPS source.`);
   }
   if (!digestPattern.test(descriptor.sha256) || !["raw", "tar.gz", "zip"].includes(descriptor.archive) || !/^[A-Za-z0-9_.-]+$/.test(descriptor.executable)) {
@@ -39,35 +79,133 @@ export function sha256(body) {
   return createHash("sha256").update(body).digest("hex");
 }
 
-export async function downloadPinnedTool(descriptor, fetchImpl = globalThis.fetch) {
+function responseHeader(response, name) {
+  return typeof response?.headers?.get === "function" ? response.headers.get(name) : null;
+}
+
+function isRedirect(response) {
+  return [301, 302, 303, 307, 308].includes(response?.status);
+}
+
+function cancelResponseBody(response) {
+  if (typeof response?.body?.cancel === "function") {
+    void response.body.cancel().catch(() => {});
+  }
+}
+
+function remainingDownloadTime(deadline, controller) {
+  const remaining = deadline - Date.now();
+  if (remaining <= 0) {
+    controller.abort();
+    throw new Error("Pinned tool download timed out.");
+  }
+  return remaining;
+}
+
+async function beforeDownloadDeadline(operation, deadline, controller) {
+  const remaining = remainingDownloadTime(deadline, controller);
+  return new Promise((resolve, reject) => {
+    let finished = false;
+    const finish = (callback, value) => {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timeout);
+      callback(value);
+    };
+    const timeout = setTimeout(() => {
+      controller.abort();
+      finish(reject, new Error("Pinned tool download timed out."));
+    }, remaining);
+    Promise.resolve(operation).then((value) => finish(resolve, value), (error) => finish(reject, error));
+  });
+}
+
+async function readBoundedResponseBody(response, deadline, controller, maximumBytes) {
+  if (!response?.body || typeof response.body.getReader !== "function") {
+    throw new Error("Pinned tool download did not include a readable body.");
+  }
+  const contentLength = responseHeader(response, "content-length");
+  if (contentLength && /^\d+$/.test(contentLength) && Number(contentLength) > maximumBytes) {
+    cancelResponseBody(response);
+    throw new Error("Pinned tool download has an invalid size.");
+  }
+
+  const reader = response.body.getReader();
+  const chunks = [];
+  let bytesRead = 0;
+  let completed = false;
+  try {
+    for (;;) {
+      const next = await beforeDownloadDeadline(reader.read(), deadline, controller);
+      if (next.done) {
+        completed = true;
+        break;
+      }
+      const chunk = Buffer.from(next.value);
+      bytesRead += chunk.length;
+      if (bytesRead > maximumBytes) throw new Error("Pinned tool download has an invalid size.");
+      chunks.push(chunk);
+    }
+  } finally {
+    if (!completed) void reader.cancel().catch(() => {});
+    try {
+      reader.releaseLock();
+    } catch {
+      // A read that is being cancelled can retain the lock until it settles.
+    }
+  }
+  if (bytesRead === 0) throw new Error("Pinned tool download has an invalid size.");
+  return Buffer.concat(chunks);
+}
+
+export async function downloadPinnedTool(descriptor, fetchImpl = globalThis.fetch, { timeoutMs = downloadTimeoutMs, maximumBytes = maximumPayloadBytes } = {}) {
   if (typeof fetchImpl !== "function") throw new Error("Pinned tool installer requires fetch.");
-  const response = await fetchImpl(descriptor.url, { redirect: "follow", signal: AbortSignal.timeout(30_000) });
+  if (!Number.isSafeInteger(timeoutMs) || timeoutMs <= 0 || !Number.isSafeInteger(maximumBytes) || maximumBytes <= 0) {
+    throw new Error("Pinned tool download limits are invalid.");
+  }
+  const controller = new AbortController();
+  const deadline = Date.now() + timeoutMs;
+  let currentUrl = pinnedToolSourceUrl(descriptor.url);
+  let followedRedirect = false;
+  let response;
+  for (;;) {
+    response = await beforeDownloadDeadline(fetchImpl(currentUrl.toString(), { redirect: "manual", signal: controller.signal }), deadline, controller);
+    if (!isRedirect(response)) break;
+    cancelResponseBody(response);
+    if (followedRedirect) throw new Error("Pinned tool download used too many redirects.");
+    const location = responseHeader(response, "location");
+    if (!location) throw new Error("Pinned tool download redirected without a location.");
+    let redirectLocation;
+    try {
+      redirectLocation = new URL(location, currentUrl).toString();
+    } catch {
+      throw new Error("Pinned tool download redirected without a valid location.");
+    }
+    currentUrl = pinnedToolRedirectUrl(currentUrl, redirectLocation);
+    followedRedirect = true;
+  }
   if (!response?.ok) throw new Error(`Pinned tool download failed with HTTP ${response?.status ?? "unknown"}.`);
-  const finalUrl = new URL(response.url || descriptor.url);
-  if (finalUrl.protocol !== "https:") throw new Error("Pinned tool download redirected outside HTTPS.");
-  const body = Buffer.from(await response.arrayBuffer());
-  if (body.length === 0 || body.length > 100 * 1024 * 1024) throw new Error("Pinned tool download has an invalid size.");
+  const body = await readBoundedResponseBody(response, deadline, controller, maximumBytes);
   if (sha256(body) !== descriptor.sha256) throw new Error("Pinned tool download digest does not match the committed manifest.");
   return body;
 }
 
-async function writeVerifiedPayload(destination, payload) {
-  await new Promise((resolve, reject) => {
-    let settled = false;
-    const finish = (error) => {
-      if (settled) return;
-      settled = true;
-      if (error) reject(error);
-      else resolve();
-    };
-    const writer = spawn(process.execPath, [payloadWriterPath, destination], {
-      stdio: ["pipe", "ignore", "ignore"]
-    });
-    writer.once("error", () => finish(new Error("Pinned payload writer could not start.")));
-    writer.stdin.once("error", () => finish(new Error("Pinned payload writer could not receive verified bytes.")));
-    writer.once("close", (code) => finish(code === 0 ? undefined : new Error("Pinned payload writer rejected verified bytes.")));
-    writer.stdin.end(payload);
-  });
+export async function writeVerifiedPayload(destination, payload) {
+  const handle = await open(destination, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | (constants.O_NOFOLLOW ?? 0), 0o600);
+  let completed = false;
+  try {
+    let offset = 0;
+    while (offset < payload.length) {
+      const { bytesWritten } = await handle.write(payload, offset, payload.length - offset, offset);
+      if (bytesWritten <= 0) throw new Error("Pinned payload could not be written.");
+      offset += bytesWritten;
+    }
+    await handle.sync();
+    completed = true;
+  } finally {
+    await handle.close();
+    if (!completed) await rm(destination, { force: true });
+  }
 }
 
 export async function installPinnedTool(name, destination, { fetchImpl, commandRunner = execFileAsync, readTools = readPinnedTools } = {}) {
