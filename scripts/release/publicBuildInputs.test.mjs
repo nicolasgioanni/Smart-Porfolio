@@ -24,7 +24,16 @@ describe("public build input identity", () => {
     });
   });
 
-  it("rejects a missing deployable key and hashes canonical identities", () => {
+  it("preserves an unconfigured preview widget without using production credentials", () => {
+    expect(effectivePublicBuildEnvironment("preview", { NEXT_PUBLIC_TURNSTILE_SITE_KEY: "production-key" })).toEqual({
+      NEXT_PUBLIC_TURNSTILE_SITE_KEY: ""
+    });
+    expect(effectivePublicBuildEnvironment("preview", { NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY: "" })).toEqual({
+      NEXT_PUBLIC_TURNSTILE_SITE_KEY: ""
+    });
+  });
+
+  it("rejects a missing production key and hashes canonical identities", () => {
     expect(() => effectivePublicBuildEnvironment("production", {})).toThrow("NEXT_PUBLIC_TURNSTILE_SITE_KEY");
     expect(publicBuildInputDigest(inputs)).toMatch(/^[a-f0-9]{64}$/);
     expect(publicBuildInputDigest({ ...inputs, keyDigest: "e".repeat(64) })).not.toBe(publicBuildInputDigest(inputs));

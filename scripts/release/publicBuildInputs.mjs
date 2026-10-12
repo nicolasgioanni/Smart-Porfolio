@@ -34,6 +34,11 @@ export function effectivePublicBuildEnvironment(target, environment = process.en
     ? "NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY"
     : "NEXT_PUBLIC_TURNSTILE_SITE_KEY";
   const value = environment[sourceName];
+  // Preview already supports a disabled contact widget when its distinct key
+  // is absent. Preserve that contract; never borrow the production key.
+  if (target === "preview" && (value === undefined || value === "")) {
+    return { NEXT_PUBLIC_TURNSTILE_SITE_KEY: "" };
+  }
   if (typeof value !== "string" || !value.trim()) {
     throw new Error(`A non-empty ${sourceName} is required for a ${target} public build`);
   }
