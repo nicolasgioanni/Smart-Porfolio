@@ -9,6 +9,7 @@ export default [
     ignores: [
       ".next/**",
       "out/**",
+      "release/**",
       "node_modules/**",
       "coverage/**",
       "src/content/generated/**",

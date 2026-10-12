@@ -36,6 +36,11 @@ describe("package and CI deployment automation", () => {
     expect(packageJson.scripts["build:generated"]).toBe(
       "next build && node scripts/writeContentVersion.mjs"
     );
+    expect(packageJson.scripts["release:build"]).toBe("node scripts/release.mjs build");
+    expect(packageJson.scripts["release:compile"]).toBe("node scripts/release.mjs compile");
+    expect(packageJson.scripts["release:package"]).toBe("node scripts/release.mjs package");
+    expect(packageJson.scripts["release:runtime"]).toBe("node scripts/release.mjs runtime");
+    expect(packageJson.scripts["test:e2e:release-static"]).toContain("playwright.release.config.ts");
     expect(nextConfigSource).toMatch(/adapterPath:\s*fileURLToPath\(new URL\("\.\/scripts\/nextBuildAdapter\.mjs"/);
     expect(nextConfigSource).toMatch(/output:\s*"export"/);
     expect(packageJson.scripts["dev:pages"]).toContain("npx --no-install wrangler");
@@ -607,7 +612,12 @@ describe("package and CI deployment automation", () => {
       await writeContentVersion({
         generatedContentPath,
         outputPath: path.join(artifactDirectory, "content-version.json"),
-        environment: { DEPLOYMENT_COMMIT_SHA: candidateSha }
+        environment: { DEPLOYMENT_COMMIT_SHA: candidateSha },
+        identity: {
+          target: "local",
+          publicBuildInputDigest: "b".repeat(64),
+          producer: { kind: "local", runId: "local", runNumber: null, attempt: null }
+        }
       });
 
       const manifest = await createArtifactManifest(artifactDirectory);
@@ -623,9 +633,11 @@ describe("package and CI deployment automation", () => {
       await expect(verifyArtifactManifest(artifactDirectory, candidateSha)).resolves.toBeDefined();
 
       const version = await readContentVersion(path.join(artifactDirectory, "content-version.json"));
-      expect(Object.keys(version)).toEqual(["schemaVersion", "contentHash", "commitSha", "generatedAt", "deployedAt"]);
+      expect(Object.keys(version)).toEqual(["schemaVersion", "contentHash", "commitSha", "generatedAt", "deployedAt", "target", "publicBuildInputDigest", "producer"]);
+      expect(version.schemaVersion).toBe(2);
       expect(version.contentHash).toBe(contentHash);
       expect(version.commitSha).toBe(candidateSha);
+      expect(version.target).toBe("local");
       expect(version.deployedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
 
       await writeFile(path.join(artifactDirectory, "index.html"), "tampered", "utf8");

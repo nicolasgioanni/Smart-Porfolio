@@ -46,6 +46,7 @@ Smart Portfolio uses a layered quality gate for documentation, static content, R
 | `npm run test` | Complete Vitest suite, including local D1 and Workers transport integration coverage | Uses mocks, jsdom, isolated local D1, and local workerd; no live provider credentials |
 | `npm run build` | `prebuild`, Next.js static export, segment-cache normalization, then content-version write | Regenerates content before building |
 | `npm run build:generated` | Next.js static export, segment-cache normalization, and content-version write | Consumes existing generated JSON without another content fetch |
+| `npm run release:build`, `release:compile`, `release:package`, `release:runtime`, and `release:verify` | Explicit accepted-snapshot build, CSP/Functions compilation, sealed package, local runtime/static-browser check, and verification | Dormant local preparation commands; existing workflow builds remain schema-v1 until later orchestration activation |
 | `npm audit` | Locked full dependency graph audit | Covers development and deployment dependencies |
 | `npm audit --omit=dev` | Locked production dependency graph audit | Covers the deployed runtime dependency graph |
 | `npm run audit:check` | Full locked audit with exact, expiring GHSA exceptions | Blocks unlisted, expired, and production findings |
