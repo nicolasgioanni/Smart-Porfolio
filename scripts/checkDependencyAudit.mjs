@@ -8,6 +8,7 @@ const projectRoot = path.resolve(import.meta.dirname, "..");
 const exceptionPath = path.join(projectRoot, "security", "audit-exceptions.json");
 const auditTimeoutMs = 15_000;
 const auditMaxBytes = 1_000_000;
+const severityCounters = ["info", "low", "moderate", "high", "critical"];
 
 function advisoryId(url) {
   return typeof url === "string" ? url.match(/GHSA-[a-z0-9-]+$/i)?.[0]?.toUpperCase() : undefined;
@@ -18,21 +19,30 @@ function isCanonicalDate(value) {
 }
 
 export function validateAuditReport(audit) {
-  if (!audit || typeof audit !== "object" || audit.error || audit.auditReportVersion !== 2 || !audit.metadata?.vulnerabilities || typeof audit.metadata.vulnerabilities.total !== "number" || !audit.vulnerabilities || typeof audit.vulnerabilities !== "object" || Array.isArray(audit.vulnerabilities)) {
+  if (!audit || typeof audit !== "object" || audit.error || audit.auditReportVersion !== 2 || !audit.metadata?.vulnerabilities || !audit.vulnerabilities || typeof audit.vulnerabilities !== "object" || Array.isArray(audit.vulnerabilities)) {
     throw new Error("npm audit returned an incomplete or malformed report.");
   }
+  const counters = audit.metadata.vulnerabilities;
+  if (Object.keys(counters).sort().join(",") !== [...severityCounters, "total"].sort().join(",") || Object.values(counters).some((count) => !Number.isInteger(count) || count < 0)) {
+    throw new Error("npm audit vulnerability severity counters are malformed.");
+  }
   const names = Object.keys(audit.vulnerabilities);
-  if (audit.metadata.vulnerabilities.total !== names.length) throw new Error("npm audit metadata does not match its vulnerability graph.");
-  const visit = (name, visiting = new Set(), visited = new Set()) => {
+  if (counters.total !== names.length || severityCounters.reduce((sum, severity) => sum + counters[severity], 0) !== counters.total) {
+    throw new Error("npm audit metadata does not match its vulnerability graph.");
+  }
+  const graphCounters = Object.fromEntries(severityCounters.map((severity) => [severity, 0]));
+  const visited = new Set();
+  const visit = (name, visiting = new Set()) => {
     if (visiting.has(name)) throw new Error("npm audit vulnerability graph contains a cycle.");
     if (visited.has(name)) return;
     const vulnerability = audit.vulnerabilities[name];
-    if (!vulnerability || !Array.isArray(vulnerability.via) || vulnerability.via.length === 0) throw new Error("npm audit vulnerability entry has no usable advisory path.");
+    if (!vulnerability || !severityCounters.includes(vulnerability.severity) || !Array.isArray(vulnerability.via) || vulnerability.via.length === 0) throw new Error("npm audit vulnerability entry has no usable advisory path.");
+    graphCounters[vulnerability.severity] += 1;
     visiting.add(name);
     for (const entry of vulnerability.via) {
       if (typeof entry === "string") {
         if (!audit.vulnerabilities[entry]) throw new Error("npm audit vulnerability graph references a missing node.");
-        visit(entry, visiting, visited);
+        visit(entry, visiting);
       } else if (!entry || typeof entry !== "object" || !advisoryId(entry.url) || typeof entry.title !== "string" || !entry.title) {
         throw new Error("npm audit vulnerability entry is malformed.");
       }
@@ -41,6 +51,9 @@ export function validateAuditReport(audit) {
     visited.add(name);
   };
   for (const name of names) visit(name);
+  if (severityCounters.some((severity) => graphCounters[severity] !== counters[severity])) {
+    throw new Error("npm audit severity counters do not match its vulnerability graph.");
+  }
 }
 
 export function validateAuditExceptions(exceptions, lock) {
@@ -78,6 +91,8 @@ export function parseAuditCommandResult(result) {
   let audit;
   try { audit = JSON.parse(result.stdout); } catch { throw new Error("npm audit returned invalid JSON."); }
   validateAuditReport(audit);
+  const hasFindings = audit.metadata.vulnerabilities.total > 0;
+  if ((result.status === 1) !== hasFindings) throw new Error("npm audit exit status does not match its vulnerability report.");
   return audit;
 }
 

@@ -7,6 +7,7 @@ const projectRoot = path.resolve(import.meta.dirname, "..");
 const vitestEntryPoint = path.join(projectRoot, "node_modules", "vitest", "vitest.mjs");
 
 export const priorityTestDirectories = [
+  "scripts/security",
   "src/components/overlay",
   "src/components/portfolio/experience",
   "src/features/projects",
@@ -27,6 +28,8 @@ export const priorityTestTargets = [
   "scripts/runValidationTier.test.mjs",
   "scripts/checkDeployedContent.test.mjs",
   "scripts/checkDependencyAudit.test.mjs",
+  "scripts/candidateAdmissionWorkflow.test.mjs",
+  "scripts/heartbeatWorkflow.test.mjs",
   "scripts/renderRouteSkeleton.test.mjs",
   "scripts/d1Configuration.test.mjs",
   "scripts/portfolioContentGeneration.test.ts",
@@ -59,6 +62,13 @@ export const requiredPriorityFiles = [...new Set([
   ...priorityTestTargets.filter((target) => /\.test\.(?:[cm]?[jt]sx?)$/.test(target)),
   "functions/api/contact.test.ts",
   "functions/api/contact/verify.test.ts",
+  "scripts/checkDependencyAudit.test.mjs",
+  "scripts/candidateAdmissionWorkflow.test.mjs",
+  "scripts/security/checkSarif.test.mjs",
+  "scripts/security/ciGate.test.mjs",
+  "scripts/heartbeatWorkflow.test.mjs",
+  "scripts/security/installPinnedTool.test.mjs",
+  "scripts/security/securityScans.test.mjs",
   "src/components/overlay/ModalDialog.test.tsx",
   "src/components/portfolio/shared/DetailDisclosureList.test.tsx",
   "src/components/portfolio/shared/detailDisclosureStyles.test.ts",
