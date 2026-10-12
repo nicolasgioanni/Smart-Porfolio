@@ -1,3 +1,53 @@
+.project-card__deep-dive p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.project-card__image {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: var(--color-control-surface-soft);
+}
+
+.project-card--showcase .project-card__image {
+  aspect-ratio: 16 / 10;
+}
+
+.project-card__deep-dive {
+  display: grid;
+  gap: var(--space-3);
+  color: var(--color-muted);
+}
+
+.project-card--showcase {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.project-card__showcase-header {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.project-card__showcase-header .content-card__summary {
+  color: var(--color-muted);
+}
+
+.project-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+@media (max-width: 720px) {
+  .project-card--showcase .project-card__image {
+    aspect-ratio: 4 / 3;
+  }
+}
+
 .project-visual-switcher,
 .project-visual-static {
   position: relative;

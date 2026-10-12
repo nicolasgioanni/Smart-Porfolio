@@ -6,7 +6,7 @@ import {
 import { readGeneratedPortfolioContent } from "./generatedContent";
 import { settleLayout } from "./settleLayout";
 import { selectThemeWithChooser } from "./themePreference";
-import { selectProjectDetailContent } from "../../src/lib/content/selectDetailContent";
+import { selectProjectDetailContent } from "../../src/features/projects/content/selectProjectDetailContent";
 import {
   getProjectActions,
   getProjectDiagramAction,

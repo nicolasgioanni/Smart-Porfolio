@@ -23,8 +23,8 @@ Documentation is not evidence that an external control is active. Treat the impl
 | Contact public contract | `functions/_shared/contact.ts` |
 | Contact request validation, tickets, provider calls, and Function headers | `functions/_shared/contact/` |
 | Contact endpoint order and responses | `functions/api/contact/verify.ts`, `functions/api/contact.ts` |
-| Browser request and retry behavior | `src/components/contact/ContactForm.tsx` |
-| Turnstile widget configuration | `src/components/contact/TurnstileWidget.tsx` |
+| Browser request and retry behavior | `src/features/contact/components/ContactForm.tsx` |
+| Turnstile widget configuration | `src/features/contact/components/TurnstileWidget.tsx` |
 | Production and preview non-secret Function values | `wrangler.jsonc` |
 | Contact-rate reservation schema | `migrations/` |
 | Build-time public values and deployment flow | `.github/workflows/ci.yml` |

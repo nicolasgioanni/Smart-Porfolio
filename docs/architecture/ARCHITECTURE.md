@@ -68,14 +68,14 @@ Core pages do not require a runtime Next.js server, database, authentication ser
 
 | Layer | Primary source | Responsibility |
 | --- | --- | --- |
-| Routes and metadata | `src/app/` | Static route composition, page metadata, loading files, and legal content. |
+| Routes and metadata | `src/app/` | Static route composition, page metadata, segment fallbacks, loading delegation, and authored legal notices. |
 | Layout and navigation | `src/components/layout/`, `src/components/navigation/` | Shared shell, desktop header, active routes, mobile bottom dock and rail, footer, and profile preview. |
 | Overlay primitives | `src/components/overlay/` | Default portal and optional persistent in-place native-dialog rendering, modal lifecycle and topmost stack, focus containment, scroll locking, dismissal, and trigger-focus restoration shared by media and evidence dialogs. |
-| Portfolio UI | `src/components/portfolio/` | Home overview, evidence pages, cards, skills, recommendations, and route-specific presentation. |
+| Feature UI | `src/features/` | Home, Experience, Projects, Research, Recommendations, Skills, Legal, Contact, and Resume components, domain selectors, loading compositions, and styles. |
 | Theme and interaction | `src/components/theme/`, `src/components/motion/`, `src/lib/theme/` | System preference resolution, manual theme persistence, role and scroll motion, reduced-motion behavior, and hydrated state. |
 | Content contracts | `src/content/types.ts` | Generated and UI-facing TypeScript shapes. |
 | Content transformation | `src/lib/content/`, `src/lib/csv/`, `scripts/lib/portfolioContentGeneration.ts` | Parsing, normalization, validation, selection, sorting, hashing, workbook structure, and canonical route-header ownership. |
-| Styling | `src/styles/` | Semantic tokens, themes, layout, solid surface primitives, portfolio surfaces, navigation, motion, loading, and contact UI. |
+| Styling | `src/styles/` and `src/features/` | Shared semantic tokens, neutral content and surface primitives, navigation, motion, and loading foundations; each feature owns its presentation stylesheet. |
 | Runtime contact | `functions/`, `migrations/` | Origin enforcement, Turnstile verification, signed tickets, schema and DNS validation, pseudonymous quota storage, and email delivery. |
 | Operations | `.github/workflows/ci.yml`, `scripts/`, `wrangler.jsonc` | Candidate selection, quality gates, artifact integrity, Direct Upload, smoke tests, and environment configuration. |
 
@@ -83,7 +83,7 @@ Core pages do not require a runtime Next.js server, database, authentication ser
 
 `next.config.mjs` sets `output: "export"` and disables Next.js image optimization so all application routes can be emitted as static files. `src/app/layout.tsx` reads the generated snapshot during build, resolves the server fallback theme, creates metadata, and renders the shared shell.
 
-The shell's `StaticPortfolioRouteGate` exposes server-rendered Home, Projects, and Research content inside a native `noscript` fallback outside the route loading boundary. Home reuses `HomeOverview` with scroll motion disabled, so its Education disclosures remain natively operable in the exported page without JavaScript. Normal hydrated route children retain their direct relationship to `site-main`; no runtime content fetch or export rewrite is introduced.
+Each route segment layout uses the shared `RouteNoScriptFallback` outside its sibling loading boundary. It exposes the complete server-rendered page composition only inside a native `noscript` branch, so every static route remains readable without JavaScript while normal hydrated route children retain their direct relationship to `site-main`. Research keeps its thin `ResearchNoScriptRouteGate` adapter to supply its showcase, native controls, and captions without making shared layout import that feature. No runtime content fetch or export rewrite is introduced.
 
 `npm run typecheck` runs `next typegen` before strict TypeScript checking. Generated route and root-parameter declarations stay under ignored `.next/`; Next regenerates the ignored root `next-env.d.ts` as part of that command, while the Next-managed TypeScript settings in `tsconfig.json` are accepted only when a clean type-generation run produces the change. Next 16 also maintains a version-matched agent guidance block in the repository guidance file; leave that managed block intact so implementation work can consult the bundled framework documentation.
 
@@ -100,7 +100,7 @@ Static export does not mean the site contains no JavaScript. Focused client comp
 - header and footer disclosure behavior;
 - profile image preview through the shared modal layer;
 - Home role rotation;
-- scroll reveal where enabled;
+- scroll reveal where enabled and IntersectionObserver is available, with readable server output before enhancement;
 - skills dialogs through the shared modal layer;
 - independent Project Concept/How it works tabs;
 - recommendation measurement and expansion;
@@ -112,7 +112,7 @@ Portfolio data is already present in the generated page output. Hydration adds i
 
 The generator converts either checked-in templates or one complete workbook download into `src/content/generated/portfolio.generated.json`. Application code imports that file only through `getPortfolioContent()`, which validates the generated shape again before selectors and components consume it.
 
-Research is a vertically owned feature under `src/features/research/`: its components, content resolvers and selector, loading composition, tests, and styles stay together. `src/app/RouteSkeleton.tsx` composes feature and shared loading states, while app layout supplies the Research no-JavaScript fallback to `SiteShell`; shared components do not import feature modules.
+Features own domain components, selectors, loading compositions, tests, and styles under `src/features/`. Routes compose those features; `src/app/RouteSkeleton.tsx` delegates to their loaders. Shared components and libraries remain neutral. The TypeScript-resolved import graph rejects forbidden feature edges, unresolved local imports, ambiguous dynamic imports, and cycles. Home may compose Experience, Projects, Research, Recommendations, and Skills; Projects may consume Skills. Research retains its existing media resolvers and abstract-only composition.
 
 Research graphical abstracts and video cross one additional presentation boundary. `getResearchGraphicalAbstract()` selects a complete canonical path-and-alt pair when authored, otherwise supplies the checked-in abstract for one of the three established project IDs only when both canonical fields are absent. `getResearchVideo()` supplies the curated, captioned CytoCV media only for its exact ID when its canonical video field is absent; an authored value must pass the strict local video-path guard and match the registered self-hosted asset, while its captions and transcript must also pass their local allowlists. Both resolvers accept own registry keys only, and invalid or incomplete canonical input is never masked by a fallback. The temporary legacy workbook `image` field is discarded during normalization and is never a presentation input. `ResearchGraphicalAbstractPreview` and `ResearchVideoPreview` progressively enhance static media with the shared `ModalDialog`; neither fetches portfolio content or duplicates modal lifecycle behavior. The transcript remains part of resolver and asset-integrity validation but is intentionally unlinked in the interface. The video asset contract is in [Research media](../content/RESEARCH_MEDIA.md).
 
@@ -129,14 +129,14 @@ Production candidates use strict remote mode. The workflow generates once, runs 
 
 The workbook remains the authority for project records, summaries, ordering, visibility, and destinations. `src/features/projects/selectors/projectVisualRegistry.ts` adds typed local screenshot or native-preview metadata, badges, and diagram content for established IDs without changing `ProjectItem` or the workbook schema. Unknown IDs fall back to authored content and images. `projectActions.ts` supplies source-first action selection used by Home, the gallery, and feature loading footprints.
 
-`ProjectList` and `ProjectCard` remain server-composed around `PortfolioCard`, `FeaturedGrid`, and `GlassButton`. Only each `ProjectVisualTabs` boundary owns client selection; it starts on the preview on every route mount and does not fetch data. Its source-safe sibling keeps a linked native disclosure for no-JavaScript export. App composition supplies the feature-owned Home-project highlights and static Project fallback to shared Home and shell components, preserving the direct import boundary. The [project showcase guide](../content/PROJECT_SHOWCASE.md) owns the five-row migration, preview provenance, and attribution.
+`ProjectList` and `ProjectCard` remain server-composed around `PortfolioCard`, `FeaturedGrid`, and `GlassButton`. Only each `ProjectVisualTabs` boundary owns client selection; it starts on the preview on every route mount and does not fetch data. Its source-safe sibling keeps a linked native disclosure for no-JavaScript export. The Home feature owns its project highlight components and consumes the Projects action/preview contracts. The Projects segment supplies its static fallback through the neutral route wrapper. The [project showcase guide](../content/PROJECT_SHOWCASE.md) owns the five-row migration, preview provenance, and attribution.
 
 ## Content selection and UI mapping
 
 The generated snapshot contains the full public content model. Selectors decide what each surface receives:
 
 - `selectHomeContent()` applies Home ordering, limits, group construction, and recommendation settings; `selectVisibleContent.ts` supplies its shared explicit-visibility, featured, then all-items fallback.
-- `selectDetailContent.ts` sorts complete research, project, experience, and education collections; `selectRecommendationContent.ts` owns recommendation selection and excerpt fallback.
+- Each feature owns its detail selector; the Home selector owns education selection, while Recommendations owns detail selection, excerpts, and verification destinations. Neutral sorting, header links, route eligibility, and date formatting remain under `src/lib/`.
 - `createProfileOverviewContent()` chooses current work, primary education, and profile research from explicit references and deterministic fallbacks.
 - display helpers format links, lists, dates, and summary fallback values. The shared `DisabledResourceButton` keeps unpublished resources semantically native across profile and Research surfaces.
 
@@ -251,7 +251,7 @@ The two-step ticket flow avoids sending a consumed Turnstile token twice and kee
 | Workbook contract | `scripts/lib/portfolioContentGeneration.ts` |
 | Source-mode orchestration | `scripts/fetchPortfolioContent.ts` |
 | Normalization and validation | `src/lib/content/normalizePortfolioContent.ts` and `validatePortfolioContent.ts` |
-| Home order and selection | `src/components/portfolio/home/HomeOverview.tsx`, `selectHomeContent.ts`, and `profileOverview.ts` |
+| Home order and selection | `src/features/home/components/HomeOverview.tsx`, `selectHomeContent.ts`, and `profileOverview.ts` |
 | Theme behavior | `src/components/theme/`, `src/lib/theme/`, and `tokens.css` |
 | Glass and interaction primitives | `src/components/glass/`, `glass.css`, and `interactions.css` |
 | Contact verification and delivery | `functions/api/`, the stable `functions/_shared/contact.ts` facade, and its focused `functions/_shared/contact/` modules |

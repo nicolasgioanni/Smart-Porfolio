@@ -15,10 +15,10 @@ describe("priority validation tier", () => {
     expect(priorityTestTargets).toEqual(expect.arrayContaining([
       "scripts/contactTransport.integration.test.ts",
       "scripts/updateContactTlds.test.mjs",
-      "src/components/contact/ContactNotifications.test.tsx",
-      "src/components/contact/useContactStepTransition.test.tsx",
+      "src/features/contact/components/ContactNotifications.test.tsx",
+      "src/features/contact/components/useContactStepTransition.test.tsx",
       "src/components/navigation/smartLink.test.tsx",
-      "src/styles/contactStyles.test.ts",
+      "src/features/contact/contactStyles.test.ts",
       "src/styles/typographyStyles.test.ts"
     ]));
     expect(requiredPriorityFiles).toEqual(expect.arrayContaining([
