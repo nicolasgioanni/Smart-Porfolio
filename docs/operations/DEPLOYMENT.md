@@ -359,3 +359,5 @@ The daily schedule also starts `develop-schedule-heartbeat`. It compares the new
 - [Security](../security/SECURITY.md)
 - [Architecture](../architecture/ARCHITECTURE.md)
 - [Local Development](../development/LOCAL_DEVELOPMENT.md)
+
+The preparation change retains version-1 identity output for existing `build:generated` callers that do not declare `RELEASE_TARGET`. Only the sealed-release builder supplies the explicit target, public-input fingerprint, and producer fields needed for version 2. A PR candidate may record its Actions producer while remaining target `local` and ineligible for deployment. Offline local builds use the explicit local producer.

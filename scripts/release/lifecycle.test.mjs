@@ -3,6 +3,7 @@ import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { parseContentVersion, releaseProducerForEnvironment, writeContentVersion } from "../writeContentVersion.mjs";
 import { assertAcceptedSnapshot, parseGeneration, validateGeneratedSource } from "./lifecycle.mjs";
 
 const temporaryDirectories = [];
@@ -29,9 +30,39 @@ describe("bounded release stages", () => {
     expect(validateGeneratedSource(generated, "local")).toBe("templates");
   });
 
+  it("keeps existing build callers on legacy metadata until they declare a sealed identity", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "release-version-test-"));
+    temporaryDirectories.push(root);
+    const generatedContentPath = path.join(root, "generated.json");
+    await writeFile(generatedContentPath, JSON.stringify({ metadata: {
+      contentHash: "a".repeat(64), generatedAt: "2026-10-12T00:00:00.000Z"
+    } }));
+    const version = await writeContentVersion({ generatedContentPath,
+      outputPath: path.join(root, "content-version.json"),
+      environment: { DEPLOYMENT_COMMIT_SHA: "b".repeat(40) },
+      now: () => "2026-10-12T00:00:00.000Z"
+    });
+    expect(version.schemaVersion).toBe(1);
+    expect(version).not.toHaveProperty("target");
+    expect(version).not.toHaveProperty("producer");
+  });
+
+  it("records Actions provenance for non-deployable PR candidates without inventing an offline producer", () => {
+    const producer = releaseProducerForEnvironment("local", {
+      RELEASE_RUN_ID: "701", RELEASE_RUN_NUMBER: "42", RELEASE_PRODUCER_ATTEMPT: "3"
+    });
+    expect(producer).toEqual({ kind: "github-actions", runId: "701", runNumber: 42, attempt: 3 });
+    expect(parseContentVersion({ schemaVersion: 2, commitSha: "b".repeat(40), contentHash: "a".repeat(64),
+      generatedAt: "2026-10-12T00:00:00.000Z", deployedAt: "2026-10-12T00:00:00.000Z",
+      target: "local", publicBuildInputDigest: "c".repeat(64), producer }).target).toBe("local");
+    expect(() => releaseProducerForEnvironment("local", { RELEASE_RUN_ID: "701" })).toThrow();
+    expect(() => releaseProducerForEnvironment("production", {})).toThrow();
+  });
+
   it("marks local generation explicitly and refuses fabricated deployable generations", () => {
     expect(parseGeneration("local", "local")).toEqual({ kind: "local", runId: "local", runNumber: null, attempt: null });
     expect(parseGeneration("701:42:3", "production")).toEqual({ kind: "github-actions", runId: "701", runNumber: 42, attempt: 3 });
+    expect(parseGeneration("701:42:3", "local")).toEqual({ kind: "github-actions", runId: "701", runNumber: 42, attempt: 3 });
     expect(() => parseGeneration("local", "preview")).toThrow("Only local");
     expect(() => parseGeneration("701:0:1", "preview")).toThrow("invalid");
   });

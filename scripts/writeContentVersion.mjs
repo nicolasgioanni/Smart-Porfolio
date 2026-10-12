@@ -40,7 +40,6 @@ export function parseProducer(value, target) {
   }
   if (
     value.kind !== "github-actions" ||
-    target === "local" ||
     typeof value.runId !== "string" || !/^\d+$/.test(value.runId) ||
     !Number.isSafeInteger(value.runNumber) || value.runNumber < 1 ||
     !Number.isSafeInteger(value.attempt) || value.attempt < 1
@@ -115,7 +114,7 @@ async function resolveCommitSha(environment = process.env) {
 }
 
 export function releaseProducerForEnvironment(target, environment = process.env) {
-  if (target === "local") return { kind: "local", runId: "local", runNumber: null, attempt: null };
+  if (target === "local" && environment.RELEASE_RUN_ID === undefined) return { kind: "local", runId: "local", runNumber: null, attempt: null };
   const runId = environment.RELEASE_RUN_ID;
   const runNumber = Number(environment.RELEASE_RUN_NUMBER);
   const attempt = Number(environment.RELEASE_PRODUCER_ATTEMPT);
@@ -152,16 +151,19 @@ export async function writeContentVersion({
   if (typeof generatedAt !== "string" || !generatedAt.trim()) throw new Error("Generated portfolio content is missing generatedAt metadata");
 
   const commitSha = await resolveCommitSha(environment);
-  const resolvedIdentity = identity ?? await resolveReleaseIdentity({ sourceCommit: commitSha, environment });
+  // The existing workflow keeps its version-1 writer until the sealed-release
+  // orchestrator passes an explicit target. Preparation must not mislabel a
+  // normal production build as a local candidate or invent producer identity.
+  const resolvedIdentity = identity ?? (environment.RELEASE_TARGET !== undefined
+    ? await resolveReleaseIdentity({ sourceCommit: commitSha, environment }) : null);
   const contentVersion = parseContentVersion({
-    schemaVersion: 2,
-    contentHash,
-    commitSha,
-    generatedAt,
-    deployedAt: now(),
-    target: resolvedIdentity.target,
-    publicBuildInputDigest: resolvedIdentity.publicBuildInputDigest,
-    producer: resolvedIdentity.producer
+    contentHash, commitSha, generatedAt, deployedAt: now(),
+    ...(resolvedIdentity === null ? { schemaVersion: 1 } : {
+      schemaVersion: 2,
+      target: resolvedIdentity.target,
+      publicBuildInputDigest: resolvedIdentity.publicBuildInputDigest,
+      producer: resolvedIdentity.producer
+    })
   });
   await mkdir(path.dirname(outputPath), { recursive: true });
   await writeFile(outputPath, `${JSON.stringify(contentVersion, null, 2)}\n`, "utf8");

@@ -93,7 +93,7 @@ export function parseGeneration(value, target) {
     return { kind: "local", runId: "local", runNumber: null, attempt: null };
   }
   const match = /^(\d+):(\d+):(\d+)$/.exec(value ?? "");
-  if (!match || target === "local") throw new Error("Deployable release generations must be runId:runNumber:attempt");
+  if (!match) throw new Error("CI release generations must be runId:runNumber:attempt");
   const [, runId, runNumberText, attemptText] = match;
   const runNumber = Number(runNumberText);
   const attempt = Number(attemptText);
@@ -134,7 +134,7 @@ export async function buildAcceptedSnapshot({
     DEPLOYMENT_COMMIT_SHA: sourceCommit,
     RELEASE_TARGET: target,
     RELEASE_PUBLIC_BUILD_INPUT_DIGEST: expectedPublicDigest,
-    RELEASE_RUN_ID: generation.kind === "github-actions" ? generation.runId : "",
+    RELEASE_RUN_ID: generation.kind === "github-actions" ? generation.runId : undefined,
     RELEASE_RUN_NUMBER: generation.kind === "github-actions" ? String(generation.runNumber) : "",
     RELEASE_PRODUCER_ATTEMPT: generation.kind === "github-actions" ? String(generation.attempt) : ""
   };
