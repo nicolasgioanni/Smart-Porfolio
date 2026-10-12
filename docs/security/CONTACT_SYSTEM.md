@@ -115,6 +115,8 @@ Successful delivery replaces the wizard with a standalone completion view. Its <
 
 The browser validates and trims the visible fields, freezes the reviewed payload during delivery, and sends the final JSON to `/api/contact` only after `/api/contact/verify` succeeds. It does not send the Turnstile token to the delivery endpoint.
 
+Browser verification has a 30-second request deadline and delivery has a 45-second deadline, leaving room for the server's respective 25-second and 40-second whole-operation budgets. Each request uses a replaceable abort controller: a new request, unmount, or its deadline cancels the old request. Responses are accepted only as valid UTF-8 JSON within a 16 KiB cap. A malformed, oversized, aborted, or otherwise unknown response cannot update an unmounted or superseded form; delivery remains locked and is described as an unconfirmed outcome so an explicit same-payload retry stays available.
+
 After verification, each Next, Review, or Back action keeps exactly one data-entry step in the form. The incoming body fades and rises by 8 pixels while a bounded measured frame interpolates only the step-content height, carrying the normal-flow email fallback and card boundary. Temporary clipping is released after the transition, interruption, resize, document hiding, or unmount. The Turnstile gate remains outside this frame so its reserved verification geometry and provider lifecycle stay stable. Reduced-motion and unsupported-animation paths apply the new step immediately.
 
 The review Back button, repeat Send actions, and acknowledgment controls are locked while delivery is active. A pre-delivery correction or service result can unlock the form because no email-provider request was made. After a provider or delivery-network failure makes the outcome ambiguous or partial, the browser keeps the reviewed payload locked for safe retry. It preserves the original submission UUID, `startedAt` value, acknowledgments, and byte-equivalent JSON payload. This matches Resend's requirement that a repeated idempotency key use the same request payload.
@@ -157,12 +159,12 @@ Both handlers use the same request envelope rules:
 - HTTP method must be `POST`. Other methods return `405` and `Allow: POST`.
 - Required environment configuration is checked immediately after the method, before origin, media-type, or body validation.
 - The media type, after removing parameters and normalizing case, must be `application/json`.
-- The `Origin` header is mandatory and must exactly match a normalized configured origin. Missing, `null`, malformed, or unlisted origins are rejected. No wildcard and no CORS response are implemented.
+- The `Origin` header is mandatory and must exactly match a normalized configured origin and the request target origin. Missing, `null`, malformed, unlisted, or cross-host targets are rejected before provider work. No wildcard and no CORS response are implemented.
 - Both handlers enforce a 16,384-byte limit from `Content-Length` when present and from the bytes actually streamed. This happens before JSON parsing completes.
 - The byte stream must be valid UTF-8 and valid JSON.
 - A configured allowlist is valid only when every comma-separated entry is valid. One malformed origin or hostname makes the corresponding configuration check fail closed.
 
-The handlers apply a 15-second request-body read deadline, but do not implement a whole-request timeout or client-side fetch timeout. Cloudflare platform limits still apply. A body that crosses the 16 KiB input limit or its read deadline begins stream cancellation without waiting for that cleanup to settle. Bounded timeouts apply to Siteverify, mail-domain DNS validation, and each Resend request.
+The verification handler applies a 25-second whole-operation deadline and the delivery handler applies a 40-second whole-operation deadline, both beginning before the body read and alongside the 15-second body-read deadline. DNS, ticket crypto, D1 reservation, and provider transport share the handler budget; D1 has an additional three-second bounded wait, and each Resend request retains its eight-second bound. Cloudflare platform limits still apply. A body that crosses the 16 KiB input limit or its read deadline begins stream cancellation without waiting for that cleanup to settle.
 
 ### `POST /api/contact/verify`
 
@@ -248,10 +250,12 @@ Before calling Resend, the handler atomically reserves a slot in the `CONTACT_RA
 | `submission_id` | Opaque submission UUID and primary key. |
 | `email_hash` | HMAC-SHA-256 of `email.trim().toLowerCase()`. |
 | `payload_hash` | HMAC-SHA-256 fingerprint of the normalized full delivery payload. |
+| `delivery_config_hash` | HMAC-SHA-256 fingerprint of the fixed sender, recipient, reply-to, and renderer version. |
+| `render_version` | Renderer contract version required to reproduce a retry safely. |
 | `reserved_at` | Reservation time as Unix epoch seconds. |
 | `expires_at` | Rolling-window expiry as Unix epoch seconds. |
 
-The address and payload HMAC keys are derived from `TURNSTILE_SECRET_KEY` with separate domain-separated HKDF contexts. The payload fingerprint includes every normalized delivery field and lets D1 compare retries without storing the field values. No provider-specific dot removal or plus-alias rewriting occurs. D1 never receives the raw email address, name, phone number, or message.
+The address, payload, and delivery-configuration HMAC keys are derived from `TURNSTILE_SECRET_KEY` with separate domain-separated HKDF contexts. The payload fingerprint includes every normalized delivery field and lets D1 compare retries without storing the field values. The configuration fingerprint and renderer version prevent a deployment with changed mail settings or an unknown renderer from reusing an uncertain prior send. Such a retry fails as a locked `delivery_failed` response. No provider-specific dot removal or plus-alias rewriting occurs. D1 never receives the raw email address, name, phone number, or message.
 
 Expired rows are removed during reservation cleanup. Fewer than two unexpired rows for an email hash permits a new reservation; a third returns `429 rate_limited` with `Retry-After` set to the remaining time until the earliest applicable expiry. Reusing the same submission UUID is a free retry only when both the email hash and payload fingerprint match. A mismatch is rejected. A reservation is created before provider delivery and remains after a provider or network failure, while valid same-ID retries consume no additional slot. Missing or unavailable D1 configuration fails closed with `503 service_unavailable`.
 
@@ -268,7 +272,7 @@ Both messages use the configured `CONTACT_FROM_EMAIL` sender. The visitor subjec
 
 The visitor request uses `Idempotency-Key: portfolio-contact/visitor/<submissionId>` and the owner request uses `Idempotency-Key: portfolio-contact/owner/<submissionId>`. If the owner request fails after visitor acceptance, the browser keeps its locked payload and still-valid ticket; a retry repeats both calls, and the visitor key returns the original accepted result before the owner call is retried. If the ticket expires first, the browser refreshes verification with the original UUID and then repeats the same locked delivery request, preserving both provider keys and the byte-equivalent body. Resend currently documents a 24-hour idempotency window, returns the original result for an identical retry, and rejects reuse of the same key with a different payload. See [Resend idempotency keys](https://resend.com/docs/dashboard/emails/idempotency-keys).
 
-Any network failure, timeout, redirect, or non-success provider response becomes `502 delivery_failed`. The handler reads only what it needs to establish provider acceptance and does not return provider response bodies or email identifiers. Acceptance is not mailbox verification: asynchronous rejection or bounce can still occur after the API call succeeds.
+Provider results are internally typed as accepted, rejected, or unknown. A network failure, timeout, redirect, or operation deadline is unknown rather than evidence that delivery did not happen; all non-accepted outcomes return generic `502 delivery_failed` and retain the signed ticket for the locked retry. The handler reads only what it needs to establish provider acceptance and does not return provider response bodies or email identifiers. Acceptance is not mailbox verification: asynchronous rejection or bounce can still occur after the API call succeeds.
 
 ## Responses and headers
 
@@ -294,11 +298,15 @@ Any network failure, timeout, redirect, or non-success provider response becomes
 Every Function response sets:
 
 - `Cache-Control: no-store, max-age=0`;
+- `Content-Security-Policy: default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`;
 - `Content-Type: application/json; charset=utf-8`;
+- `Permissions-Policy: camera=(), geolocation=(), microphone=(), payment=(), usb=()`;
 - `Referrer-Policy: no-referrer`;
-- `X-Content-Type-Options: nosniff`.
+- `Strict-Transport-Security: max-age=31536000`;
+- `X-Content-Type-Options: nosniff`;
+- `X-Frame-Options: DENY`.
 
-Cloudflare Pages does not apply `public/_headers` rules to Function-generated responses. Static pages receive the broader Content Security Policy, Permissions Policy, HSTS, framing, referrer, and content-type protections declared there. See [Cloudflare Pages custom headers](https://developers.cloudflare.com/pages/configuration/headers/).
+Cloudflare Pages does not apply `public/_headers` rules to Function-generated responses. The shared JSON response helper therefore applies its own restrictive header set. Static pages receive the broader Content Security Policy, Permissions Policy, HSTS, framing, referrer, and content-type protections declared there. See [Cloudflare Pages custom headers](https://developers.cloudflare.com/pages/configuration/headers/).
 
 ## Configuration
 
@@ -367,7 +375,7 @@ Cloudflare documents custom JSON rate-limit block responses as a Pro-plan-or-hig
 
 ## Privacy, storage, and logging
 
-The browser holds the draft in memory. The signed cookie holds only the submission UUID and timing metadata. D1 stores the opaque submission UUID, keyed normalized-email hash, opaque keyed full-payload fingerprint, and reservation and expiry times; it stores no raw contact fields or message. Expired rows stop counting at expiry and are removed during later reservation cleanup. Cloudflare processes request metadata and the verification token; Siteverify also receives the optional Cloudflare-provided IP value. DNS resolution processes the email domain. Resend and the receiving mail systems process the complete email messages and delivery metadata. The visitor confirmation repeats the submitted contact details in email.
+The browser holds the draft in memory. The signed cookie holds only the submission UUID and timing metadata. D1 stores the opaque submission UUID, keyed normalized-email hash, opaque keyed full-payload and fixed-configuration fingerprints, renderer version, and reservation and expiry times; it stores no raw contact fields or message. Expired rows stop counting at expiry and are removed during later reservation cleanup. Cloudflare processes request metadata and the verification token; Siteverify also receives the optional Cloudflare-provided IP value. DNS resolution processes the email domain. Resend and the receiving mail systems process the complete email messages and delivery metadata. The visitor confirmation repeats the submitted contact details in email.
 
 There are no explicit `console` calls or request-body logging in the two Functions. This repository-level absence does not disable Cloudflare, Resend, or mailbox-provider logs and retention. Do not add body, token, contact-field, provider-response, recipient, or credential logging. Coarse outcomes and non-sensitive timing are the maximum appropriate application telemetry if logging is added later.
 
@@ -377,7 +385,7 @@ The direct email link bypasses the two contact Functions, their ticket, and thei
 
 ## Verification coverage and limits
 
-The automated tests cover the visible upfront gate, three data-entry steps, two acknowledgments, 500-character boundary, expiry and error recovery, repeated-click blocking, exact client request bodies, standalone completion, subsequent new messages, notices and locked retries, field validation, Turnstile widget callbacks, handler order, body and schema rejection, origin and configuration failure, action, hostname and custom-data binding, bounded Siteverify retry, ticket signing and tamper checks, DNS outcomes, D1 reservation and concurrency behavior, sequential provider calls, email escaping, idempotent partial-failure retry, route allowlisting, and legal-page disclosures.
+The automated tests cover the visible upfront gate, three data-entry steps, two acknowledgments, 500-character boundary, expiry and error recovery, repeated-click blocking, exact client request bodies, browser cancellation and deadline behavior, bounded client response parsing, standalone completion, subsequent new messages, notices and locked retries, field validation, Turnstile widget callbacks, handler order, body cancellation and schema rejection, request-target and configured-origin failure, restrictive JSON headers, action, hostname and custom-data binding, bounded Siteverify retry, ticket signing and tamper checks, DNS outcomes, D1 deadline and concurrency behavior, stable renderer/configuration retry identity, sequential provider calls, provider deadlines, email escaping, idempotent partial-failure retry, route allowlisting, and legal-page disclosures.
 
 Deployment smoke testing performs unauthenticated `GET` requests to both Function paths and requires `405` JSON responses. This proves that both routes are deployed and reject the wrong method. It does not prove live Turnstile validation, cookie acceptance, D1 migration state, DNS behavior, WAF state, Resend delivery, sender-domain verification, recipient correctness, or mailbox receipt.
 
@@ -386,7 +394,7 @@ The PR gate also runs actual local workerd with isolated provider fixtures: succ
 Useful focused verification:
 
 ```powershell
-npx --no-install vitest run functions/api/contact/verify.test.ts functions/api/contact.test.ts src/app/contact/contact.test.tsx src/components/contact/TurnstileWidget.test.tsx src/components/contact/contactFormValidation.test.ts
+npx --no-install vitest run functions/api/contact/verify.test.ts functions/api/contact.test.ts src/app/contact/contact.test.tsx src/components/contact/contactRequest.test.ts src/components/contact/TurnstileWidget.test.tsx src/components/contact/contactFormValidation.test.ts
 npx --no-install vitest run scripts/contactTransport.integration.test.ts scripts/updateContactTlds.test.mjs src/components/contact/ContactNotifications.test.tsx
 npm run docs:check
 ```

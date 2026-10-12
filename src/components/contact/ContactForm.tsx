@@ -18,6 +18,8 @@ import { ContactNotifications } from "./ContactNotifications";
 import { useContactNotifications } from "./useContactNotifications";
 import { TurnstileWidget, type TurnstileStatus } from "@/components/contact/TurnstileWidget";
 import { useContactStepTransition } from "./useContactStepTransition";
+import { requestContactApi } from "./contactRequest";
+import { normalizeContactMultilineText } from "@/lib/contact/validation";
 import { siteRoutes } from "@/lib/routing/siteRoutes";
 
 type ContactStep = 1 | 2 | 3;
@@ -32,6 +34,10 @@ const initialConsents: Record<ConsentField, boolean> = {
 };
 
 const verificationAutoAdvanceDelayMs = 500;
+// These exceed the server's bounded work so a normal, permitted request is
+// not aborted by the browser while the Function is still completing it.
+const VERIFY_API_TIMEOUT_MS = 30_000;
+const DELIVERY_API_TIMEOUT_MS = 45_000;
 
 function retryAfterCopy(value: string | null): string {
   if (!value) return "Try again after the 24-hour limit resets.";
@@ -230,6 +236,10 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
   const frozenRequestBodyRef = useRef<string | undefined>(undefined);
   const frozenEmailRef = useRef("");
   const verificationRequestRef = useRef(0);
+  const deliveryRequestRef = useRef(0);
+  const verificationAbortControllerRef = useRef<AbortController | undefined>(undefined);
+  const deliveryAbortControllerRef = useRef<AbortController | undefined>(undefined);
+  const mountedRef = useRef(false);
   const autoAdvanceTimeoutRef = useRef<number | undefined>(undefined);
   const verifiedDestinationStepRef = useRef<ContactStep>(1);
   const successHeadingRef = useRef<HTMLHeadingElement>(null);
@@ -247,7 +257,13 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
   const isHumanVerified = verificationGateStatus === "verified";
   const isSubmissionBusy = submissionStatus !== "idle";
 
+  function abortInFlightRequests() {
+    verificationAbortControllerRef.current?.abort();
+    deliveryAbortControllerRef.current?.abort();
+  }
+
   useEffect(() => {
+    mountedRef.current = true;
     try {
       const nextSubmissionId = createSubmissionId();
       submissionIdRef.current = nextSubmissionId;
@@ -257,7 +273,10 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
     }
 
     return () => {
+      mountedRef.current = false;
       verificationRequestRef.current += 1;
+      deliveryRequestRef.current += 1;
+      abortInFlightRequests();
       if (autoAdvanceTimeoutRef.current !== undefined) {
         window.clearTimeout(autoAdvanceTimeoutRef.current);
       }
@@ -343,22 +362,18 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
     setVerificationPhase("verifying");
 
     try {
-      const response = await fetch("/api/contact/verify", {
-        method: "POST",
-        credentials: "same-origin",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
+      const { response, result } = await requestContactApi(
+        "/api/contact/verify",
+        JSON.stringify({
           submissionId: submissionIdRef.current,
           turnstileToken: token
-        })
-      });
-      const result = (await response.json().catch(() => null)) as { error?: string; ok?: boolean } | null;
+        }),
+        verificationAbortControllerRef,
+        VERIFY_API_TIMEOUT_MS
+      );
 
-      if (verificationRequestRef.current !== requestId) return;
-      if (!response.ok || result?.ok !== true) {
+      if (!mountedRef.current || verificationRequestRef.current !== requestId) return;
+      if (!response?.ok || result?.ok !== true) {
         failVerification(
           result?.error === "verification_failed"
             ? "The security check was invalid or expired. Run a fresh check to continue."
@@ -374,7 +389,7 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
         continueAfterVerification();
       }, verificationAutoAdvanceDelayMs);
     } catch {
-      if (verificationRequestRef.current !== requestId) return;
+      if (!mountedRef.current || verificationRequestRef.current !== requestId) return;
       failVerification("Secure verification is temporarily unavailable. Try again or email me directly.");
     }
   }
@@ -567,7 +582,7 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
       lastName: draft.lastName.trim(),
       email: frozenEmailRef.current,
       phone: draft.phone.trim(),
-      message: draft.message.trim(),
+      message: normalizeContactMultilineText(draft.message),
       contactConsent: consents.contact,
       legalConsent: consents.legal,
       startedAt: formStartedAtRef.current,
@@ -590,20 +605,19 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
     hasDeliveryAttemptRef.current = true;
     setReviewLock(true);
     setSubmissionPhase("submitting");
+    const requestId = deliveryRequestRef.current + 1;
+    deliveryRequestRef.current = requestId;
 
     try {
-      const response = await fetch("/api/contact", {
-        method: "POST",
-        credentials: "same-origin",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json"
-        },
-        body: requestBody
-      });
-      const result = (await response.json().catch(() => null)) as { error?: string; ok?: boolean } | null;
+      const { response, result } = await requestContactApi(
+        "/api/contact",
+        requestBody,
+        deliveryAbortControllerRef,
+        DELIVERY_API_TIMEOUT_MS
+      );
+      if (!mountedRef.current || deliveryRequestRef.current !== requestId) return;
 
-      if (!response.ok || result?.ok !== true) {
+      if (!response?.ok || result?.ok !== true) {
         if (result?.error === "verification_required") {
           returnToVerification(
             "Your secure verification session expired. Complete a fresh check to continue. Your reviewed details remain locked for a safe retry."
@@ -635,10 +649,10 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
 
         if (result?.error === "rate_limited") {
           handlePreDeliveryFailure(
-            `This email address has reached the limit of 2 submissions within 24 hours. ${retryAfterCopy(response.headers.get("Retry-After"))} You can edit the address or email me directly.`,
-            `This retry is temporarily rate limited. ${retryAfterCopy(response.headers.get("Retry-After"))} Your reviewed details remain locked for a safe retry.`,
+            `This email address has reached the limit of 2 submissions within 24 hours. ${retryAfterCopy(response?.headers.get("Retry-After") ?? null)} You can edit the address or email me directly.`,
+            `This retry is temporarily rate limited. ${retryAfterCopy(response?.headers.get("Retry-After") ?? null)} Your reviewed details remain locked for a safe retry.`,
             wasPayloadPreviouslyAttempted,
-            true
+            wasPayloadPreviouslyAttempted
           );
           return;
         }
@@ -663,16 +677,17 @@ export function ContactForm({ contactEmail, turnstileSiteKey }: { contactEmail: 
 
         setSubmissionPhase("idle");
         notify(
-          "Your request could not be delivered right now. Your verification remains complete, and your reviewed details are locked for a safe retry. Try again, or email me directly."
+          "We could not confirm the delivery status. Your verification remains complete, and your reviewed details are locked for a safe retry. Try again, or email me directly."
         );
         return;
       }
 
       resetAfterSuccess(frozenEmailRef.current);
     } catch {
+      if (!mountedRef.current || deliveryRequestRef.current !== requestId) return;
       setSubmissionPhase("idle");
       notify(
-        "Your request could not reach the delivery service. Your verification remains complete, and your reviewed details are locked for a safe retry. Check your connection and try again, or email me directly."
+        "We could not confirm the delivery status. Your verification remains complete, and your reviewed details are locked for a safe retry. Check your connection and try again, or email me directly."
       );
     }
   }

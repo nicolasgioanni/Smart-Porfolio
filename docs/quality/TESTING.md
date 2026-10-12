@@ -86,7 +86,7 @@ The validator uses only Node.js standard-library APIs and does not check externa
 | Semantic hashing | `scripts/portfolioContentGeneration.test.ts` | Canonical normalized content subset, research-media fields, and `generatedAt` preservation |
 | Public asset references | `scripts/demoAssets.test.mjs`, `scripts/pngMetadata.test.mjs` | Referenced local assets and the three curated research abstracts exist and are non-empty; configured media stays under its allowlisted directory and extensions; Research PNG IHDR, palette, critical-chunk, zlib, Adam7 scanline, and nonempty image-data ordering semantics; stat-before-read size rejection; protected byte/chunk/decoded-data/dimension/canvas ceilings; restricted metadata absence; and dimensions, exact byte length, complete-file SHA-256, and IDAT-stream SHA-256 for every curated abstract |
 | Environment placeholders | `scripts/envConfiguration.test.mjs` | Supported variables, ignored local files, and removal of legacy variable families |
-| D1 configuration and schema | `scripts/d1Configuration.test.mjs`, `scripts/d1Reservation.integration.test.ts` | Distinct pinned remote UUIDs, local isolation, minimal reservation and payload-fingerprint columns, indexes, migration-before-deploy ordering, and real local-D1 changed-payload and third-reservation refusal |
+| D1 configuration and schema | `scripts/d1Configuration.test.mjs`, `scripts/d1Reservation.integration.test.ts` | Distinct pinned remote UUIDs, local isolation, minimal reservation, payload, delivery-configuration, and renderer-identity columns, indexes, migration-before-deploy ordering, and real local-D1 changed-retry and third-reservation refusal |
 
 These are unit and integration-style tests with temporary files and injected fetch implementations. They do not download the production workbook during pull-request verification.
 
@@ -94,15 +94,16 @@ These are unit and integration-style tests with temporary files and injected fet
 
 | Layer | Authoritative tests | Coverage |
 | --- | --- | --- |
-| Client field validation | `src/components/contact/contactFormValidation.test.ts` | Required fields, trimming, email suffix and Punycode rules, phone, 500-character message boundary, and shared limits |
+| Client field validation | `src/components/contact/contactFormValidation.test.ts` | Required fields, trimming, control-character rejection, email suffix and Punycode rules, phone, 500-character message boundary, and shared limits |
+| Client request transport | `src/components/contact/contactRequest.test.ts` | Same-origin JSON request shape, 16 KiB response limit, malformed-response handling, and request cancellation |
 | Workers transport | `scripts/contactTransport.integration.test.ts` | Actual local workerd plain/JSON success and every 3xx rejection, with zero destination requests or credential forwarding |
 | IANA snapshot | `scripts/updateContactTlds.test.mjs` | Complete attributed offline suffix set, bounded explicit updater, malformed/oversized input, and no build-time download |
 | Contact notifications | `src/components/contact/ContactNotifications.test.tsx` | Body portal, three-card capacity, duplicates, independent expiry, pause/resume, announcements, focus recovery, dismissal, and reduced motion |
 | Contact step transitions | `src/components/contact/useContactStepTransition.test.tsx` | Measured-height completion, replacement-animation isolation, content-resize interruption, frame removal, reduced-motion updates, and unsupported-animation fallback |
 | Turnstile widget | `src/components/contact/TurnstileWidget.test.tsx` | Visible upfront rendering, submission custom data, success, expiry, reset, theme, and missing-key failure |
-| Contact route | `src/app/contact/contact.test.tsx` | Hard-gate isolation, 500-millisecond transition and Continue fallback, three data-entry steps, two acknowledgments, challenge and two-hour draft recovery, retry focus, repeated-click blocking, exact payload, standalone success, subsequent-message gates, and locked retries |
-| Verification Function | `functions/api/contact/verify.test.ts` | Method, origin, media type, body contract, Siteverify action, hostname and custom-data binding, operation-scoped bounded retry, transient failure mapping, remote IP, and signed cookie |
-| Delivery Function | `functions/api/contact.test.ts` | Method, origin, media type, body size, schema, honeypot, timing, ticket, DNS, rolling quota, keyed retry-payload binding, sequential idempotent delivery, and retry |
+| Contact route | `src/app/contact/contact.test.tsx` | Hard-gate isolation, 500-millisecond transition and Continue fallback, three data-entry steps, two acknowledgments, challenge and two-hour draft recovery, 30-second verification and 45-second delivery deadlines, unmount cancellation, retry focus, repeated-click blocking, exact payload, standalone success, subsequent-message gates, and locked retries |
+| Verification Function | `functions/api/contact/verify.test.ts` | Method, target-bound origin, media type, body cancellation and contract, restrictive JSON headers, 25-second operation deadline, Siteverify action, hostname and custom-data binding, operation-scoped bounded retry, transient failure mapping, remote IP, and signed cookie |
+| Delivery Function | `functions/api/contact.test.ts` | Method, target-bound origin, media type, body size, schema, restrictive JSON headers, 40-second operation deadline, ticket, DNS, three-second D1 bound, rolling quota concurrency, stable configuration/renderer retry identity, sequential idempotent delivery, provider deadline, and retry |
 | Contact styles | `src/styles/contactStyles.test.ts` | Notice tones, focus, disabled, responsive, wrapping, animation, and reduced-motion contracts |
 | Legal disclosures | `src/components/legal/legal.test.tsx` | Contact processing, pseudonymous reservation storage, DNS validation, retention, and published notices |
 
