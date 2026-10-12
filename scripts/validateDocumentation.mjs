@@ -210,6 +210,7 @@ function inlineMarkdownLinks(source) {
           cursor += 2;
           continue;
         }
+        if (character === "\r" || character === "\n") break;
         if (character === "(") nestedParentheses += 1;
         else if (character === ")") {
           if (nestedParentheses === 0) break;

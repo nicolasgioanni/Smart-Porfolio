@@ -81,15 +81,19 @@ describe("documentation validation", () => {
     }
   });
 
-  it("recovers from an incomplete link at a paragraph boundary and validates the next link", async () => {
+  it.each([
+    ["bare", "[unfinished](somewhere\n\n[Missing](docs/MISSING.md)", "docs/MISSING.md"],
+    ["nested", "[unfinished](somewhere(\n\n[Missing](docs/MISSING-NESTED.md)", "docs/MISSING-NESTED.md"],
+    ["angle", "[unfinished](<somewhere\n\n[Missing](docs/MISSING-ANGLE.md)", "docs/MISSING-ANGLE.md"],
+  ])("recovers from an incomplete %s link at a paragraph boundary and validates the next link", async (_kind, source, target) => {
     const root = await createFixture({
-      "README.md": "# Project\n\n[unfinished](somewhere\n\n[Missing](docs/MISSING.md)\n",
+      "README.md": `# Project\n\n${source}\n`,
       "docs/README.md": "# Documentation\n",
     });
 
     try {
       const result = await validateDocumentation({ projectRoot: root });
-      expect(result.errors).toEqual(expect.arrayContaining([expect.stringContaining("relative link target does not exist: docs/MISSING.md")]));
+      expect(result.errors).toEqual(expect.arrayContaining([expect.stringContaining(`relative link target does not exist: ${target}`)]));
     } finally {
       await rm(root, { recursive: true, force: true });
     }
