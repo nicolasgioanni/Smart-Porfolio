@@ -11,8 +11,9 @@
     "dev:pages": "npm run build && npm run db:migrate:local && npx --no-install wrangler pages dev out --env-file .env",
     "db:migrate:local": "npx --no-install wrangler d1 migrations apply CONTACT_RATE_LIMIT_DB --local",
     "docs:check": "node scripts/validateDocumentation.mjs",
+    "audit:check": "node scripts/checkDependencyAudit.mjs",
     "update:contact-tlds": "node scripts/updateContactTlds.mjs",
-    "generate:content": "tsx scripts/fetchPortfolioContent.ts",
+    "generate:content": "node scripts/generateContent.mjs",
     "prebuild": "npm run generate:content",
     "build": "next build && node scripts/writeContentVersion.mjs",
     "build:generated": "next build && node scripts/writeContentVersion.mjs",
@@ -38,9 +39,9 @@
     "test:e2e:contact": "playwright test contact.spec.ts --project=chromium",
     "test:e2e:priority": "playwright test skeleton-alignment.spec.ts skeletons.transition.spec.ts navigation.spec.ts progressiveEnhancement.spec.ts footer.spec.ts contact.spec.ts recommendations.spec.ts experience.spec.ts projects.spec.ts research.spec.ts research-mobile-video.spec.ts --project=chromium",
     "test:e2e:full": "playwright test --project=chromium",
-    "verify": "npm run docs:check && npm run lint && npm run typecheck && npm run test && npm run build",
-    "verify:priority": "npm run docs:check && npm run lint && npm run typecheck && npm run test:priority && npm run test:e2e:priority && npm run build",
-    "verify:full": "npm run docs:check && npm run lint && npm run typecheck && npm run test && npm run test:e2e:full && npm run build",
+    "verify": "node scripts/runVerification.mjs verify",
+    "verify:priority": "node scripts/runVerification.mjs priority",
+    "verify:full": "node scripts/runVerification.mjs full",
     "setup:local": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup-local.ps1",
     "dev:smart": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-dev.ps1",
     "verify:local": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-local.ps1",
@@ -52,14 +53,14 @@
   },
   "dependencies": {
     "csv-parse": "^7.0.2",
-    "next": "^16.3.4",
+    "next": "^16.4.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "simple-icons": "^16.28.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.18.0",
-    "@next/eslint-plugin-next": "^16.3.4",
+    "@next/eslint-plugin-next": "^16.4.0",
     "@playwright/test": "^1.62.1",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
@@ -72,16 +73,38 @@
     "globals": "^15.14.0",
     "jsdom": "^25.0.1",
     "jszip": "3.10.1",
-    "miniflare": "5.20260910.0-alpha",
+    "miniflare": "5.20261006.0-alpha",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.20.0",
     "vitest": "4.1.11",
-    "wrangler": "4.131.0"
+    "wrangler": "4.148.0"
   },
   "overrides": {
     "exceljs": {
       "uuid": "11.1.1"
+    },
+    "minimatch": {
+      "brace-expansion": "1.1.21"
+    },
+    "readdir-glob": {
+      "minimatch": {
+        "brace-expansion": "2.1.7"
+      }
+    },
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": {
+        "brace-expansion": "5.0.12"
+      }
+    },
+    "postcss": {
+      "source-map-js": "1.2.2"
+    },
+    "miniflare": {
+      "sharp": "0.35.5"
+    },
+    "next": {
+      "sharp": "0.35.5"
     }
   }
 }

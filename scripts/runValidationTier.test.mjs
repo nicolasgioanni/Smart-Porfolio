@@ -14,6 +14,10 @@ describe("priority validation tier", () => {
     expect(priorityTestTargets).toContain("functions");
     expect(priorityTestTargets).toEqual(expect.arrayContaining([
       "scripts/contactTransport.integration.test.ts",
+      "scripts/checkDependencyAudit.test.mjs",
+      "scripts/security",
+      "scripts/localAutomation.test.mjs",
+      "scripts/runVerification.test.mjs",
       "scripts/updateContactTlds.test.mjs",
       "src/features/contact/components/ContactNotifications.test.tsx",
       "src/features/contact/components/useContactStepTransition.test.tsx",
@@ -22,6 +26,13 @@ describe("priority validation tier", () => {
       "src/styles/typographyStyles.test.ts"
     ]));
     expect(requiredPriorityFiles).toEqual(expect.arrayContaining([
+      "scripts/checkDependencyAudit.test.mjs",
+      "scripts/candidateAdmissionWorkflow.test.mjs",
+      "scripts/security/checkSarif.test.mjs",
+      "scripts/security/ciGate.test.mjs",
+      "scripts/heartbeatWorkflow.test.mjs",
+      "scripts/security/installPinnedTool.test.mjs",
+      "scripts/security/securityScans.test.mjs",
       "src/components/portfolio/shared/DetailDisclosureList.test.tsx",
       "src/components/portfolio/shared/detailDisclosureStyles.test.ts",
       "src/features/projects/components/ProjectSkillShowcase.test.tsx",

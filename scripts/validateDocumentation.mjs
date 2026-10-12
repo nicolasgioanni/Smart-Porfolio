@@ -25,7 +25,6 @@ const obviousPlaceholderPatterns = [
 ];
 
 const privateWorkbookPatterns = [
-  /https?:\/\/(?:docs\.google\.com\/spreadsheets|drive\.google\.com\/(?:file|open|uc))/i,
   /PORTFOLIO_WORKBOOK_URL\s*=\s*["']?\s*https?:\/\//i,
 ];
 
@@ -141,14 +140,135 @@ function maskInlineCode(line) {
     .replace(/<code\b[^>]*>.*?<\/code>/gi, (match) => " ".repeat(match.length));
 }
 
+function lineBreakEnd(source, index) {
+  if (source[index] === "\r") index += 1;
+  return source[index] === "\n" ? index + 1 : index;
+}
+
+function malformedLinkRecoveryIndex(source, lineBreakIndex) {
+  const nextLineStart = lineBreakEnd(source, lineBreakIndex);
+  let cursor = nextLineStart;
+  while (source[cursor] === " " || source[cursor] === "\t" || source[cursor] === "\r") cursor += 1;
+  return source[cursor] === "\n" ? lineBreakEnd(source, cursor) : nextLineStart;
+}
+
+function angleDestination(source, start) {
+  let cursor = start + 1;
+  let hasLineBreak = false;
+  while (cursor < source.length) {
+    if (source[cursor] === ">") {
+      return hasLineBreak
+        ? { recoveryIndex: cursor + 1 }
+        : { target: source.slice(start + 1, cursor), cursor: cursor + 1 };
+    }
+    if (source[cursor] === "\r" || source[cursor] === "\n") {
+      const recoveryIndex = malformedLinkRecoveryIndex(source, cursor);
+      if (recoveryIndex > lineBreakEnd(source, cursor)) return { recoveryIndex };
+      hasLineBreak = true;
+    }
+    cursor += 1;
+  }
+  return { recoveryIndex: source.length };
+}
+
+function inlineMarkdownLinks(source) {
+  const links = [];
+  let index = 0;
+  while (index < source.length) {
+    const labelStart = source[index] === "!" && source[index + 1] === "[" ? index + 1 : index;
+    if (source[labelStart] !== "[") {
+      index += 1;
+      continue;
+    }
+    let labelEnd = labelStart + 1;
+    while (labelEnd < source.length && source[labelEnd] !== "]") {
+      labelEnd += source[labelEnd] === "\\" ? 2 : 1;
+    }
+    if (source[labelEnd] !== "]") break;
+    if (source[labelEnd + 1] !== "(") {
+      index = labelEnd + 1;
+      continue;
+    }
+
+    let cursor = labelEnd + 2;
+    while (/\s/.test(source[cursor] ?? "")) cursor += 1;
+    const targetStart = cursor;
+    let target;
+    if (source[cursor] === "<") {
+      const destination = angleDestination(source, cursor);
+      if (!("target" in destination)) {
+        index = destination.recoveryIndex;
+        continue;
+      }
+      target = destination.target;
+      cursor = destination.cursor;
+    } else {
+      let nestedParentheses = 0;
+      while (cursor < source.length) {
+        const character = source[cursor];
+        if (character === "\\") {
+          cursor += 2;
+          continue;
+        }
+        if (character === "\r" || character === "\n") break;
+        if (character === "(") nestedParentheses += 1;
+        else if (character === ")") {
+          if (nestedParentheses === 0) break;
+          nestedParentheses -= 1;
+        } else if (nestedParentheses === 0 && /\s/.test(character)) break;
+        cursor += 1;
+      }
+      target = source.slice(targetStart, cursor);
+    }
+    if (!target) {
+      index = cursor + 1;
+      continue;
+    }
+
+    let titleParentheses = 0;
+    let closed = false;
+    let recoveryIndex;
+    while (cursor < source.length) {
+      const character = source[cursor];
+      if (character === "\r" || character === "\n") {
+        recoveryIndex = malformedLinkRecoveryIndex(source, cursor);
+        break;
+      }
+      if (character === "\\") {
+        cursor += 2;
+        continue;
+      }
+      if (character === "(") titleParentheses += 1;
+      else if (character === ")") {
+        if (titleParentheses === 0) {
+          closed = true;
+          cursor += 1;
+          break;
+        }
+        titleParentheses -= 1;
+      }
+      cursor += 1;
+    }
+    if (!closed) {
+      if (recoveryIndex !== undefined) {
+        index = recoveryIndex;
+        continue;
+      }
+      break;
+    }
+    links.push({ target: target.trim(), index });
+    index = cursor - 1;
+    index += 1;
+  }
+  return links;
+}
+
 function extractLinkData(source) {
   const targets = [];
   const undefinedReferences = [];
   const searchableSource = linesOutsideFences(source)
     .map(maskInlineCode)
     .join("\n");
-  const inlineLinkPattern =
-    /!?\[[^\]]*\]\(\s*(?:<([^>\n]+)>|((?:\\.|[^()\s]|\((?:\\.|[^()\s])*\))+))(?:\s+(?:"[^"]*"|'[^']*'|\([^)]*\)))?\s*\)/g;
   const referenceLinkPattern = /^\s{0,3}\[([^\]]+)\]:\s*(?:<([^>]+)>|(\S+))/gm;
   const referenceUsagePattern = /!?\[([^\]]+)\]\[([^\]]*)\]/g;
   const htmlLinkPattern = /\b(?:href|src)=["']([^"']+)["']/gi;
@@ -164,14 +284,13 @@ function extractLinkData(source) {
       });
   }
 
-  for (const pattern of [inlineLinkPattern, htmlLinkPattern]) {
-    for (const match of searchableSource.matchAll(pattern)) {
-      const target = (match[1] ?? match[2] ?? "").trim();
-      if (target)
-        targets.push({
-          target,
-          line: lineNumberAt(searchableSource, match.index ?? 0),
-        });
+  for (const match of inlineMarkdownLinks(searchableSource)) {
+    targets.push({ target: match.target, line: lineNumberAt(searchableSource, match.index) });
+  }
+  for (const match of searchableSource.matchAll(htmlLinkPattern)) {
+    const target = (match[1] ?? "").trim();
+    if (target) {
+      targets.push({ target, line: lineNumberAt(searchableSource, match.index ?? 0) });
     }
   }
 
@@ -216,9 +335,22 @@ function targetFragment(target) {
     : decodeTarget(target.slice(fragmentIndex + 1));
 }
 
+function removeHtmlTags(value) {
+  let text = "";
+  for (let index = 0; index < value.length; index += 1) {
+    if (value[index] !== "<" || !/[A-Za-z!/]/.test(value[index + 1] ?? "")) {
+      text += value[index];
+      continue;
+    }
+    const tagEnd = value.indexOf(">", index + 1);
+    if (tagEnd === -1) break;
+    index = tagEnd;
+  }
+  return text;
+}
+
 function markdownHeadingSlug(value) {
-  return value
-    .replace(/<[^>]*>/g, "")
+  return removeHtmlTags(value)
     .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
     .replace(/!?\[([^\]]*)\]\[[^\]]*\]/g, "$1")
     .replace(/[`*_~]/g, "")
@@ -226,6 +358,16 @@ function markdownHeadingSlug(value) {
     .toLowerCase()
     .replace(/[^\p{Letter}\p{Number}\s_-]/gu, "")
     .replace(/\s+/g, "-");
+}
+
+function hasPrivateWorkbookUrl(source) {
+  const normalized = source.toLowerCase();
+  return (
+    normalized.includes("docs.google.com/spreadsheets") ||
+    normalized.includes("drive.google.com/file") ||
+    normalized.includes("drive.google.com/open") ||
+    normalized.includes("drive.google.com/uc")
+  );
 }
 
 function extractHeadingAnchors(source) {
@@ -336,7 +478,7 @@ function scanDocumentContent(relativePath, source) {
     );
   }
 
-  if (privateWorkbookPatterns.some((pattern) => pattern.test(source))) {
+  if (hasPrivateWorkbookUrl(source) || privateWorkbookPatterns.some((pattern) => pattern.test(source))) {
     errors.push("contains a private-workbook URL pattern");
   }
 
