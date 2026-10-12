@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { createStaticCsp, cspForHashes, hashesForInlineScripts, pagesHeaderLimit } from "./csp.mjs";
+import { createStaticCsp, cspForHashes, hashesForInlineScripts, inlineScriptSources, pagesHeaderLimit } from "./csp.mjs";
 
 const temporaryDirectories = [];
 afterEach(async () => Promise.all(temporaryDirectories.splice(0).map((directory) => rm(directory, { force: true, recursive: true }))));
@@ -21,6 +21,15 @@ async function makeOutput(routeCount = 0) {
 }
 
 describe("static Pages CSP generation", () => {
+  it("uses HTML script boundaries and excludes inert markup and external scripts", () => {
+    const html = '<!-- <script>comment()</script> --><template><script>template()</script></template>' +
+      '<noscript><script>fallback()</script></noscript><textarea><script>text()</script></textarea>' +
+      '<SCRIPT data-label=">" data-src="metadata">first()\r\n</SCRIPT \t ignored>' +
+      '<script SRC="/external.js">external()</script><script>second()</script >';
+    expect(inlineScriptSources(html)).toEqual(["first()\n", "second()"]);
+    expect(hashesForInlineScripts(html)).toEqual(hashesForInlineScripts("<script>first()\n</script><script>second()</script>"));
+  });
+
   it("hashes only each route's inline scripts and preserves metadata no-cache rules", async () => {
     const out = await makeOutput();
     const result = await createStaticCsp(out);

@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { parse } from "parse5";
 
 export const pagesHeaderLimit = 2_000;
 export const pagesHeaderRuleLimit = 100;
@@ -30,14 +31,23 @@ async function htmlFiles(root, current = root) {
   return result.sort((left, right) => left.localeCompare(right));
 }
 
+export function inlineScriptSources(html) {
+  const sources = [];
+  const visit = (node) => {
+    if (node.tagName === "script" && !node.attrs.some((attribute) => attribute.name === "src")) {
+      const source = node.childNodes.filter((child) => child.nodeName === "#text").map((child) => child.value).join("");
+      if (source) sources.push(source);
+    }
+    for (const child of node.childNodes ?? []) visit(child);
+  };
+  // Parse as an HTML document with scripting enabled, without executing code or
+  // loading resources. Comments, templates and noscript text grant no hashes.
+  visit(parse(html, { scriptingEnabled: true }));
+  return sources;
+}
+
 export function hashesForInlineScripts(html) {
-  const hashes = new Set();
-  for (const match of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)) {
-    if (/\bsrc\s*=/i.test(match[1] ?? "")) continue;
-    const source = match[2] ?? "";
-    if (source) hashes.add(`'sha256-${createHash("sha256").update(source).digest("base64")}'`);
-  }
-  return [...hashes].sort();
+  return [...new Set(inlineScriptSources(html).map((source) => `'sha256-${createHash("sha256").update(source).digest("base64")}'`))].sort();
 }
 
 export function cspForHashes(hashes) {

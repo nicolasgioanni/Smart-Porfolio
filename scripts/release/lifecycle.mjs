@@ -1,6 +1,6 @@
 import { execFile, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { copyFile, mkdtemp, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -11,6 +11,7 @@ import { readContentVersion } from "../writeContentVersion.mjs";
 import { createStaticCsp } from "./csp.mjs";
 import { effectivePublicBuildEnvironment, collectPublicBuildInputs, publicBuildInputDigest } from "./publicBuildInputs.mjs";
 import { packageSealedRelease, verifySealedRelease } from "./sealedRelease.mjs";
+import { readRegularFile } from "../lib/readRegularFile.mjs";
 
 const execFileAsync = promisify(execFile);
 const generatedRelativePath = "src/content/generated/portfolio.generated.json";
@@ -194,16 +195,20 @@ export async function compilePagesFunctions({ projectRoot = process.cwd(), outDi
     await commandRunner(process.execPath, [wrangler, "pages", "functions", "build", "functions", "--outdir", temporary, "--output-config-path", configPath, "--output-routes-path", routesPath, "--build-output-directory", outDirectory, "--compatibility-date", compatibilityDate, ...compatibilityFlags.flatMap((flag) => ["--compatibility-flag", flag])], { cwd: root });
     const emitted = (await readdir(temporary, { withFileTypes: true })).map((entry) => entry.name).sort();
     if (emitted.join(",") !== "config.json,index.js,routes.json") throw new Error("Pages Functions build must emit one plain worker, routing config, and routes file");
-    const workerPath = path.join(temporary, "index.js");
-    if (!(await stat(workerPath)).isFile()) throw new Error("Pages Functions build did not emit plain index.js");
-    validatePlainWorker(await readFile(workerPath, "utf8"));
-    validateRoutingConfig(await readJson(configPath));
-    const routes = await readJson(routesPath);
+    const [worker, configBytes, routesBytes] = await Promise.all([
+      readRegularFile(path.join(temporary, "index.js"), { minimumBytes: 1, maximumBytes: 32 * 1024 * 1024 }),
+      readRegularFile(configPath, { minimumBytes: 1, maximumBytes: 1024 * 1024 }),
+      readRegularFile(routesPath, { minimumBytes: 1, maximumBytes: 1024 * 1024 })
+    ]);
+    const decode = (bytes) => new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    validatePlainWorker(decode(worker));
+    validateRoutingConfig(JSON.parse(decode(configBytes)));
+    const routes = JSON.parse(decode(routesBytes));
     validateRoutes(routes);
     validateRoutes(await readJson(path.join(root, "public", "_routes.json")));
     validateRoutes(await readJson(path.join(outDirectory, "_routes.json")));
-    await copyFile(workerPath, path.join(outDirectory, "_worker.js"));
-    await copyFile(routesPath, path.join(outDirectory, "_routes.json"));
+    await writeFile(path.join(outDirectory, "_worker.js"), worker);
+    await writeFile(path.join(outDirectory, "_routes.json"), routesBytes);
   } finally { await rm(temporary, { force: true, recursive: true }); }
 }
 
