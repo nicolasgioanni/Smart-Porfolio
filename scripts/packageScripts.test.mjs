@@ -216,7 +216,10 @@ describe("package and CI deployment automation", () => {
     expect(applicationJob).toContain('PORTFOLIO_REQUIRE_REMOTE_CONTENT: "false"');
     expect(pullRequestGeneration).toContain('PORTFOLIO_WORKBOOK_URL: ""');
     expect(applicationJob).toContain("run: npm run lint");
-    expect(applicationJob).toContain("run: npm run audit:check");
+    expect(applicationJob).not.toContain("run: npm run audit:check");
+    const independentScans = section(workflow, "  security-scans:", "\n  codeql:");
+    expect(independentScans).toContain("- name: Audit locked dependencies independently of application content\n        run: npm run audit:check");
+    expect(independentScans).not.toContain("should_verify");
     expect(applicationJob).toContain("run: npm run typecheck");
     expect(applicationJob).toContain("run: npm run test:priority");
     expect(applicationJob).toContain("run: npx --no-install playwright install --with-deps chromium");

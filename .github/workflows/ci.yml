@@ -261,10 +261,6 @@ jobs:
         if: steps.decision.outputs.should_verify == 'true'
         run: npm run docs:check
 
-      - name: Dependency audit
-        if: steps.decision.outputs.should_verify == 'true'
-        run: npm run audit:check
-
       - name: Lint
         if: steps.decision.outputs.should_verify == 'true'
         run: npm run lint
@@ -422,6 +418,9 @@ jobs:
             --gitleaks-mode git \
             --target . \
             --zizmor "$RUNNER_TEMP/smart-portfolio-tools/zizmor/zizmor"
+
+      - name: Audit locked dependencies independently of application content
+        run: npm run audit:check
 
   codeql:
     name: codeql
