@@ -50,13 +50,13 @@ Candidate admission and credential-free precheck precede `application-validation
 | Pull request targeting `main` or `develop` | Event SHA | Checked-in templates | Priority | Never |
 | Push to `develop` | Exact pushed SHA, if still current | One strict workbook snapshot | Full for the latest candidate | `develop` preview |
 | Push to `main` | Exact pushed SHA, if still current | One strict workbook snapshot | Full for the latest candidate | Production |
-| Daily schedule at `17 13 * * *` | Current `main` | One strict workbook snapshot | Full when the production content hash or commit SHA differs | Production when either differs |
-| Manual dispatch, `force_deploy=true` | Current `main` | One strict workbook snapshot | Always | Production |
-| Manual dispatch, `force_deploy=false` | Current `main` | One strict workbook snapshot | When the production content hash or commit SHA differs | Production when either differs |
+| Daily schedule at `17 13 * * *` | Admitted `main` event SHA, if still current | One strict workbook snapshot | Full when the production content hash or commit SHA differs | Production when either differs |
+| Manual dispatch, `force_deploy=true` | Admitted `main` event SHA, if still current | One strict workbook snapshot | Always | Production |
+| Manual dispatch, `force_deploy=false` | Admitted `main` event SHA, if still current | One strict workbook snapshot | When the production content hash or commit SHA differs | Production when either differs |
 
 `force_deploy` is a required boolean input and defaults to `true`. It bypasses only the exact-candidate no-op optimization. It does not bypass content validation, documentation validation, lint, typecheck, tests, build, artifact verification, current-branch checks, Wrangler, or post-deployment smoke checks.
 
-Scheduled and manual runs explicitly check out `main`, regardless of the branch shown in the dispatch interface. Push candidates use the pushed branch. Pull requests set no deployment branch and build a verification-only template snapshot.
+Scheduled candidates and manual dispatches are admitted only from `refs/heads/main`. In the Actions interface, select `main`; candidate admission rejects another workflow reference and requires matching event and workflow SHAs. The run uses that exact admitted `main` event candidate, then stale checking decides whether it remains eligible. Push candidates use the pushed branch. Pull requests set no deployment branch and build a verification-only template snapshot.
 
 For any non-PR candidate, `candidate-precheck` fetches the current remote branch tip and compares it with the checked-out SHA before protected inputs. A stale candidate produces no build artifact or deployment. The deploy job repeats that branch-tip comparison immediately before Wrangler runs.
 
@@ -176,7 +176,7 @@ Do not change the deployment account or public identity as an unreviewed dashboa
 1. Complete the matching setup path above and confirm the configuration change passes a pull-request check. Pull requests are verification-only and never deploy.
 2. Push the reviewed change to `develop` to run full verification and deploy the stable preview. Complete the preview checks in [Operations](OPERATIONS.md#preview-a-branch-change).
 3. Merge the approved change into `main` to run full verification and deploy production. The workflow checks the latest `main` candidate again immediately before Wrangler uploads.
-4. Optional, after a reviewed commit is already on `main`: for a first deployment, an intentional rebuild, or a retry after correcting external configuration, use **Actions → CI → Run workflow** with `force_deploy=true`. The dispatch interface may display a branch selector, but the workflow always checks out current `main`; forced dispatch still runs the full verification, exact-artifact, migration, deployment, and smoke-test path.
+4. Optional, after a reviewed commit is already on `main`: for a first deployment, an intentional rebuild, or a retry after correcting external configuration, use **Actions → CI → Run workflow**, select `main`, and set `force_deploy=true`. Candidate admission rejects a non-`main` workflow reference and binds the run to the exact admitted `main` event SHA; stale checking must still pass. Forced dispatch then runs the full verification, exact-artifact, migration, deployment, and smoke-test path.
 5. Use `force_deploy=false` only when a content-hash and commit-SHA no-op is acceptable. Follow [Operations](OPERATIONS.md) for the ongoing manual release, verification, monitoring, and rollback procedures.
 
 ## Strict content input
@@ -193,14 +193,17 @@ See [Content Pipeline](../content/CONTENT_PIPELINE.md) and [Content Sheet Schema
 
 ```mermaid
 flowchart TD
-    A[Resolve candidate SHA] --> B[Fetch one workbook snapshot with bounded retry]
+    A[Admit exact candidate SHA] --> B[Fetch one workbook snapshot with bounded retry]
+    A --> S[Run independent source-security checks]
     B --> C[Validate and generate JSON]
     C --> D[Run quality gates]
     D --> E[Build from generated JSON]
     E --> F[Write content version]
     F --> G[Create and verify artifact manifest]
     G --> H[Upload artifact]
-    H --> I[Verify downloaded artifact]
+    H --> V[Aggregate application and security results]
+    S --> V
+    V --> I[Verify downloaded artifact]
     I --> J[Recheck branch SHA]
     J --> K[Validate D1 target]
     K --> L[Apply D1 migrations]
