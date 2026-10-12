@@ -5,7 +5,10 @@ type AbortControllerRef = { current: AbortController | undefined };
 const maxContactApiResponseBytes = 16_384;
 
 async function awaitWithAbort<T>(operation: Promise<T>, signal: AbortSignal): Promise<T | undefined> {
-  if (signal.aborted) return undefined;
+  if (signal.aborted) {
+    void operation.catch(() => undefined);
+    return undefined;
+  }
   return new Promise((resolve) => {
     const onAbort = () => resolve(undefined);
     signal.addEventListener("abort", onAbort, { once: true });
@@ -52,7 +55,7 @@ export async function readContactApiResult(response: Response, signal: AbortSign
     return null;
   } finally {
     try {
-      if (!completed) void reader.cancel();
+      if (!completed) void reader.cancel().catch(() => undefined);
     } catch {
       // The browser may already have closed the bounded response stream.
     }
