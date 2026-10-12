@@ -218,6 +218,8 @@ The verify job always runs documentation integrity, ESLint with zero warnings, a
 
 Pull-request verification is deliberately deployment-free. A full candidate creates an artifact integrity manifest only after the full checks and exact build succeed; the deploy job revalidates that downloaded artifact before running Wrangler.
 
+The deploy job runs only when the workflow is not cancelled, the event is not a pull request, `verify` explicitly succeeds, and `verify` emits the exact `should_deploy=true` output. `verify` always evaluates its complete needs set; its event-specific gate treats the pull-request-only dependency review as optional on pushes, schedules, and dispatches, while failed, cancelled, missing, or unexpectedly skipped required jobs block deployment. The explicit deploy status guard prevents GitHub Actions' implicit success propagation from turning that intentional optional skip into a production or preview no-op.
+
 For production and preview builds, `DEPLOYMENT_COMMIT_SHA` binds deployment metadata to the candidate. Production receives only the production Turnstile site key. Preview receives only the optional preview key.
 
 The deploy job checks out the same SHA so `functions/`, `migrations/`, and `wrangler.jsonc` match the tested source. It installs the locked local Wrangler version with `npm ci`, downloads the verified `out/` artifact, validates it, rechecks the branch tip, validates the environment-specific D1 ID, applies any pending migrations, and runs Wrangler from the repository root. Migration targeting uses the fixed database names rather than an interchangeable binding name.

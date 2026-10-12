@@ -50,6 +50,7 @@ describe("package and CI deployment automation", () => {
     expect(packageJson.devDependencies["@next/eslint-plugin-next"]).toBe("^16.4.0");
     expect(packageJson.devDependencies.wrangler).toBe("4.148.0");
     expect(packageJson.devDependencies.miniflare).toBe("5.20261006.0-alpha");
+    expect(packageJson.devDependencies["js-yaml"]).toBe("4.3.2");
     expect(packageJson.devDependencies.vitest).toBe("4.1.11");
     expect(packageJson.devDependencies["@playwright/test"]).toMatch(/^\^1\./);
     expect(packageJson.scripts["test:footer"]).toBe(
@@ -410,8 +411,9 @@ describe("package and CI deployment automation", () => {
     expect(verifyJob).toContain("CI_GATE_RESULTS: ${{ toJSON(needs) }}");
     expect(verifyJob).toContain("node scripts/security/ciGate.mjs");
     expect(deployJob).toContain("needs: verify");
+    expect(deployJob).toContain("if: >-");
     expect(deployJob).toContain(
-      "if: needs.verify.result == 'success' && needs.verify.outputs.should_deploy == 'true'"
+      "${{ !cancelled() && github.event_name != 'pull_request' && needs.verify.result == 'success' && needs.verify.outputs.should_deploy == 'true' }}"
     );
     expect(deployJob).toContain("ref: ${{ needs.verify.outputs.candidate_sha }}");
     expect(deployJob).toContain('run: node scripts/artifactIntegrity.mjs verify out "$CANDIDATE_SHA"');
