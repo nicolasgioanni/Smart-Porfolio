@@ -1814,7 +1814,7 @@ test.describe("Research showcase", () => {
     await settings.evaluate((menu) => menu.scrollTo({ top: menu.scrollHeight }));
     await expandFromSettings.focus();
     await page.keyboard.press("Enter");
-    const dialog = page.getByRole("dialog", { name: "CytoCV supplementary workflow video" });
+    const dialog = page.getByRole("dialog", { exact: true, name: "CytoCV supplementary workflow video" });
     const dialogRoot = page.getByTestId("research-media-dialog");
     const dialogPlayer = dialog.getByTestId("research-video-player");
     const dialogVideo = dialogPlayer.locator("video.research-video-player__media");
@@ -2152,7 +2152,7 @@ test.describe("Research showcase", () => {
         await expect(expandFromSettings).toBeVisible();
         await expandFromSettings.click();
 
-        const dialog = page.getByRole("dialog", { name: "CytoCV supplementary workflow video" });
+        const dialog = page.getByRole("dialog", { exact: true, name: "CytoCV supplementary workflow video" });
         const dialogPlayer = dialog.getByTestId("research-video-player");
         const close = dialog.getByRole("button", { name: /Close video for CytoCV/ });
         await expect(dialog).toBeVisible();
@@ -2206,7 +2206,7 @@ test.describe("Research showcase", () => {
         await expect(inlineSettings).toHaveAttribute("data-open", "true");
         await inlineSettings.getByRole("button", { name: "Open enlarged player" }).tap();
 
-        const popup = page.getByRole("dialog", { name: "CytoCV supplementary workflow video" });
+        const popup = page.getByRole("dialog", { exact: true, name: "CytoCV supplementary workflow video" });
         const popupPlayer = popup.getByTestId("research-video-player");
         const popupVideo = popupPlayer.locator("video.research-video-player__media");
         await expect(popup).toBeVisible();
@@ -2397,7 +2397,7 @@ test.describe("Research showcase", () => {
         await expect.poll(() => popupVideo.evaluate((element) => (element as HTMLVideoElement).paused)).toBe(false);
         const entryPlaybackTime = await popupVideo.evaluate((element) => (element as HTMLVideoElement).currentTime);
         await popupPlayer.getByRole("button", { name: "Enter fullscreen" }).tap();
-        const fullscreen = page.getByRole("dialog", { name: "CytoCV supplementary workflow video enlarged fullscreen" });
+        const fullscreen = page.getByRole("dialog", { exact: true, name: "CytoCV supplementary workflow video enlarged fullscreen" });
         await expect(fullscreen).toBeVisible();
         const waitForFullscreenCaptionGeometry = async () => {
           await expect(fullscreen).toHaveAttribute("data-state", "open");

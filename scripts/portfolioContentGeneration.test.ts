@@ -374,7 +374,7 @@ describe("strict XLSX download boundary", () => {
     expect(calls).toHaveLength(1);
     expect(calls[0]!.url).toBe(workbookUrl);
     expect(calls[0]!.init.credentials).toBe("omit");
-    expect(calls[0]!.init.redirect).toBe("follow");
+    expect(calls[0]!.init.redirect).toBe("manual");
     expect(calls[0]!.init.signal).toBeInstanceOf(AbortSignal);
     const requestHeaders = new Headers(calls[0]!.init.headers);
     expect(requestHeaders.has("authorization")).toBe(false);
@@ -386,6 +386,64 @@ describe("strict XLSX download boundary", () => {
     expect(generated.metadata.sources.resume).toBe("template");
     expect(logs.join("\n")).not.toContain(workbookUrl);
     expect(logs.join("\n")).not.toContain("private-test-id");
+  });
+
+  it("follows only validated redirects and cancels each redirect body", async () => {
+    const bytes = await createWorkbookBytes();
+    const { outputFile } = await createTemporaryPaths();
+    const redirects = [
+      "https://mirror-one.example.test/portfolio.xlsx",
+      "https://mirror-two.example.test/portfolio.xlsx"
+    ];
+    const calls: Array<{ url: string; init: RequestInit }> = [];
+    let cancelledRedirectBodies = 0;
+
+    await generatePortfolioContent({
+      environment: { PORTFOLIO_WORKBOOK_URL: workbookUrl, PORTFOLIO_REQUIRE_REMOTE_CONTENT: "true" },
+      fetchImplementation: async (url, init) => {
+        calls.push({ url, init });
+        const location = redirects[calls.length - 1];
+        if (!location) return responseFromBytes(bytes, { contentType: xlsxContentType });
+
+        return new Response(
+          new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(new Uint8Array([0x72, 0x65, 0x64, 0x69, 0x72, 0x65, 0x63, 0x74]));
+            },
+            cancel() {
+              cancelledRedirectBodies += 1;
+            }
+          }),
+          { status: 302, headers: { location } }
+        );
+      },
+      outputFile,
+      templatesDirectory,
+      log: () => undefined
+    });
+
+    expect(calls.map((call) => call.url)).toEqual([workbookUrl, ...redirects]);
+    expect(calls.every((call) => call.init.redirect === "manual" && call.init.credentials === "omit")).toBe(true);
+    expect(cancelledRedirectBodies).toBe(redirects.length);
+  });
+
+  it("fails closed for a redirect to an unsafe destination without exposing its URL", async () => {
+    const { outputFile } = await createTemporaryPaths();
+    const unsafeRedirect = "https://127.0.0.1/private-test-id.xlsx";
+
+    await expect(
+      generatePortfolioContent({
+        environment: { PORTFOLIO_WORKBOOK_URL: workbookUrl, PORTFOLIO_REQUIRE_REMOTE_CONTENT: "true" },
+        fetchImplementation: async () => responseFromBytes(new Uint8Array(), {
+          status: 302,
+          headers: { location: unsafeRedirect }
+        }),
+        outputFile,
+        templatesDirectory,
+        log: () => undefined
+      })
+    ).rejects.toThrow("Failed to download the public XLSX workbook");
+    await expect(readFile(outputFile, "utf8")).rejects.toMatchObject({ code: "ENOENT" });
   });
 
   it("uses templates only when strict mode is false and no workbook URL is configured", async () => {

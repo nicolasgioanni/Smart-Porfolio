@@ -55,7 +55,7 @@ function ProjectShowcaseCard({ item, staticVisual }: { item: ProjectItem; static
     <PortfolioCard as="article" className="project-card project-card--showcase" variant="media">
       <header className="project-card__showcase-header">
         <div className="project-card__showcase-title-row">
-          <h3 className="content-card__title">{item.title}</h3>
+          <h2 className="content-card__title">{item.title}</h2>
           {visual?.badge ? <span className={`project-card__badge project-card__badge--${visual.badge.tone}`}><span aria-hidden="true" className="project-card__badge-icon">{visual.badge.tone === "live" ? "●" : visual.badge.tone === "installable" ? "↓" : "◷"}</span>{visual.badge.label}{visual.badge.tone === "installable" ? <span className="visually-hidden"> — Windows installer available</span> : null}</span> : null}
         </div>
         {summary ? (

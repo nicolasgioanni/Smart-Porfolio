@@ -11,7 +11,7 @@ Smart Portfolio uses a layered quality gate for documentation, static content, R
 | Test runner | Vitest 4.1.11 |
 | Default test environment | jsdom |
 | DOM assertions | Testing Library and `@testing-library/jest-dom` |
-| Browser runner | Playwright 1.x with Chromium |
+| Browser runner | Playwright 1.x with Chromium plus narrow Firefox and WebKit critical projects |
 | TypeScript mode | Strict, no emit |
 | CI runner | Verify: `ubuntu-24.04`; deploy and scheduled heartbeat: `ubuntu-latest` |
 
@@ -30,8 +30,11 @@ Smart Portfolio uses a layered quality gate for documentation, static content, R
 | `npm run test:navigation` | Focused mobile rail, header, responsive-query, theme, and navigation style tests | Use while changing navigation; release CI covers them through `test` |
 | `npm run test:skeletons` | Focused skeleton component, content, style, and page-entry tests | Protects route fallback semantics, fixture geometry, and static no-motion placeholders |
 | `npm run test:e2e:priority` | Playwright skeleton alignment and held-navigation transitions, navigation, footer, mocked-contact, Recommendations, Projects, Experience, and Research flows | Portable pull-request browser gate; uses no provider credentials or delivery endpoint and intentionally excludes Linux-only visual comparison |
-| `npm run test:e2e:full` | Every supported Playwright specification in one Chromium process | Release browser gate; includes every skeleton part and the mocked-contact flow |
+| `npm run test:e2e:full` | Every supported Playwright specification in one Chromium process | Release browser gate; includes every skeleton part, the mocked-contact flow, and axe accessibility coverage |
 | `npm run test:e2e:contact` | Playwright contact flow specification in Chromium | Mocks Turnstile and both same-origin contact endpoints; never submits to a provider |
+| `npm run test:e2e:accessibility` | Axe scan of all public routes and selected interactive states in Chromium | Requires zero violations and uses no rule suppression |
+| `npm run test:e2e:critical:firefox` | Narrow navigation, theme, dialog, and mocked-contact recovery path in Firefox | Does not run Linux skeleton screenshots |
+| `npm run test:e2e:critical:webkit` | The same narrow critical path with the iPhone 13 WebKit project | Supplements, but does not claim, physical-device Safari validation |
 | `npm run test:e2e:navigation` | Playwright navigation specification in Chromium | Uses port 3100 by default and starts its own local server |
 | `npm run test:e2e:skeletons:alignment` | Playwright resolved-page versus canonical-loader geometry specification | Covers direct header line boxes, wrap boundaries, generated Experience copy, detail footprints, overflow, themes, and reduced motion in inert same-origin fixtures |
 | `npm run test:e2e:skeletons:visual` | Linux-only Playwright screenshot specification | Captures or compares 25 reviewed skeleton geometry baselines on Ubuntu 24.04 only, rejecting browser diagnostics before any screenshot |
@@ -43,9 +46,13 @@ Smart Portfolio uses a layered quality gate for documentation, static content, R
 | `npm run test` | Complete Vitest suite, including local D1 and Workers transport integration coverage | Uses mocks, jsdom, isolated local D1, and local workerd; no live provider credentials |
 | `npm run build` | `prebuild`, Next.js static export, segment-cache normalization, then content-version write | Regenerates content before building |
 | `npm run build:generated` | Next.js static export, segment-cache normalization, and content-version write | Consumes existing generated JSON without another content fetch |
+| `npm run release:build`, `release:compile`, `release:package`, `release:runtime`, and `release:verify` | Explicit accepted-snapshot build, CSP/Functions compilation, sealed package, local runtime/static-browser check, and verification | Dormant local preparation commands; existing workflow builds remain schema-v1 until later orchestration activation |
 | `npm audit` | Locked full dependency graph audit | Covers development and deployment dependencies |
 | `npm audit --omit=dev` | Locked production dependency graph audit | Covers the deployed runtime dependency graph |
 | `npm run audit:check` | Full locked audit with exact, expiring GHSA exceptions | Blocks unlisted, expired, and production findings |
+| `npm run test:quality:properties` | Seeded contact payload, origin, ticket, and UTF-8 boundary cases | Deterministic bounded loops; no live provider or remote D1 |
+| `npm run test:quality:mutations` | Exact compiled contact-payload guard mutants against shared boundary assertions | A surviving unknown-schema, consent, or submission-ID mutant fails the test |
+| `npm run test:quality:payload` | Route, initial-JavaScript, framework, and asset-role gzip budget | Requires the generated `out/` and `.next/` directories from `build:generated` |
 | `npm run db:migrate:local` | Pending tracked migrations against Wrangler's local D1 state | Never targets preview or production |
 | `npm run verify` | One content snapshot, docs check, dependency audit, lint, typecheck, full Vitest suite, and generated-snapshot build | Compatibility local gate; does not install Chromium or download content again during the build |
 | `npm run verify:priority` | One content snapshot, docs check, dependency audit, lint, typecheck, priority Vitest and browser suites, and generated-snapshot build | Portable pull-request-sized local gate; install Chromium first. Linux CI runs the visual skeleton comparison as its separate priority-only step |
@@ -95,17 +102,18 @@ These are unit and integration-style tests with temporary files and injected fet
 
 | Layer | Authoritative tests | Coverage |
 | --- | --- | --- |
-| Client field validation | `src/components/contact/contactFormValidation.test.ts` | Required fields, trimming, email suffix and Punycode rules, phone, 500-character message boundary, and shared limits |
+| Client field validation | `src/features/contact/components/contactFormValidation.test.ts` | Required fields, trimming, control-character rejection, email suffix and Punycode rules, phone, 500-character message boundary, and shared limits |
+| Client request transport | `src/features/contact/components/contactRequest.test.ts` | Same-origin JSON request shape, 16 KiB response limit, malformed-response handling, and request cancellation |
 | Workers transport | `scripts/contactTransport.integration.test.ts` | Actual local workerd plain/JSON success and every 3xx rejection, with zero destination requests or credential forwarding |
 | IANA snapshot | `scripts/updateContactTlds.test.mjs` | Complete attributed offline suffix set, bounded explicit updater, malformed/oversized input, and no build-time download |
-| Contact notifications | `src/components/contact/ContactNotifications.test.tsx` | Body portal, three-card capacity, duplicates, independent expiry, pause/resume, announcements, focus recovery, dismissal, and reduced motion |
-| Contact step transitions | `src/components/contact/useContactStepTransition.test.tsx` | Measured-height completion, replacement-animation isolation, content-resize interruption, frame removal, reduced-motion updates, and unsupported-animation fallback |
-| Turnstile widget | `src/components/contact/TurnstileWidget.test.tsx` | Visible upfront rendering, submission custom data, success, expiry, reset, theme, and missing-key failure |
-| Contact route | `src/app/contact/contact.test.tsx` | Hard-gate isolation, 500-millisecond transition and Continue fallback, three data-entry steps, two acknowledgments, challenge and two-hour draft recovery, retry focus, repeated-click blocking, exact payload, standalone success, subsequent-message gates, and locked retries |
-| Verification Function | `functions/api/contact/verify.test.ts` | Method, origin, media type, body contract, Siteverify action, hostname and custom-data binding, operation-scoped bounded retry, transient failure mapping, remote IP, and signed cookie |
-| Delivery Function | `functions/api/contact.test.ts` | Method, origin, media type, body size, schema, honeypot, timing, ticket, DNS, rolling quota, keyed retry-payload binding, sequential idempotent delivery, and retry |
-| Contact styles | `src/styles/contactStyles.test.ts` | Notice tones, focus, disabled, responsive, wrapping, animation, and reduced-motion contracts |
-| Legal disclosures | `src/components/legal/legal.test.tsx` | Contact processing, pseudonymous reservation storage, DNS validation, retention, and published notices |
+| Contact notifications | `src/features/contact/components/ContactNotifications.test.tsx` | Body portal, three-card capacity, duplicates, independent expiry, pause/resume, announcements, focus recovery, dismissal, and reduced motion |
+| Contact step transitions | `src/features/contact/components/useContactStepTransition.test.tsx` | Measured-height completion, replacement-animation isolation, content-resize interruption, frame removal, reduced-motion updates, and unsupported-animation fallback |
+| Turnstile widget | `src/features/contact/components/TurnstileWidget.test.tsx` | Visible upfront rendering, submission custom data, success, expiry, reset, theme, and missing-key failure |
+| Contact route | `src/app/contact/contact.test.tsx` | Hard-gate isolation, 500-millisecond transition and Continue fallback, three data-entry steps, two acknowledgments, challenge and two-hour draft recovery, 30-second verification and 45-second delivery deadlines, unmount cancellation, retry focus, repeated-click blocking, exact payload, standalone success, subsequent-message gates, and locked retries |
+| Verification Function | `functions/api/contact/verify.test.ts` | Method, target-bound origin, media type, body cancellation and contract, restrictive JSON headers, 25-second operation deadline, Siteverify action, hostname and custom-data binding, operation-scoped bounded retry, transient failure mapping, remote IP, and signed cookie |
+| Delivery Function | `functions/api/contact.test.ts` | Method, target-bound origin, media type, body size, schema, restrictive JSON headers, 40-second operation deadline, ticket, DNS, three-second D1 bound, rolling quota concurrency, stable configuration/renderer retry identity, sequential idempotent delivery, provider deadline, and retry |
+| Contact styles | `src/features/contact/contactStyles.test.ts` | Notice tones, focus, disabled, responsive, wrapping, animation, and reduced-motion contracts |
+| Legal disclosures | `src/features/legal/components/legal.test.tsx` | Contact processing, pseudonymous reservation storage, DNS validation, retention, and published notices |
 
 The Function tests call exported handlers with web-standard `Request` and `Response` objects while mocking Turnstile, DNS, D1, and Resend. They do not execute in a real Workers runtime, cross a WAF rule, use live provider credentials, mutate remote D1, or send production email.
 
@@ -119,21 +127,21 @@ The contact browser specification also checks unchanged gate geometry across loa
 | --- | --- | --- |
 | Navigation and links | Tests under `src/components/navigation/`, plus responsive-query and theme tests | Route registry and `SmartLink` internal-route recognition, active indicator, fixed mobile dock, unified route-and-action rail order, overflow state, idle motion, five-second interaction pause and resume, responsive transitions, external-link safety, and cleanup |
 | Themes | Tests under `src/components/theme/`, `src/lib/theme/`, and `src/styles/themePalette.test.ts` | Stable identifiers, visitor-facing labels, pre-hydration system resolution, live device changes, manual precedence, cross-tab synchronization, complete palette tokens, contrast, solid surface tiers, no decorative gradients/glow/blur/masks, keyboard and pointer behavior, native fade eligibility, immediate fallback, and cleanup |
-| Motion | `src/components/motion/motion.test.tsx`, `src/components/motion/pageEntryStyles.test.ts`, `src/components/portfolio/profile/AnimatedRole.test.tsx` | Page-root entrance scope, reveal persistence, animation timing, static fallback, reduced motion, and cleanup |
+| Motion | `src/components/motion/motion.test.tsx`, `src/components/motion/pageEntryStyles.test.ts`, `src/features/home/components/AnimatedRole.test.tsx` | Page-root entrance scope, reveal persistence, animation timing, static fallback, reduced motion, and cleanup |
 | Footer | `src/components/layout/InteractiveBlobFooter.test.tsx`, `src/components/layout/footerStyles.test.ts` | Server fallback, route-scoped compact state, user-scroll activation, layout-shift resistance, focus safety, responsive layout, motion, and cleanup |
 | Skeletons | Tests under `src/components/loading/` plus `scripts/renderRouteSkeleton.test.mjs` | Structure, busy and hidden state, route delegation, canonical header ownership, generated Experience override, body-placeholder content safety, Research footprints, and static solid styling |
-| Portfolio rendering | `src/components/portfolio/portfolio.test.tsx`, `src/lib/content/experienceDuration.test.ts` | Home order, cards, empty states, actions, profile hierarchy, images, footer content, and inclusive Experience-duration formatting |
-| Home Education disclosure | `src/components/portfolio/home/HomeEducationDetails.test.tsx`, plus the Home Education rendering fixture | Native server output, preserved authored bullets, independent entries, empty details, animation cleanup and reversal, reduced motion, and unsupported-animation fallback |
+| Portfolio rendering | `src/components/portfolio/portfolio.test.tsx`, `src/lib/formatting/experienceDuration.test.ts` | Home order, cards, empty states, actions, profile hierarchy, images, footer content, and inclusive Experience-duration formatting |
+| Home Education disclosure | `src/features/home/components/HomeEducationDetails.test.tsx`, plus the Home Education rendering fixture | Native server output, preserved authored bullets, independent entries, empty details, animation cleanup and reversal, reduced motion, and unsupported-animation fallback |
 | Research showcase | `src/features/research/components/ResearchShowcase.test.tsx`, `src/features/research/components/researchStyles.test.ts`, `src/features/research/content/researchGraphicalAbstracts.test.ts`, `src/features/research/content/researchVideos.test.ts`, `src/features/research/loading/ResearchPageSkeleton.test.tsx` | Project order, canonical-over-curated media resolution, legacy-workbook-safe fallbacks, CytoCV's abstract/divider/video stack, centered abstract-only AML and Guide Donor Scheduler media, strict local video resolution, custom-player layout, responsive behavior, resource states, audience depth, disclosure isolation, motion, and Escape behavior |
 | Research video assets | `src/lib/media/researchVideoAssets.test.ts`, `src/lib/media/researchVideoPlayback.test.ts`, `src/features/research/components/ResearchVideoPreview.test.tsx` | Immutable MP4, LF-only captions, and retained visual-description transcript hashes; bounded deterministic MP4 stream metadata and WebVTT timing; native no-JavaScript controls; enhanced transport, captions, absence of transcript UI and transcript-directed error copy, metadata/error recovery, and paused timeline/settings handoff without automatic playback through the shared fitted dialog |
-| Shared detail controls | `src/components/portfolio/experience/ExperienceShowcase.test.tsx`, `src/components/portfolio/experience/experienceStyles.test.ts` | Compact top-right selector geometry, audience state, shared disclosure semantics, responsive flow, and reduced motion |
-| Shared dialogs | `src/components/overlay/ModalDialog.test.tsx`, `src/components/navigation/navigation.test.tsx`, `src/components/portfolio/skills/PortfolioSkillShowcase.test.tsx`, `src/features/projects/components/ProjectSkillShowcase.test.tsx`, `src/features/research/components/ResearchGraphicalAbstractPreview.test.tsx` | Portal and persistent in-place lifecycle, accessible names, informative abstract alt text, inactive-wrapper accessibility, stable media identity, native-dialog failure cleanup, nested fullscreen ancestry exposure, initial focus, native media fallback, consumed Escape, fullscreen focus scope, hidden/inert control filtering, focus containment and recovery through exit, topmost stack isolation, Escape, backdrop isolation, exact scroll-lock restoration, reduced motion, rapid reopen, and trigger-focus restoration |
+| Shared detail controls | `src/features/experience/components/ExperienceShowcase.test.tsx`, `src/features/experience/components/experienceStyles.test.ts` | Compact top-right selector geometry, audience state, shared disclosure semantics, responsive flow, and reduced motion |
+| Shared dialogs | `src/components/overlay/ModalDialog.test.tsx`, `src/components/navigation/navigation.test.tsx`, `src/features/skills/components/PortfolioSkillShowcase.test.tsx`, `src/features/projects/components/ProjectSkillShowcase.test.tsx`, `src/features/research/components/ResearchGraphicalAbstractPreview.test.tsx` | Portal and persistent in-place lifecycle, accessible names, informative abstract alt text, inactive-wrapper accessibility, stable media identity, native-dialog failure cleanup, nested fullscreen ancestry exposure, initial focus, native media fallback, consumed Escape, fullscreen focus scope, hidden/inert control filtering, focus containment and recovery through exit, topmost stack isolation, Escape, backdrop isolation, exact scroll-lock restoration, reduced motion, rapid reopen, and trigger-focus restoration |
 | Recommendations | Recommendation component, layout, and style tests under `src/components/portfolio/` | Expansion, link safety, row measurement, overflow reservation, hard clipping, and reduced motion |
 | Static search metadata | `src/app/robots.test.ts`, `src/app/sitemap.test.ts` | Static metadata file syntax, approved crawler policy, canonical sitemap URL, and exact indexable route set |
 | Static security contracts | `src/lib/content/security.test.ts` | No Next.js runtime endpoints, scoped Pages routing, safe structured links, responsive and motion contracts |
 | Architecture import direction | `src/lib/architecture/importBoundaries.test.ts` | Direct alias and relative import policy for library and component layers, plus permitted shared dependencies |
 
-Many accessibility assertions verify semantic roles, names, focus behavior, keyboard handling, `aria` state, and reduced-motion fallbacks. The repository does not currently run an automated browser accessibility scanner.
+Many accessibility assertions verify semantic roles, names, focus behavior, keyboard handling, `aria` state, and reduced-motion fallbacks. `tests/e2e/accessibility.spec.ts` adds axe scans across the eleven public routes and the theme chooser, graphical-abstract dialog, contact validation/review, Research video settings, and Experience evidence state. It is intentionally a local focused command until the CI orchestration selects it.
 
 ## Browser skeleton coverage
 
@@ -173,7 +181,7 @@ The shared `tests/e2e/generatedContent.ts` reader validates the on-disk generate
 
 The mobile video cases in `research.spec.ts` and `research-mobile-video.spec.ts` run in the normal Chromium Research suite and through the narrowly scoped `webkit-mobile` project. Run `npx playwright install webkit` followed by `npm run test:e2e:research:webkit` for the second engine; existing priority and skeleton scripts keep their Chromium selection. These cases exercise 320, 390, 420, 421, and 440 CSS-pixel widths, short landscape, and orientation changes. They cover captions near the contained picture, both control states, long cues, identical lower/raised typography, settings and volume expansion, themes, and accessibility display preferences.
 
-Fullscreen fallback coverage disables or rejects container fullscreen to exercise the shared in-place dialog. It verifies that the same video node and playback settings survive entry and exit, that inactive wrappers do not expose extra dialogs, and that fullscreen inside an enlarged popup remains accessible while its ancestor loses topmost status. Nested Escape, focus restoration, scroll locks, caption toggles, and native/picture-in-picture handoffs retain their separate contracts. Use normal-motion tests for caption transition timing and reduced-motion tests for immediate final states.
+Fullscreen fallback coverage disables or rejects container fullscreen to exercise the shared in-place dialog. It verifies that the same video node and playback settings survive entry and exit, that inactive wrappers keep a self-contained inline-player name without modal state or focusability, and that fullscreen inside an enlarged popup remains accessible while its ancestor loses topmost status. Nested Escape, focus restoration, scroll locks, caption toggles, and native/picture-in-picture handoffs retain their separate contracts. Use normal-motion tests for caption transition timing and reduced-motion tests for immediate final states.
 
 Desktop WebKit with a mobile viewport is not physical iPhone Safari. Record a device check separately for Safari chrome, safe areas, rotation, and ongoing playback; if hardware is unavailable, report that check as pending rather than claiming device validation. The normal enlarged popup retains its fitted frame, while the site fullscreen fallback fills the available webpage viewport. See the [mobile caption review captures](evidence/mobile-video-captions/README.md) for the starting behavior and corrected layouts.
 
@@ -198,6 +206,7 @@ After `build:generated`, verify `/projects` without JavaScript against the expor
 | `scripts/security/ciGate.test.mjs` and `scripts/security/deployWorkflow.test.mjs` | Event-specific CI gate and parsed-workflow eligibility contract: only explicit green aggregates with the exact deploy decision may deploy; a skipped pull-request-only dependency review remains non-blocking for a push, while cancellation, pull requests, failed, cancelled, missing, or unexpectedly skipped required results, stale candidates, and exact no-ops stay blocked. |
 | `scripts/checkDeployedContent.test.mjs` | Independent deployed content and commit comparison, missing or malformed manifest behavior, and post-deployment smoke requests with exact contact Function method rejection |
 | Artifact tests inside `scripts/packageScripts.test.mjs` | Content-version creation, hidden file inclusion, manifest structure, commit binding, digest verification, and tamper rejection |
+| `scripts/quality/recoveryDrill.test.mjs` | Credential-free local Wrangler D1 export, fresh `0001`–`0003` migration, and pseudonymous reservation restore; v2 sealed-envelope tamper rejection and restoration without collector files |
 | `scripts/localAutomation.test.mjs` | Project discovery, environment copy safety, dependency-state hashing, stale content, and port selection |
 | `scripts/permanentBranchRuleset.test.mjs` | Exact tracked permanent-branch ruleset name, active scope, deletion and non-fast-forward rules only, and empty bypass list |
 
@@ -214,7 +223,7 @@ Pull requests targeting `main` or `develop`:
 1. Generate validated template content without workbook or Cloudflare credentials.
 2. Run documentation integrity, the bounded dependency audit, lint, and typecheck.
 3. Run the priority Vitest contracts once, including the centralized typography-token contract.
-4. Install Chromium once and run the portable priority browser suite: skeleton alignment and held-navigation transitions, navigation, footer, locally mocked contact, Recommendations, Experience, and Research flows.
+4. Install Chromium once and run the portable priority browser suite: skeleton alignment and held-navigation transitions, navigation, progressive enhancement across all routes, footer, locally mocked contact, Recommendations, Experience, Projects, and Research flows.
 5. Run the separate Linux-only skeleton visual comparison against the explicit template-content generated for the pull request.
 6. Build with `build:generated`.
 7. Stop without creating a deployment artifact.
@@ -307,11 +316,17 @@ Avoid snapshot tests that hide semantic changes. Prefer explicit assertions for 
 
 - No coverage percentage is generated or enforced.
 - The default CI browser gate runs Chromium, including a local mocked contact journey. The scoped mobile Research video and Projects preview commands also run WebKit locally; neither emulates physical iPhone Safari or exercises a live security provider, D1 binding, delivery service, or mailbox.
-- No automated Lighthouse or performance threshold runs in CI.
-- No automated browser accessibility scanner is configured.
+- No automated Lighthouse or Core Web Vitals measurement runs in CI. The local payload command enforces reviewed static gzip limits after a generated build.
+- The axe and cross-browser critical commands are available locally but are not selected by the current stable CI orchestration.
 - No Workers emulator integration test runs in CI.
 - No automated live contact delivery test is performed.
 - CI covers one Linux and Node-major configuration. Local `verify:full` on another operating system cannot replace the required Ubuntu 24.04 visual comparison.
 - Remote D1 binding and migration state, external WAF, DNS, TLS, provider-secret, and branch-protection state are not testable from the repository.
 
 These are explicit boundaries, not implied guarantees. Use the manual checks in [Operations](../operations/OPERATIONS.md) when the release risk reaches beyond the automated suite.
+
+## Feature ownership and progressive enhancement
+
+The priority selector includes feature directories, the neutral import-graph contract, and shared route-fallback tests. Its required-file discovery protects relocated tests from silently dropping out of the gate. The import graph resolves TypeScript aliases, relative edges, type imports, re-exports, and dynamic imports, rejecting cycles and undocumented cross-feature directions.
+
+`tests/e2e/progressiveEnhancement.spec.ts` checks every public route with JavaScript disabled, native Research controls, and footer navigation. Run it against the static export as well as the portable development server when changing segment fallbacks. Its missing-IntersectionObserver case protects readable content when browser enhancement is unavailable. CSS ownership changes preserve selector conditions and declarations; direct skeleton alignment and the independent 25-image Linux comparison remain required.

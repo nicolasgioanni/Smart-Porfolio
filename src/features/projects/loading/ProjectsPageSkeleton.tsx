@@ -3,7 +3,7 @@ import { getProjectSkeletonProfiles } from "@/features/projects/loading/projectS
 import { SkeletonBlock } from "@/components/loading/SkeletonBlock";
 import { SkeletonText } from "@/components/loading/SkeletonText";
 import { getPortfolioContent } from "@/lib/content/getPortfolioContent";
-import { selectProjectDetailContent } from "@/lib/content/selectDetailContent";
+import { selectProjectDetailContent } from "@/features/projects/content/selectProjectDetailContent";
 import type { ProjectItem } from "@/content/types";
 import { siteRoutes } from "@/lib/routing/siteRoutes";
 

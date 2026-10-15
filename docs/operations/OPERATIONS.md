@@ -101,9 +101,10 @@ curl --fail --silent --show-error "$production_origin/artifact-integrity.json"
 
 Confirm:
 
-- `schemaVersion` is `1`.
+- `schemaVersion` is `2` for a current release. A v1 document is legacy metadata and must not be used to prove a no-op or producer ordering decision.
 - `contentHash` is 64 lowercase hexadecimal characters.
 - `commitSha` is the intended 40-character source revision.
+- `target`, `publicBuildInputDigest`, and the producer `runId`, `runNumber`, and `attempt` match the verified candidate. The public digest is a fingerprint, not a public-key value.
 - `generatedAt` and `deployedAt` are parseable timestamps.
 - The artifact manifest uses `sha256`, carries the same commit SHA, and contains file records.
 
@@ -233,6 +234,12 @@ When the intended prior deployment is still present in Cloudflare Pages history:
 Provider rollback procedures and retention are external Cloudflare behavior and should be confirmed against the active account before an incident.
 
 A Pages rollback does not revert D1 migrations. Before rolling back to older Function code, confirm that the active schema remains backward compatible. Database restoration or destructive corrective SQL is a separate operation that requires explicit review and should not be inferred from a Pages rollback.
+
+### Local recovery-drill evidence
+
+`scripts/quality/recoveryDrill.test.mjs` uses only temporary directories, a credential-free child environment, and `wrangler d1 --local`. It applies the checked-in migrations through `0003_contact_delivery_rendering.sql`, exports a fixture reservation, rebuilds a fresh local database, and verifies that the pseudonymous reservation fields restore unchanged. It also verifies that a tampered v2 sealed envelope is rejected and can be replaced only by its previously verified local fixture; the sealed fixture contains no audit collector input.
+
+This is a repository-level drill, not a Cloudflare D1 backup, retention, export, import, or restore procedure. It does not establish a durable release archive or authorize production database recovery. Any provider recovery remains a separately reviewed operation against verified provider state.
 
 ### Forward recovery
 

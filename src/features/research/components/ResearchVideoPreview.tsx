@@ -123,6 +123,7 @@ export function ResearchVideoPreview({ poster, title, video }: ResearchVideoPrev
           dialogId={fullscreenDialogId}
           frameClassName="research-video-fullscreen__frame"
           initialFocusRef={fullscreenCloseRef}
+          inPlaceAriaLabel={`${inlineLabel} inline player`}
           onOpenError={() => {
             setFullscreenFallbackOpen(false);
             setFullscreenFallbackFailed(true);
@@ -188,6 +189,7 @@ export function ResearchVideoPreview({ poster, title, video }: ResearchVideoPrev
           dialogId={`${fullscreenDialogId}-modal`}
           frameClassName="research-video-fullscreen__frame"
           initialFocusRef={modalFullscreenCloseRef}
+          inPlaceAriaLabel={`${inlineLabel} enlarged inline player`}
           onOpenError={() => {
             setModalFullscreenFallbackOpen(false);
             setModalFullscreenFallbackFailed(true);

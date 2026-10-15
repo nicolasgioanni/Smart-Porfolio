@@ -9,10 +9,10 @@ Use this guide for the complete request contract and trust boundary. See [Securi
 | Concern | Authoritative source |
 | --- | --- |
 | Static Contact route and metadata | `src/app/contact/page.tsx` |
-| Wizard state, requests, retries, and acknowledgments | `src/components/contact/ContactForm.tsx` |
-| Browser field validation | `src/components/contact/contactFormValidation.ts` |
-| Turnstile widget options | `src/components/contact/TurnstileWidget.tsx` |
-| Notification portal and independent lifetimes | `src/components/contact/ContactNotifications.tsx`, `src/components/contact/useContactNotifications.ts` |
+| Wizard state, requests, retries, and acknowledgments | `src/features/contact/components/ContactForm.tsx` |
+| Browser field validation | `src/features/contact/components/contactFormValidation.ts` |
+| Turnstile widget options | `src/features/contact/components/TurnstileWidget.tsx` |
+| Notification portal and independent lifetimes | `src/features/contact/components/ContactNotifications.tsx`, `src/features/contact/components/useContactNotifications.ts` |
 | Shared email validator and registered suffix snapshot | `src/lib/contact/validation.ts`, `src/lib/contact/ianaTlds.ts` |
 | Shared public contact contract | `functions/_shared/contact.ts` |
 | Request, provider, persistence, ticket, and delivery modules | `functions/_shared/contact/` |
@@ -386,8 +386,8 @@ The PR gate also runs actual local workerd with isolated provider fixtures: succ
 Useful focused verification:
 
 ```powershell
-npx --no-install vitest run functions/api/contact/verify.test.ts functions/api/contact.test.ts src/app/contact/contact.test.tsx src/components/contact/TurnstileWidget.test.tsx src/components/contact/contactFormValidation.test.ts
-npx --no-install vitest run scripts/contactTransport.integration.test.ts scripts/updateContactTlds.test.mjs src/components/contact/ContactNotifications.test.tsx
+npx --no-install vitest run functions/api/contact/verify.test.ts functions/api/contact.test.ts src/app/contact/contact.test.tsx src/features/contact/components/contactRequest.test.ts src/features/contact/components/TurnstileWidget.test.tsx src/features/contact/components/contactFormValidation.test.ts
+npx --no-install vitest run scripts/contactTransport.integration.test.ts scripts/updateContactTlds.test.mjs src/features/contact/components/ContactNotifications.test.tsx
 npm run docs:check
 ```
 

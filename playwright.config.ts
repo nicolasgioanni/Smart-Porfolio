@@ -43,6 +43,16 @@ export default defineConfig({
       grep: /@mobile-(?:video|projects)/,
       testMatch: /(?:research(?:-mobile-video)?|projects)\.spec\.ts/,
       use: { browserName: "webkit", ...devices["iPhone 13"] }
+    },
+    {
+      name: "firefox-critical",
+      testMatch: /critical-quality\.spec\.ts/,
+      use: { ...devices["Desktop Firefox"] }
+    },
+    {
+      name: "webkit-critical",
+      testMatch: /critical-quality\.spec\.ts/,
+      use: { browserName: "webkit", ...devices["iPhone 13"] }
     }
   ]
 });
