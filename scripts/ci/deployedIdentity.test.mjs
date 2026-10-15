@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { approvedPagesOrigin, compareSnapshotDeployment, readDeployedIdentity } from "./deployedIdentity.mjs";
 import { createSnapshot } from "./snapshot.mjs";
 import { repository, workflowPath } from "./plan.mjs";
+import { decideDeployment } from "../checkDeployedContent.mjs";
 
 const environment = { CLOUDFLARE_PAGES_PROJECT_NAME: "smart-portfolio", CLOUDFLARE_PAGES_DOMAIN: "smart-portfolio-bds.pages.dev" };
 const sha = "a".repeat(40), digest = "b".repeat(64);
@@ -11,15 +12,68 @@ const deployed = { schemaVersion: 2, target: "production", contentHash: digest, 
   producer: { kind: "github-actions", runId: "101", runNumber: 10, attempt: 1 } };
 
 describe("deployed input identity", () => {
-  it("observes only reviewed production/preview origins without credentials or redirects", async () => {
+  it("observes only reviewed aliases and exact hosts with one unique metadata query each", async () => {
     expect(approvedPagesOrigin("preview", environment)).toBe("https://develop.smart-portfolio-bds.pages.dev");
     expect(() => approvedPagesOrigin("production", { ...environment, CLOUDFLARE_PAGES_DOMAIN: "substitute.pages.dev" })).toThrow();
-    await expect(readDeployedIdentity("production", { environment, fetchImplementation: async (url, options) => {
-      expect(url).toBe("https://smart-portfolio-bds.pages.dev/content-version.json");
+    const requests = [];
+    const fetchImplementation = async (url, options) => {
+      const request = new URL(url);
+      requests.push(request);
+      expect(request.pathname).toBe("/content-version.json");
+      expect([...request.searchParams.keys()]).toEqual(["ci"]);
+      expect(request.searchParams.get("ci")).toMatch(/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/);
       expect(options.redirect).toBe("error");
+      expect(options.headers).toEqual({ "Cache-Control": "no-cache", Pragma: "no-cache" });
       expect(options.headers).not.toHaveProperty("Authorization");
       return Response.json(deployed);
-    } })).resolves.toEqual(deployed);
+    };
+    await expect(readDeployedIdentity("production", { environment, fetchImplementation })).resolves.toEqual(deployed);
+    await expect(readDeployedIdentity("preview", { environment, fetchImplementation })).resolves.toEqual(deployed);
+    await expect(readDeployedIdentity("production", {
+      environment,
+      exactDeployment: "https://0123abcd.smart-portfolio-bds.pages.dev",
+      fetchImplementation
+    })).resolves.toEqual(deployed);
+    expect(requests.map((request) => request.origin)).toEqual([
+      "https://smart-portfolio-bds.pages.dev",
+      "https://develop.smart-portfolio-bds.pages.dev",
+      "https://0123abcd.smart-portfolio-bds.pages.dev"
+    ]);
+    expect(new Set(requests.map((request) => request.searchParams.get("ci"))).size).toBe(3);
+
+    let invalidFetches = 0;
+    for (const exactDeployment of [
+      "https://0123abcd.smart-portfolio-bds.pages.dev?unexpected=query",
+      "https://0123abcd.smart-portfolio-bds.pages.dev#fragment",
+      "https://credential@0123abcd.smart-portfolio-bds.pages.dev",
+      "https://0123abcd.substitute.pages.dev"
+    ]) {
+      await expect(readDeployedIdentity("production", {
+        environment,
+        exactDeployment,
+        fetchImplementation: async () => { invalidFetches += 1; return Response.json(deployed); }
+      })).rejects.toThrow("approved Pages hash host");
+    }
+    expect(invalidFetches).toBe(0);
+  });
+
+  it("does not reuse a cached alias identity for a later observation", async () => {
+    const newer = { ...deployed, producer: { ...deployed.producer, runId: "102", runNumber: 11 } };
+    const responses = new Map();
+    const observedUrls = [];
+    const fetchImplementation = async (url) => {
+      const value = String(url);
+      observedUrls.push(value);
+      if (!responses.has(value)) responses.set(value, Response.json(responses.size === 0 ? deployed : newer));
+      return responses.get(value).clone();
+    };
+
+    await expect(readDeployedIdentity("production", { environment, fetchImplementation })).resolves.toEqual(deployed);
+    await expect(readDeployedIdentity("production", { environment, fetchImplementation })).resolves.toEqual(newer);
+    expect(observedUrls).toHaveLength(2);
+    expect(observedUrls[0]).not.toBe(observedUrls[1]);
+    expect(new URL(observedUrls[0]).origin).toBe("https://smart-portfolio-bds.pages.dev");
+    expect(decideDeployment(deployed, newer)).toEqual({ action: "fail-closed", reason: "candidate-generation-is-older" });
   });
 
   it("distinguishes missing metadata from failed, redirected, oversized or malformed observations", async () => {

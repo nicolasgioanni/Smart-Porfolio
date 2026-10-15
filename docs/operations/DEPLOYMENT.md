@@ -262,7 +262,7 @@ The `contentHash` covers the canonical normalized content subset and excludes vo
 
 The producer identifies the build-and-package job, not the earlier content-preparation job. Release ordering compares `runNumber` and then `attempt`; a local build records `{ "kind": "local", "runId": "local", "runNumber": null, "attempt": null }` and cannot be deployed. The reader accepts existing v1 metadata for migration, but v1 cannot establish a no-op equivalence or producer order. A malformed or ambiguous v2 identity fails closed.
 
-`public/_headers` marks `/content-version.json` as non-cacheable. The comparison request also sends no-cache headers, adds a cache-busting query, treats `404` as no prior deployment, rejects redirects for identity metadata, and fails closed on other inaccessible or malformed responses.
+`public/_headers` marks `/content-version.json` as non-cacheable. Every deployed-identity observation, including an exact deployment host and a stable branch alias, also sends no-cache headers and a unique cache-busting query. It treats `404` as no prior deployment, rejects redirects for identity metadata, and fails closed on other inaccessible or malformed responses.
 
 ### Bounded sealed-release package
 

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { parseContentVersion } from "../writeContentVersion.mjs";
 import { candidateTarget, parseCandidate, recordDigest } from "./plan.mjs";
 import { parseSnapshot } from "./snapshot.mjs";
@@ -15,6 +16,12 @@ export function approvedPagesOrigin(target, environment = process.env) {
   return `https://${target === "preview" ? "develop." : ""}${environment.CLOUDFLARE_PAGES_DOMAIN}`;
 }
 
+function deployedIdentityUrl(origin) {
+  const url = new URL("/content-version.json", origin);
+  url.searchParams.set("ci", randomUUID());
+  return url;
+}
+
 export async function readDeployedIdentity(target, { environment = process.env, fetchImplementation = fetch,
   signal = AbortSignal.timeout(20_000), exactDeployment = null } = {}) {
   const alias = approvedPagesOrigin(target, environment);
@@ -28,7 +35,7 @@ export async function readDeployedIdentity(target, { environment = process.env, 
   });
   let reader;
   try {
-    const response = await Promise.race([Promise.resolve().then(() => fetchImplementation(`${origin}/content-version.json`, {
+    const response = await Promise.race([Promise.resolve().then(() => fetchImplementation(deployedIdentityUrl(origin), {
       headers: { "Cache-Control": "no-cache", Pragma: "no-cache" }, redirect: "error", signal
     })), expired]);
     if (response.status === 404) { void response.body?.cancel().catch(() => {}); return null; }
