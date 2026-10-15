@@ -83,9 +83,20 @@ describe("contact D1 configuration", () => {
 
   it("migrates the selected database before uploading the Pages deployment", async () => {
     const workflow = await readFile(path.join(projectRoot, ".github", "workflows", "ci.yml"), "utf8");
+    const verifyStart = workflow.indexOf("  verify:\n");
+    const deployStart = workflow.indexOf("  deploy:\n");
+    const heartbeatStart = workflow.indexOf("  heartbeat:\n");
+    const verifyGate = workflow.slice(verifyStart, deployStart);
+    const deployJob = workflow.slice(deployStart, heartbeatStart);
     const migrationStep = workflow.indexOf("Validate the environment-specific D1 binding and apply migrations");
     const deployStep = workflow.indexOf("Deploy the verified export and Pages Function with pinned Wrangler");
 
+    expect(verifyStart).toBeGreaterThan(-1);
+    expect(deployStart).toBeGreaterThan(verifyStart);
+    expect(heartbeatStart).toBeGreaterThan(deployStart);
+    expect(verifyGate).toContain("application-validation");
+    expect(verifyGate).toContain("node scripts/security/ciGate.mjs");
+    expect(deployJob).toContain("needs: verify");
     expect(migrationStep).toBeGreaterThan(-1);
     expect(deployStep).toBeGreaterThan(migrationStep);
     expect(workflow).toContain(

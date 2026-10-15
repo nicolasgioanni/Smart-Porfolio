@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 const skeletonStyles = readFileSync(path.join(process.cwd(), "src", "styles", "skeletons.css"), "utf8");
 const motionStyles = readFileSync(path.join(process.cwd(), "src", "styles", "motion.css"), "utf8");
-const experienceStyles = readFileSync(path.join(process.cwd(), "src", "styles", "experience.css"), "utf8");
+const experienceStyles = readFileSync(path.join(process.cwd(), "src", "features", "experience", "experience.css"), "utf8");
 const researchStyles = readFileSync(path.join(process.cwd(), "src", "features", "research", "research.css"), "utf8");
 
 describe("skeleton style contracts", () => {

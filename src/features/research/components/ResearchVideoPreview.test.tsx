@@ -191,13 +191,12 @@ describe("ResearchVideoPreview", () => {
     const fullscreenButton = screen.getByRole("button", { name: "Enter fullscreen" });
     fireEvent.click(screen.getByRole("button", { name: "Open video settings" }));
 
-    expect(fullscreenDialog).toHaveAttribute("role", "presentation");
-    expect(fullscreenDialog).not.toHaveAttribute("aria-label");
+    expect(fullscreenDialog).not.toHaveAttribute("role");
+    expect(fullscreenDialog).toHaveAttribute("aria-label", "Example Research supplementary workflow video inline player");
     expect(fullscreenDialog).not.toHaveAttribute("aria-modal");
     expect(fullscreenDialog).not.toHaveAttribute("tabindex");
     expect(fullscreenDialog).not.toHaveAttribute("open");
     expect(fullscreenDialog).toContainElement(player);
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 
     Object.defineProperty(playerRoot, "requestFullscreen", { configurable: true, value: undefined });
     fireEvent.click(fullscreenButton);
@@ -214,7 +213,7 @@ describe("ResearchVideoPreview", () => {
     fireEvent.click(within(firstFallbackDialog).getAllByRole("button", { name: "Exit fullscreen" })[1]!);
     act(() => vi.advanceTimersByTime(180));
 
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(fullscreenDialog).not.toHaveAttribute("open");
     expect(fullscreenButton).toHaveFocus();
     expect(fullscreenDialog).toContainElement(player);
 
@@ -230,7 +229,7 @@ describe("ResearchVideoPreview", () => {
     fireEvent.keyDown(document, { key: "Escape" });
     act(() => vi.advanceTimersByTime(180));
 
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(fullscreenDialog).not.toHaveAttribute("open");
     expect(fullscreenButton).toHaveFocus();
   });
 
@@ -252,7 +251,9 @@ describe("ResearchVideoPreview", () => {
 
     const fullscreenDialog = container.querySelector<HTMLDialogElement>("[data-testid='research-video-fullscreen']")!;
     expect(fullscreenDialog).not.toHaveAttribute("open");
-    expect(fullscreenDialog).toHaveAttribute("role", "presentation");
+    expect(fullscreenDialog).not.toHaveAttribute("role");
+    expect(fullscreenDialog).toHaveAttribute("aria-label", "Example Research supplementary workflow video inline player");
+    expect(fullscreenDialog).not.toHaveAttribute("aria-modal");
     expect(fullscreenDialog).toContainElement(player);
     expect(player).toBe(getInlineVideo(container));
     expect(screen.getByRole("status", { hidden: true })).toHaveTextContent("Fullscreen is unavailable in this browser.");
@@ -301,7 +302,7 @@ describe("ResearchVideoPreview", () => {
     fireEvent.click(persistentExit);
     act(() => vi.advanceTimersByTime(180));
 
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(fullscreenDialog).not.toHaveAttribute("open");
     expect(persistentExit).toHaveAttribute("hidden");
     expect(screen.queryAllByRole("button", { name: "Exit fullscreen" })).toHaveLength(0);
     expect(fullscreenButton).toHaveFocus();
@@ -502,6 +503,40 @@ describe("ResearchVideoPreview", () => {
     expect(screen.getByTestId("research-video-captions")).toBeInTheDocument();
     fireEvent(player, new Event("enterpictureinpicture"));
     expect(screen.queryByTestId("research-video-captions")).not.toBeInTheDocument();
+  });
+
+  it("keeps caption text while excluding complete and incomplete cue markup", async () => {
+    const captionTrack = new EventTarget() as EventTarget & { activeCues: Array<{ text: string }>; mode: TextTrackMode };
+    captionTrack.activeCues = [{ text: "<b>Visible</b> caption <script" }];
+    captionTrack.mode = "showing";
+    vi.spyOn(HTMLMediaElement.prototype, "textTracks", "get").mockReturnValue([captionTrack] as unknown as TextTrackList);
+
+    render(<ResearchVideoPreview poster={graphicalAbstract} title="Example Research" video={video} />);
+
+    await waitFor(() => expect(screen.getByTestId("research-video-captions")).toHaveTextContent("Visible caption"));
+    expect(screen.getByTestId("research-video-captions")).not.toHaveTextContent("script");
+  });
+
+  it("retains ordinary caption text that contains a less-than character", async () => {
+    const captionTrack = new EventTarget() as EventTarget & { activeCues: Array<{ text: string }>; mode: TextTrackMode };
+    captionTrack.activeCues = [{ text: "3 < 5." }];
+    captionTrack.mode = "showing";
+    vi.spyOn(HTMLMediaElement.prototype, "textTracks", "get").mockReturnValue([captionTrack] as unknown as TextTrackList);
+
+    render(<ResearchVideoPreview poster={graphicalAbstract} title="Example Research" video={video} />);
+
+    await waitFor(() => expect(screen.getByTestId("research-video-captions")).toHaveTextContent("3 < 5."));
+  });
+
+  it("removes WebVTT timestamps while retaining the surrounding caption text", async () => {
+    const captionTrack = new EventTarget() as EventTarget & { activeCues: Array<{ text: string }>; mode: TextTrackMode };
+    captionTrack.activeCues = [{ text: "A <00:00:01.000> B" }];
+    captionTrack.mode = "showing";
+    vi.spyOn(HTMLMediaElement.prototype, "textTracks", "get").mockReturnValue([captionTrack] as unknown as TextTrackList);
+
+    render(<ResearchVideoPreview poster={graphicalAbstract} title="Example Research" video={video} />);
+
+    await waitFor(() => expect(screen.getByTestId("research-video-captions")).toHaveTextContent("A B"));
   });
 
   it("keeps native captions active until both picture-in-picture and native fullscreen exit", async () => {

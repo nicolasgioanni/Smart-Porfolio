@@ -13,7 +13,7 @@ vi.mock("next/link", () => ({
 
 const turnstileHarness = vi.hoisted(() => ({ resets: 0, tokenIndex: 0 }));
 
-vi.mock("@/components/contact/TurnstileWidget", async () => {
+vi.mock("@/features/contact/components/TurnstileWidget", async () => {
   const React = await vi.importActual<typeof import("react")>("react");
   type MockStatus = "error" | "expired" | "loading" | "ready" | "unavailable";
   type MockProps = {

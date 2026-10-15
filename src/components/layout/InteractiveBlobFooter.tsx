@@ -22,8 +22,6 @@ type InteractiveBlobFooterProps = {
 type ScrollDirection = "down" | "idle" | "up";
 
 const DOWNWARD_SCROLL_KEYS = new Set([" ", "ArrowDown", "End", "PageDown", "Spacebar"]);
-const initialFooterInertScript =
-  'document.querySelector(".blob-footer__details[aria-hidden=\\"true\\"]")?.setAttribute("inert", "");';
 
 type RunwayPosition = {
   bottom: number;
@@ -49,13 +47,17 @@ function isEditableOrInteractiveTarget(target: EventTarget | null): boolean {
   );
 }
 
-function InitialFooterInertScript() {
+function FooterNoScriptNavigation({
+  noticeLinks,
+  resourceLinks
+}: Pick<InteractiveBlobFooterProps, "noticeLinks" | "resourceLinks">) {
   return (
-    <script
-      dangerouslySetInnerHTML={{ __html: initialFooterInertScript }}
-      suppressHydrationWarning
-      type={typeof window === "undefined" ? "text/javascript" : "text/plain"}
-    />
+    <noscript>
+      <div className="blob-footer__noscript">
+        <FooterLinkList label="Footer notices" links={noticeLinks} />
+        <FooterLinkList label="Footer resources" links={resourceLinks} />
+      </div>
+    </noscript>
   );
 }
 
@@ -102,14 +104,6 @@ function RouteScopedInteractiveBlobFooter({
   const manualCollapseSuppressedRef = useRef(false);
   const pendingCollapseRef = useRef(false);
   const scrollActivationArmedRef = useRef(false);
-
-  const setDetailsRef = useCallback(
-    (details: HTMLDivElement | null) => {
-      detailsRef.current = details;
-      details?.toggleAttribute("inert", !expanded);
-    },
-    [expanded]
-  );
 
   const expandNow = useCallback(() => {
     pendingCollapseRef.current = false;
@@ -291,8 +285,8 @@ function RouteScopedInteractiveBlobFooter({
           aria-hidden={!expanded}
           className="blob-footer__details"
           id={detailsId}
-          ref={setDetailsRef}
-          suppressHydrationWarning
+          inert={!expanded}
+          ref={detailsRef}
         >
           <div className="blob-footer__details-inner">
             <div className="blob-footer__details-grid">
@@ -308,7 +302,7 @@ function RouteScopedInteractiveBlobFooter({
             <p className="blob-footer__closing">{closingStatement}</p>
           </div>
         </div>
-        <InitialFooterInertScript />
+        <FooterNoScriptNavigation noticeLinks={noticeLinks} resourceLinks={resourceLinks} />
       </GlassBlob>
     </footer>
   );

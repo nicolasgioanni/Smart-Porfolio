@@ -19,35 +19,69 @@ permissions:
   contents: read
 
 jobs:
-  verify:
-    name: verify
+  candidate-admission:
+    name: candidate-admission
     runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      candidate_sha: ${{ steps.admission.outputs.candidate_sha }}
+    steps:
+      - name: Reject ineligible events and untrusted workflow references before checkout
+        id: admission
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_REF: ${{ github.ref }}
+          EVENT_SHA: ${{ github.sha }}
+          EVENT_BASE_REF: ${{ github.base_ref }}
+          WORKFLOW_REF: ${{ github.workflow_ref }}
+          WORKFLOW_SHA: ${{ github.workflow_sha }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          [[ "$REPOSITORY" == "nicolasgioanni/Smart-Porfolio" ]] || { echo "Unsupported repository."; exit 1; }
+          [[ "$EVENT_SHA" =~ ^[a-f0-9]{40}$ ]] || { echo "Candidate SHA is invalid."; exit 1; }
+          [[ "$WORKFLOW_SHA" =~ ^[a-f0-9]{40}$ ]] || { echo "Workflow SHA is invalid."; exit 1; }
+          expected_workflow_ref="$REPOSITORY/.github/workflows/ci.yml@$EVENT_REF"
+          [[ "$WORKFLOW_REF" == "$expected_workflow_ref" ]] || { echo "Workflow reference does not match the eligible event ref."; exit 1; }
+          case "$EVENT_NAME" in
+            pull_request)
+              [[ "$EVENT_BASE_REF" == "main" || "$EVENT_BASE_REF" == "develop" ]] || { echo "Pull requests must target main or develop."; exit 1; }
+              [[ "$EVENT_REF" =~ ^refs/pull/[1-9][0-9]*/merge$ ]] || { echo "Pull request candidate ref is invalid."; exit 1; }
+              ;;
+            push)
+              [[ "$EVENT_REF" == "refs/heads/main" || "$EVENT_REF" == "refs/heads/develop" ]] || { echo "Pushes must target main or develop."; exit 1; }
+              [[ "$WORKFLOW_SHA" == "$EVENT_SHA" ]] || { echo "Trusted workflow revision does not match the candidate."; exit 1; }
+              ;;
+            schedule|workflow_dispatch)
+              [[ "$EVENT_REF" == "refs/heads/main" ]] || { echo "Scheduled and manual candidates must use main."; exit 1; }
+              [[ "$WORKFLOW_SHA" == "$EVENT_SHA" ]] || { echo "Trusted workflow revision does not match the candidate."; exit 1; }
+              ;;
+            *)
+              echo "Unsupported CI event."
+              exit 1
+              ;;
+          esac
+          echo "candidate_sha=$EVENT_SHA" >> "$GITHUB_OUTPUT"
+
+  candidate-precheck:
+    name: candidate-precheck
+    needs: candidate-admission
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
     outputs:
       candidate_branch: ${{ steps.candidate.outputs.candidate_branch }}
       candidate_sha: ${{ steps.candidate.outputs.candidate_sha }}
-      content_hash: ${{ steps.content.outputs.content_hash }}
-      deploy_target: ${{ steps.decision.outputs.deploy_target }}
-      pages_domain: ${{ steps.pages.outputs.pages_domain }}
-      pages_project_name: ${{ steps.pages.outputs.pages_project_name }}
-      should_deploy: ${{ steps.decision.outputs.should_deploy }}
-      verification_tier: ${{ steps.decision.outputs.verification_tier }}
+      is_latest: ${{ steps.candidate.outputs.is_latest }}
     steps:
-      - name: Check out the exact candidate
+      - name: Check out the selected immutable candidate without credentials
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
-          ref: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'main' || github.sha }}
+          ref: ${{ needs.candidate-admission.outputs.candidate_sha }}
           fetch-depth: 0
+          persist-credentials: false
 
-      - name: Set up Node.js
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Install locked dependencies
-        run: npm ci
-
-      - name: Resolve and check the candidate revision
+      - name: Resolve and check the candidate revision before protected inputs
         id: candidate
         shell: bash
         run: |
@@ -75,8 +109,38 @@ jobs:
             echo "is_latest=true" >> "$GITHUB_OUTPUT"
           else
             echo "is_latest=false" >> "$GITHUB_OUTPUT"
-            echo "Skipping stale $candidate_branch revision $candidate_sha; the branch is now $latest_sha."
+            echo "Skipping protected inputs for stale $candidate_branch revision $candidate_sha."
           fi
+
+  application-validation:
+    name: application-validation
+    needs: candidate-precheck
+    runs-on: ubuntu-24.04
+    outputs:
+      candidate_branch: ${{ needs.candidate-precheck.outputs.candidate_branch }}
+      candidate_sha: ${{ needs.candidate-precheck.outputs.candidate_sha }}
+      content_hash: ${{ steps.content.outputs.content_hash }}
+      deploy_target: ${{ steps.decision.outputs.deploy_target }}
+      pages_domain: ${{ steps.pages.outputs.pages_domain }}
+      pages_project_name: ${{ steps.pages.outputs.pages_project_name }}
+      should_deploy: ${{ steps.decision.outputs.should_deploy }}
+      verification_tier: ${{ steps.decision.outputs.verification_tier }}
+    steps:
+      - name: Check out the exact candidate
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ needs.candidate-precheck.outputs.candidate_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
 
       - name: Generate validated local template content for pull requests
         if: github.event_name == 'pull_request'
@@ -87,7 +151,7 @@ jobs:
 
       - name: Validate the immutable Cloudflare Pages target
         id: pages
-        if: github.event_name != 'pull_request' && steps.candidate.outputs.is_latest == 'true'
+        if: github.event_name != 'pull_request' && needs.candidate-precheck.outputs.is_latest == 'true'
         env:
           CLOUDFLARE_PAGES_DOMAIN: ${{ vars.CLOUDFLARE_PAGES_DOMAIN }}
           CLOUDFLARE_PAGES_PROJECT_NAME: ${{ vars.CLOUDFLARE_PAGES_PROJECT_NAME }}
@@ -108,7 +172,7 @@ jobs:
           echo "pages_project_name=$CLOUDFLARE_PAGES_PROJECT_NAME" >> "$GITHUB_OUTPUT"
 
       - name: Fetch and generate the strict public workbook snapshot
-        if: github.event_name != 'pull_request' && steps.candidate.outputs.is_latest == 'true'
+        if: github.event_name != 'pull_request' && needs.candidate-precheck.outputs.is_latest == 'true'
         env:
           PORTFOLIO_WORKBOOK_URL: ${{ secrets.PORTFOLIO_WORKBOOK_URL }}
           PORTFOLIO_REQUIRE_REMOTE_CONTENT: "true"
@@ -116,7 +180,7 @@ jobs:
 
       - name: Read the validated workbook content hash
         id: content
-        if: github.event_name != 'pull_request' && steps.candidate.outputs.is_latest == 'true'
+        if: github.event_name != 'pull_request' && needs.candidate-precheck.outputs.is_latest == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -130,13 +194,13 @@ jobs:
       - name: Compare the validated snapshot with production
         id: deployed_content
         if: >-
-          steps.candidate.outputs.is_latest == 'true' &&
+          needs.candidate-precheck.outputs.is_latest == 'true' &&
           (github.event_name == 'schedule' ||
           (github.event_name == 'workflow_dispatch' && inputs.force_deploy == false))
         env:
           CLOUDFLARE_PAGES_DOMAIN: ${{ steps.pages.outputs.pages_domain }}
           CONTENT_HASH: ${{ steps.content.outputs.content_hash }}
-          CANDIDATE_SHA: ${{ steps.candidate.outputs.candidate_sha }}
+          CANDIDATE_SHA: ${{ needs.candidate-precheck.outputs.candidate_sha }}
         shell: bash
         run: |
           set -euo pipefail
@@ -151,7 +215,7 @@ jobs:
         id: decision
         shell: bash
         env:
-          CANDIDATE_IS_LATEST: ${{ steps.candidate.outputs.is_latest }}
+          CANDIDATE_IS_LATEST: ${{ needs.candidate-precheck.outputs.is_latest }}
           DEPLOYED_CONTENT_MATCHES: ${{ steps.deployed_content.outputs.deployed_content_matches }}
           DEPLOYED_COMMIT_MATCHES: ${{ steps.deployed_content.outputs.deployed_commit_matches }}
           FORCE_DEPLOY: ${{ inputs.force_deploy }}
@@ -243,27 +307,27 @@ jobs:
       - name: Build the pull-request snapshot without remote credentials
         if: steps.decision.outputs.should_verify == 'true' && steps.decision.outputs.deploy_target == 'none'
         env:
-          DEPLOYMENT_COMMIT_SHA: ${{ steps.candidate.outputs.candidate_sha }}
+          DEPLOYMENT_COMMIT_SHA: ${{ needs.candidate-precheck.outputs.candidate_sha }}
         run: npm run build:generated
 
       - name: Build the exact production snapshot
         if: steps.decision.outputs.should_verify == 'true' && steps.decision.outputs.deploy_target == 'production'
         env:
-          DEPLOYMENT_COMMIT_SHA: ${{ steps.candidate.outputs.candidate_sha }}
+          DEPLOYMENT_COMMIT_SHA: ${{ needs.candidate-precheck.outputs.candidate_sha }}
           NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
         run: npm run build:generated
 
       - name: Build the exact develop preview snapshot
         if: steps.decision.outputs.should_verify == 'true' && steps.decision.outputs.deploy_target == 'preview'
         env:
-          DEPLOYMENT_COMMIT_SHA: ${{ steps.candidate.outputs.candidate_sha }}
+          DEPLOYMENT_COMMIT_SHA: ${{ needs.candidate-precheck.outputs.candidate_sha }}
           NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY }}
         run: npm run build:generated
 
       - name: Create and verify the artifact integrity manifest
         if: steps.decision.outputs.should_deploy == 'true'
         env:
-          CANDIDATE_SHA: ${{ steps.candidate.outputs.candidate_sha }}
+          CANDIDATE_SHA: ${{ needs.candidate-precheck.outputs.candidate_sha }}
         run: |
           node scripts/artifactIntegrity.mjs create out
           node scripts/artifactIntegrity.mjs verify out "$CANDIDATE_SHA"
@@ -277,6 +341,187 @@ jobs:
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 1
+
+  security-tools:
+    name: security-tools
+    needs: candidate-precheck
+    if: needs.candidate-precheck.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out the immutable candidate without credentials
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ needs.candidate-precheck.outputs.candidate_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: 22
+
+      - name: Install checksum-verified actionlint
+        shell: bash
+        run: |
+          set -euo pipefail
+          tool_root="$RUNNER_TEMP/smart-portfolio-tools"
+          mkdir -p "$tool_root"
+          node scripts/security/installPinnedTool.mjs actionlint "$tool_root" > /dev/null
+
+      - name: Validate tracked GitHub Actions workflows without publishing diagnostics
+        shell: bash
+        run: |
+          set -euo pipefail
+          report_root="$(mktemp -d "$RUNNER_TEMP/actionlint.XXXXXX")"
+          if ! "$RUNNER_TEMP/smart-portfolio-tools/actionlint/actionlint" \
+            -shellcheck '' \
+            -pyflakes '' > "$report_root/stdout" 2> "$report_root/stderr"; then
+            echo "GitHub Actions syntax validation failed without publishing diagnostics."
+            exit 1
+          fi
+
+  security-scans:
+    name: security-scans
+    needs: candidate-precheck
+    if: needs.candidate-precheck.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out the complete immutable history without credentials
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ needs.candidate-precheck.outputs.candidate_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: 22
+
+      - name: Install checksum-verified credential-free scanners
+        shell: bash
+        run: |
+          set -euo pipefail
+          tool_root="$RUNNER_TEMP/smart-portfolio-tools"
+          mkdir -p "$tool_root"
+          node scripts/security/installPinnedTool.mjs gitleaks "$tool_root" > /dev/null
+          node scripts/security/installPinnedTool.mjs zizmor "$tool_root" > /dev/null
+
+      - name: Scan Git history and workflow semantics without publishing scanner details
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/security/securityScans.mjs \
+            --gitleaks "$RUNNER_TEMP/smart-portfolio-tools/gitleaks/gitleaks" \
+            --gitleaks-mode git \
+            --target . \
+            --zizmor "$RUNNER_TEMP/smart-portfolio-tools/zizmor/zizmor"
+
+      - name: Audit locked dependencies independently of application content
+        run: npm run audit:check
+
+  codeql:
+    name: codeql
+    needs: candidate-precheck
+    if: needs.candidate-precheck.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Check out the immutable candidate without credentials
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ needs.candidate-precheck.outputs.candidate_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Initialize CodeQL security-extended analysis
+        uses: github/codeql-action/init@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          languages: javascript-typescript
+          build-mode: none
+          queries: security-extended
+
+      - name: Analyze CodeQL SARIF without upload
+        id: analyze
+        uses: github/codeql-action/analyze@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          category: /language:javascript-typescript
+          output: sarif-results
+          upload: never
+
+      - name: Fail closed for malformed SARIF, scanner errors, or security findings
+        shell: bash
+        env:
+          SARIF_OUTPUT: ${{ steps.analyze.outputs.sarif-output }}
+        run: |
+          set -euo pipefail
+          mapfile -t sarif_files < <(find "$SARIF_OUTPUT" -maxdepth 1 -type f -name '*.sarif' -print | sort)
+          if [[ "${#sarif_files[@]}" != 1 ]]; then
+            echo "CodeQL SARIF validation failed without publishing scanner details."
+            exit 1
+          fi
+          node scripts/security/checkSarif.mjs "${sarif_files[0]}"
+
+      - name: Upload passed CodeQL SARIF
+        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          sarif_file: ${{ steps.analyze.outputs.sarif-output }}
+          category: /language:javascript-typescript
+
+  dependency-review:
+    name: dependency-review
+    needs: candidate-precheck
+    if: github.event_name == 'pull_request' && needs.candidate-precheck.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Block newly introduced high-severity dependency vulnerabilities
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: never
+
+  verify:
+    name: verify
+    if: always()
+    needs: [candidate-admission, candidate-precheck, application-validation, security-tools, security-scans, codeql, dependency-review]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      candidate_branch: ${{ needs.application-validation.outputs.candidate_branch }}
+      candidate_sha: ${{ needs.application-validation.outputs.candidate_sha }}
+      content_hash: ${{ needs.application-validation.outputs.content_hash }}
+      deploy_target: ${{ needs.application-validation.outputs.deploy_target }}
+      pages_domain: ${{ needs.application-validation.outputs.pages_domain }}
+      pages_project_name: ${{ needs.application-validation.outputs.pages_project_name }}
+      should_deploy: ${{ needs.application-validation.outputs.should_deploy }}
+      verification_tier: ${{ needs.application-validation.outputs.verification_tier }}
+    steps:
+      - name: Check out the immutable candidate for the CI gate
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ needs.candidate-precheck.outputs.candidate_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: 22
+
+      - name: Require successful application validation and every applicable security gate
+        env:
+          CI_EVENT_NAME: ${{ github.event_name }}
+          CI_GATE_RESULTS: ${{ toJSON(needs) }}
+        run: node scripts/security/ciGate.mjs --event "$CI_EVENT_NAME" --results "$CI_GATE_RESULTS"
 
   deploy:
     name: deploy-${{ needs.verify.outputs.deploy_target }}
@@ -294,6 +539,7 @@ jobs:
         with:
           ref: ${{ needs.verify.outputs.candidate_sha }}
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up Node.js
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
@@ -408,9 +654,12 @@ jobs:
         with:
           ref: develop
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Refresh the existing develop branch after 30 inactive days
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           heartbeat_path=".github/schedule-heartbeat"
@@ -489,4 +738,19 @@ jobs:
             exit 1
           fi
 
-          git push origin "HEAD:refs/heads/develop"
+          askpass_path="$(mktemp "$RUNNER_TEMP/smart-portfolio-heartbeat-askpass.XXXXXX")"
+          cleanup_askpass() { rm -f "$askpass_path"; }
+          trap cleanup_askpass EXIT
+          umask 077
+          cat > "$askpass_path" <<'ASKPASS'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          case "$1" in
+            *Username*) printf '%s\n' 'x-access-token' ;;
+            *Password*) printf '%s\n' "$GH_TOKEN" ;;
+            *) exit 1 ;;
+          esac
+          ASKPASS
+          chmod 700 "$askpass_path"
+          GIT_ASKPASS="$askpass_path" GIT_TERMINAL_PROMPT=0 GCM_INTERACTIVE=Never \
+            git -c credential.helper= push origin "HEAD:refs/heads/develop"
