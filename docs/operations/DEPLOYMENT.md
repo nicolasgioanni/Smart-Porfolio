@@ -36,29 +36,31 @@ The repository cannot verify Cloudflare or GitHub dashboard state. Operators mus
 - Cloudflare runtime secrets and separate D1 bindings exist in the correct production and preview environments.
 - WAF rate limiting covers both contact endpoints, and the selected Cloudflare plan or provider-compatible control preserves the JSON API contract.
 - The tracked [permanent-branch ruleset](../../.github/rulesets/protect-permanent-branches.json) declares one active `protect-permanent-branches` ruleset for exactly `main` and `develop`, with deletion and non-fast-forward protection and no bypass actors. GitHub readback reverified the matching live ruleset on 2026-10-12. The JSON records the configuration but cannot prove or change future live state.
-- A signed-in, read-only GitHub UI inspection on 2026-10-12 confirmed that classic `main` protection requires pull requests and the current `verify` status from GitHub Actions, requires the branch to be current, requires no approvals, enforces the policy for administrators, and disallows force pushes and deletion. This point-in-time observation does not establish future live configuration. Do not replace or weaken the classic policy; the limited permanent-branch ruleset permits the guarded ordinary `develop` heartbeat. Recheck both external controls after any GitHub policy change.
+- Current GitHub branch-response evidence establishes that `main` is protected and has a `verify` requirement from GitHub Actions app `15368`. A signed-in, read-only settings inspection on 2026-10-12 confirmed required pull-request changes, up-to-date branches, no required review count, administrator enforcement, and disabled force pushes and deletion. The detailed classic-protection API remained inaccessible; this observation came from the settings UI and changed no controls. Do not replace or weaken the intended classic policy; the limited permanent-branch ruleset permits the guarded ordinary `develop` heartbeat. Re-verify both external controls after any GitHub policy change.
 - Custom-domain bindings, redirects, certificates, and DNS remain healthy.
 
 Provider-dashboard uploads and deploy hooks bypass the repository quality gate and are not part of the supported release path.
 
 ## Trigger and branch behavior
 
-Candidate admission and credential-free precheck precede `application-validation`. Independent source-security jobs run separately from the content decision, then the stable `verify` job aggregates their required outcomes with application validation. Deployment remains conditional on that aggregate, while the heartbeat remains schedule-only.
+`resolve-candidate` admits an eligible event and workflow revision before checkout, then records one immutable candidate. `prepare-content` creates the plan and accepted snapshot. A full plan fans out to application validation; the independent source-security jobs fan out directly from resolution. `verify` accepts only the required successful jobs and their original evidence artifacts. `deploy-<target>` is conditional on that acceptance. The schedule-only `develop-schedule-heartbeat` is independent.
 
-| Event | Candidate | Content source | Verification tier | Deployment |
-| --- | --- | --- | --- | --- |
-| Pull request targeting `main` or `develop` | Event SHA | Checked-in templates | Priority | Never |
-| Push to `develop` | Exact pushed SHA, if still current | One strict workbook snapshot | Full for the latest candidate | `develop` preview |
-| Push to `main` | Exact pushed SHA, if still current | One strict workbook snapshot | Full for the latest candidate | Production |
-| Daily schedule at `17 13 * * *` | Admitted `main` event SHA, if still current | One strict workbook snapshot | Full when the production content hash or commit SHA differs | Production when either differs |
-| Manual dispatch, `force_deploy=true` | Admitted `main` event SHA, if still current | One strict workbook snapshot | Always | Production |
-| Manual dispatch, `force_deploy=false` | Admitted `main` event SHA, if still current | One strict workbook snapshot | When the production content hash or commit SHA differs | Production when either differs |
+| Event | Candidate and content | Application path | Deployment |
+| --- | --- | --- | --- |
+| Pull request targeting `main` or `develop` | Event merge SHA and checked-in templates | Full validation and sealed candidate checks | Never |
+| Push to `develop` | Exact pushed SHA and one strict remote workbook snapshot | Full validation | `develop` preview |
+| Push to `main` | Exact pushed SHA and one strict remote workbook snapshot | Full validation | Production |
+| Daily schedule at `17 13 * * *` | Trusted `main`, one strict remote snapshot, and deployed-identity comparison | Full only when not obsolete or proven unchanged | Production only for a full accepted plan |
+| Manual dispatch, `force_deploy=true` | Trusted `main` and one strict remote snapshot | Full validation | Production after acceptance |
+| Manual dispatch, `force_deploy=false` | Trusted `main`, one strict remote snapshot, and deployed-identity comparison | Full only when not proven unchanged | Production only for a full accepted plan |
 
 `force_deploy` is a required boolean input and defaults to `true`. It bypasses only the exact-candidate no-op optimization. It does not bypass content validation, documentation validation, lint, typecheck, tests, build, artifact verification, current-branch checks, Wrangler, or post-deployment smoke checks.
 
-Scheduled candidates and manual dispatches are admitted only from `refs/heads/main`. In the Actions interface, select `main`; candidate admission rejects another workflow reference and requires matching event and workflow SHAs. The run uses that exact admitted `main` event candidate, then stale checking decides whether it remains eligible. Push candidates use the pushed branch. Pull requests set no deployment branch and build a verification-only template snapshot.
+Scheduled and manual runs explicitly execute the trusted `main` workflow. Pushes use `main` or `develop`; pull requests use the GitHub merge candidate and never receive workbook or Cloudflare deployment credentials. A stale permanent-branch candidate becomes an explicit obsolete plan. A scheduled or ordinary manual candidate is unchanged only when a validated deployable-v2 identity has the same content, source, target, public-build inputs, and GitHub Actions producer kind. A missing identity (`404`), legacy v1, or valid but non-equivalent v2 identity selects full validation. A malformed, failed, any other non-200 response, or unavailable observation fails closed. Producer ordering protects the later serialized deployment decision and does not make a current run ineligible for this comparison.
 
-For any non-PR candidate, `candidate-precheck` fetches the current remote branch tip and compares it with the checked-out SHA before protected inputs. A stale candidate produces no build artifact or deployment. The deploy job repeats that branch-tip comparison immediately before Wrangler runs.
+Every full plan runs `quality`, `unit-integration`, two Chromium functional shards, Linux visual regression, Firefox critical, WebKit critical, and WebKit mobile Research/Projects coverage, `build-and-package`, and `export-check` from the same restored snapshot. `security-tools`, `security-scans`, `codeql`, and `infrastructure` run for every accepted candidate, including obsolete and unchanged plans; `dependency-review` is also required for pull requests. All source-security jobs write independent source receipts, and `verify` reads their exact producer artifacts rather than inferring success from job names.
+
+The workflow uses Node `22.23.3`, Next `16.4.0`, Wrangler `4.148.0`, and the pinned Miniflare pair in the lockfile. The security path checks workflows with checksum-verified actionlint, scans complete Git history with checksum-verified Gitleaks and Zizmor, and scans the exact sealed full-plan release directory with the same pinned Gitleaks binary before it can upload. It runs JavaScript/TypeScript CodeQL `security-extended` in `build-mode: none`, checks SARIF fail-closed, and uses GitHub dependency review on pull requests. These repository checks do not prove that an external environment, protection rule, or provider setting is enabled.
 
 ## Permissions and credentials
 
@@ -176,7 +178,7 @@ Do not change the deployment account or public identity as an unreviewed dashboa
 1. Complete the matching setup path above and confirm the configuration change passes a pull-request check. Pull requests are verification-only and never deploy.
 2. Push the reviewed change to `develop` to run full verification and deploy the stable preview. Complete the preview checks in [Operations](OPERATIONS.md#preview-a-branch-change).
 3. Merge the approved change into `main` to run full verification and deploy production. The workflow checks the latest `main` candidate again immediately before Wrangler uploads.
-4. Optional, after a reviewed commit is already on `main`: for a first deployment, an intentional rebuild, or a retry after correcting external configuration, use **Actions → CI → Run workflow**, select `main`, and set `force_deploy=true`. Candidate admission rejects a non-`main` workflow reference and binds the run to the exact admitted `main` event SHA; stale checking must still pass. Forced dispatch then runs the full verification, exact-artifact, migration, deployment, and smoke-test path.
+4. Optional, after a reviewed commit is already on `main`: for a first deployment, an intentional rebuild, or a retry after correcting external configuration, use **Actions → CI → Run workflow**, select `main`, and set `force_deploy=true`. The run uses the exact admitted `main` event candidate; stale checking must still pass. Forced dispatch then runs the full verification, exact-artifact, migration, deployment, and smoke-test path.
 5. Use `force_deploy=false` only when a content-hash and commit-SHA no-op is acceptable. Follow [Operations](OPERATIONS.md) for the ongoing manual release, verification, monitoring, and rollback procedures.
 
 ## Strict content input
@@ -193,40 +195,31 @@ See [Content Pipeline](../content/CONTENT_PIPELINE.md) and [Content Sheet Schema
 
 ```mermaid
 flowchart TD
-    A[Admit exact candidate SHA] --> B[Fetch one workbook snapshot with bounded retry]
-    A --> S[Run independent source-security checks]
-    B --> C[Validate and generate JSON]
-    C --> D[Run quality gates]
-    D --> E[Build from generated JSON]
-    E --> F[Write content version]
-    F --> G[Create and verify artifact manifest]
-    G --> H[Upload artifact]
-    H --> V[Aggregate application and security results]
-    S --> V
-    V --> I[Verify downloaded artifact]
-    I --> J[Recheck branch SHA]
-    J --> K[Validate D1 target]
-    K --> L[Apply D1 migrations]
-    L --> M[Deploy with Wrangler]
-    M --> N[Smoke test stable Pages alias]
+    A[Resolve accepted candidate] --> B[Prepare one snapshot and plan]
+    A --> S[Independent source-security receipts]
+    B --> C[Restore snapshot in every full validator]
+    C --> D[Quality, unit, browser, sealed build and export receipts]
+    S --> G[Verify exact jobs and producer artifacts]
+    D --> G
+    G --> H[Restore and verify sealed release]
+    H --> I[Create archive provenance and SBOM attestations]
+    I --> J[Validate sealed runtime configuration]
+    J --> K[Read-only Pages project preflight]
+    K --> L[Cryptographically verify provenance and SBOM]
+    L --> M[Check branch freshness and apply selected D1 migrations]
+    M --> N[Recheck freshness and deploy with Wrangler]
+    N --> O[Smoke unique deployment, then stable target]
 ```
 
-`npm run build:generated` invokes Next.js, whose local build-completion adapter normalizes any Windows-emitted nested segment-cache filenames to Next's flat static-export URL layout, and then writes the content version without running the `prebuild` content generator. The normalization is a no-op on the already-flat Linux output and fails on malformed trees or collisions. This keeps generation at one accepted workbook snapshot even if its download needs the single bounded retry. The deploy job does not rebuild or download the workbook.
+The exact job graph, receipt contracts, and hosted-evidence limits are maintained in [CI input and evidence contracts](../quality/CI_CONTRACTS.md). `npm run build:generated` invokes Next.js, whose local build-completion adapter normalizes any Windows-emitted nested segment-cache filenames to Next's flat static-export URL layout, and then writes the content version without running the `prebuild` content generator. The normalization is a no-op on the already-flat Linux output and fails on malformed trees or collisions. This keeps generation at one accepted workbook snapshot even if its download needs the single bounded retry. The deploy job does not rebuild or download the workbook.
 
-`application-validation` always runs documentation integrity, ESLint with zero warnings, and TypeScript type checking for a candidate selected for application verification. Its remaining checks depend on the selected tier. Independent source-security jobs run separately, and `verify` requires their explicit applicable successes before artifact metadata can reach deployment:
+`quality` runs documentation validation, ESLint with zero warnings, and strict TypeScript checking. The independent `security-scans` job runs the dependency audit for every plan, including no-ops. `unit-integration` runs the complete Vitest suite. Browser discovery creates one complete identity set; its two Chromium functional shards, the separate visual selection, and Firefox critical, WebKit critical, and WebKit mobile Research/Projects selections must cover their exact assignments. `build-and-package` builds once from the accepted bytes, compiles Functions, creates an artifact manifest and CycloneDX SBOM, then seals the release. It scans that exact sealed directory with pinned Gitleaks before uploading either its scan receipt or release artifact; the aggregate requires the distinct scan receipt bound to the sealed manifest. `export-check` restores that same sealed package and validates static output and compiled Pages runtime. Pull-request verification is deliberately deployment-free, but it uses this complete application path rather than a reduced priority tier.
 
-| Candidate | Unit and contract checks | Browser checks | Build |
-| --- | --- | --- | --- |
-| Pull request to `main` or `develop` | `npm run test:priority` | Install Chromium, then `npm run test:e2e:priority` and the Linux skeleton visual regression | `npm run build:generated` from local-template content |
-| Latest `develop` or `main` push, or a manual or scheduled deployment that is not a no-op | `npm run test` | Install Chromium, then `npm run test:e2e:full` | `npm run build:generated` from the accepted strict workbook snapshot |
+Consumers restore the original snapshot artifact by immutable same-run ID, provider digest, role, record digest, and producer identity. They do not regenerate content. A consumer rerun continues to use the original producer; a regenerated snapshot, missing or expired artifact, changed lockfile or public-build input, or changed restored bytes invalidates affected receipts and requires a full affected rerun.
 
-Pull-request verification is deliberately deployment-free. A full candidate creates an artifact integrity manifest only after the full checks and exact build succeed; the deploy job revalidates that downloaded artifact before running Wrangler.
+For production and preview builds, `DEPLOYMENT_COMMIT_SHA` binds deployment metadata to the candidate. Each build selects only its effective production or preview browser Turnstile key; preview maps its optional key into `NEXT_PUBLIC_TURNSTILE_SITE_KEY`.
 
-The deploy job runs only when the workflow is not cancelled, the event is not a pull request, `verify` explicitly succeeds, and `verify` emits the exact `should_deploy=true` output. `verify` always evaluates its complete needs set; its event-specific gate treats the pull-request-only dependency review as optional on pushes, schedules, and dispatches, while failed, cancelled, missing, or unexpectedly skipped required jobs block deployment. The explicit deploy status guard prevents GitHub Actions' implicit success propagation from turning that intentional optional skip into a production or preview no-op.
-
-For production and preview builds, `DEPLOYMENT_COMMIT_SHA` binds deployment metadata to the candidate. Production receives only the production Turnstile site key. Preview receives only the optional preview key.
-
-The deploy job checks out the same SHA so `functions/`, `migrations/`, and `wrangler.jsonc` match the tested source. It installs the locked local Wrangler version with `npm ci`, downloads the verified `out/` artifact, validates it, rechecks the branch tip, validates the environment-specific D1 ID, applies any pending migrations, and runs Wrangler from the repository root. Migration targeting uses the fixed database names rather than an interchangeable binding name.
+The deploy job checks out the same SHA so `functions/`, `migrations/`, and `wrangler.jsonc` match the tested source. The trusted workflow creates GitHub provenance and SBOM attestations for the restored, validated archive before invoking the deployment command. Before that command makes any provider call, it admits the sealed runtime configuration as the reviewed narrow capability boundary, including the selected target's D1 binding and the sealed toolchain compatibility settings. The command then makes one bounded read-only authenticated `GET` for the exact Pages project in the configured account. The preflight accepts only the reviewed `smart-portfolio` Direct Upload project, `smart-portfolio-bds.pages.dev` subdomain, and `main` production branch; it rejects redirects, malformed or oversized responses, timeouts, and Git-connected projects without logging provider details. After that read-only preflight, the command cryptographically verifies the attestations against the candidate repository, source, workflow certificate, signer digest, and OIDC issuer before D1 migration or Wrangler upload. It holds a non-cancelling target-specific concurrency lock, checks branch freshness before and after migrations, validates the selected D1 binding, applies pending migrations, then accepts only the exact pinned-Wrangler structured deployment result. It smokes the returned unique Pages host before confirming its identity, then smokes the stable assigned target and confirms the final deployed identity. Migration targeting uses fixed database names rather than an interchangeable binding name.
 
 ## D1 migration lifecycle
 
@@ -243,23 +236,9 @@ The release process must migrate and verify preview before production. CI routes
 
 ## Deployment metadata
 
-### Current content version and prepared v2 identity
+### Content version
 
-The active workflow calls the ordinary `build:generated` command without `RELEASE_TARGET`. Its writer therefore emits exactly this schema-v1 metadata:
-
-```json
-{
-  "schemaVersion": 1,
-  "contentHash": "<sha256>",
-  "commitSha": "<40-character Git SHA>",
-  "generatedAt": "<content generation timestamp>",
-  "deployedAt": "<build timestamp>"
-}
-```
-
-The active schedule and non-forced dispatch no-op decision compares the `contentHash` and `commitSha` fields. Schema v1 has no target, public-build fingerprint, or producer ordering claim.
-
-The prepared sealed-release lifecycle writes the following v2 identity only when its explicit `release:build` input supplies `RELEASE_TARGET`, the public-build fingerprint, and producer information. The current workflow does not invoke that lifecycle.
+Every new build writes `out/content-version.json` with the v2 identity:
 
 ```json
 {
@@ -279,9 +258,9 @@ The prepared sealed-release lifecycle writes the following v2 identity only when
 }
 ```
 
-For that prepared v2 identity, `contentHash` covers the canonical normalized content subset and excludes volatile metadata. `publicBuildInputDigest` binds the target, candidate SHA, lockfile, public Wrangler configuration digest, Node/Next/Wrangler versions, and a hash of the effective browser Turnstile key. It never publishes the key itself. Preview maps its preview variable into the one runtime input, `NEXT_PUBLIC_TURNSTILE_SITE_KEY`.
+The `contentHash` covers the canonical normalized content subset and excludes volatile metadata. `publicBuildInputDigest` binds the target, candidate SHA, lockfile, public Wrangler configuration digest, Node/Next/Wrangler versions, and a hash of the effective browser Turnstile key. It never publishes the key itself. Preview maps its preview variable into the one runtime input, `NEXT_PUBLIC_TURNSTILE_SITE_KEY`.
 
-Its producer identifies the build-and-package job, not the earlier content-preparation job. Release ordering compares `runNumber` and then `attempt`; a local build records `{ "kind": "local", "runId": "local", "runNumber": null, "attempt": null }` and cannot be deployed. The reader accepts v1 metadata for the active hash-and-commit comparison, but v1 cannot establish v2 equivalence or producer order. A malformed or ambiguous v2 identity fails closed.
+The producer identifies the build-and-package job, not the earlier content-preparation job. Release ordering compares `runNumber` and then `attempt`; a local build records `{ "kind": "local", "runId": "local", "runNumber": null, "attempt": null }` and cannot be deployed. The reader accepts existing v1 metadata for migration, but v1 cannot establish a no-op equivalence or producer order. A malformed or ambiguous v2 identity fails closed.
 
 `public/_headers` marks `/content-version.json` as non-cacheable. The comparison request also sends no-cache headers, adds a cache-busting query, treats `404` as no prior deployment, rejects redirects for identity metadata, and fails closed on other inaccessible or malformed responses.
 
@@ -300,7 +279,7 @@ npm run release:runtime -- --directory <release-dir>/release
 
 `release:compile` parses the completed HTML export to hash only real inline script nodes, then reads the emitted worker, configuration, and routes through bounded no-follow descriptors before validating and writing those exact bytes into `out/`. It uses the pinned local Wrangler CLI to compile the two reviewed Functions and routing file, and creates the static artifact manifest. `release:package` seals exactly `out/`, `wrangler.jsonc`, numbered migrations, a CycloneDX SBOM, and the candidate identity. The package rejects symlinks, traversal, private deployment inputs in `out/`, unexpected entries, configuration or migration substitutions, and replacement of an unowned release directory.
 
-`release:runtime` verifies the sealed package before and after running the compiled worker in local Miniflare and a browser check through pinned `wrangler pages dev`. It uses the packaged `out/` and configuration so the command can check an exact downloaded candidate without modifying its compiled public-key bytes. These checks use isolated Turnstile/D1 fixtures and prohibit provider email delivery; they are not evidence of live Cloudflare, D1, email, or environment settings. The commands are dormant local preparation: the existing workflow neither invokes them nor supplies `RELEASE_TARGET`, so its normal writer keeps emitting schema-v1 metadata until a separately reviewed orchestration change activates the staged path.
+`release:runtime` verifies the sealed package before and after running the compiled worker in local Miniflare and a browser check through pinned `wrangler pages dev`. It uses the packaged `out/` and configuration so the command can check an exact downloaded candidate without modifying its compiled public-key bytes. These checks use isolated Turnstile/D1 fixtures and prohibit provider email delivery; they are not evidence of live Cloudflare, D1, email, or environment settings. A full CI plan invokes the accepted-snapshot build, compile/package, and packaged-runtime stages with explicit `RELEASE_TARGET` identities. Ordinary callers that omit those release identities retain schema-v1 output; v1 remains ineligible to establish no-op equivalence or release-producer ordering.
 
 ### Artifact integrity
 
@@ -311,34 +290,34 @@ Before upload, `scripts/artifactIntegrity.mjs` creates `out/artifact-integrity.j
 - The candidate commit SHA.
 - A sorted record for every other artifact file, including its relative path, byte size, and SHA-256 digest.
 
-The creator rejects symbolic links and unsupported entries. Verification requires the expected commit SHA, agreement with `content-version.json`, the same file count and ordered paths, and exact size and digest matches. `application-validation` validates the manifest before upload, and the deploy job validates the downloaded artifact again. Hidden export files are included. The Actions artifact is named `cloudflare-pages-build` and is retained for one day.
+The creator rejects symbolic links and unsupported entries. Verification requires the expected commit SHA, agreement with `content-version.json`, the same file count and ordered paths, and exact size and digest matches. The sealed release contains `out/`, the reviewed Wrangler configuration, numbered migrations, the SBOM, candidate identity, and release manifest. Its immutable Actions artifact is identified by original producer run and attempt and is retained for three days; it is not a durable release archive.
 
-The active integrity manifest covers the static files in `out/`; it does not claim that the ordinary build compiled a worker or routing file. The dormant sealed package additionally compiles and binds the reviewed Functions worker, routing output, public Wrangler configuration, and numbered migrations outside the public static directory.
+The integrity manifest covers `out/`, including the compiled worker and reviewed routing file. The sealed package also binds the public Wrangler configuration and numbered migrations outside the public static directory.
 
 ## Exact automated smoke scope
 
-After Wrangler returns, `scripts/checkDeployedContent.mjs` tests the stable assigned-domain alias for the deployed branch. It retries up to 10 times, waits 5 seconds between attempts, uses cache-busting queries, and applies a 20-second timeout to each request.
+After Wrangler returns, `scripts/checkDeployedContent.mjs` tests the unique deployment host returned by the pinned structured result and then the stable assigned-domain alias for the deployed branch. These are unauthenticated `GET` checks for the canonical production alias or current `develop` preview alias. It retries up to 10 times, waits 5 seconds between attempts, uses cache-busting queries, applies a 20-second timeout to each request, and rejects redirects for every verified resource.
 
 Each successful attempt proves:
 
-1. `/` returns a successful response whose content type includes `text/html` and whose canonical link resolves to `https://nicolasmgioanni.dev/` without a query string or fragment.
+1. `/` returns a successful `text/html` response whose bytes exactly match sealed `index.html`, whose effective route headers exactly match sealed `_headers` for CSP, permissions policy, referrer policy, HSTS, content-type protection, and frame denial, and whose canonical link resolves to `https://nicolasgioanni.dev/` without a query string or fragment.
 2. `/robots.txt` returns a successful response whose content type includes `text/plain`, and its text exactly matches `robots.txt` in the verified local artifact.
 3. `/sitemap.xml` returns a successful response with an XML-compatible content type, and its text exactly matches `sitemap.xml` in the verified local artifact.
-4. `/content-version.json` contains the expected content hash and candidate commit SHA.
-5. `/artifact-integrity.json` exactly matches the verified local manifest.
-6. `GET /api/contact/verify` returns HTTP `405`, an `application/json` content type, and `{ "ok": false, "error": "method_not_allowed" }`.
-7. `GET /api/contact` returns the same exact method-rejection contract.
+4. `/content-version.json` contains the expected content hash and candidate commit SHA, with `Cache-Control: no-store` and `Pragma: no-cache`.
+5. `/artifact-integrity.json` exactly matches the verified local manifest and has the same non-cacheable metadata headers.
+6. `GET /api/contact/verify` returns HTTP `405`, an `application/json` content type, `{ "ok": false, "error": "method_not_allowed" }`, `Cache-Control: no-store`, `Referrer-Policy: no-referrer`, and `X-Content-Type-Options: nosniff`.
+7. `GET /api/contact` returns the same exact method-rejection and restrictive-header contract.
 
-The automated smoke test does not request every static route, test the custom domain, inspect the static security headers, submit a valid Turnstile token, inspect D1 rows, exercise DNS validation, send email, exercise WAF rules, or prove end-to-end contact delivery. Those checks remain part of release and operations verification.
+The automated smoke test does not request every static route, test the custom domain, submit a valid Turnstile token, inspect D1 rows, exercise DNS validation, send email, exercise WAF rules, or prove end-to-end contact delivery. Those checks remain part of release and operations verification.
 
 ## Routing and response headers
 
-`public/_routes.json` invokes Pages Functions only for:
+The Pages Functions compiler emits sealed `out/_routes.json` only after it matches both the reviewed `public/_routes.json` source intent and the static output route contract. The sealed route file invokes Pages Functions only for:
 
 - `/api/contact/verify`
 - `/api/contact`
 
-All other route and asset requests remain on the static Pages path. `public/_headers` supplies the static Content Security Policy, permissions policy, referrer policy, HSTS, content-type protection, frame denial, and the non-cache rules for both public metadata files.
+All other route and asset requests remain on the static Pages path. The sealed compiler emits `out/_headers` from the reviewed `public/_headers` source; its static Content Security Policy, permissions policy, referrer policy, HSTS, content-type protection, frame denial, and metadata cache rules are the exact values compared by assigned-alias smoke.
 
 Pages `_headers` rules do not apply to Function responses. Both Functions set their own JSON content type, no-store caching, referrer, and content-type-sniffing headers.
 
@@ -354,7 +333,7 @@ Failure behavior depends on where the run stops:
 - A changed workbook hash that fails before deployment differs from the active manifest, so a later scheduled run attempts it again.
 - A code-only candidate can have the same content hash as production. Its differing commit SHA makes a later scheduled or non-forced run retry the complete verified deployment path automatically.
 
-The one-day GitHub artifact is not a long-term rollback archive. Use Cloudflare Pages deployment history for an authorized provider rollback, or restore the intended source and workbook state and perform a forced green deployment. After either path, verify both assigned and custom domains and record the active content and commit metadata.
+The three-day GitHub Actions artifact is not a long-term rollback archive. Use Cloudflare Pages deployment history for an authorized provider rollback, or restore the intended source and workbook state and perform a forced green deployment. After either path, verify both assigned and custom domains and record the active content and commit metadata.
 
 See [Operations](OPERATIONS.md) for the release, incident, and rollback runbooks.
 

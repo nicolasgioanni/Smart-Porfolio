@@ -9,6 +9,14 @@ const contentHashPattern = /^[a-f0-9]{64}$/;
 const gitShaPattern = /^[a-f0-9]{40}$/;
 const pagesDomainPattern = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.pages\.dev$/;
 const canonicalHomepageUrl = new URL("https://nicolasmgioanni.dev/");
+const staticHeaderNames = new Map([
+  ["content-security-policy", "Content-Security-Policy"],
+  ["permissions-policy", "Permissions-Policy"],
+  ["referrer-policy", "Referrer-Policy"],
+  ["strict-transport-security", "Strict-Transport-Security"],
+  ["x-content-type-options", "X-Content-Type-Options"],
+  ["x-frame-options", "X-Frame-Options"]
+]);
 
 export function resolvePagesDeploymentUrl(pagesDomain, branch) {
   if (typeof pagesDomain !== "string" || !pagesDomainPattern.test(pagesDomain)) {
@@ -51,6 +59,81 @@ async function fetchNoCache(url, { allowNotFound = false, rejectRedirect = false
   if (allowNotFound && response.status === 404) return response;
   if (!response.ok) throw new Error(`${url.pathname} returned HTTP ${response.status}`);
   return response;
+}
+
+function headerRuleMatches(rule, requestPath) {
+  const expression = rule.replace(/[|\\{}()[\]^$+?.]/g, "\\$&").replaceAll("*", ".*");
+  return new RegExp(`^${expression}$`).test(requestPath);
+}
+
+function effectiveStaticHeaders(headerFile, requestPath) {
+  const rules = headerFile.trim().split(/\r?\n\r?\n/).filter(Boolean);
+  const headers = new Map();
+  for (const rule of rules) {
+    const [route, ...lines] = rule.split(/\r?\n/);
+    if (!route || !route.startsWith("/") || /\s/.test(route) || !headerRuleMatches(route, requestPath)) continue;
+    for (const line of lines) {
+      if (!line.startsWith("  ")) throw new Error("Verified artifact has a malformed _headers rule.");
+      const instruction = line.slice(2);
+      const remove = instruction.match(/^! ([!#$%&'*+.^_`|~0-9A-Za-z-]+)$/);
+      const set = instruction.match(/^([!#$%&'*+.^_`|~0-9A-Za-z-]+): (\S(?:.*\S)?)$/);
+      const name = (remove?.[1] ?? set?.[1])?.toLowerCase();
+      if (!name) throw new Error("Verified artifact has a malformed _headers instruction.");
+      if (!staticHeaderNames.has(name)) continue;
+      if (remove) {
+        headers.delete(name);
+      } else if (headers.has(name)) {
+        throw new Error(`Verified artifact defines ${staticHeaderNames.get(name)} more than once for ${requestPath}.`);
+      } else {
+        headers.set(name, set[2]);
+      }
+    }
+  }
+  for (const [name, label] of staticHeaderNames) {
+    if (!headers.has(name)) throw new Error(`Verified artifact is missing the effective ${label} header for ${requestPath}.`);
+  }
+  return headers;
+}
+
+export async function assertStaticHeaders(response, artifactDirectory, requestPath = "/") {
+  const headerFile = await readFile(path.join(path.resolve(artifactDirectory), "_headers"), "utf8");
+  const expected = effectiveStaticHeaders(headerFile, requestPath);
+  for (const [name, label] of staticHeaderNames) {
+    assert.equal(
+      response.headers.get(name),
+      expected.get(name),
+      `Deployment ${requestPath} has an unexpected ${label} header`
+    );
+  }
+}
+
+export function assertNoCacheMetadataHeaders(response, name) {
+  assert.match(response.headers.get("cache-control") ?? "", /\bno-store\b/i, `${name} must disable caching`);
+  assert.equal(response.headers.get("pragma"), "no-cache", `${name} must set Pragma: no-cache`);
+}
+
+export function assertFunctionHeaders(response, endpoint) {
+  assert.match(response.headers.get("cache-control") ?? "", /\bno-store\b/i, `/${endpoint} must disable caching`);
+  assert.equal(response.headers.get("referrer-policy"), "no-referrer", `/${endpoint} must not leak referrers`);
+  assert.equal(response.headers.get("x-content-type-options"), "nosniff", `/${endpoint} must disable content sniffing`);
+  assert.equal(response.headers.get("content-security-policy"), "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'", `/${endpoint} must retain restrictive JSON CSP`);
+  assert.equal(response.headers.get("permissions-policy"), "camera=(), geolocation=(), microphone=(), payment=(), usb=()", `/${endpoint} must disable sensitive browser features`);
+  assert.equal(response.headers.get("strict-transport-security"), "max-age=31536000", `/${endpoint} must retain transport security`);
+  assert.equal(response.headers.get("x-frame-options"), "DENY", `/${endpoint} must reject framing`);
+}
+
+export async function assertRootResponse(response, artifactDirectory) {
+  if (!response.headers.get("content-type")?.includes("text/html")) {
+    throw new Error("Deployment root did not return HTML");
+  }
+  await assertStaticHeaders(response, artifactDirectory);
+  const rootBytes = Buffer.from(await response.arrayBuffer());
+  assert.deepEqual(
+    rootBytes,
+    await readFile(path.join(path.resolve(artifactDirectory), "index.html")),
+    "Deployment root content does not match the verified upload"
+  );
+  return new TextDecoder("utf-8", { fatal: true }).decode(rootBytes);
 }
 
 async function writeOutput(name, value, environment = process.env) {
@@ -153,10 +236,7 @@ export function decideDeployment(candidateValue, deployedValue) {
 
 async function smokeAttempt(baseUrl, artifactDirectory, expectedContentHash, expectedCommitSha, cacheBust) {
   const rootResponse = await fetchNoCache(endpointUrl(baseUrl, "/", cacheBust), { rejectRedirect: true });
-  if (!rootResponse.headers.get("content-type")?.includes("text/html")) {
-    throw new Error("Deployment root did not return HTML");
-  }
-  const rootHtml = await rootResponse.text();
+  const rootHtml = await assertRootResponse(rootResponse, artifactDirectory);
   const canonicalTag = (rootHtml.match(/<link\b[^>]*>/gi) ?? []).find((tag) =>
     /\brel\s*=\s*(["'])canonical\1/i.test(tag)
   );
@@ -175,18 +255,20 @@ async function smokeAttempt(baseUrl, artifactDirectory, expectedContentHash, exp
   assert.equal(deployedCanonical.hash, "", "Deployment root canonical must not contain a fragment");
 
   const versionResponse = await fetchNoCache(endpointUrl(baseUrl, "content-version.json", cacheBust), { rejectRedirect: true });
+  assertNoCacheMetadataHeaders(versionResponse, "content-version.json");
   const deployedVersion = parseContentVersion(await versionResponse.json());
   assert.equal(deployedVersion.contentHash, expectedContentHash, "Deployed content hash is stale");
   assert.equal(deployedVersion.commitSha, expectedCommitSha, "Deployed commit SHA is stale");
 
   const manifestResponse = await fetchNoCache(endpointUrl(baseUrl, artifactManifestFileName, cacheBust), { rejectRedirect: true });
+  assertNoCacheMetadataHeaders(manifestResponse, artifactManifestFileName);
   const deployedManifest = await manifestResponse.json();
   const localManifest = JSON.parse(
     await readFile(path.join(path.resolve(artifactDirectory), artifactManifestFileName), "utf8")
   );
   assert.deepEqual(deployedManifest, localManifest, "Deployed artifact manifest does not match the verified upload");
 
-  const robotsResponse = await fetchNoCache(endpointUrl(baseUrl, "robots.txt", cacheBust));
+  const robotsResponse = await fetchNoCache(endpointUrl(baseUrl, "robots.txt", cacheBust), { rejectRedirect: true });
   assert.match(
     robotsResponse.headers.get("content-type") ?? "",
     /^text\/plain\b/i,
@@ -198,7 +280,7 @@ async function smokeAttempt(baseUrl, artifactDirectory, expectedContentHash, exp
     "Deployed robots.txt does not match the verified upload"
   );
 
-  const sitemapResponse = await fetchNoCache(endpointUrl(baseUrl, "sitemap.xml", cacheBust));
+  const sitemapResponse = await fetchNoCache(endpointUrl(baseUrl, "sitemap.xml", cacheBust), { rejectRedirect: true });
   assert.match(
     sitemapResponse.headers.get("content-type") ?? "",
     /^(?:application|text)\/(?:xml|[a-z0-9!#$&^_.+-]+\+xml)(?:\s*;|$)/i,
@@ -222,6 +304,7 @@ async function smokeAttempt(baseUrl, artifactDirectory, expectedContentHash, exp
       /^application\/json\b/i,
       `/${endpoint} did not return JSON`
     );
+    assertFunctionHeaders(apiResponse, endpoint);
     assert.deepEqual(
       await apiResponse.json(),
       { ok: false, error: "method_not_allowed" },

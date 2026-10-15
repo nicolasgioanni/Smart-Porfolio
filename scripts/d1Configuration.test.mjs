@@ -1,6 +1,8 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { validateWorkflowYaml } from "./ci/workflowYaml.mjs";
+import { validateDeploymentConfig } from "./ci/deployment.mjs";
 
 const projectRoot = path.resolve(import.meta.dirname, "..");
 const placeholderId = "00000000-0000-0000-0000-000000000000";
@@ -81,30 +83,13 @@ describe("contact D1 configuration", () => {
     expect(gitignore).toMatch(/^\.wrangler$/m);
   });
 
-  it("migrates the selected database before uploading the Pages deployment", async () => {
-    const workflow = await readFile(path.join(projectRoot, ".github", "workflows", "ci.yml"), "utf8");
-    const verifyStart = workflow.indexOf("  verify:\n");
-    const deployStart = workflow.indexOf("  deploy:\n");
-    const heartbeatStart = workflow.indexOf("  heartbeat:\n");
-    const verifyGate = workflow.slice(verifyStart, deployStart);
-    const deployJob = workflow.slice(deployStart, heartbeatStart);
-    const migrationStep = workflow.indexOf("Validate the environment-specific D1 binding and apply migrations");
-    const deployStep = workflow.indexOf("Deploy the verified export and Pages Function with pinned Wrangler");
-
-    expect(verifyStart).toBeGreaterThan(-1);
-    expect(deployStart).toBeGreaterThan(verifyStart);
-    expect(heartbeatStart).toBeGreaterThan(deployStart);
-    expect(verifyGate).toContain("application-validation");
-    expect(verifyGate).toContain("node scripts/security/ciGate.mjs");
-    expect(deployJob).toContain("needs: verify");
-    expect(migrationStep).toBeGreaterThan(-1);
-    expect(deployStep).toBeGreaterThan(migrationStep);
-    expect(workflow).toContain(
-      "wrangler d1 migrations apply smart-portfolio-contact-rate-limit-preview --env preview --remote"
-    );
-    expect(workflow).toContain(
-      "wrangler d1 migrations apply smart-portfolio-contact-rate-limit-production --remote"
-    );
-    expect(workflow).toContain("still has the non-deployable placeholder database ID");
+  it("selects the reviewed isolated binding inside the serialized deployment operation", async () => {
+    const config = await readWranglerConfig();
+    expect(validateDeploymentConfig(config, "production").database_name).toBe("smart-portfolio-contact-rate-limit-production");
+    expect(validateDeploymentConfig(config, "preview").database_name).toBe("smart-portfolio-contact-rate-limit-preview");
+    const workflow = validateWorkflowYaml(await readFile(path.join(projectRoot, ".github", "workflows", "ci.yml"), "utf8"));
+    expect(workflow.jobs.deploy.needs).toContain("verify");
+    expect(workflow.jobs.deploy.concurrency["cancel-in-progress"]).toBe(false);
+    expect(workflow.jobs.deploy.steps.filter((step) => step.run === "node scripts/ci/run.mjs deploy")).toHaveLength(1);
   });
 });

@@ -1,6 +1,6 @@
 # Operations
 
-This runbook covers recurring deployment, monitoring, incident response, and rollback for the active Smart Portfolio Cloudflare Pages service. Complete the environment setup in [Deployment](DEPLOYMENT.md) before using these procedures.
+This runbook covers recurring deployment, monitoring, incident response, and rollback for the Smart Portfolio Cloudflare Pages service. Complete the environment setup in [Deployment](DEPLOYMENT.md) before using these procedures. The checked-in workflow graph and repository evidence boundary are defined in [CI input and evidence contracts](../quality/CI_CONTRACTS.md); this runbook does not prove a hosted deployment completed.
 
 ## Service map
 
@@ -31,8 +31,8 @@ Use the narrowest authoritative source for each question:
 | What non-secret Pages values were reviewed? | `wrangler.jsonc` at the candidate SHA |
 | What D1 schema should be active? | Numbered SQL under `migrations/` at the candidate SHA |
 | Which D1 migrations are actually active? | The selected database's D1 migration ledger in Cloudflare |
-| Which static requests invoke Functions? | `public/_routes.json` at the candidate SHA |
-| Which static headers are intended? | `public/_headers` at the candidate SHA |
+| Which static requests invoke Functions? | Sealed `out/_routes.json`, emitted after validation against reviewed `public/_routes.json`, at the candidate SHA |
+| Which static headers are intended? | Sealed `out/_headers`, generated from reviewed `public/_headers`, at the candidate SHA |
 | Do required secrets, WAF, domains, DNS, and branch rules match the intended state? | Verify the external, repository-unverified state in the Cloudflare and GitHub dashboards |
 
 Do not infer a successful source deployment from the content hash alone. Code-only revisions can share the same hash.
@@ -42,23 +42,23 @@ Do not infer a successful source deployment from the content hash alone. Code-on
 ### Preview a branch change
 
 1. Open or update a pull request targeting `main` or `develop`.
-2. Confirm candidate admission and precheck passed, `application-validation` generated template content and passed documentation integrity, lint, typecheck, the priority unit and browser suites, and the static build, and the independent source-security jobs passed before the `verify` aggregate succeeded.
+2. Confirm the `verify` job accepted the template snapshot, full quality and unit suites, assigned Chromium, visual, Firefox critical, WebKit critical, and WebKit mobile Research/Projects browser coverage, the sealed candidate, export/runtime check, and every applicable source-security receipt.
 3. Merge or push the reviewed change to `develop`.
 4. Confirm the workflow selected `deploy_target=preview`, validated the preview D1 binding, applied pending preview migrations, and deployed the current `develop` SHA.
 5. Review `https://develop.smart-portfolio-bds.pages.dev` manually. Complete the visible gate, observe its automatic transition or use Continue, and confirm the three data-entry steps, two acknowledgments, 500-character limit, responsive behavior, focus, and error states without selecting Send request. The gate may consume a Turnstile token, but this no-delivery inspection must not call `/api/contact`, reserve D1 quota, or send email. Confirm the standalone completion layout through verified component coverage.
 6. Confirm the preview workflow and the pull-request verification workflow both pass for the exact candidate before merge. The automated smoke check covers only the scope listed in [Deployment](DEPLOYMENT.md#exact-automated-smoke-scope).
 
-The preview build receives only `NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY`. If that variable is blank, the contact form remains unavailable instead of using the production key. The key should identify a Managed Turnstile widget restricted to the preview hostname; visible upfront rendering is controlled by the client.
+A preview build maps `NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY` into the only browser-visible input, `NEXT_PUBLIC_TURNSTILE_SITE_KEY`. If the preview variable is blank, the contact form remains unavailable and never falls back to the production key. The key should identify a Managed Turnstile widget restricted to the preview hostname; visible upfront rendering is controlled by the client.
 
 ### Release source changes to production
 
 1. Merge the reviewed green change into `main` through the repository's approved change flow.
 2. Confirm the push workflow resolves the current `main` SHA.
-3. Confirm strict workbook generation succeeds before the quality gates.
-4. Confirm the deploy job downloads and revalidates `cloudflare-pages-build` instead of rebuilding.
-5. Confirm the final branch-tip check passes before D1 migration and Wrangler.
+3. Confirm strict workbook generation produces one accepted snapshot before full validation.
+4. Confirm `verify` accepts every required job result and the exact physical producer receipt or artifact. A retained consumer copy may map to its unique original execution; a new physical rerun must supply its own evidence.
+5. Confirm the deploy job restores the sealed candidate and verifies its archive digest; the trusted workflow creates provenance/SBOM attestations, then the deployment command performs its bounded read-only Direct Upload Pages-project preflight and cryptographically verifies those attestations before branch freshness, D1 migration, or upload.
 6. Confirm the production D1 target check and pending migrations succeed before Pages upload.
-7. Confirm the assigned-domain smoke step passes.
+7. Confirm the unique deployment-host smoke, exact identity check, and stable assigned-domain smoke pass.
 8. Verify the public custom domain, key static routes, security headers, and the contact page manually. Completing the gate is permitted, but do not select Send request.
 9. Record the active `contentHash`, `commitSha`, workflow run, D1 migration result, and any manual checks in the release record.
 
@@ -66,16 +66,16 @@ The preview build receives only `NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY`. If tha
 
 The daily schedule at `13:17 UTC` checks the current `main` source against one newly downloaded and validated workbook snapshot.
 
-An exact-candidate check still performs checkout, dependency installation, target validation, strict workbook download, normalization, hashing, and a no-cache production manifest request. When both the content hash and commit SHA match production, `application-validation` stops before documentation validation, lint, typecheck, tests, build, artifact upload, and deployment; the independent workflow, history, dependency-audit, and CodeQL checks still run.
+An exact-candidate check still resolves the trusted candidate, prepares one strict workbook snapshot, validates target-specific public inputs, and reads no-cache deployed identity. It stops before application validation, release packaging, and deployment only when the current v2 identity has the same target, content hash, candidate commit SHA, target-specific public-build input digest, and trusted GitHub Actions producer kind. Source-security jobs still run and write receipts for every no-op.
 
-When the hash of the canonical normalized content subset or the candidate commit SHA differs, the workflow runs the complete production path. Editing workbook formatting or data outside that subset does not intentionally trigger deployment unless a source revision also changed.
+Valid but non-equivalent metadata, legacy metadata, or an explicit missing-metadata HTTP 404 selects the complete production path. Malformed metadata, failed requests and unavailable observations fail preparation; they do not select a no-op or authorize deployment. Editing workbook formatting or data outside the canonical content subset does not intentionally trigger deployment unless another compared input changes.
 
 ### Run a manual content check
 
 Use the `CI` workflow dispatch input:
 
-- `force_deploy=true`, the default, runs full verification and production deployment even when both candidate identifiers match.
-- `force_deploy=false` uses the same content-hash and commit-SHA comparison as the schedule and stops early only when both match.
+- `force_deploy=true`, the default, runs full verification and production deployment even when the validated v2 deployment identity is equivalent.
+- `force_deploy=false` uses the same target, content-hash, candidate-commit, public-build-input, and trusted GitHub Actions producer-kind comparison as the schedule and stops early only when the current v2 identity is equivalent.
 
 Use a forced run for a first deployment, an intentional rebuild, an immediate retry, or recovery after correcting external configuration. Force does not skip any quality or integrity gate. The daily schedule automatically retries an undeployed code-only `main` revision because its commit SHA differs from production.
 
@@ -99,20 +99,20 @@ curl --fail --silent --show-error "$production_origin/content-version.json"
 curl --fail --silent --show-error "$production_origin/artifact-integrity.json"
 ```
 
-Confirm the active schema-v1 metadata has exactly `schemaVersion`, `contentHash`, `commitSha`, `generatedAt`, and `deployedAt`:
+Confirm:
 
-- `schemaVersion` is `1`; the active schedule and non-forced dispatch use the matching content hash and commit SHA for their no-op decision.
-- `contentHash` is 64 lowercase hexadecimal characters and `commitSha` is the intended 40-character source revision.
+- `schemaVersion` is `2` for a current release. A v1 document is legacy metadata and must not be used to prove a no-op or producer ordering decision.
+- `contentHash` is 64 lowercase hexadecimal characters.
+- `commitSha` is the intended 40-character source revision.
+- `target`, `publicBuildInputDigest`, and the producer `runId`, `runNumber`, and `attempt` match the verified candidate. The public digest is a fingerprint, not a public-key value.
 - `generatedAt` and `deployedAt` are parseable timestamps.
-- The artifact manifest uses `sha256`, carries the same commit SHA, and contains file records for the static output.
-
-The prepared sealed-release lifecycle introduces schema v2 only after a separately reviewed orchestration supplies explicit release inputs. Its `target`, `publicBuildInputDigest`, and producer `runId`, `runNumber`, and `attempt` then bind a sealed candidate; the public digest is a fingerprint, not a public-key value. Do not read those absent v2 fields from an active v1 document or infer producer ordering from it.
+- The artifact manifest uses `sha256`, carries the same commit SHA, and contains file records.
 
 Both metadata endpoints should return explicit no-store and no-cache headers.
 
 ### Verify static routes
 
-The automated deployment smoke requests only `/`. For a release, use the current route registry and check the exported portfolio, contact, and legal routes. At minimum, include:
+The automated deployment smoke compares the assigned alias against the sealed release for `/`, `robots.txt`, `sitemap.xml`, both metadata documents, and safe Function method rejections, including their exact scoped headers. It does not cover every static route or the custom domain. For a release, use the current route registry and check the exported portfolio, contact, and legal routes manually. At minimum, include:
 
 - `/`
 - `/experience`
@@ -128,7 +128,7 @@ Check both the assigned production domain and the primary custom domain. Confirm
 
 ### Verify static response headers
 
-On representative static pages, confirm the Cloudflare response includes the intended policy from `public/_headers`:
+On representative static pages, confirm the Cloudflare response includes the intended policy from sealed `out/_headers`, generated from reviewed `public/_headers`:
 
 - `Content-Security-Policy`
 - `Permissions-Policy`
@@ -137,7 +137,7 @@ On representative static pages, confirm the Cloudflare response includes the int
 - `X-Content-Type-Options`
 - `X-Frame-Options`
 
-The repository does not automatically smoke-test these headers after deployment.
+The assigned-alias smoke compares the root response headers against sealed `out/_headers`; manually confirm representative routes and the custom domain as well.
 
 ### Verify contact routing without delivery
 
@@ -191,7 +191,7 @@ Repository checks cannot prove these controls. The live WAF state is unverified 
 
 ## Monitoring the daily schedule
 
-The schedule starts the candidate admission and precheck path, `application-validation`, independent source-security jobs, the `verify` aggregate, and a separate heartbeat. Application validation performs the content comparison and produces a deployment artifact only when required. `security-tools`, `security-scans` with its independent dependency audit, and `codeql` still run when the application candidate is an exact no-op; `verify` accepts deployment metadata only after every applicable job result succeeds. `develop-schedule-heartbeat` separately checks activity and may refresh the existing `develop` branch.
+The schedule starts the candidate/content path and independent source-security jobs, plus `develop-schedule-heartbeat`. `verify` accepts the required receipts and deploys only when the prepared plan is full; security still runs when a snapshot is unchanged or branch revision is obsolete.
 
 The heartbeat does not depend on the verify result and does not deploy. It writes only after 30 days without newer activity on `main` or `develop`, and only after confirming remote `develop` already exists. It accepts only the `.github/schedule-heartbeat` path, rechecks the remote `develop` SHA before a normal non-force push, and fails rather than overwriting a concurrent update. Its `contents: write` permission is intentionally isolated from the verification and deployment jobs. The checked-in workflow is coded and guarded to update only `develop`; that source-level constraint does not make other refs impossible for every possible token or future workflow change. The tracked [permanent-branch ruleset](../../.github/rulesets/protect-permanent-branches.json) protects both permanent refs from deletion and non-fast-forward updates while allowing this guarded fast-forward. It supplements the retained classic `main` governance target; inspect the live GitHub configuration separately after policy changes.
 
@@ -203,20 +203,15 @@ Use the first failing stage to decide whether production could have changed:
 
 | Failure stage | Production impact | First action |
 | --- | --- | --- |
-| Candidate marked stale | None | Review the newer branch run |
+| Candidate marked obsolete | None | Review the newer branch run |
 | Target or content validation | None | Correct configuration or workbook data |
-| Application validation: documentation, lint, typecheck, or tests | None | Fix the reported repository failure |
-| Independent source-security job | None | Fix the scanner or dependency finding; do not treat an application no-op as an exemption |
-| `verify` aggregate | None | Inspect the failed or missing application or required security job result |
-| Static build or manifest creation | None | Reproduce locally with the documented command |
-| Artifact upload, download, or verification | None | Inspect artifact transfer and candidate SHA |
-| Branch recheck | None | Review the newer branch run |
+| Source-security, documentation, lint, typecheck, test, browser, or export receipt | None | Fix the reported repository failure or evidence mismatch |
+| Static build, sealed package, or artifact transfer | None | Inspect original-producer artifact identity and candidate SHA |
+| Branch recheck | No Pages upload after the failed check | Review the newer branch run |
 | D1 target validation | None | Restore the reviewed database ID or correct environment isolation before retrying |
 | D1 migration | The failing migration is rolled back; an earlier migration may already be active | Inspect the selected database and migration ledger before retrying |
 | Wrangler | Usually prior deployment remains active | Check Cloudflare deployment history before retrying |
-| Post-Wrangler smoke | Candidate deployment exists and may already serve through the stable alias; the failed job does not roll it back | Inspect live metadata and Cloudflare history immediately |
-
-Detailed failure signatures and corrective commands are in [Troubleshooting](../development/TROUBLESHOOTING.md).
+| Unique-host or stable-target post-Wrangler smoke | Candidate deployment exists and may already serve through the stable alias; the failed job does not roll it back | Inspect live metadata and Cloudflare history immediately |
 
 ## Rollback
 
@@ -251,7 +246,7 @@ When provider rollback is unavailable or a corrected release is preferable:
 4. Dispatch the workflow with `force_deploy=true`.
 5. Complete all post-deployment checks.
 
-The Actions artifact is retained for one day and is not a durable release archive. Production workbook snapshots are transient build inputs, so repository history alone may not reproduce an earlier content deployment.
+The Actions artifact is retained for three days and is not a durable release archive. Production workbook snapshots are transient build inputs, so repository history alone may not reproduce an earlier content deployment.
 
 ## Secret and configuration rotation
 
@@ -274,10 +269,10 @@ Rotating `TURNSTILE_SECRET_KEY` also changes the verification-ticket signing key
 - CI validates only the assigned `pages.dev` aliases, not the custom domain.
 - Automated smoke checks do not exercise valid POST requests, D1 queries, DNS validation, or downstream delivery.
 - Live D1 binding and migration state, WAF, Cloudflare plan, DNS, TLS, custom-domain, provider-secret, and branch-protection state are external and unverified by repository tests.
-- The pre-deployment comparison verifies the active content hash and commit SHA, but does not prove that a prior post-upload smoke test or external runtime configuration succeeded.
+- For scheduled checks and non-forced manual dispatches, preparation can recognize an equivalent active v2 identity only when target, candidate commit SHA, content hash, target-specific public-build-input digest, and GitHub Actions producer kind match. Under the deployment lock, smoke-only execution separately requires the exact deployed identity, while run-number/attempt ordering rejects older or conflicting generations before mutation. Neither comparison proves that a prior post-upload smoke test or external runtime configuration succeeded.
 - A successful Wrangler upload creates the candidate deployment before smoke runs. A later smoke failure does not undo or automatically roll back that deployment.
-- There is no uptime monitor, performance monitor, or synthetic browser test in the repository.
-- GitHub's one-day artifact retention is not a long-term recovery mechanism.
+- The repository has no continuous hosted uptime, performance, or deployed-site browser monitor. Packaged-runtime and browser receipts are release validation, not ongoing monitoring.
+- GitHub's three-day artifact retention is not a long-term recovery mechanism.
 
 ## Related guides
 
