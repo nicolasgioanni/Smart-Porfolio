@@ -36,6 +36,11 @@ describe("package and CI deployment automation", () => {
     expect(packageJson.scripts["build:generated"]).toBe(
       "next build && node scripts/writeContentVersion.mjs"
     );
+    expect(packageJson.scripts["release:build"]).toBe("node scripts/release.mjs build");
+    expect(packageJson.scripts["release:compile"]).toBe("node scripts/release.mjs compile");
+    expect(packageJson.scripts["release:package"]).toBe("node scripts/release.mjs package");
+    expect(packageJson.scripts["release:runtime"]).toBe("node scripts/release.mjs runtime");
+    expect(packageJson.scripts["test:e2e:release-static"]).toContain("playwright.release.config.ts");
     expect(nextConfigSource).toMatch(/adapterPath:\s*fileURLToPath\(new URL\("\.\/scripts\/nextBuildAdapter\.mjs"/);
     expect(nextConfigSource).toMatch(/output:\s*"export"/);
     expect(packageJson.scripts["dev:pages"]).toContain("npx --no-install wrangler");
@@ -77,6 +82,15 @@ describe("package and CI deployment automation", () => {
     expect(packageJson.scripts["test:skeleton-guidance"]).toBe(
       "vitest run scripts/skeletonGuidance.test.mjs"
     );
+    expect(packageJson.scripts["test:quality:properties"]).toBe(
+      "vitest run scripts/quality/contactBoundary.property.test.ts"
+    );
+    expect(packageJson.scripts["test:quality:mutations"]).toBe(
+      "vitest run scripts/quality/contactGuardMutation.test.mjs"
+    );
+    expect(packageJson.scripts["test:quality:payload"]).toBe(
+      "node scripts/quality/payloadBudget.mjs --out out --next .next"
+    );
     expect(packageJson.scripts["test:e2e:footer"]).toBe(
       "playwright test footer.spec.ts --project=chromium"
     );
@@ -92,11 +106,23 @@ describe("package and CI deployment automation", () => {
     expect(packageJson.scripts["test:e2e:research:webkit"]).toBe(
       "playwright test research.spec.ts research-mobile-video.spec.ts --project=webkit-mobile --grep @mobile-video"
     );
+    expect(packageJson.scripts["test:e2e:projects:webkit"]).toBe(
+      "playwright test projects.spec.ts --project=webkit-mobile --grep @mobile-projects"
+    );
     expect(packageJson.scripts["test:e2e:contact"]).toBe(
       "playwright test contact.spec.ts --project=chromium"
     );
+    expect(packageJson.scripts["test:e2e:accessibility"]).toBe(
+      "playwright test accessibility.spec.ts --project=chromium"
+    );
+    expect(packageJson.scripts["test:e2e:critical:firefox"]).toBe(
+      "playwright test critical-quality.spec.ts --project=firefox-critical"
+    );
+    expect(packageJson.scripts["test:e2e:critical:webkit"]).toBe(
+      "playwright test critical-quality.spec.ts --project=webkit-critical"
+    );
     expect(packageJson.scripts["test:e2e:priority"]).toBe(
-      "playwright test skeleton-alignment.spec.ts skeletons.transition.spec.ts navigation.spec.ts footer.spec.ts contact.spec.ts recommendations.spec.ts experience.spec.ts projects.spec.ts research.spec.ts research-mobile-video.spec.ts --project=chromium"
+      "playwright test skeleton-alignment.spec.ts skeletons.transition.spec.ts navigation.spec.ts progressiveEnhancement.spec.ts footer.spec.ts contact.spec.ts recommendations.spec.ts experience.spec.ts projects.spec.ts research.spec.ts research-mobile-video.spec.ts --project=chromium"
     );
     expect(packageJson.scripts["test:e2e:full"]).toBe(
       "playwright test --project=chromium"
@@ -109,12 +135,17 @@ describe("package and CI deployment automation", () => {
     const packageJson = JSON.parse(await readFile(path.join(projectRoot, "package.json"), "utf8"));
     expect(packageJson.scripts["test:priority"]).toBe("node scripts/runValidationTier.mjs priority");
     expect(priorityTestTargets).toContain("functions");
+    expect(priorityTestTargets).toContain("scripts/permanentBranchRuleset.test.mjs");
     expect(priorityTestDirectories).toEqual([
       "scripts/security",
       "src/components/overlay",
-      "src/components/portfolio/experience",
+      "src/features/home",
+      "src/features/contact",
+      "src/features/legal",
+      "src/features/skills",
+      "src/features/experience",
       "src/features/projects",
-      "src/components/portfolio/recommendations",
+      "src/features/recommendations",
       "src/components/portfolio/shared",
       "src/components/theme",
       "src/features/research",
@@ -139,10 +170,10 @@ describe("package and CI deployment automation", () => {
         "src/styles/themePalette.test.ts",
         "src/components/portfolio/shared/DetailDisclosureList.test.tsx",
         "src/components/portfolio/shared/detailDisclosureStyles.test.ts",
-        "src/components/portfolio/experience/ExperienceShowcase.test.tsx",
+        "src/features/experience/components/ExperienceShowcase.test.tsx",
         "src/features/projects/components/ProjectSkillShowcase.test.tsx",
         "src/features/projects/components/ProjectShowcase.test.tsx",
-        "src/components/portfolio/recommendations/RecommendationsList.test.tsx",
+        "src/features/recommendations/components/RecommendationsList.test.tsx",
         "src/features/research/components/ResearchShowcase.test.tsx",
         "src/components/overlay/ModalDialog.test.tsx"
       ])
@@ -584,7 +615,12 @@ describe("package and CI deployment automation", () => {
       await writeContentVersion({
         generatedContentPath,
         outputPath: path.join(artifactDirectory, "content-version.json"),
-        environment: { DEPLOYMENT_COMMIT_SHA: candidateSha }
+        environment: { DEPLOYMENT_COMMIT_SHA: candidateSha },
+        identity: {
+          target: "local",
+          publicBuildInputDigest: "b".repeat(64),
+          producer: { kind: "local", runId: "local", runNumber: null, attempt: null }
+        }
       });
 
       const manifest = await createArtifactManifest(artifactDirectory);
@@ -600,9 +636,11 @@ describe("package and CI deployment automation", () => {
       await expect(verifyArtifactManifest(artifactDirectory, candidateSha)).resolves.toBeDefined();
 
       const version = await readContentVersion(path.join(artifactDirectory, "content-version.json"));
-      expect(Object.keys(version)).toEqual(["schemaVersion", "contentHash", "commitSha", "generatedAt", "deployedAt"]);
+      expect(Object.keys(version)).toEqual(["schemaVersion", "contentHash", "commitSha", "generatedAt", "deployedAt", "target", "publicBuildInputDigest", "producer"]);
+      expect(version.schemaVersion).toBe(2);
       expect(version.contentHash).toBe(contentHash);
       expect(version.commitSha).toBe(candidateSha);
+      expect(version.target).toBe("local");
       expect(version.deployedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
 
       await writeFile(path.join(artifactDirectory, "index.html"), "tampered", "utf8");

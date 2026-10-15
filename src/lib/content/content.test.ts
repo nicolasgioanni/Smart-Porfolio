@@ -12,35 +12,15 @@ import {
   normalizePortfolioContent,
   type RawPortfolioSheets
 } from "@/lib/content/normalizePortfolioContent";
-import {
-  groupSkillsByCategory,
-  selectHeaderLinks,
-  selectHomeContent
-} from "@/lib/content/selectHomeContent";
-import {
-  createRecommendationExcerpt,
-  hasRecommendations,
-  selectHomeRecommendations,
-  shouldShowRecommendationsRoute
-} from "@/lib/content/selectRecommendationContent";
-import {
-  getRecommendationVerificationUrl,
-  linkedInRecommendationsUrl
-} from "@/lib/content/recommendationVerification";
-import {
-  createProfileOverviewContent,
-  createShortAboutText,
-  formatCompactGraduationDate,
-  getCurrentExperience,
-  getCurrentWorkLabel,
-  getEducationDisplayLabel,
-  getPrimaryEducation,
-  getProfileIdentityItems,
-  getProfileContactLinks,
-  getSelectedResearch
-} from "@/lib/content/profileOverview";
+import { groupSkillsByCategory, selectHomeContent } from "@/features/home/content/selectHomeContent";
+import { selectHeaderLinks } from "@/lib/content/selectHeaderLinks";
+import { createRecommendationExcerpt, selectHomeRecommendations } from "@/features/recommendations/content/selectRecommendationContent";
+import { hasRecommendations, shouldShowRecommendationsRoute } from "@/lib/content/shouldShowRecommendationsRoute";
+import { getRecommendationVerificationUrl, linkedInRecommendationsUrl } from "@/features/recommendations/content/recommendationVerification";
+import { createProfileOverviewContent, createShortAboutText, getCurrentExperience, getCurrentWorkLabel, getEducationDisplayLabel, getPrimaryEducation, getProfileIdentityItems, getProfileContactLinks, getSelectedResearch } from "@/features/home/content/profileOverview";
+import { formatCompactGraduationDate } from "@/lib/formatting/profileContent";
 import { sortForDetail, sortForHome, sortRecommendationsForDetail } from "@/lib/content/sortPortfolioContent";
-import { isHttpsUrl, isIsoDate, isSupportedUrl } from "@/lib/content/validatePortfolioContent";
+import { isHttpsUrl, isIsoDate, isSupportedUrl, validatePortfolioContent } from "@/lib/content/validatePortfolioContent";
 import { formatDateRange } from "@/lib/formatting/formatDateRange";
 
 const metadata: GeneratedContentMetadata = {
@@ -410,6 +390,30 @@ describe("portfolio normalization", () => {
     expect(content.siteSettings.legalEffectiveDate).toBe("2026-08-07");
     expect(content.siteSettings.hostingProviderName).toBe("Vercel");
     expect(content.siteSettings.hostingPrivacyUrl).toBe("https://vercel.com/legal/privacy-notice");
+  });
+
+  it("rejects unknown keys and aliases that normalize to an already authored key", () => {
+    const unknownProfileKey = createSheets();
+    unknownProfileKey.profile.push({ key: "__proto__", value: "unsafe" });
+    expect(() => normalizePortfolioContent(unknownProfileKey, metadata)).toThrow(/profile contains an unknown key/);
+
+    const duplicateProfileAlias = createSheets();
+    duplicateProfileAlias.profile.push(
+      { key: "timezone", value: "Pacific" },
+      { key: "time_zone", value: "PT" }
+    );
+    expect(() => normalizePortfolioContent(duplicateProfileAlias, metadata)).toThrow(
+      /duplicate key after alias normalization: timezone/
+    );
+  });
+
+  it("treats generated content as unknown data before applying semantic validation", () => {
+    const malformed = structuredClone(normalizePortfolioContent(createSheets(), metadata)) as unknown as Record<string, unknown>;
+    (malformed.links as Array<Record<string, unknown>>)[0]!.showOnHome = "true";
+    (malformed.profile as Record<string, unknown>).unexpected = "field";
+
+    expect(() => validatePortfolioContent(malformed)).toThrow(/links\[0\]\.showOnHome must be a boolean/);
+    expect(() => validatePortfolioContent(malformed)).toThrow(/profile\.unexpected must be a supported field/);
   });
 
   it("normalizes a paired recommendation quote label and HTTPS URL", () => {
@@ -1419,20 +1423,27 @@ describe("profile overview helpers", () => {
   it("maps spreadsheet rows into the compact identity overview without Previous Work", () => {
     const sheets = createSheets();
     sheets.research = sheets.research.map((row) => ({ ...row, featured: "false", show_on_home: "false" }));
-    sheets.profile.push(
-      { key: "headline", value: "CSV Headline Sentinel." },
-      { key: "short_bio", value: "CSV About Sentinel." },
-      { key: "current_title", value: "CSV Current Role Sentinel" },
-      { key: "current_company", value: "CSV Current Organization Sentinel" },
-      { key: "current_experience_id", value: "experience-current-sentinel" },
-      { key: "previous_experience_id", value: "experience-previous-sentinel" },
-      { key: "featured_research_id", value: "research-sentinel" },
-      { key: "primary_education_id", value: "education-sentinel" },
-      { key: "university", value: "CSV Education Institution Sentinel" },
-      { key: "degree", value: "CSV Degree Sentinel" },
-      { key: "field_of_study", value: "CSV Field Sentinel" },
-      { key: "graduation", value: "2031-06" }
-    );
+    const profileUpdates = new Map([
+      ["headline", "CSV Headline Sentinel."],
+      ["short_bio", "CSV About Sentinel."],
+      ["current_title", "CSV Current Role Sentinel"],
+      ["current_company", "CSV Current Organization Sentinel"],
+      ["current_experience_id", "experience-current-sentinel"],
+      ["previous_experience_id", "experience-previous-sentinel"],
+      ["featured_research_id", "research-sentinel"],
+      ["primary_education_id", "education-sentinel"],
+      ["university", "CSV Education Institution Sentinel"],
+      ["degree", "CSV Degree Sentinel"],
+      ["field_of_study", "CSV Field Sentinel"],
+      ["graduation", "2031-06"]
+    ]);
+    sheets.profile = sheets.profile.map((row) => {
+      const value = profileUpdates.get(row.key);
+      if (value === undefined) return row;
+      profileUpdates.delete(row.key);
+      return { ...row, value };
+    });
+    sheets.profile.push(...[...profileUpdates].map(([key, value]) => ({ key, value })));
     sheets.experience.push(
       {
         id: "experience-current-sentinel",

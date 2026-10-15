@@ -42,7 +42,7 @@ Do not infer a successful source deployment from the content hash alone. Code-on
 ### Preview a branch change
 
 1. Open or update a pull request targeting `main` or `develop`.
-2. Confirm the `verify` job generated template content and passed documentation integrity, lint, typecheck, the priority unit and browser suites, and the static build.
+2. Confirm candidate admission and precheck passed, `application-validation` generated template content and passed documentation integrity, lint, typecheck, the priority unit and browser suites, and the static build, and the independent source-security jobs passed before the `verify` aggregate succeeded.
 3. Merge or push the reviewed change to `develop`.
 4. Confirm the workflow selected `deploy_target=preview`, validated the preview D1 binding, applied pending preview migrations, and deployed the current `develop` SHA.
 5. Review `https://develop.smart-portfolio-bds.pages.dev` manually. Complete the visible gate, observe its automatic transition or use Continue, and confirm the three data-entry steps, two acknowledgments, 500-character limit, responsive behavior, focus, and error states without selecting Send request. The gate may consume a Turnstile token, but this no-delivery inspection must not call `/api/contact`, reserve D1 quota, or send email. Confirm the standalone completion layout through verified component coverage.
@@ -66,7 +66,7 @@ The preview build receives only `NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY`. If tha
 
 The daily schedule at `13:17 UTC` checks the current `main` source against one newly downloaded and validated workbook snapshot.
 
-An exact-candidate check still performs checkout, dependency installation, target validation, strict workbook download, normalization, hashing, and a no-cache production manifest request. It stops before documentation validation, lint, typecheck, tests, build, artifact upload, and deployment only when both the content hash and commit SHA match production.
+An exact-candidate check still performs checkout, dependency installation, target validation, strict workbook download, normalization, hashing, and a no-cache production manifest request. When both the content hash and commit SHA match production, `application-validation` stops before documentation validation, lint, typecheck, tests, build, artifact upload, and deployment; the independent workflow, history, dependency-audit, and CodeQL checks still run.
 
 When the hash of the canonical normalized content subset or the candidate commit SHA differs, the workflow runs the complete production path. Editing workbook formatting or data outside that subset does not intentionally trigger deployment unless a source revision also changed.
 
@@ -101,9 +101,10 @@ curl --fail --silent --show-error "$production_origin/artifact-integrity.json"
 
 Confirm:
 
-- `schemaVersion` is `1`.
+- `schemaVersion` is `2` for a current release. A v1 document is legacy metadata and must not be used to prove a no-op or producer ordering decision.
 - `contentHash` is 64 lowercase hexadecimal characters.
 - `commitSha` is the intended 40-character source revision.
+- `target`, `publicBuildInputDigest`, and the producer `runId`, `runNumber`, and `attempt` match the verified candidate. The public digest is a fingerprint, not a public-key value.
 - `generatedAt` and `deployedAt` are parseable timestamps.
 - The artifact manifest uses `sha256`, carries the same commit SHA, and contains file records.
 
@@ -190,12 +191,9 @@ Repository checks cannot prove these controls. The live WAF state is unverified 
 
 ## Monitoring the daily schedule
 
-The schedule starts two independent jobs:
+The schedule starts the candidate admission and precheck path, `application-validation`, independent source-security jobs, the `verify` aggregate, and a separate heartbeat. Application validation performs the content comparison and produces a deployment artifact only when required. `security-tools`, `security-scans` with its independent dependency audit, and `codeql` still run when the application candidate is an exact no-op; `verify` accepts deployment metadata only after every applicable job result succeeds. `develop-schedule-heartbeat` separately checks activity and may refresh the existing `develop` branch.
 
-- `verify`, which performs the content comparison and deploys only when required.
-- `develop-schedule-heartbeat`, which checks activity and may refresh the existing `develop` branch.
-
-The heartbeat does not depend on the verify result and does not deploy. It writes only after 30 days without newer activity on `main` or `develop`, and only after confirming remote `develop` already exists. It accepts only the `.github/schedule-heartbeat` path, rechecks the remote `develop` SHA before a normal non-force push, and fails rather than overwriting a concurrent update. Its `contents: write` permission is intentionally isolated from the verification and deployment jobs. The checked-in workflow is coded and guarded to update only `develop`; that source-level constraint does not make other refs impossible for every possible token or future workflow change. Configure GitHub branch or ruleset protection for `main` and `develop` as defense in depth, and verify its live configuration separately.
+The heartbeat does not depend on the verify result and does not deploy. It writes only after 30 days without newer activity on `main` or `develop`, and only after confirming remote `develop` already exists. It accepts only the `.github/schedule-heartbeat` path, rechecks the remote `develop` SHA before a normal non-force push, and fails rather than overwriting a concurrent update. Its `contents: write` permission is intentionally isolated from the verification and deployment jobs. The checked-in workflow is coded and guarded to update only `develop`; that source-level constraint does not make other refs impossible for every possible token or future workflow change. The tracked [permanent-branch ruleset](../../.github/rulesets/protect-permanent-branches.json) protects both permanent refs from deletion and non-fast-forward updates while allowing this guarded fast-forward. It supplements the retained classic `main` governance target; inspect the live GitHub configuration separately after policy changes.
 
 An exact-candidate check is a successful no-op, not a skipped or failed schedule. It requires matching production content and commit metadata. Investigate a missing scheduled run through GitHub Actions state rather than assuming the workbook or source has not changed.
 
@@ -207,7 +205,9 @@ Use the first failing stage to decide whether production could have changed:
 | --- | --- | --- |
 | Candidate marked stale | None | Review the newer branch run |
 | Target or content validation | None | Correct configuration or workbook data |
-| Documentation, lint, typecheck, or tests | None | Fix the reported repository failure |
+| Application validation: documentation, lint, typecheck, or tests | None | Fix the reported repository failure |
+| Independent source-security job | None | Fix the scanner or dependency finding; do not treat an application no-op as an exemption |
+| `verify` aggregate | None | Inspect the failed or missing application or required security job result |
 | Static build or manifest creation | None | Reproduce locally with the documented command |
 | Artifact upload, download, or verification | None | Inspect artifact transfer and candidate SHA |
 | Branch recheck | None | Review the newer branch run |
@@ -234,6 +234,12 @@ When the intended prior deployment is still present in Cloudflare Pages history:
 Provider rollback procedures and retention are external Cloudflare behavior and should be confirmed against the active account before an incident.
 
 A Pages rollback does not revert D1 migrations. Before rolling back to older Function code, confirm that the active schema remains backward compatible. Database restoration or destructive corrective SQL is a separate operation that requires explicit review and should not be inferred from a Pages rollback.
+
+### Local recovery-drill evidence
+
+`scripts/quality/recoveryDrill.test.mjs` uses only temporary directories, a credential-free child environment, and `wrangler d1 --local`. It applies the checked-in migrations through `0003_contact_delivery_rendering.sql`, exports a fixture reservation, rebuilds a fresh local database, and verifies that the pseudonymous reservation fields restore unchanged. It also verifies that a tampered v2 sealed envelope is rejected and can be replaced only by its previously verified local fixture; the sealed fixture contains no audit collector input.
+
+This is a repository-level drill, not a Cloudflare D1 backup, retention, export, import, or restore procedure. It does not establish a durable release archive or authorize production database recovery. Any provider recovery remains a separately reviewed operation against verified provider state.
 
 ### Forward recovery
 

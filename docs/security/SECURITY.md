@@ -23,8 +23,8 @@ Documentation is not evidence that an external control is active. Treat the impl
 | Contact public contract | `functions/_shared/contact.ts` |
 | Contact request validation, tickets, provider calls, and Function headers | `functions/_shared/contact/` |
 | Contact endpoint order and responses | `functions/api/contact/verify.ts`, `functions/api/contact.ts` |
-| Browser request and retry behavior | `src/components/contact/ContactForm.tsx` |
-| Turnstile widget configuration | `src/components/contact/TurnstileWidget.tsx` |
+| Browser request and retry behavior | `src/features/contact/components/ContactForm.tsx` |
+| Turnstile widget configuration | `src/features/contact/components/TurnstileWidget.tsx` |
 | Production and preview non-secret Function values | `wrangler.jsonc` |
 | Contact-rate reservation schema | `migrations/` |
 | Build-time public values and deployment flow | `.github/workflows/ci.yml` |
@@ -60,7 +60,7 @@ The CI workflow admits an event before checking out code or reading protected co
 
 `security-tools` installs the checksum-verified pinned `actionlint` binary and uses its repository workflow discovery so new tracked workflows are included. `security-scans` installs pinned Gitleaks and Zizmor binaries, scans reachable Git history and workflow semantics, and keeps scanner reports in private runner temporary files. This source job also runs the existing dependency audit on unchanged scheduled candidates, so new advisories and expired exceptions remain blocking without rerunning application checks. `codeql` runs JavaScript/TypeScript `security-extended` analysis in `build-mode: none`; a local SARIF gate rejects malformed output, empty analyzed-rule sets across the driver and identified query-pack extensions, scanner errors, and every finding before a passing report can be uploaded. Pull requests also run the pinned dependency-review action and reject newly introduced high-severity dependency vulnerabilities. These hosted controls are repository-enforced workflow behavior; a local review does not prove a hosted run passed.
 
-The pinned-tool manifest retains Terraform and OPA entries for a later infrastructure baseline. This repository currently has no activated IaC validation or posture scan, and the manifest alone does not establish one.
+Terraform and OPA pins support an inactive infrastructure source boundary. Its local checks validate the reviewed Terraform roots with backend-disabled, credential-free inputs, mock plans, saved-plan identity checks, and OPA policy evaluation; they neither initialize a remote backend nor establish provider posture. No infrastructure CI job, receipt, `verify` dependency, deployment input, Access enforcement, or runtime-posture scan is active in this source-only stage. See [Terraform ownership preparation](../infrastructure/TERRAFORM_OWNERSHIP.md).
 
 ## Threat model
 

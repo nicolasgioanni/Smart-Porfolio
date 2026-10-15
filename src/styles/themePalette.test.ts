@@ -6,7 +6,7 @@ const projectRoot = process.cwd();
 const tokenStyles = readFileSync(path.join(projectRoot, "src", "styles", "tokens.css"), "utf8");
 const glassStyles = readFileSync(path.join(projectRoot, "src", "styles", "glass.css"), "utf8");
 const layoutStyles = readFileSync(path.join(projectRoot, "src", "styles", "layout.css"), "utf8");
-const contactStyles = readFileSync(path.join(projectRoot, "src", "styles", "contact.css"), "utf8");
+const contactStyles = readFileSync(path.join(projectRoot, "src", "features", "contact", "contact.css"), "utf8");
 const researchStyles = readFileSync(
   path.join(projectRoot, "src", "features", "research", "research.css"),
   "utf8"
@@ -17,25 +17,22 @@ const contactStylesWithoutPendingGradient = contactStyles.replace(
 );
 const styleSources = [
   "base.css",
-  "contact.css",
+  "content.css",
   "detail.css",
   "dialog.css",
-  "experience.css",
   "glass.css",
   "interactions.css",
   "layout.css",
   "motion.css",
   "navigation.css",
-  "portfolio.css",
-  "research.css",
   "skeletons.css",
   "tokens.css",
   "utilities.css"
-].map((fileName) => fileName === "contact.css"
-  ? contactStylesWithoutPendingGradient
-  : fileName === "research.css"
-    ? researchStyles
-  : readFileSync(path.join(projectRoot, "src", "styles", fileName), "utf8"));
+].map((fileName) => readFileSync(path.join(projectRoot, "src", "styles", fileName), "utf8"));
+styleSources.push(contactStylesWithoutPendingGradient, researchStyles);
+for (const fileName of ["home/portfolio", "experience/experience", "projects/projects", "recommendations/recommendations", "skills/skills", "legal/legal", "resume/resume"]) {
+  styleSources.push(readFileSync(path.join(projectRoot, "src", "features", `${fileName}.css`), "utf8"));
+}
 
 const themePatterns = {
   dark: /\[data-theme="dark"\]\s*\{([\s\S]*?)\r?\n\}/,

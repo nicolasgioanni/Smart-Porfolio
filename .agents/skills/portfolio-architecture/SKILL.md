@@ -12,3 +12,5 @@ Read [system decisions](../../knowledge/SYSTEM_DECISIONS.md) first. Read [Archit
 Keep domain content near its owning feature. Move only repeated behavior into a narrow shared module with a clear owner. Preserve static rendering and progressive enhancement. When framework behavior matters, read the relevant installed Next.js guide under `node_modules/next/dist/docs/` before writing code.
 
 Update the ownership document and its links when a path, boundary, or source of truth changes. Keep durable decisions in the compact repository memory; put implementation detail in the authoritative product document.
+
+Feature ownership is vertical under `src/features/`: components, selectors, loading composition, styles, and their tests stay with the domain. `src/app/` composes features; `src/components/` and `src/lib/` stay neutral. Preserve the TypeScript-resolved import graph and its documented Home-to-feature and Projects-to-Skills directions. Update priority discovery and path-owning tests with every move. Each segment supplies its server no-script fallback outside the loading boundary; the Home route group does not change its URL.

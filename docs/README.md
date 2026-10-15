@@ -77,6 +77,7 @@ This is an npm repository: `package.json`, `package-lock.json`, and `.nvmrc` are
 | --- | --- |
 | [Deployment](operations/DEPLOYMENT.md) | GitHub and Cloudflare setup, environment separation, release governance, and first deployment. |
 | [Operations](operations/OPERATIONS.md) | Event behavior, candidate selection, exact-artifact deployment, manifests, smoke tests, retries, and rollback considerations. |
+| [Terraform ownership preparation](infrastructure/TERRAFORM_OWNERSHIP.md) | Inactive Terraform source boundary, saved-plan review, and adoption prerequisites. |
 | [Troubleshooting](development/TROUBLESHOOTING.md) | Symptoms, likely causes, diagnostics, safe corrections, and actions to avoid. |
 
 ## Security and data handling
@@ -103,9 +104,9 @@ Use the narrowest authoritative implementation source when documentation and cod
 | Static export and route implementation | `next.config.mjs` and `src/app/` |
 | Content types and runtime validation | `src/content/types.ts` and `src/lib/content/` |
 | Workbook download and structure | `scripts/fetchPortfolioContent.ts` and `scripts/lib/portfolioContentGeneration.ts` |
-| Home selection and section order | `src/lib/content/selectHomeContent.ts` and `src/components/portfolio/home/HomeOverview.tsx` |
+| Home selection and section order | `src/features/home/content/selectHomeContent.ts` and `src/features/home/components/HomeOverview.tsx` |
 | Themes, layout, motion, and styling | `src/components/`, `src/lib/theme/`, and `src/styles/` |
-| Contact request boundary | `functions/api/`, `functions/_shared/contact.ts`, and `src/components/contact/` |
+| Contact request boundary | `functions/api/`, `functions/_shared/contact.ts`, and `src/features/contact/` |
 | Function routing and static headers | `public/_routes.json` and `public/_headers` |
 | Cloudflare configuration | `wrangler.jsonc` |
 | Verification and deployment behavior | `.github/workflows/ci.yml` and `scripts/` |

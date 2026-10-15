@@ -9,9 +9,11 @@ export default [
     ignores: [
       ".next/**",
       "out/**",
+      "release/**",
       "node_modules/**",
       "coverage/**",
-      "src/content/generated/**"
+      "src/content/generated/**",
+      "src/lib/architecture/fixtures/**"
     ]
   },
   js.configs.recommended,
@@ -56,6 +58,7 @@ export default [
   },
   {
     files: ["src/lib/**/*.{ts,tsx}"],
+    ignores: ["src/lib/**/*.test.{ts,tsx}"],
     rules: {
       "no-restricted-imports": [
         "error",
@@ -79,7 +82,11 @@ export default [
         {
           patterns: [
             {
-              group: ["@/content/generated/**", "@/features/**", "**/content/generated/**", "**/features/**", "**/functions/**", "**/scripts/**"],
+              group: ["@/features/**", "**/features/**"],
+              message: "Shared components must not depend on feature modules."
+            },
+            {
+              group: ["@/content/generated/**", "**/content/generated/**", "**/functions/**", "**/scripts/**"],
               message: "Components must receive content through supported application and library boundaries."
             }
           ]

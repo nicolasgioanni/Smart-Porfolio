@@ -99,7 +99,7 @@ test("@mobile-video animates CytoCV popup captions through a nested native fulls
   await inline.getByRole("button", { name: "Open video settings" }).click();
   await inline.getByTestId("video-settings").getByRole("button", { name: "Open enlarged player" }).click();
 
-  const popup = page.getByRole("dialog", { name: "CytoCV supplementary workflow video" });
+  const popup = page.getByRole("dialog", { exact: true, name: "CytoCV supplementary workflow video" });
   const player = popup.getByTestId("research-video-player");
   const video = videoFor(player);
   await expect(popup).toBeVisible();
@@ -118,7 +118,7 @@ test("@mobile-video animates CytoCV popup captions through a nested native fulls
 
   await rejectContainerFullscreen(player);
   await player.getByRole("button", { name: "Enter fullscreen" }).click();
-  const fullscreen = page.getByRole("dialog", { name: "CytoCV supplementary workflow video enlarged fullscreen" });
+  const fullscreen = page.getByRole("dialog", { exact: true, name: "CytoCV supplementary workflow video enlarged fullscreen" });
   await expect(fullscreen).toBeVisible();
   await expect(player).toHaveAttribute("data-fullscreen-fallback", "true");
   await setCue(video, 19);
@@ -147,7 +147,7 @@ test("@mobile-video keeps fullscreen fallback controls opaque in every palette a
     await rejectContainerFullscreen(player);
     await player.getByRole("button", { name: "Enter fullscreen" }).click();
 
-    const fullscreen = page.getByRole("dialog", { name: "CytoCV supplementary workflow video fullscreen" });
+    const fullscreen = page.getByRole("dialog", { exact: true, name: "CytoCV supplementary workflow video fullscreen" });
     await expect(fullscreen).toBeVisible();
     const opaqueSurface = await player.evaluate((element) => {
       const caption = element.querySelector<HTMLElement>("[data-testid='research-video-captions']");

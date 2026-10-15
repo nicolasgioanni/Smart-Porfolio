@@ -35,29 +35,30 @@ The repository cannot verify Cloudflare or GitHub dashboard state. Operators mus
 - No legacy provider continues to publish the custom domain.
 - Cloudflare runtime secrets and separate D1 bindings exist in the correct production and preview environments.
 - WAF rate limiting covers both contact endpoints, and the selected Cloudflare plan or provider-compatible control preserves the JSON API contract.
-- `main` branch protection was independently verified on 2026-09-11: pull requests require the current `verify` status from GitHub Actions app `15368`, require the branch to be current, require zero human approvals, enforce rules for administrators, and block force-push and deletion. Keep `develop` unprotected while its guarded schedule heartbeat remains enabled. Re-verify this external setting after any GitHub policy change.
+- The tracked [permanent-branch ruleset](../../.github/rulesets/protect-permanent-branches.json) declares one active `protect-permanent-branches` ruleset for exactly `main` and `develop`, with deletion and non-fast-forward protection and no bypass actors. GitHub readback reverified the matching live ruleset on 2026-10-12. The JSON records the configuration but cannot prove or change future live state.
+- A signed-in, read-only GitHub UI inspection on 2026-10-12 confirmed that classic `main` protection requires pull requests and the current `verify` status from GitHub Actions, requires the branch to be current, requires no approvals, enforces the policy for administrators, and disallows force pushes and deletion. This point-in-time observation does not establish future live configuration. Do not replace or weaken the classic policy; the limited permanent-branch ruleset permits the guarded ordinary `develop` heartbeat. Recheck both external controls after any GitHub policy change.
 - Custom-domain bindings, redirects, certificates, and DNS remain healthy.
 
 Provider-dashboard uploads and deploy hooks bypass the repository quality gate and are not part of the supported release path.
 
 ## Trigger and branch behavior
 
-The workflow has one verification job, one conditional deploy job, and one schedule-only heartbeat job.
+Candidate admission and credential-free precheck precede `application-validation`. Independent source-security jobs run separately from the content decision, then the stable `verify` job aggregates their required outcomes with application validation. Deployment remains conditional on that aggregate, while the heartbeat remains schedule-only.
 
 | Event | Candidate | Content source | Verification tier | Deployment |
 | --- | --- | --- | --- | --- |
 | Pull request targeting `main` or `develop` | Event SHA | Checked-in templates | Priority | Never |
 | Push to `develop` | Exact pushed SHA, if still current | One strict workbook snapshot | Full for the latest candidate | `develop` preview |
 | Push to `main` | Exact pushed SHA, if still current | One strict workbook snapshot | Full for the latest candidate | Production |
-| Daily schedule at `17 13 * * *` | Current `main` | One strict workbook snapshot | Full when the production content hash or commit SHA differs | Production when either differs |
-| Manual dispatch, `force_deploy=true` | Current `main` | One strict workbook snapshot | Always | Production |
-| Manual dispatch, `force_deploy=false` | Current `main` | One strict workbook snapshot | When the production content hash or commit SHA differs | Production when either differs |
+| Daily schedule at `17 13 * * *` | Admitted `main` event SHA, if still current | One strict workbook snapshot | Full when the production content hash or commit SHA differs | Production when either differs |
+| Manual dispatch, `force_deploy=true` | Admitted `main` event SHA, if still current | One strict workbook snapshot | Always | Production |
+| Manual dispatch, `force_deploy=false` | Admitted `main` event SHA, if still current | One strict workbook snapshot | When the production content hash or commit SHA differs | Production when either differs |
 
 `force_deploy` is a required boolean input and defaults to `true`. It bypasses only the exact-candidate no-op optimization. It does not bypass content validation, documentation validation, lint, typecheck, tests, build, artifact verification, current-branch checks, Wrangler, or post-deployment smoke checks.
 
-Scheduled and manual runs explicitly check out `main`, regardless of the branch shown in the dispatch interface. Push candidates use the pushed branch. Pull requests set no deployment branch and build a verification-only template snapshot.
+Scheduled candidates and manual dispatches are admitted only from `refs/heads/main`. In the Actions interface, select `main`; candidate admission rejects another workflow reference and requires matching event and workflow SHAs. The run uses that exact admitted `main` event candidate, then stale checking decides whether it remains eligible. Push candidates use the pushed branch. Pull requests set no deployment branch and build a verification-only template snapshot.
 
-For any non-PR candidate, the verify job fetches the current remote branch tip and compares it with the checked-out SHA. A stale candidate produces no build artifact and no deployment. The deploy job repeats that branch-tip comparison immediately before Wrangler runs.
+For any non-PR candidate, `candidate-precheck` fetches the current remote branch tip and compares it with the checked-out SHA before protected inputs. A stale candidate produces no build artifact or deployment. The deploy job repeats that branch-tip comparison immediately before Wrangler runs.
 
 ## Permissions and credentials
 
@@ -68,9 +69,9 @@ permissions:
   contents: read
 ```
 
-The verify and deploy jobs therefore have read-only repository access. Cloudflare deployment authority comes from the restricted API token passed directly to Wrangler, not from a GitHub repository write permission.
+Ordinary jobs retain read-only repository access. The `codeql` job adds only `security-events: write` to upload its already-validated SARIF result; pull-request dependency review adds only `pull-requests: read`. Cloudflare deployment authority remains isolated to the restricted API token passed directly to Wrangler, not to a repository write permission.
 
-The schedule-only heartbeat job is the sole exception. It declares `contents: write`, but the checked-in job is coded and guarded to update only `.github/schedule-heartbeat` on the existing `develop` branch after the inactivity threshold is met. That source-level guard does not replace external branch or ruleset protection.
+The schedule-only heartbeat job is the sole exception. It declares `contents: write`, but the checked-in job is coded and guarded to update only `.github/schedule-heartbeat` on the existing `develop` branch after the inactivity threshold is met. That source-level guard and the tracked ruleset test do not replace independently verified external branch or ruleset protection.
 
 ### GitHub repository variables
 
@@ -175,7 +176,7 @@ Do not change the deployment account or public identity as an unreviewed dashboa
 1. Complete the matching setup path above and confirm the configuration change passes a pull-request check. Pull requests are verification-only and never deploy.
 2. Push the reviewed change to `develop` to run full verification and deploy the stable preview. Complete the preview checks in [Operations](OPERATIONS.md#preview-a-branch-change).
 3. Merge the approved change into `main` to run full verification and deploy production. The workflow checks the latest `main` candidate again immediately before Wrangler uploads.
-4. Optional, after a reviewed commit is already on `main`: for a first deployment, an intentional rebuild, or a retry after correcting external configuration, use **Actions → CI → Run workflow** with `force_deploy=true`. The dispatch interface may display a branch selector, but the workflow always checks out current `main`; forced dispatch still runs the full verification, exact-artifact, migration, deployment, and smoke-test path.
+4. Optional, after a reviewed commit is already on `main`: for a first deployment, an intentional rebuild, or a retry after correcting external configuration, use **Actions → CI → Run workflow**, select `main`, and set `force_deploy=true`. Candidate admission rejects a non-`main` workflow reference and binds the run to the exact admitted `main` event SHA; stale checking must still pass. Forced dispatch then runs the full verification, exact-artifact, migration, deployment, and smoke-test path.
 5. Use `force_deploy=false` only when a content-hash and commit-SHA no-op is acceptable. Follow [Operations](OPERATIONS.md) for the ongoing manual release, verification, monitoring, and rollback procedures.
 
 ## Strict content input
@@ -192,14 +193,17 @@ See [Content Pipeline](../content/CONTENT_PIPELINE.md) and [Content Sheet Schema
 
 ```mermaid
 flowchart TD
-    A[Resolve candidate SHA] --> B[Fetch one workbook snapshot with bounded retry]
+    A[Admit exact candidate SHA] --> B[Fetch one workbook snapshot with bounded retry]
+    A --> S[Run independent source-security checks]
     B --> C[Validate and generate JSON]
     C --> D[Run quality gates]
     D --> E[Build from generated JSON]
     E --> F[Write content version]
     F --> G[Create and verify artifact manifest]
     G --> H[Upload artifact]
-    H --> I[Verify downloaded artifact]
+    H --> V[Aggregate application and security results]
+    S --> V
+    V --> I[Verify downloaded artifact]
     I --> J[Recheck branch SHA]
     J --> K[Validate D1 target]
     K --> L[Apply D1 migrations]
@@ -209,7 +213,7 @@ flowchart TD
 
 `npm run build:generated` invokes Next.js, whose local build-completion adapter normalizes any Windows-emitted nested segment-cache filenames to Next's flat static-export URL layout, and then writes the content version without running the `prebuild` content generator. The normalization is a no-op on the already-flat Linux output and fails on malformed trees or collisions. This keeps generation at one accepted workbook snapshot even if its download needs the single bounded retry. The deploy job does not rebuild or download the workbook.
 
-The verify job always runs documentation integrity, ESLint with zero warnings, and TypeScript type checking for a candidate selected for verification. Its remaining checks depend on the selected tier:
+`application-validation` always runs documentation integrity, ESLint with zero warnings, and TypeScript type checking for a candidate selected for application verification. Its remaining checks depend on the selected tier. Independent source-security jobs run separately, and `verify` requires their explicit applicable successes before artifact metadata can reach deployment:
 
 | Candidate | Unit and contract checks | Browser checks | Build |
 | --- | --- | --- | --- |
@@ -241,21 +245,48 @@ The release process must migrate and verify preview before production. CI routes
 
 ### Content version
 
-Every build writes `out/content-version.json` with exactly five fields:
+Every new build writes `out/content-version.json` with the v2 identity:
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "contentHash": "<sha256>",
   "commitSha": "<40-character Git SHA>",
+  "target": "<local|preview|production>",
+  "publicBuildInputDigest": "<sha256>",
+  "producer": {
+    "kind": "github-actions",
+    "runId": "<GitHub run ID>",
+    "runNumber": 123,
+    "attempt": 1
+  },
   "generatedAt": "<content generation timestamp>",
   "deployedAt": "<build timestamp>"
 }
 ```
 
-The `contentHash` covers the canonical normalized content subset and excludes volatile metadata. When that canonical subset is unchanged, generation preserves `generatedAt`. Scheduled and non-forced manual decisions independently compare this content hash and the candidate `commitSha` with the active production manifest. Only a match on both fields is a no-op.
+The `contentHash` covers the canonical normalized content subset and excludes volatile metadata. `publicBuildInputDigest` binds the target, candidate SHA, lockfile, public Wrangler configuration digest, Node/Next/Wrangler versions, and a hash of the effective browser Turnstile key. It never publishes the key itself. Preview maps its preview variable into the one runtime input, `NEXT_PUBLIC_TURNSTILE_SITE_KEY`.
 
-`public/_headers` marks `/content-version.json` as non-cacheable. The comparison request also sends no-cache headers, adds a cache-busting query, treats `404` as no prior deployment, and fails closed on other inaccessible or malformed responses.
+The producer identifies the build-and-package job, not the earlier content-preparation job. Release ordering compares `runNumber` and then `attempt`; a local build records `{ "kind": "local", "runId": "local", "runNumber": null, "attempt": null }` and cannot be deployed. The reader accepts existing v1 metadata for migration, but v1 cannot establish a no-op equivalence or producer order. A malformed or ambiguous v2 identity fails closed.
+
+`public/_headers` marks `/content-version.json` as non-cacheable. The comparison request also sends no-cache headers, adds a cache-busting query, treats `404` as no prior deployment, rejects redirects for identity metadata, and fails closed on other inaccessible or malformed responses.
+
+### Bounded sealed-release package
+
+The release foundation separates the exact-artifact work into explicit commands. These commands do not download content, run the normal quality gates, deploy, migrate D1, send email, or sign an unsigned package:
+
+```bash
+npm run release:build -- --snapshot <accepted-generated-json> --snapshot-sha <sha256> --snapshot-record-digest <sha256> --sha <candidate-sha> --target <local|preview|production> --public-build-input-digest <sha256> --generation <local|run-id:run-number:attempt>
+npm run release:compile -- --out out --sha <candidate-sha>
+npm run release:package -- --directory <release-dir>/release --out out --snapshot-sha <sha256> --snapshot-record-digest <sha256> --sha <candidate-sha> --target <target> --public-build-input-digest <sha256> --generation <generation>
+npm run release:runtime -- --directory <release-dir>/release
+```
+
+`release:build` verifies the accepted generated JSON bytes, carries the accepted snapshot-record digest into the later sealed candidate, derives the target-specific public fingerprint, and runs `build:generated` once. The verified snapshot record separately binds the preparation producer; the `--generation` value belongs only to the build/package producer. A build rerun therefore creates a new release identity and package even when source and snapshot bytes are unchanged.
+
+`release:compile` parses the completed HTML export to hash only real inline script nodes, then reads the emitted worker, configuration, and routes through bounded no-follow descriptors before validating and writing those exact bytes into `out/`. It uses the pinned local Wrangler CLI to compile the two reviewed Functions and routing file, and creates the static artifact manifest. `release:package` seals exactly `out/`, `wrangler.jsonc`, numbered migrations, a CycloneDX SBOM, and the candidate identity. The package rejects symlinks, traversal, private deployment inputs in `out/`, unexpected entries, configuration or migration substitutions, and replacement of an unowned release directory.
+
+`release:runtime` verifies the sealed package before and after running the compiled worker in local Miniflare and a browser check through pinned `wrangler pages dev`. It uses the packaged `out/` and configuration so the command can check an exact downloaded candidate without modifying its compiled public-key bytes. These checks use isolated Turnstile/D1 fixtures and prohibit provider email delivery; they are not evidence of live Cloudflare, D1, email, or environment settings. The commands are dormant local preparation: the existing workflow neither invokes them nor supplies `RELEASE_TARGET`, so its normal writer keeps emitting schema-v1 metadata until a separately reviewed orchestration change activates the staged path.
 
 ### Artifact integrity
 
@@ -266,9 +297,9 @@ Before upload, `scripts/artifactIntegrity.mjs` creates `out/artifact-integrity.j
 - The candidate commit SHA.
 - A sorted record for every other artifact file, including its relative path, byte size, and SHA-256 digest.
 
-The creator rejects symbolic links and unsupported entries. Verification requires the expected commit SHA, agreement with `content-version.json`, the same file count and ordered paths, and exact size and digest matches. The verify job validates the manifest before upload, and the deploy job validates the downloaded artifact again. Hidden export files are included. The Actions artifact is named `cloudflare-pages-build` and is retained for one day.
+The creator rejects symbolic links and unsupported entries. Verification requires the expected commit SHA, agreement with `content-version.json`, the same file count and ordered paths, and exact size and digest matches. `application-validation` validates the manifest before upload, and the deploy job validates the downloaded artifact again. Hidden export files are included. The Actions artifact is named `cloudflare-pages-build` and is retained for one day.
 
-The integrity manifest covers `out/`. The Pages Functions are source-bound through the exact candidate checkout and branch recheck rather than being copied into that static artifact.
+The integrity manifest covers `out/`, including the compiled worker and reviewed routing file. The sealed package also binds the public Wrangler configuration and numbered migrations outside the public static directory.
 
 ## Exact automated smoke scope
 
@@ -313,18 +344,20 @@ The one-day GitHub artifact is not a long-term rollback archive. Use Cloudflare 
 
 See [Operations](OPERATIONS.md) for the release, incident, and rollback runbooks.
 
-## Branch protection and heartbeat
+## Permanent-branch protection and heartbeat
 
-The `main` protection rule was independently read from GitHub on 2026-09-11. Its verified policy is:
+`main` and `develop` are permanent branches. Never delete, rename, force-update, or recreate either their local or remote refs, and never weaken their protection. Exclude both branches from cleanup work. The checked-in [protect-permanent-branches ruleset](../../.github/rulesets/protect-permanent-branches.json) records the one active ruleset's exact payload: it applies only to `refs/heads/main` and `refs/heads/develop`, has no bypass actors, and blocks only deletion and non-fast-forward updates. It deliberately does not restrict ordinary updates or branch creation.
+
+The following classic `main` policy was observed through the signed-in, read-only GitHub UI on 2026-10-12:
 
 1. Pull-request-based changes with the `verify` status required; require the branch to be current before merge.
 2. No human review approval is required by this policy.
 3. Force-push and branch deletion are blocked.
 4. GitHub Actions has no bypass to write deployment state to `main`.
 
-This policy must be checked in GitHub settings after any change because it is not encoded by the workflow. `develop` has no equivalent rule so the narrowly guarded schedule heartbeat can continue to update that branch.
+The ruleset supplements rather than replaces the classic `main` policy. GitHub readback reverified the matching live ruleset on 2026-10-12. A committed JSON payload, its local test, and the point-in-time classic-policy observation do not establish future live state, so operators must inspect both the active GitHub ruleset and the classic `main` policy after every governance change.
 
-The daily schedule also starts `develop-schedule-heartbeat`. It compares the newest activity on `main` and `develop`. If neither has activity within 30 days, the checked-in job first confirms that remote `develop` already exists, then writes only `.github/schedule-heartbeat`, verifies that no other path changed, and commits as `github-actions[bot]`. It checks that `develop` did not change while the job prepared the commit and uses a normal non-force push to `develop`; a concurrent update is rejected rather than retried or overwritten. The job is coded to make no other ref update, uses its own non-canceling concurrency group, and cannot deploy. Do not apply the intended `main` rule to `develop` while this heartbeat is active; its current external state is not verified here.
+The daily schedule also starts `develop-schedule-heartbeat`. It compares the newest activity on `main` and `develop`. If neither has activity within 30 days, the checked-in job first confirms that remote `develop` already exists, then writes only `.github/schedule-heartbeat`, verifies that no other path changed, and commits as `github-actions[bot]`. It checks that `develop` did not change while the job prepared the commit and uses a normal non-force push to `develop`; a concurrent update is rejected rather than retried or overwritten. The job is coded to make no other ref update, uses its own non-canceling concurrency group, and cannot deploy. The permanent-branch ruleset allows this guarded ordinary fast-forward while preventing deletion and non-fast-forward rewrites.
 
 ## Related guides
 
@@ -334,3 +367,7 @@ The daily schedule also starts `develop-schedule-heartbeat`. It compares the new
 - [Security](../security/SECURITY.md)
 - [Architecture](../architecture/ARCHITECTURE.md)
 - [Local Development](../development/LOCAL_DEVELOPMENT.md)
+
+The preparation change retains version-1 identity output for existing `build:generated` callers that do not declare `RELEASE_TARGET`. Only the sealed-release builder supplies the explicit target, public-input fingerprint, and producer fields needed for version 2. A PR candidate may record its Actions producer while remaining target `local` and ineligible for deployment. Offline local builds use the explicit local producer.
+
+Preview public-key fingerprinting preserves the existing optional-key behavior: an absent preview key compiles an unavailable contact widget and never falls back to the production key. Its empty-value digest changes when a preview key is configured, invalidating deployment equivalence. Production still requires its configured public key.

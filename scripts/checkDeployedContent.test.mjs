@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { artifactManifestFileName } from "./artifactIntegrity.mjs";
-import { compareDeployedContent, smokeDeployment } from "./checkDeployedContent.mjs";
+import { compareDeployedContent, compareProducerGeneration, decideDeployment, smokeDeployment } from "./checkDeployedContent.mjs";
 
 const contentHash = "a".repeat(64);
 const commitSha = "b".repeat(40);
@@ -29,6 +29,16 @@ const sitemapXml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 <url><loc>https://nicolasmgioanni.dev/</loc></url>
 </urlset>`;
+const deployedV2 = {
+  schemaVersion: 2,
+  contentHash,
+  commitSha,
+  generatedAt: "2026-08-27T12:00:00.000Z",
+  deployedAt: "2026-08-27T12:01:00.000Z",
+  target: "production",
+  publicBuildInputDigest: "d".repeat(64),
+  producer: { kind: "github-actions", runId: "101", runNumber: 50, attempt: 1 }
+};
 
 let artifactDirectory;
 
@@ -119,6 +129,26 @@ describe("deployed candidate comparison", () => {
         "malformed-manifest"
       )
     ).rejects.toThrow(/Deployed content-version\.json is invalid/);
+  });
+
+  it("rejects redirects for deployment identity metadata", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(null, { status: 302, headers: { Location: "https://substitute.example/content-version.json" } })));
+    await expect(compareDeployedContent("https://smart-portfolio-bds.pages.dev", contentHash, commitSha, "redirect")).rejects.toThrow("redirected");
+  });
+});
+
+describe("deployment identity decisions", () => {
+  it("uses run number then producer attempt and permits only exact v2 smoke-only retries", () => {
+    expect(compareProducerGeneration({ ...deployedV2, producer: { ...deployedV2.producer, attempt: 2 } }, deployedV2)).toBe(1);
+    expect(decideDeployment(deployedV2, deployedV2)).toEqual({ action: "smoke-only", reason: "exact-deployed-identity" });
+    expect(decideDeployment({ ...deployedV2, producer: { ...deployedV2.producer, attempt: 2 } }, deployedV2)).toEqual({ action: "full-verification", reason: "candidate-generation-is-newer" });
+  });
+
+  it("prevents older or ambiguous candidates from overwriting a newer release", () => {
+    expect(decideDeployment({ ...deployedV2, contentHash: "e".repeat(64), producer: { ...deployedV2.producer, runNumber: 49 } }, deployedV2)).toEqual({ action: "fail-closed", reason: "candidate-generation-is-older" });
+    expect(decideDeployment({ ...deployedV2, publicBuildInputDigest: "e".repeat(64) }, deployedV2)).toEqual({ action: "fail-closed", reason: "same-generation-has-different-identity" });
+    expect(decideDeployment(deployedV2, version)).toEqual({ action: "full-verification", reason: "legacy-deployed-identity" });
+    expect(decideDeployment(deployedV2, { invalid: true })).toEqual({ action: "fail-closed", reason: "deployed-identity-malformed" });
   });
 });
 
