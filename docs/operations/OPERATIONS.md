@@ -55,7 +55,7 @@ A preview build maps `NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY` into the only brow
 1. Merge the reviewed green change into `main` through the repository's approved change flow.
 2. Confirm the push workflow resolves the current `main` SHA.
 3. Confirm strict workbook generation produces one accepted snapshot before full validation.
-4. Confirm `verify` accepts every required job result and original producer receipt or artifact rather than a rerun substitute.
+4. Confirm `verify` accepts every required job result and the exact physical producer receipt or artifact. A retained consumer copy may map to its unique original execution; a new physical rerun must supply its own evidence.
 5. Confirm the deploy job restores the sealed candidate and verifies its archive digest; the trusted workflow creates provenance/SBOM attestations, then the deployment command performs its bounded read-only Direct Upload Pages-project preflight and cryptographically verifies those attestations before branch freshness, D1 migration, or upload.
 6. Confirm the production D1 target check and pending migrations succeed before Pages upload.
 7. Confirm the unique deployment-host smoke, exact identity check, and stable assigned-domain smoke pass.

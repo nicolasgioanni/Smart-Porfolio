@@ -163,6 +163,7 @@ describe("package and CI deployment automation", () => {
         "scripts/candidateAdmissionWorkflow.test.mjs",
         "scripts/security/checkSarif.test.mjs",
         "scripts/ci/gate.test.mjs",
+        "scripts/ci/effectiveExecution.test.mjs",
         "scripts/heartbeatWorkflow.test.mjs",
         "scripts/security/installPinnedTool.test.mjs",
         "scripts/security/securityScans.test.mjs",

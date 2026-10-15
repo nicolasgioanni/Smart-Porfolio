@@ -2,8 +2,9 @@ import { appendFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkedCandidate } from "./context.mjs";
-import { readRunCollection, readRunEvidence } from "./githubEvidence.mjs";
+import { readRunAttemptEvidence, readRunCollection, readRunEvidence } from "./githubEvidence.mjs";
 import { applicationJobs, parseCandidate, positiveInteger, securityJobs } from "./plan.mjs";
+import { collectAttemptHistory, normalizeEffectiveExecutions } from "./effectiveExecution.mjs";
 
 const measuredJobs = new Set(["resolve-candidate", "prepare-content", ...applicationJobs.filter((name) => name !== "browser-e2e"),
   "chromium-1-of-2", "chromium-2-of-2", ...securityJobs, "dependency-review"]);
@@ -23,17 +24,29 @@ function category(name) {
 
 // Observational data only. Timing omissions are explicit; this record is never
 // parsed by acceptance or deployment and cannot turn a failed check green.
-export function summarizeTimings({ candidate: input, currentAttempt, jobs, runCreatedAt, summaries = {} }) {
+export function summarizeTimings({ candidate: input, currentAttempt, attempts, jobs, runCreatedAt, summaries = {} }) {
   const candidate = parseCandidate(input);
   positiveInteger(currentAttempt, "Metrics run attempt");
-  if (!Array.isArray(jobs)) throw new Error("Timing observations are unavailable.");
-  const rows = [], seen = new Set();
-  for (const job of jobs) {
-    if (!measuredJobs.has(job?.name)) continue;
-    if (job.run_id !== candidate.runId || !Number.isSafeInteger(job.run_attempt) || job.run_attempt < 1 ||
-        job.run_attempt > currentAttempt || !Number.isSafeInteger(job.id) || job.id < 1 || seen.has(job.id)) throw new Error("Timing observations have ambiguous run identity.");
-    seen.add(job.id);
-    const row = { job: job.name, attempt: job.run_attempt,
+  if (!Array.isArray(jobs) || !Array.isArray(attempts)) throw new Error("Timing observations are unavailable.");
+  // Skipped optional rows may contain provider timestamps inherited from a
+  // prior attempt. They consumed no runner time and are intentionally outside
+  // the strict physical-execution parser used for completed work.
+  const observed = jobs.filter((job) => measuredJobs.has(job?.name) && job.conclusion !== "skipped");
+  const names = [...new Set(observed.map((job) => job.name))];
+  if (names.length === 0) throw new Error("Required-job timings are absent.");
+  const normalized = normalizeEffectiveExecutions({
+    candidate,
+    currentAttempt,
+    startAttempt: 1,
+    attempts,
+    jobs: observed,
+    names,
+    requireCurrent: false
+  });
+  const currentByName = new Map([...normalized.current].map(([name, execution]) => [name, execution.attempt]));
+  const rows = [];
+  for (const { name, attempt, job } of normalized.physical) {
+    const row = { job: name, attempt,
       outcome: conclusions.has(job.conclusion) ? job.conclusion : "unavailable",
       elapsedMs: job.status === "completed" ? duration(job.started_at, job.completed_at) : null,
       setupMs: 0, artifactUploadMs: 0, snapshotRestoreMs: 0, contentPreparationAndDiscoveryMs: 0, otherStepMs: 0, missingStepTimings: 0 };
@@ -44,10 +57,9 @@ export function summarizeTimings({ candidate: input, currentAttempt, jobs, runCr
       if (elapsed === null || typeof step.name !== "string") row.missingStepTimings += 1;
       else row[category(step.name)] += elapsed;
     }
-    const counts = Object.hasOwn(summaries, job.name) ? summaries[job.name] : null;
-    // Counts describe the accepted latest execution, never an older attempt.
-    const latestAttempt = Math.max(...jobs.filter((entry) => entry?.name === job.name).map((entry) => entry.run_attempt));
-    if (job.run_attempt === latestAttempt && counts && ["tests", "retries", "skips"].every((key) => Number.isSafeInteger(counts[key]) && counts[key] >= 0)) {
+    const counts = Object.hasOwn(summaries, name) ? summaries[name] : null;
+    // Counts describe the effective current execution, not a relabelled copy.
+    if (attempt === currentByName.get(name) && counts && ["tests", "retries", "skips"].every((key) => Number.isSafeInteger(counts[key]) && counts[key] >= 0)) {
       row.tests = counts.tests; row.retries = counts.retries; row.skips = counts.skips;
     }
     rows.push(row);
@@ -55,7 +67,7 @@ export function summarizeTimings({ candidate: input, currentAttempt, jobs, runCr
   if (rows.length === 0) throw new Error("Required-job timings are absent.");
   const current = rows.filter((row) => row.attempt === currentAttempt);
   const complete = rows.every((row) => row.elapsedMs !== null);
-  const ends = jobs.filter((job) => measuredJobs.has(job?.name) && job.status === "completed").map((job) => milliseconds(job.completed_at));
+  const ends = normalized.physical.map(({ job }) => milliseconds(job.completed_at));
   const lastEnd = ends.length && ends.every(Number.isFinite) ? new Date(Math.max(...ends)).toISOString() : null;
   return { schemaVersion: 1, observationOnly: true, sourceSha: candidate.sourceSha, event: candidate.event,
     runId: candidate.runId, runNumber: candidate.runNumber, attempt: currentAttempt,
@@ -70,9 +82,20 @@ export async function reportTimings(environment = process.env) {
     const candidate = checkedCandidate(environment);
     if (!/^[1-9]\d*$/.test(environment.GITHUB_RUN_ATTEMPT ?? "")) throw new Error("Invalid metrics attempt.");
     const options = { token: environment.GH_TOKEN };
+    const currentAttempt = Number(environment.GITHUB_RUN_ATTEMPT);
     const [run, jobs] = await Promise.all([readRunEvidence(candidate, options), readRunCollection(candidate.runId, "jobs", options)]);
+    const attempts = await collectAttemptHistory({
+      candidate,
+      currentAttempt,
+      startAttempt: 1,
+      currentRun: run,
+      readAttempt: readRunAttemptEvidence,
+      options
+    });
     const acceptance = environment.CI_ACCEPTANCE ? JSON.parse(environment.CI_ACCEPTANCE) : null;
-    const summary = summarizeTimings({ candidate, currentAttempt: Number(environment.GITHUB_RUN_ATTEMPT), jobs,
+    const summary = summarizeTimings({ candidate, currentAttempt, attempts, jobs,
+      // The generic run record retains the original creation time across
+      // consumer reruns. Attempt records describe execution windows only.
       runCreatedAt: run.created_at, summaries: acceptance?.summaries ?? {} });
     const output = JSON.stringify(summary, null, 2);
     console.log(output);

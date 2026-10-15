@@ -2,12 +2,25 @@ import { mkdtemp, realpath, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { applicationJobs, evaluateResults, exactKeys, parsePlan, positiveInteger, recordDigest, sealedReleaseValidators, securityJobs } from "./plan.mjs";
-import { artifactName, readRunCollection, readRunEvidence, transferForCompletedJob, verifyReceiptProducer } from "./githubEvidence.mjs";
+import { artifactName, readRunAttemptEvidence, readRunCollection, readRunEvidence, transferForCompletedJob, verifyReceiptProducer } from "./githubEvidence.mjs";
 import { downloadArtifact, extractArtifact } from "./artifactTransport.mjs";
 import { parseArtifactReference, verifyArtifactReference } from "./snapshot.mjs";
 import { allowedBrowserSkips } from "./browserSkips.mjs";
 import { parseChromiumDiscovery, readEvidenceArtifact, verifySourceReceipt } from "./validationEvidence.mjs";
 import { parseTestIdentity, selectCompletedJob, verifyReceipt } from "./receipts.mjs";
+import { collectAttemptHistory, normalizeEffectiveExecutions } from "./effectiveExecution.mjs";
+
+function evidenceJobs(plan) {
+  return [
+    "resolve-candidate",
+    "prepare-content",
+    ...securityJobs,
+    ...(plan.candidate.event === "pull_request" ? ["dependency-review"] : []),
+    ...(plan.mode === "full" ? applicationJobs.flatMap((job) => job === "browser-e2e"
+      ? ["chromium-1-of-2", "chromium-2-of-2"]
+      : [job]) : [])
+  ];
+}
 
 function exactProducerReference(value, { role, validator, producerJob, candidate, currentAttempt, jobs, artifacts }) {
   const reference = parseArtifactReference(value);
@@ -39,7 +52,7 @@ export function parseDiscoveryEnvelope(value) {
 // installation, application test rerun or cloud mutation occurs in this gate.
 export async function verifyCompleteEvidence({ plan: input, results, currentAttempt, references }, {
   token, fetchImplementation = fetch, temporaryRoot = os.tmpdir(),
-  readRun = readRunEvidence, readCollection = readRunCollection,
+  readRun = readRunEvidence, readAttempt = readRunAttemptEvidence, readCollection = readRunCollection,
   download = downloadArtifact, extract = extractArtifact
 } = {}) {
   const plan = parsePlan(input), candidate = plan.candidate;
@@ -52,7 +65,23 @@ export async function verifyCompleteEvidence({ plan: input, results, currentAtte
     readRun(candidate, options), readCollection(candidate.runId, "jobs", options), readCollection(candidate.runId, "artifacts", options)
   ]);
   if (run.run_attempt !== currentAttempt || currentAttempt < candidate.producerAttempt) throw new Error("Aggregate is not evaluating the current run attempt.");
-  const expected = { candidate, currentAttempt, jobs, artifacts };
+  const attempts = await collectAttemptHistory({
+    candidate,
+    currentAttempt,
+    startAttempt: candidate.producerAttempt,
+    currentRun: run,
+    readAttempt,
+    options
+  });
+  const normalized = normalizeEffectiveExecutions({
+    candidate,
+    currentAttempt,
+    startAttempt: candidate.producerAttempt,
+    attempts,
+    jobs,
+    names: evidenceJobs(plan)
+  });
+  const expected = { candidate, currentAttempt, jobs: normalized.jobs, artifacts };
   let snapshot = null, release = null;
   if (plan.mode === "obsolete") {
     if (Object.values(references).some((value) => value !== null)) throw new Error("Obsolete no-op cannot carry prepared artifacts.");

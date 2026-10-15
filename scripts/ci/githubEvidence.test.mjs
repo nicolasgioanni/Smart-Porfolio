@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
-import { artifactForCompletedJob, artifactName, readGithubEvidence, readRunCollection, readRunEvidence, transferForCompletedJob, verifyReceiptProducer } from "./githubEvidence.mjs";
+import { artifactForCompletedJob, artifactName, readGithubEvidence, readRunAttemptEvidence, readRunCollection, readRunEvidence, transferForCompletedJob, verifyReceiptProducer } from "./githubEvidence.mjs";
 import { repository, workflowPath } from "./plan.mjs";
 
 const sha = "a".repeat(40), digest = "b".repeat(64);
@@ -19,11 +19,12 @@ describe("same-run GitHub evidence admission", () => {
     expect(await readGithubEvidence("/actions/runs/12345", { ...options, fetchImplementation })).toEqual({ id: 12345 });
     expect(fetchImplementation.mock.calls[0][0]).toBe(`https://api.github.com/repos/${repository}/actions/runs/12345`);
     expect(fetchImplementation.mock.calls[0][1]).toMatchObject({ redirect: "error", headers: { Authorization: "Bearer read-only-fixture-token" } });
-    for (const endpoint of ["https://evil.test", "/actions/runs/latest", "/actions/runs/12345/../../secrets", "/actions/runs/12345?redirect=elsewhere"]) {
+    expect(await readGithubEvidence("/actions/runs/12345/attempts/2", { ...options, fetchImplementation })).toEqual({ id: 12345 });
+    for (const endpoint of ["https://evil.test", "/actions/runs/latest", "/actions/runs/12345/attempts/0", "/actions/runs/12345/attempts/2/jobs", "/actions/runs/12345/../../secrets", "/actions/runs/12345?redirect=elsewhere"]) {
       await expect(readGithubEvidence(endpoint, { ...options, fetchImplementation })).rejects.toThrow("Unsupported");
     }
     await expect(readGithubEvidence("/actions/runs/12345", { fetchImplementation })).rejects.toThrow("credentials");
-    expect(fetchImplementation).toHaveBeenCalledTimes(1);
+    expect(fetchImplementation).toHaveBeenCalledTimes(2);
   });
 
   it("rejects unavailable, malformed and oversized reports without exposing their body", async () => {
@@ -37,6 +38,17 @@ describe("same-run GitHub evidence admission", () => {
     expect(await readRunEvidence(candidate, { ...options, fetchImplementation: async () => response(run) })).toEqual(run);
     for (const patch of [{ id: 88 }, { event: "workflow_dispatch" }, { head_sha: "c".repeat(40) }, { path: "untrusted.yml" }, { run_attempt: 0 }]) {
       await expect(readRunEvidence(candidate, { ...options, fetchImplementation: async () => response({ ...run, ...patch }) })).rejects.toThrow("does not match");
+    }
+  });
+
+  it("reads only a matching historical attempt boundary", async () => {
+    const run = { id: 12345, run_number: 350, event: "push", head_sha: sha, path: workflowPath, run_attempt: 2,
+      run_started_at: "2026-10-15T00:00:02Z" };
+    const fetchImplementation = vi.fn(async () => response(run));
+    await expect(readRunAttemptEvidence(candidate, 2, { ...options, fetchImplementation })).resolves.toEqual(run);
+    expect(fetchImplementation.mock.calls[0][0]).toBe(`https://api.github.com/repos/${repository}/actions/runs/12345/attempts/2`);
+    for (const patch of [{ run_attempt: 1 }, { id: 88 }, { path: "untrusted.yml" }]) {
+      await expect(readRunAttemptEvidence(candidate, 2, { ...options, fetchImplementation: async () => response({ ...run, ...patch }) })).rejects.toThrow("does not match");
     }
   });
 

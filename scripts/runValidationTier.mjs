@@ -78,6 +78,7 @@ export const requiredPriorityFiles = [...new Set([
   "scripts/ci/workflowGraph.test.mjs",
   "scripts/ci/browserDiscovery.test.mjs",
   "scripts/ci/githubEvidence.test.mjs",
+  "scripts/ci/effectiveExecution.test.mjs",
   "scripts/ci/validationEvidence.test.mjs",
   "scripts/ci/artifactTransport.test.mjs",
   "scripts/ci/workflowYaml.test.mjs",

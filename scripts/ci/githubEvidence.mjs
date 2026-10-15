@@ -6,7 +6,7 @@ const apiRoot = `https://api.github.com/repos/${repository}`;
 const responseBudget = 8 * 1024 * 1024;
 
 export async function readGithubEvidence(endpoint, { token, fetchImplementation = fetch } = {}) {
-  if (!/^\/actions\/(?:runs\/[1-9]\d*(?:\/(?:jobs\?filter=all&per_page=100&page=[1-9]\d*|artifacts\?per_page=100&page=[1-9]\d*))?|artifacts\/[1-9]\d*)$/.test(endpoint)) {
+  if (!/^\/actions\/(?:runs\/[1-9]\d*(?:\/attempts\/[1-9]\d*|\/(?:jobs\?filter=all&per_page=100&page=[1-9]\d*|artifacts\?per_page=100&page=[1-9]\d*))?|artifacts\/[1-9]\d*)$/.test(endpoint)) {
     throw new Error("Unsupported GitHub evidence endpoint.");
   }
   if (typeof token !== "string" || !token || /\s/.test(token)) throw new Error("Read-only GitHub evidence credentials are missing or invalid.");
@@ -42,6 +42,20 @@ export async function readRunEvidence(candidateValue, options) {
       run.head_sha !== candidate.runHeadSha || run.path !== ".github/workflows/ci.yml" ||
       !Number.isSafeInteger(run.run_attempt) || run.run_attempt < candidate.producerAttempt) {
     throw new Error("GitHub run evidence does not match the candidate.");
+  }
+  return run;
+}
+
+// The all-attempt job collection is the sole source of job rows. This narrow
+// endpoint supplies only an attempt's trusted start boundary so copied rows
+// can be mapped back to their physical execution without extra job reads.
+export async function readRunAttemptEvidence(candidateValue, attempt, options) {
+  const candidate = parseCandidate(candidateValue);
+  positiveInteger(attempt, "Run attempt");
+  const run = await readGithubEvidence(`/actions/runs/${candidate.runId}/attempts/${attempt}`, options);
+  if (run.id !== candidate.runId || run.run_number !== candidate.runNumber || run.event !== candidate.event ||
+      run.head_sha !== candidate.runHeadSha || run.path !== ".github/workflows/ci.yml" || run.run_attempt !== attempt) {
+    throw new Error("GitHub run-attempt evidence does not match the candidate.");
   }
   return run;
 }
