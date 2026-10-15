@@ -33,11 +33,16 @@ describe("static portfolio security contracts", () => {
     const runtimeFetchFiles = sourceFiles.filter((filePath) => readFileSync(filePath, "utf8").includes("fetch("));
 
     expect(runtimeFetchFiles.map((filePath) => path.relative(projectRoot, filePath).replaceAll("\\", "/"))).toEqual([
-      "src/features/contact/components/ContactForm.tsx"
+      "src/features/contact/components/contactRequest.ts"
     ]);
-    const contactFormSource = readFileSync(runtimeFetchFiles[0], "utf8");
-    expect(contactFormSource).toContain('fetch("/api/contact/verify"');
-    expect(contactFormSource).toContain('fetch("/api/contact"');
+    const requestSource = readFileSync(runtimeFetchFiles[0], "utf8");
+    const contactFormSource = readFileSync(
+      path.join(projectRoot, "src", "features", "contact", "components", "ContactForm.tsx"),
+      "utf8"
+    );
+    expect(requestSource).toContain("fetch(path");
+    expect(contactFormSource).toMatch(/requestContactApi\(\s*"\/api\/contact\/verify"/);
+    expect(contactFormSource).toMatch(/requestContactApi\(\s*"\/api\/contact"/);
     expect(contactFormSource).toContain("onTokenChange={handleTurnstileTokenChange}");
     expect(contactFormSource).not.toMatch(/onTokenChange=\{\([^)]*\)\s*=>/);
   });

@@ -386,7 +386,7 @@ The PR gate also runs actual local workerd with isolated provider fixtures: succ
 Useful focused verification:
 
 ```powershell
-npx --no-install vitest run functions/api/contact/verify.test.ts functions/api/contact.test.ts src/app/contact/contact.test.tsx src/features/contact/components/TurnstileWidget.test.tsx src/features/contact/components/contactFormValidation.test.ts
+npx --no-install vitest run functions/api/contact/verify.test.ts functions/api/contact.test.ts src/app/contact/contact.test.tsx src/features/contact/components/contactRequest.test.ts src/features/contact/components/TurnstileWidget.test.tsx src/features/contact/components/contactFormValidation.test.ts
 npx --no-install vitest run scripts/contactTransport.integration.test.ts scripts/updateContactTlds.test.mjs src/features/contact/components/ContactNotifications.test.tsx
 npm run docs:check
 ```
