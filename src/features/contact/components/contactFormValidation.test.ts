@@ -20,6 +20,11 @@ describe("contact form validation", () => {
     const complete = validateNameStep(draft({ firstName: " Avery ", lastName: " Nguyen " }));
     expect(complete).toEqual({ firstName: undefined, lastName: undefined });
     expect(hasFieldErrors(complete)).toBe(false);
+
+    expect(validateNameStep(draft({ firstName: "Avery\u0001", lastName: "Nguyen" }))).toEqual({
+      firstName: "Enter a valid first name",
+      lastName: undefined
+    });
   });
 
   it("requires a valid email and message while keeping phone optional", () => {
@@ -89,6 +94,14 @@ describe("contact form validation", () => {
     expect(validateDetailsStep(draft({ email: "person@example.com", message: "a".repeat(501) })).message).toBe(
       "Keep your message to 500 characters or fewer"
     );
+  });
+
+  it("rejects server-invalid control characters before the review payload is frozen", () => {
+    expect(validateDetailsStep(draft({ email: "person@example.com", message: "Hello\u0001" }))).toEqual({
+      email: undefined,
+      phone: undefined,
+      message: "Enter a valid message"
+    });
   });
 
   it("accepts international-friendly phone formatting and rejects malformed or implausible values", () => {

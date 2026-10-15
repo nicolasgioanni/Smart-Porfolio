@@ -20,6 +20,7 @@ Use this guide for the complete request contract and trust boundary. See [Securi
 | Delivery handler | `functions/api/contact.ts` |
 | Function route allowlist | `public/_routes.json` |
 | Static response headers | `public/_headers` |
+| Function JSON response headers | `functions/_shared/contact/request.ts` |
 | Production and preview non-secret values | `wrangler.jsonc` |
 | Contact-rate reservation schema | `migrations/` |
 | Build-time site-key selection | `.github/workflows/ci.yml` |
@@ -157,12 +158,14 @@ Both handlers use the same request envelope rules:
 - HTTP method must be `POST`. Other methods return `405` and `Allow: POST`.
 - Required environment configuration is checked immediately after the method, before origin, media-type, or body validation.
 - The media type, after removing parameters and normalizing case, must be `application/json`.
-- The `Origin` header is mandatory and must exactly match a normalized configured origin. Missing, `null`, malformed, or unlisted origins are rejected. No wildcard and no CORS response are implemented.
+- The `Origin` header is mandatory. Its normalized value must be configured and exactly equal the normalized target origin of the request URL. Missing, `null`, malformed, unlisted, or target-mismatched origins are rejected. No wildcard and no CORS response are implemented.
 - Both handlers enforce a 16,384-byte limit from `Content-Length` when present and from the bytes actually streamed. This happens before JSON parsing completes.
 - The byte stream must be valid UTF-8 and valid JSON.
 - A configured allowlist is valid only when every comma-separated entry is valid. One malformed origin or hostname makes the corresponding configuration check fail closed.
 
-The handlers apply a 15-second request-body read deadline, but do not implement a whole-request timeout or client-side fetch timeout. Cloudflare platform limits still apply. A body that crosses the 16 KiB input limit or its read deadline begins stream cancellation without waiting for that cleanup to settle. Bounded timeouts apply to Siteverify, mail-domain DNS validation, and each Resend request.
+`/api/contact/verify` has a 25-second server operation deadline; `/api/contact` has a 40-second server operation deadline. Each includes the 15-second request-body read deadline and all later local work. The browser separately aborts verification after 30 seconds and delivery after 45 seconds. Reservation fingerprint/key derivation and the D1 batch each have a three-second deadline, further bounded by the remaining delivery deadline. A body that crosses the 16 KiB input limit or a read deadline begins stream cancellation without waiting for cleanup to settle.
+
+Deadline expiry prevents the handler from starting a later stage, but cannot prove that a provider accepted no request after a request was already started. Browser aborts likewise stop the browser from waiting; they do not revoke work already received by a Function or provider. An uncertain delivery remains a locked, idempotent retry rather than a no-send guarantee. Cloudflare platform limits still apply.
 
 ### `POST /api/contact/verify`
 
@@ -248,16 +251,18 @@ Before calling Resend, the handler atomically reserves a slot in the `CONTACT_RA
 | `submission_id` | Opaque submission UUID and primary key. |
 | `email_hash` | HMAC-SHA-256 of `email.trim().toLowerCase()`. |
 | `payload_hash` | HMAC-SHA-256 fingerprint of the normalized full delivery payload. |
+| `delivery_config_hash` | Opaque HMAC-SHA-256 fingerprint of the email renderer version and configured sender, recipient, and reply-to values. |
+| `render_version` | Integer email-renderer version for the reserved delivery. |
 | `reserved_at` | Reservation time as Unix epoch seconds. |
 | `expires_at` | Rolling-window expiry as Unix epoch seconds. |
 
-The address and payload HMAC keys are derived from `TURNSTILE_SECRET_KEY` with separate domain-separated HKDF contexts. The payload fingerprint includes every normalized delivery field and lets D1 compare retries without storing the field values. No provider-specific dot removal or plus-alias rewriting occurs. D1 never receives the raw email address, name, phone number, or message.
+The address, payload, and delivery-configuration HMAC keys are derived from `TURNSTILE_SECRET_KEY` with separate domain-separated HKDF contexts. The payload fingerprint includes every normalized delivery field, and the configuration fingerprint binds the renderer version plus sender, recipient, and reply-to configuration without storing either fields or configuration values in D1. No provider-specific dot removal or plus-alias rewriting occurs. D1 never receives the raw email address, name, phone number, message, or configured mailboxes.
 
-Expired rows are removed during reservation cleanup. Fewer than two unexpired rows for an email hash permits a new reservation; a third returns `429 rate_limited` with `Retry-After` set to the remaining time until the earliest applicable expiry. Reusing the same submission UUID is a free retry only when both the email hash and payload fingerprint match. A mismatch is rejected. A reservation is created before provider delivery and remains after a provider or network failure, while valid same-ID retries consume no additional slot. Missing or unavailable D1 configuration fails closed with `503 service_unavailable`.
+Expired rows are removed during reservation cleanup. Fewer than two unexpired rows for an email hash permits a new reservation; a third returns `429 rate_limited` with `Retry-After` set to the remaining time until the earliest applicable expiry. Reusing the same submission UUID is a free retry only when the email hash, payload fingerprint, delivery-configuration fingerprint, and renderer version all match. A mismatch is rejected. Rows created before migration `0003` have `NULL` delivery configuration and renderer fields; they fail closed rather than rerendering an uncertain prior send after a configuration or template change. A reservation is created before provider delivery and remains after a provider or network failure, while valid same-ID retries consume no additional slot. Missing or unavailable D1 configuration fails closed with `503 service_unavailable`.
 
 ## Email delivery and idempotency
 
-After DNS validation and quota reservation, the handler makes up to two sequential `POST https://api.resend.com/emails` requests with server-only bearer authorization and bounded timeouts. Fixed Resend requests reject redirects, and the handler cancels each unread response body without waiting because it needs only the acceptance status. It sends the visitor confirmation first and sends the owner notification only after Resend accepts the confirmation request:
+After DNS validation and quota reservation, the handler makes up to two sequential `POST https://api.resend.com/emails` requests with server-only bearer authorization. Each request has an eight-second deadline and is also bounded by the remaining 40-second delivery operation. Fixed Resend requests reject redirects, and the handler cancels each unread response body without waiting because it needs only the acceptance status. The operation deadline prevents starting a later mail stage, but cannot guarantee that a provider did not accept a request already in flight when a timeout or abort occurs. It sends the visitor confirmation first and sends the owner notification only after Resend accepts the confirmation request:
 
 | Message | Destination | Reply-to | Content |
 | --- | --- | --- | --- |
@@ -295,8 +300,12 @@ Every Function response sets:
 
 - `Cache-Control: no-store, max-age=0`;
 - `Content-Type: application/json; charset=utf-8`;
+- `Content-Security-Policy: default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`;
+- `Permissions-Policy: camera=(), geolocation=(), microphone=(), payment=(), usb=()`;
 - `Referrer-Policy: no-referrer`;
-- `X-Content-Type-Options: nosniff`.
+- `Strict-Transport-Security: max-age=31536000`;
+- `X-Content-Type-Options: nosniff`;
+- `X-Frame-Options: DENY`.
 
 Cloudflare Pages does not apply `public/_headers` rules to Function-generated responses. Static pages receive the broader Content Security Policy, Permissions Policy, HSTS, framing, referrer, and content-type protections declared there. See [Cloudflare Pages custom headers](https://developers.cloudflare.com/pages/configuration/headers/).
 
@@ -336,7 +345,7 @@ For local testing, copy the placeholder-only example into the ignored local envi
 
 - exact Function route allowlisting;
 - POST-only JSON handlers;
-- mandatory exact origin;
+- mandatory configured origin equal to the request target origin;
 - streaming body-size and UTF-8/JSON validation;
 - strict schemas and unknown-field rejection;
 - required acknowledgments and field validation;
@@ -386,7 +395,7 @@ The PR gate also runs actual local workerd with isolated provider fixtures: succ
 Useful focused verification:
 
 ```powershell
-npx --no-install vitest run functions/api/contact/verify.test.ts functions/api/contact.test.ts src/app/contact/contact.test.tsx src/features/contact/components/TurnstileWidget.test.tsx src/features/contact/components/contactFormValidation.test.ts
+npx --no-install vitest run functions/api/contact/verify.test.ts functions/api/contact.test.ts src/app/contact/contact.test.tsx src/features/contact/components/contactRequest.test.ts src/features/contact/components/TurnstileWidget.test.tsx src/features/contact/components/contactFormValidation.test.ts
 npx --no-install vitest run scripts/contactTransport.integration.test.ts scripts/updateContactTlds.test.mjs src/features/contact/components/ContactNotifications.test.tsx
 npm run docs:check
 ```

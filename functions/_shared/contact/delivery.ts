@@ -1,17 +1,26 @@
 import { isValidEmail } from "../../../src/lib/contact/validation";
 import { isValidFromMailbox } from "./config";
-import type { ContactEnv, ContactPayload, EmailMessage } from "./contracts";
-import { discardResponseBody, fetchWithTimeout } from "./transport";
+import {
+  CONTACT_EMAIL_RENDER_VERSION,
+  type ContactDeliveryResult,
+  type ContactEnv,
+  type ContactPayload,
+  type EmailMessage
+} from "./contracts";
+import { discardResponseBody, fetchWithTimeout, type Deadline } from "./transport";
 
 const RESEND_EMAIL_URL = "https://api.resend.com/emails";
 const CANONICAL_SITE_URL = "https://nicolasmgioanni.dev";
 const RESEND_TIMEOUT_MS = 8_000;
+type ProviderDeliveryAttempt = { kind: "accepted" } | { kind: "rejected" } | { kind: "unknown" };
 
 export async function sendContactEmails(
   payload: ContactPayload,
   env: ContactEnv,
-  reservationTimestamp = Math.floor(Date.now() / 1_000)
-): Promise<boolean> {
+  reservationTimestamp: number,
+  renderVersion: number,
+  operationDeadline?: Deadline
+): Promise<ContactDeliveryResult> {
   const apiKey = env.RESEND_API_KEY?.trim();
   const recipient = env.CONTACT_RECIPIENT_EMAIL?.trim();
   const fromEmail = env.CONTACT_FROM_EMAIL?.trim();
@@ -25,11 +34,14 @@ export async function sendContactEmails(
     !replyToEmail ||
     !isValidEmail(replyToEmail)
   ) {
-    return false;
+    return { kind: "rejected", stage: "visitor" };
   }
 
   const reservationYear = new Date(reservationTimestamp * 1_000).getUTCFullYear();
-  if (!Number.isSafeInteger(reservationYear)) return false;
+  if (!Number.isSafeInteger(reservationYear) || renderVersion !== CONTACT_EMAIL_RENDER_VERSION) {
+    return { kind: "unknown", stage: "visitor" };
+  }
+  if (operationDeadline?.isExpired()) return { kind: "unknown", stage: "visitor" };
 
   const [visitorMessage, ownerMessage] = createEmailMessages(
     payload,
@@ -38,14 +50,22 @@ export async function sendContactEmails(
     replyToEmail,
     reservationYear
   );
-  const visitorAccepted = await sendResendEmail(
+  const visitorResult = await sendResendEmail(
     visitorMessage,
     apiKey,
-    `portfolio-contact/visitor/${payload.submissionId}`
+    `portfolio-contact/visitor/${payload.submissionId}`,
+    operationDeadline
   );
-  if (!visitorAccepted) return false;
+  if (visitorResult.kind !== "accepted") return { ...visitorResult, stage: "visitor" };
 
-  return sendResendEmail(ownerMessage, apiKey, `portfolio-contact/owner/${payload.submissionId}`);
+  if (operationDeadline?.isExpired()) return { kind: "unknown", stage: "owner" };
+  const ownerResult = await sendResendEmail(
+    ownerMessage,
+    apiKey,
+    `portfolio-contact/owner/${payload.submissionId}`,
+    operationDeadline
+  );
+  return ownerResult.kind === "accepted" ? ownerResult : { ...ownerResult, stage: "owner" };
 }
 
 export function createEmailMessages(
@@ -61,6 +81,8 @@ export function createEmailMessages(
   const escapedEmail = escapeHtml(payload.email);
   const escapedPhone = escapeHtml(phone);
   const escapedMessage = escapeHtml(payload.message).replace(/\n/g, "<br>");
+  const replyToMailto = escapeHtml(encodeURIComponent(replyToEmail));
+  const visitorMailto = escapeHtml(encodeURIComponent(payload.email));
 
   const ownerText = [
     `New contact request from ${fullName}`,
@@ -112,7 +134,7 @@ export function createEmailMessages(
             ["Phone", escapedPhone]
           ],
           escapedMessage
-        )}<div style="margin-top:20px;padding:14px;border:1px solid #cbd8e6;border-radius:8px;background:#f7fafc;color:#334155;font-size:13px;line-height:1.6;">If you need to correct or update this information, please <a href="${CANONICAL_SITE_URL}/contact" style="color:#174f87;font-weight:600;">submit a new form</a> or email <a href="mailto:${escapeHtml(replyToEmail)}" style="color:#174f87;font-weight:600;">${escapeHtml(replyToEmail)}</a>.</div>`,
+        )}<div style="margin-top:20px;padding:14px;border:1px solid #cbd8e6;border-radius:8px;background:#f7fafc;color:#334155;font-size:13px;line-height:1.6;">If you need to correct or update this information, please <a href="${CANONICAL_SITE_URL}/contact" style="color:#174f87;font-weight:600;">submit a new form</a> or email <a href="mailto:${replyToMailto}" style="color:#174f87;font-weight:600;">${escapeHtml(replyToEmail)}</a>.</div>`,
         visitorLegalFooter(reservationYear)
       )
     },
@@ -131,7 +153,7 @@ export function createEmailMessages(
             ["Name", escapedName],
             [
               "Email",
-              `<a href="mailto:${escapedEmail}" style="color:#174f87;font-weight:700;">${escapedEmail}</a>`
+              `<a href="mailto:${visitorMailto}" style="color:#174f87;font-weight:700;">${escapedEmail}</a>`
             ],
             ["Phone", escapedPhone]
           ],
@@ -159,7 +181,12 @@ export function escapeHtml(value: string): string {
   });
 }
 
-async function sendResendEmail(message: EmailMessage, apiKey: string, idempotencyKey: string): Promise<boolean> {
+async function sendResendEmail(
+  message: EmailMessage,
+  apiKey: string,
+  idempotencyKey: string,
+  operationDeadline?: Deadline
+): Promise<ProviderDeliveryAttempt> {
   const response = await fetchWithTimeout(
     RESEND_EMAIL_URL,
     {
@@ -171,11 +198,12 @@ async function sendResendEmail(message: EmailMessage, apiKey: string, idempotenc
       },
       body: JSON.stringify(message)
     },
-    RESEND_TIMEOUT_MS
+    RESEND_TIMEOUT_MS,
+    operationDeadline
   );
-  const accepted = response?.ok === true;
+  const result = response === undefined ? { kind: "unknown" as const } : response.ok ? { kind: "accepted" as const } : { kind: "rejected" as const };
   discardResponseBody(response);
-  return accepted;
+  return result;
 }
 
 function detailTable(title: string, rows: Array<[string, string]>, escapedMessage: string): string {

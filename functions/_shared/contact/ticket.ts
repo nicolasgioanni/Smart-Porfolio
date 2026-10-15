@@ -1,5 +1,6 @@
 import type { ContactEnv } from "./contracts";
 import { decodeBase64Url, encodeBase64Url } from "./base64url";
+import { createDeadline, startWithinDeadlines, type Deadline } from "./transport";
 
 export const CONTACT_TICKET_COOKIE_NAME = "__Host-portfolio_contact_ticket";
 export const CONTACT_TICKET_MAX_AGE_SECONDS = 30 * 60;
@@ -10,6 +11,7 @@ const CONTACT_TICKET_SIGNATURE_BYTES = 32;
 const MAX_CLOCK_SKEW_MS = 30_000;
 const TICKET_HKDF_SALT = "portfolio-contact-ticket:v1:hkdf-salt";
 const TICKET_HKDF_INFO = "portfolio-contact-ticket:v1:hmac-key";
+const CONTACT_TICKET_CRYPTO_TIMEOUT_MS = 3_000;
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 interface ContactTicketPayload {
@@ -22,10 +24,11 @@ interface ContactTicketPayload {
 export async function createContactTicket(
   submissionId: string,
   env: ContactEnv,
-  now = Date.now()
+  now = Date.now(),
+  operationDeadline?: Deadline
 ): Promise<string | undefined> {
   const secret = env.TURNSTILE_SECRET_KEY?.trim();
-  if (!secret || !uuidPattern.test(submissionId)) return undefined;
+  if (!secret || !uuidPattern.test(submissionId) || operationDeadline?.isExpired()) return undefined;
 
   const issuedAt = Math.floor(now / 1_000);
   if (!Number.isSafeInteger(issuedAt) || issuedAt < 0) return undefined;
@@ -38,12 +41,20 @@ export async function createContactTicket(
   };
   const payloadBytes = new TextEncoder().encode(JSON.stringify(payload));
 
+  const cryptoDeadline = ticketCryptoDeadline(operationDeadline);
+  if (!cryptoDeadline) return undefined;
   try {
-    const key = await deriveContactTicketKey(secret, ["sign"]);
-    const signature = new Uint8Array(await crypto.subtle.sign("HMAC", key, payloadBytes));
-    return `${encodeBase64Url(payloadBytes)}.${encodeBase64Url(signature)}`;
-  } catch {
-    return undefined;
+    const key = await deriveContactTicketKey(secret, ["sign"], cryptoDeadline, operationDeadline);
+    if (!key || operationDeadline?.isExpired()) return undefined;
+    const signature = await startWithinDeadlines(
+      () => crypto.subtle.sign("HMAC", key, payloadBytes),
+      cryptoDeadline,
+      operationDeadline
+    );
+    if (!signature || operationDeadline?.isExpired()) return undefined;
+    return `${encodeBase64Url(payloadBytes)}.${encodeBase64Url(new Uint8Array(signature))}`;
+  } finally {
+    cryptoDeadline.clear();
   }
 }
 
@@ -51,10 +62,11 @@ export async function hasValidContactTicket(
   request: Request,
   submissionId: string,
   env: ContactEnv,
-  now = Date.now()
+  now = Date.now(),
+  operationDeadline?: Deadline
 ): Promise<boolean> {
   const secret = env.TURNSTILE_SECRET_KEY?.trim();
-  if (!secret || !uuidPattern.test(submissionId)) return false;
+  if (!secret || !uuidPattern.test(submissionId) || operationDeadline?.isExpired()) return false;
 
   const ticket = readCookie(request, CONTACT_TICKET_COOKIE_NAME);
   if (!ticket || ticket.length > CONTACT_TICKET_MAX_LENGTH) return false;
@@ -66,9 +78,17 @@ export async function hasValidContactTicket(
   const signatureBytes = decodeBase64Url(segments[1] ?? "");
   if (!payloadBytes || !signatureBytes || signatureBytes.byteLength !== CONTACT_TICKET_SIGNATURE_BYTES) return false;
 
+  const cryptoDeadline = ticketCryptoDeadline(operationDeadline);
+  if (!cryptoDeadline) return false;
   try {
-    const key = await deriveContactTicketKey(secret, ["verify"]);
-    if (!(await crypto.subtle.verify("HMAC", key, signatureBytes, payloadBytes))) return false;
+    const key = await deriveContactTicketKey(secret, ["verify"], cryptoDeadline, operationDeadline);
+    if (!key || operationDeadline?.isExpired()) return false;
+    const valid = await startWithinDeadlines(
+      () => crypto.subtle.verify("HMAC", key, signatureBytes, payloadBytes),
+      cryptoDeadline,
+      operationDeadline
+    );
+    if (!valid || operationDeadline?.isExpired()) return false;
 
     const decoded = new TextDecoder("utf-8", { fatal: true }).decode(payloadBytes);
     const parsed = JSON.parse(decoded) as unknown;
@@ -83,6 +103,8 @@ export async function hasValidContactTicket(
     );
   } catch {
     return false;
+  } finally {
+    cryptoDeadline.clear();
   }
 }
 
@@ -120,21 +142,41 @@ function isContactTicketPayload(value: unknown): value is ContactTicketPayload {
   );
 }
 
-async function deriveContactTicketKey(secret: string, keyUsages: KeyUsage[]): Promise<CryptoKey> {
-  const encoder = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey("raw", encoder.encode(secret), "HKDF", false, ["deriveKey"]);
+function ticketCryptoDeadline(operationDeadline?: Deadline): Deadline | undefined {
+  const remaining = operationDeadline?.remainingMs() ?? CONTACT_TICKET_CRYPTO_TIMEOUT_MS;
+  if (remaining < 1 || operationDeadline?.isExpired()) return undefined;
+  return createDeadline(remaining);
+}
 
-  return crypto.subtle.deriveKey(
-    {
-      name: "HKDF",
-      hash: "SHA-256",
-      salt: encoder.encode(TICKET_HKDF_SALT),
-      info: encoder.encode(TICKET_HKDF_INFO)
-    },
-    keyMaterial,
-    { name: "HMAC", hash: "SHA-256", length: 256 },
-    false,
-    keyUsages
+async function deriveContactTicketKey(
+  secret: string,
+  keyUsages: KeyUsage[],
+  deadline: Deadline,
+  operationDeadline?: Deadline
+): Promise<CryptoKey | undefined> {
+  const encoder = new TextEncoder();
+  const keyMaterial = await startWithinDeadlines(
+    () => crypto.subtle.importKey("raw", encoder.encode(secret), "HKDF", false, ["deriveKey"]),
+    deadline,
+    operationDeadline
+  );
+  if (!keyMaterial) return undefined;
+
+  return startWithinDeadlines(
+    () => crypto.subtle.deriveKey(
+      {
+        name: "HKDF",
+        hash: "SHA-256",
+        salt: encoder.encode(TICKET_HKDF_SALT),
+        info: encoder.encode(TICKET_HKDF_INFO)
+      },
+      keyMaterial,
+      { name: "HMAC", hash: "SHA-256", length: 256 },
+      false,
+      keyUsages
+    ),
+    deadline,
+    operationDeadline
   );
 }
 
