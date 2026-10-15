@@ -99,14 +99,14 @@ curl --fail --silent --show-error "$production_origin/content-version.json"
 curl --fail --silent --show-error "$production_origin/artifact-integrity.json"
 ```
 
-Confirm:
+Confirm the active schema-v1 metadata has exactly `schemaVersion`, `contentHash`, `commitSha`, `generatedAt`, and `deployedAt`:
 
-- `schemaVersion` is `2` for a current release. A v1 document is legacy metadata and must not be used to prove a no-op or producer ordering decision.
-- `contentHash` is 64 lowercase hexadecimal characters.
-- `commitSha` is the intended 40-character source revision.
-- `target`, `publicBuildInputDigest`, and the producer `runId`, `runNumber`, and `attempt` match the verified candidate. The public digest is a fingerprint, not a public-key value.
+- `schemaVersion` is `1`; the active schedule and non-forced dispatch use the matching content hash and commit SHA for their no-op decision.
+- `contentHash` is 64 lowercase hexadecimal characters and `commitSha` is the intended 40-character source revision.
 - `generatedAt` and `deployedAt` are parseable timestamps.
-- The artifact manifest uses `sha256`, carries the same commit SHA, and contains file records.
+- The artifact manifest uses `sha256`, carries the same commit SHA, and contains file records for the static output.
+
+The prepared sealed-release lifecycle introduces schema v2 only after a separately reviewed orchestration supplies explicit release inputs. Its `target`, `publicBuildInputDigest`, and producer `runId`, `runNumber`, and `attempt` then bind a sealed candidate; the public digest is a fingerprint, not a public-key value. Do not read those absent v2 fields from an active v1 document or infer producer ordering from it.
 
 Both metadata endpoints should return explicit no-store and no-cache headers.
 

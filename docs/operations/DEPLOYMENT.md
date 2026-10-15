@@ -243,9 +243,23 @@ The release process must migrate and verify preview before production. CI routes
 
 ## Deployment metadata
 
-### Content version
+### Current content version and prepared v2 identity
 
-Every new build writes `out/content-version.json` with the v2 identity:
+The active workflow calls the ordinary `build:generated` command without `RELEASE_TARGET`. Its writer therefore emits exactly this schema-v1 metadata:
+
+```json
+{
+  "schemaVersion": 1,
+  "contentHash": "<sha256>",
+  "commitSha": "<40-character Git SHA>",
+  "generatedAt": "<content generation timestamp>",
+  "deployedAt": "<build timestamp>"
+}
+```
+
+The active schedule and non-forced dispatch no-op decision compares the `contentHash` and `commitSha` fields. Schema v1 has no target, public-build fingerprint, or producer ordering claim.
+
+The prepared sealed-release lifecycle writes the following v2 identity only when its explicit `release:build` input supplies `RELEASE_TARGET`, the public-build fingerprint, and producer information. The current workflow does not invoke that lifecycle.
 
 ```json
 {
@@ -265,9 +279,9 @@ Every new build writes `out/content-version.json` with the v2 identity:
 }
 ```
 
-The `contentHash` covers the canonical normalized content subset and excludes volatile metadata. `publicBuildInputDigest` binds the target, candidate SHA, lockfile, public Wrangler configuration digest, Node/Next/Wrangler versions, and a hash of the effective browser Turnstile key. It never publishes the key itself. Preview maps its preview variable into the one runtime input, `NEXT_PUBLIC_TURNSTILE_SITE_KEY`.
+For that prepared v2 identity, `contentHash` covers the canonical normalized content subset and excludes volatile metadata. `publicBuildInputDigest` binds the target, candidate SHA, lockfile, public Wrangler configuration digest, Node/Next/Wrangler versions, and a hash of the effective browser Turnstile key. It never publishes the key itself. Preview maps its preview variable into the one runtime input, `NEXT_PUBLIC_TURNSTILE_SITE_KEY`.
 
-The producer identifies the build-and-package job, not the earlier content-preparation job. Release ordering compares `runNumber` and then `attempt`; a local build records `{ "kind": "local", "runId": "local", "runNumber": null, "attempt": null }` and cannot be deployed. The reader accepts existing v1 metadata for migration, but v1 cannot establish a no-op equivalence or producer order. A malformed or ambiguous v2 identity fails closed.
+Its producer identifies the build-and-package job, not the earlier content-preparation job. Release ordering compares `runNumber` and then `attempt`; a local build records `{ "kind": "local", "runId": "local", "runNumber": null, "attempt": null }` and cannot be deployed. The reader accepts v1 metadata for the active hash-and-commit comparison, but v1 cannot establish v2 equivalence or producer order. A malformed or ambiguous v2 identity fails closed.
 
 `public/_headers` marks `/content-version.json` as non-cacheable. The comparison request also sends no-cache headers, adds a cache-busting query, treats `404` as no prior deployment, rejects redirects for identity metadata, and fails closed on other inaccessible or malformed responses.
 
@@ -299,7 +313,7 @@ Before upload, `scripts/artifactIntegrity.mjs` creates `out/artifact-integrity.j
 
 The creator rejects symbolic links and unsupported entries. Verification requires the expected commit SHA, agreement with `content-version.json`, the same file count and ordered paths, and exact size and digest matches. `application-validation` validates the manifest before upload, and the deploy job validates the downloaded artifact again. Hidden export files are included. The Actions artifact is named `cloudflare-pages-build` and is retained for one day.
 
-The integrity manifest covers `out/`, including the compiled worker and reviewed routing file. The sealed package also binds the public Wrangler configuration and numbered migrations outside the public static directory.
+The active integrity manifest covers the static files in `out/`; it does not claim that the ordinary build compiled a worker or routing file. The dormant sealed package additionally compiles and binds the reviewed Functions worker, routing output, public Wrangler configuration, and numbered migrations outside the public static directory.
 
 ## Exact automated smoke scope
 
