@@ -23,9 +23,10 @@ Provider constraints and lockfiles pin Cloudflare `5.27.0` and GitHub `6.13.0`. 
 ```sh
 npm run infrastructure:check
 npm run test:infrastructure
+TERRAFORM_BIN=/absolute/pinned/terraform OPA_BIN=/absolute/pinned/opa npm run test:infrastructure:policy
 ```
 
-The local check set covers ownership, saved-plan regressions, and OPA policy admission. With the pinned tools supplied, run format, backend-disabled initialization, validation, and mock tests for every root. A missing tool, root contract, lock, fixture, or failed check is a failure. These checks prove source contracts, not adopted infrastructure or live posture; they are not a CI job, receipt, `verify` dependency, or deployment input.
+`test:infrastructure` covers saved-plan regressions. `test:infrastructure:policy` requires the pinned Terraform `1.16.5` executable through `TERRAFORM_BIN` and pinned OPA `1.21.1` executable through `OPA_BIN`; it exercises credential-free Terraform mock-plan exports and OPA admission. With those tools supplied, run format, backend-disabled initialization, validation, and mock tests for every root. A missing tool, root contract, lock, fixture, or failed check is a failure. These checks prove source contracts, not adopted infrastructure or live posture; they are not a CI job, receipt, `verify` dependency, or deployment input.
 
 To investigate a particular root locally without credentials:
 
