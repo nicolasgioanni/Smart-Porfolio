@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
+import { parseWorkflowYaml } from "./ci/workflowYaml.mjs";
 
 const projectRoot = path.resolve(import.meta.dirname, "..");
 const workflowPath = path.join(projectRoot, ".github", "workflows", "ci.yml");
@@ -12,12 +13,10 @@ const developSha = "a".repeat(40);
 const token = "test-token-must-not-appear-in-output";
 
 function workflowScript(source) {
-  const start = source.indexOf("      - name: Refresh the existing develop branch after 30 inactive days");
-  expect(start).toBeGreaterThanOrEqual(0);
-  const step = source.slice(start);
-  const marker = "        run: |\n";
-  const body = step.slice(step.indexOf(marker) + marker.length).replace(/\n+$/, "");
-  return body.split("\n").map((line) => line ? line.slice(10) : "").join("\n");
+  const job = parseWorkflowYaml(source).jobs['heartbeat'];
+  const selected = job.steps.find((step) => step.name === 'Refresh the existing develop branch after 30 inactive days');
+  expect(typeof selected?.run).toBe("string");
+  return selected.run;
 }
 
 const gitMock = `#!/usr/bin/env bash

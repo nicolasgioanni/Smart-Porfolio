@@ -1,12 +1,15 @@
 name: CI
-
 on:
   push:
-    branches: [main, develop]
+    branches:
+      - main
+      - develop
   pull_request:
-    branches: [main, develop]
+    branches:
+      - main
+      - develop
   schedule:
-    - cron: "17 13 * * *"
+    - cron: 17 13 * * *
   workflow_dispatch:
     inputs:
       force_deploy:
@@ -14,17 +17,21 @@ on:
         required: true
         type: boolean
         default: true
-
 permissions:
   contents: read
-
+concurrency:
+  group: ci-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) ||
+    format('run-{0}', github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
-  candidate-admission:
-    name: candidate-admission
+  resolve-candidate:
+    name: resolve-candidate
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
-      candidate_sha: ${{ steps.admission.outputs.candidate_sha }}
+      candidate: ${{ steps.candidate.outputs.candidate }}
+      candidate_sha: ${{ steps.candidate.outputs.candidate_sha }}
+      obsolete: ${{ steps.candidate.outputs.obsolete }}
     steps:
       - name: Reject ineligible events and untrusted workflow references before checkout
         id: admission
@@ -37,13 +44,20 @@ jobs:
           WORKFLOW_REF: ${{ github.workflow_ref }}
           WORKFLOW_SHA: ${{ github.workflow_sha }}
           REPOSITORY: ${{ github.repository }}
-        run: |
+        run: >
           set -euo pipefail
+
           [[ "$REPOSITORY" == "nicolasgioanni/Smart-Porfolio" ]] || { echo "Unsupported repository."; exit 1; }
+
           [[ "$EVENT_SHA" =~ ^[a-f0-9]{40}$ ]] || { echo "Candidate SHA is invalid."; exit 1; }
+
           [[ "$WORKFLOW_SHA" =~ ^[a-f0-9]{40}$ ]] || { echo "Workflow SHA is invalid."; exit 1; }
+
           expected_workflow_ref="$REPOSITORY/.github/workflows/ci.yml@$EVENT_REF"
-          [[ "$WORKFLOW_REF" == "$expected_workflow_ref" ]] || { echo "Workflow reference does not match the eligible event ref."; exit 1; }
+
+          [[ "$WORKFLOW_REF" == "$expected_workflow_ref" ]] || { echo "Workflow reference does not match the eligible
+          event ref."; exit 1; }
+
           case "$EVENT_NAME" in
             pull_request)
               [[ "$EVENT_BASE_REF" == "main" || "$EVENT_BASE_REF" == "develop" ]] || { echo "Pull requests must target main or develop."; exit 1; }
@@ -62,305 +76,475 @@ jobs:
               exit 1
               ;;
           esac
+
           echo "candidate_sha=$EVENT_SHA" >> "$GITHUB_OUTPUT"
-
-  candidate-precheck:
-    name: candidate-precheck
-    needs: candidate-admission
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    outputs:
-      candidate_branch: ${{ steps.candidate.outputs.candidate_branch }}
-      candidate_sha: ${{ steps.candidate.outputs.candidate_sha }}
-      is_latest: ${{ steps.candidate.outputs.is_latest }}
-    steps:
-      - name: Check out the selected immutable candidate without credentials
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - name: Check out the admitted event candidate
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
-          ref: ${{ needs.candidate-admission.outputs.candidate_sha }}
-          fetch-depth: 0
+          ref: ${{ steps.admission.outputs.candidate_sha }}
+          fetch-depth: 1
           persist-credentials: false
-
-      - name: Resolve and check the candidate revision before protected inputs
+      - name: Set up the pinned Node runtime
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22.23.3
+      - name: Resolve the candidate before dependencies and protected content
         id: candidate
-        shell: bash
-        run: |
-          set -euo pipefail
-          candidate_sha="$(git rev-parse HEAD)"
-          echo "candidate_sha=$candidate_sha" >> "$GITHUB_OUTPUT"
-
-          if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
-            echo "candidate_branch=" >> "$GITHUB_OUTPUT"
-            echo "is_latest=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
-            candidate_branch="$GITHUB_REF_NAME"
-          else
-            candidate_branch="main"
-          fi
-
-          git fetch --no-tags origin "+refs/heads/$candidate_branch:refs/remotes/origin/$candidate_branch"
-          latest_sha="$(git rev-parse "refs/remotes/origin/$candidate_branch")"
-          echo "candidate_branch=$candidate_branch" >> "$GITHUB_OUTPUT"
-
-          if [[ "$latest_sha" == "$candidate_sha" ]]; then
-            echo "is_latest=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "is_latest=false" >> "$GITHUB_OUTPUT"
-            echo "Skipping protected inputs for stale $candidate_branch revision $candidate_sha."
-          fi
-
-  application-validation:
-    name: application-validation
-    needs: candidate-precheck
+        run: node scripts/ci/resolve.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CI_FORCE_DEPLOY: ${{ toJSON(inputs.force_deploy || false) }}
+  prepare-content:
+    name: prepare-content
+    needs: resolve-candidate
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     outputs:
-      candidate_branch: ${{ needs.candidate-precheck.outputs.candidate_branch }}
-      candidate_sha: ${{ needs.candidate-precheck.outputs.candidate_sha }}
-      content_hash: ${{ steps.content.outputs.content_hash }}
-      deploy_target: ${{ steps.decision.outputs.deploy_target }}
-      pages_domain: ${{ steps.pages.outputs.pages_domain }}
-      pages_project_name: ${{ steps.pages.outputs.pages_project_name }}
-      should_deploy: ${{ steps.decision.outputs.should_deploy }}
-      verification_tier: ${{ steps.decision.outputs.verification_tier }}
+      plan: ${{ steps.prepare.outputs.plan }}
+      mode: ${{ steps.prepare.outputs.mode }}
+      target: ${{ steps.prepare.outputs.target }}
+      snapshot_reference: ${{ steps['snapshot-reference'].outputs.reference || '' }}
+      discovery_reference: ${{ steps['discovery-reference'].outputs.reference || '' }}
+    env:
+      CI_CANDIDATE: ${{ needs['resolve-candidate'].outputs.candidate }}
+      NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
+      NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY }}
+      CLOUDFLARE_PAGES_PROJECT_NAME: ${{ vars.CLOUDFLARE_PAGES_PROJECT_NAME }}
+      CLOUDFLARE_PAGES_DOMAIN: ${{ vars.CLOUDFLARE_PAGES_DOMAIN }}
     steps:
-      - name: Check out the exact candidate
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - name: Check out the exact candidate without credentials
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
-          ref: ${{ needs.candidate-precheck.outputs.candidate_sha }}
-          fetch-depth: 0
+          ref: ${{ needs['resolve-candidate'].outputs.candidate_sha }}
+          fetch-depth: 1
           persist-credentials: false
-
-      - name: Set up Node.js
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+      - name: Set up the pinned Node runtime
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
         with:
-          node-version: 22
+          node-version: 22.23.3
           cache: npm
-
       - name: Install locked dependencies
         run: npm ci
-
-      - name: Generate validated local template content for pull requests
-        if: github.event_name == 'pull_request'
+        if: ${{ needs['resolve-candidate'].outputs.obsolete != 'true' }}
+      - name: Prepare one accepted content snapshot and validated execution plan
+        id: prepare
+        run: node scripts/ci/run.mjs prepare
         env:
-          PORTFOLIO_REQUIRE_REMOTE_CONTENT: "false"
-          PORTFOLIO_WORKBOOK_URL: ""
-        run: npm run generate:content
-
-      - name: Validate the immutable Cloudflare Pages target
-        id: pages
-        if: github.event_name != 'pull_request' && needs.candidate-precheck.outputs.is_latest == 'true'
-        env:
-          CLOUDFLARE_PAGES_DOMAIN: ${{ vars.CLOUDFLARE_PAGES_DOMAIN }}
-          CLOUDFLARE_PAGES_PROJECT_NAME: ${{ vars.CLOUDFLARE_PAGES_PROJECT_NAME }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [[ "$CLOUDFLARE_PAGES_PROJECT_NAME" != "smart-portfolio" ]]; then
-            echo "CLOUDFLARE_PAGES_PROJECT_NAME must be smart-portfolio."
-            exit 1
-          fi
-          if [[ "$CLOUDFLARE_PAGES_DOMAIN" != "smart-portfolio-bds.pages.dev" ]]; then
-            echo "CLOUDFLARE_PAGES_DOMAIN must match the reviewed Cloudflare-assigned domain."
-            exit 1
-          fi
-          node scripts/checkDeployedContent.mjs url "$CLOUDFLARE_PAGES_DOMAIN" main > /dev/null
-          node scripts/checkDeployedContent.mjs url "$CLOUDFLARE_PAGES_DOMAIN" develop > /dev/null
-          echo "pages_domain=$CLOUDFLARE_PAGES_DOMAIN" >> "$GITHUB_OUTPUT"
-          echo "pages_project_name=$CLOUDFLARE_PAGES_PROJECT_NAME" >> "$GITHUB_OUTPUT"
-
-      - name: Fetch and generate the strict public workbook snapshot
-        if: github.event_name != 'pull_request' && needs.candidate-precheck.outputs.is_latest == 'true'
-        env:
-          PORTFOLIO_WORKBOOK_URL: ${{ secrets.PORTFOLIO_WORKBOOK_URL }}
-          PORTFOLIO_REQUIRE_REMOTE_CONTENT: "true"
-        run: npm run generate:content
-
-      - name: Read the validated workbook content hash
-        id: content
-        if: github.event_name != 'pull_request' && needs.candidate-precheck.outputs.is_latest == 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          content_hash="$(node -p "require('./src/content/generated/portfolio.generated.json').metadata.contentHash")"
-          if [[ ! "$content_hash" =~ ^[a-f0-9]{64}$ ]]; then
-            echo "Generated content is missing a valid SHA-256 contentHash."
-            exit 1
-          fi
-          echo "content_hash=$content_hash" >> "$GITHUB_OUTPUT"
-
-      - name: Compare the validated snapshot with production
-        id: deployed_content
-        if: >-
-          needs.candidate-precheck.outputs.is_latest == 'true' &&
-          (github.event_name == 'schedule' ||
-          (github.event_name == 'workflow_dispatch' && inputs.force_deploy == false))
-        env:
-          CLOUDFLARE_PAGES_DOMAIN: ${{ steps.pages.outputs.pages_domain }}
-          CONTENT_HASH: ${{ steps.content.outputs.content_hash }}
-          CANDIDATE_SHA: ${{ needs.candidate-precheck.outputs.candidate_sha }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          production_url="$(node scripts/checkDeployedContent.mjs url "$CLOUDFLARE_PAGES_DOMAIN" main)"
-          node scripts/checkDeployedContent.mjs compare \
-            "$production_url" \
-            "$CONTENT_HASH" \
-            "$CANDIDATE_SHA" \
-            "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${CANDIDATE_SHA}"
-
-      - name: Decide verification tier and deployment
-        id: decision
-        shell: bash
-        env:
-          CANDIDATE_IS_LATEST: ${{ needs.candidate-precheck.outputs.is_latest }}
-          DEPLOYED_CONTENT_MATCHES: ${{ steps.deployed_content.outputs.deployed_content_matches }}
-          DEPLOYED_COMMIT_MATCHES: ${{ steps.deployed_content.outputs.deployed_commit_matches }}
-          FORCE_DEPLOY: ${{ inputs.force_deploy }}
-        run: |
-          set -euo pipefail
-          should_verify=false
-          should_deploy=false
-          deploy_target="none"
-          verification_tier="none"
-
-          if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
-            should_verify=true
-            verification_tier="priority"
-          elif [[ "${CANDIDATE_IS_LATEST:-false}" != "true" ]]; then
-            echo "The candidate is stale; no verification artifact or deployment will be produced."
-          elif [[ "$GITHUB_EVENT_NAME" == "push" && "$GITHUB_REF" == "refs/heads/main" ]]; then
-            should_verify=true
-            should_deploy=true
-            deploy_target="production"
-            verification_tier="full"
-          elif [[ "$GITHUB_EVENT_NAME" == "push" && "$GITHUB_REF" == "refs/heads/develop" ]]; then
-            should_verify=true
-            should_deploy=true
-            deploy_target="preview"
-            verification_tier="full"
-          else
-            deploy_target="production"
-            if [[ "${FORCE_DEPLOY:-false}" == "true" ||
-                  "${DEPLOYED_CONTENT_MATCHES:-false}" != "true" ||
-                  "${DEPLOYED_COMMIT_MATCHES:-false}" != "true" ]]; then
-              should_verify=true
-              should_deploy=true
-              verification_tier="full"
-            fi
-          fi
-
-          echo "should_verify=$should_verify" >> "$GITHUB_OUTPUT"
-          echo "should_deploy=$should_deploy" >> "$GITHUB_OUTPUT"
-          echo "deploy_target=$deploy_target" >> "$GITHUB_OUTPUT"
-          echo "verification_tier=$verification_tier" >> "$GITHUB_OUTPUT"
-
-      - name: Documentation integrity
-        if: steps.decision.outputs.should_verify == 'true'
-        run: npm run docs:check
-
-      - name: Lint
-        if: steps.decision.outputs.should_verify == 'true'
-        run: npm run lint
-
-      - name: Typecheck
-        if: steps.decision.outputs.should_verify == 'true'
-        run: npm run typecheck
-
-      - name: Priority unit and contract tests
-        if: steps.decision.outputs.verification_tier == 'priority'
-        run: npm run test:priority
-
-      - name: Full unit and integration suite
-        if: steps.decision.outputs.verification_tier == 'full'
-        run: npm run test
-
-      - name: Install Chromium for browser regressions
-        if: steps.decision.outputs.should_verify == 'true'
-        run: npx --no-install playwright install --with-deps chromium
-
-      - name: Priority browser regression suite
-        if: steps.decision.outputs.verification_tier == 'priority'
-        run: npm run test:e2e:priority
-
-      - name: Linux skeleton visual regression
-        if: steps.decision.outputs.verification_tier == 'priority'
-        run: npm run test:e2e:skeletons:visual
-
-      - name: Full browser regression suite
-        if: steps.decision.outputs.verification_tier == 'full'
-        run: npm run test:e2e:full
-
-      - name: Upload Playwright diagnostics on failure
-        if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+          PORTFOLIO_WORKBOOK_URL: ${{ github.event_name != 'pull_request' && needs['resolve-candidate'].outputs.obsolete != 'true'
+            && secrets.PORTFOLIO_WORKBOOK_URL || '' }}
+      - name: Upload immutable snapshot
+        id: snapshot
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: playwright-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}
-          path: |
-            playwright-report/
-            test-results/
-          if-no-files-found: ignore
-          retention-days: 7
-
-      - name: Build the pull-request snapshot without remote credentials
-        if: steps.decision.outputs.should_verify == 'true' && steps.decision.outputs.deploy_target == 'none'
-        env:
-          DEPLOYMENT_COMMIT_SHA: ${{ needs.candidate-precheck.outputs.candidate_sha }}
-        run: npm run build:generated
-
-      - name: Build the exact production snapshot
-        if: steps.decision.outputs.should_verify == 'true' && steps.decision.outputs.deploy_target == 'production'
-        env:
-          DEPLOYMENT_COMMIT_SHA: ${{ needs.candidate-precheck.outputs.candidate_sha }}
-          NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
-        run: npm run build:generated
-
-      - name: Build the exact develop preview snapshot
-        if: steps.decision.outputs.should_verify == 'true' && steps.decision.outputs.deploy_target == 'preview'
-        env:
-          DEPLOYMENT_COMMIT_SHA: ${{ needs.candidate-precheck.outputs.candidate_sha }}
-          NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY }}
-        run: npm run build:generated
-
-      - name: Create and verify the artifact integrity manifest
-        if: steps.decision.outputs.should_deploy == 'true'
-        env:
-          CANDIDATE_SHA: ${{ needs.candidate-precheck.outputs.candidate_sha }}
-        run: |
-          node scripts/artifactIntegrity.mjs create out
-          node scripts/artifactIntegrity.mjs verify out "$CANDIDATE_SHA"
-
-      - name: Upload the exact verified static export
-        if: steps.decision.outputs.should_deploy == 'true'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: cloudflare-pages-build
-          path: out/
-          include-hidden-files: true
+          name: ${{ steps.prepare.outputs.snapshot_name }}
+          path: ${{ steps.prepare.outputs.snapshot_path }}
           if-no-files-found: error
-          retention-days: 1
-
+          retention-days: 3
+          include-hidden-files: false
+        if: ${{ steps.prepare.outputs.mode != 'obsolete' }}
+      - name: Record exact snapshot artifact reference
+        id: snapshot-reference
+        run: node scripts/ci/run.mjs reference
+        env:
+          CI_ARTIFACT_ROLE: snapshot
+          CI_ARTIFACT_ID: ${{ steps.snapshot.outputs.artifact-id }}
+          CI_ARTIFACT_DIGEST: ${{ steps.snapshot.outputs.artifact-digest }}
+          CI_RECORD_DIGEST: ${{ steps.prepare.outputs.snapshot_digest }}
+        if: ${{ steps.prepare.outputs.mode != 'obsolete' }}
+      - name: Upload immutable discovery
+        id: discovery
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ${{ steps.prepare.outputs.discovery_name }}
+          path: ${{ steps.prepare.outputs.discovery_path }}
+          if-no-files-found: error
+          retention-days: 3
+          include-hidden-files: false
+        if: ${{ steps.prepare.outputs.mode == 'full' }}
+      - name: Record exact discovery artifact reference
+        id: discovery-reference
+        run: node scripts/ci/run.mjs reference
+        env:
+          CI_ARTIFACT_ROLE: discovery
+          CI_ARTIFACT_ID: ${{ steps.discovery.outputs.artifact-id }}
+          CI_ARTIFACT_DIGEST: ${{ steps.discovery.outputs.artifact-digest }}
+          CI_RECORD_DIGEST: ${{ steps.prepare.outputs.discovery_digest }}
+        if: ${{ steps.prepare.outputs.mode == 'full' }}
+  quality:
+    name: quality
+    needs:
+      - resolve-candidate
+      - prepare-content
+    if: ${{ needs['prepare-content'].outputs.mode == 'full' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      actions: read
+    env: &a1
+      CI_CANDIDATE: ${{ needs['resolve-candidate'].outputs.candidate }}
+      NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
+      NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY }}
+      CI_PLAN: ${{ needs['prepare-content'].outputs.plan }}
+      CI_SNAPSHOT_REFERENCE: ${{ needs['prepare-content'].outputs.snapshot_reference }}
+    steps:
+      - name: Check out the exact candidate without credentials
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: ${{ needs['resolve-candidate'].outputs.candidate_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Set up the pinned Node runtime
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22.23.3
+          cache: npm
+      - &a2
+        name: Install locked dependencies
+        run: npm ci
+      - &a3
+        name: Restore and verify the accepted content snapshot
+        run: node scripts/ci/run.mjs restore
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Check documentation, source quality and types
+        run: |-
+          npm run docs:check
+          npm run lint
+          npm run typecheck
+      - &a4
+        name: Record successful validation against unchanged inputs
+        id: evidence
+        run: node scripts/ci/run.mjs receipt
+      - name: Upload immutable receipt
+        id: receipt
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ${{ steps.evidence.outputs.receipt_name }}
+          path: ${{ steps.evidence.outputs.receipt_path }}
+          if-no-files-found: error
+          retention-days: 3
+          include-hidden-files: false
+  unit-integration:
+    name: unit-integration
+    needs:
+      - resolve-candidate
+      - prepare-content
+    if: ${{ needs['prepare-content'].outputs.mode == 'full' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
+    env: *a1
+    steps:
+      - name: Check out the exact candidate without credentials
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: ${{ needs['resolve-candidate'].outputs.candidate_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Set up the pinned Node runtime
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22.23.3
+          cache: npm
+      - *a2
+      - *a3
+      - name: Run the complete isolated unit and integration suite
+        run: npm test
+      - *a4
+      - name: Upload immutable receipt
+        id: receipt
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ${{ steps.evidence.outputs.receipt_name }}
+          path: ${{ steps.evidence.outputs.receipt_path }}
+          if-no-files-found: error
+          retention-days: 3
+          include-hidden-files: false
+  browser-e2e:
+    name: chromium-${{ matrix.shard == '1/2' && '1' || '2' }}-of-2
+    needs:
+      - resolve-candidate
+      - prepare-content
+    if: ${{ needs['prepare-content'].outputs.mode == 'full' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    permissions:
+      contents: read
+      actions: read
+    env: *a1
+    steps:
+      - name: Check out the exact candidate without credentials
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: ${{ needs['resolve-candidate'].outputs.candidate_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Set up the pinned Node runtime
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22.23.3
+          cache: npm
+      - *a2
+      - *a3
+      - name: Install required pinned browser binaries
+        run: npx --no-install playwright install --with-deps chromium
+      - name: Run assigned browsers and verify execution coverage
+        id: evidence
+        run: node scripts/ci/run.mjs browser
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CI_DISCOVERY_REFERENCE: ${{ needs['prepare-content'].outputs.discovery_reference }}
+          CI_SHARD: ${{ matrix.shard }}
+      - name: Upload immutable receipt
+        id: receipt
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ${{ steps.evidence.outputs.receipt_name }}
+          path: ${{ steps.evidence.outputs.receipt_path }}
+          if-no-files-found: error
+          retention-days: 3
+          include-hidden-files: false
+      - name: Upload bounded browser failure diagnostics
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: browser-failure-browser-e2e-${{ strategy.job-index }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: test-results/playwright/
+          if-no-files-found: ignore
+          retention-days: 3
+    strategy:
+      fail-fast: false
+      matrix:
+        shard:
+          - 1/2
+          - 2/2
+  visual-regression:
+    name: visual-regression
+    needs:
+      - resolve-candidate
+      - prepare-content
+    if: ${{ needs['prepare-content'].outputs.mode == 'full' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    permissions:
+      contents: read
+      actions: read
+    env: *a1
+    steps:
+      - name: Check out the exact candidate without credentials
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: ${{ needs['resolve-candidate'].outputs.candidate_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Set up the pinned Node runtime
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22.23.3
+          cache: npm
+      - *a2
+      - *a3
+      - name: Install required pinned browser binaries
+        run: npx --no-install playwright install --with-deps chromium
+      - name: Run assigned browsers and verify execution coverage
+        id: evidence
+        run: node scripts/ci/run.mjs browser
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CI_DISCOVERY_REFERENCE: ${{ needs['prepare-content'].outputs.discovery_reference }}
+      - name: Upload immutable receipt
+        id: receipt
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ${{ steps.evidence.outputs.receipt_name }}
+          path: ${{ steps.evidence.outputs.receipt_path }}
+          if-no-files-found: error
+          retention-days: 3
+          include-hidden-files: false
+      - name: Upload bounded browser failure diagnostics
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: browser-failure-visual-regression-${{ github.run_id }}-${{ github.run_attempt }}
+          path: test-results/playwright/
+          if-no-files-found: ignore
+          retention-days: 3
+  cross-browser:
+    name: cross-browser
+    needs:
+      - resolve-candidate
+      - prepare-content
+    if: ${{ needs['prepare-content'].outputs.mode == 'full' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    permissions:
+      contents: read
+      actions: read
+    env: *a1
+    steps:
+      - name: Check out the exact candidate without credentials
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: ${{ needs['resolve-candidate'].outputs.candidate_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Set up the pinned Node runtime
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22.23.3
+          cache: npm
+      - *a2
+      - *a3
+      - name: Install required pinned browser binaries
+        run: npx --no-install playwright install --with-deps firefox webkit
+      - name: Run assigned browsers and verify execution coverage
+        id: evidence
+        run: node scripts/ci/run.mjs browser
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CI_DISCOVERY_REFERENCE: ${{ needs['prepare-content'].outputs.discovery_reference }}
+      - name: Upload immutable receipt
+        id: receipt
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ${{ steps.evidence.outputs.receipt_name }}
+          path: ${{ steps.evidence.outputs.receipt_path }}
+          if-no-files-found: error
+          retention-days: 3
+          include-hidden-files: false
+      - name: Upload bounded browser failure diagnostics
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: browser-failure-cross-browser-${{ github.run_id }}-${{ github.run_attempt }}
+          path: test-results/playwright/
+          if-no-files-found: ignore
+          retention-days: 3
+  build-and-package:
+    name: build-and-package
+    needs:
+      - resolve-candidate
+      - prepare-content
+    if: ${{ needs['prepare-content'].outputs.mode == 'full' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      actions: read
+    env: *a1
+    steps:
+      - name: Check out the exact candidate without credentials
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: ${{ needs['resolve-candidate'].outputs.candidate_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Set up the pinned Node runtime
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22.23.3
+          cache: npm
+      - *a2
+      - *a3
+      - name: Build once and seal the full candidate
+        id: evidence
+        run: node scripts/ci/run.mjs build
+      - name: Upload immutable release
+        id: release
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ${{ steps.evidence.outputs.release_name }}
+          path: ${{ steps.evidence.outputs.release_path }}
+          if-no-files-found: error
+          retention-days: 3
+          include-hidden-files: false
+      - name: Record exact release artifact reference
+        id: release-reference
+        run: node scripts/ci/run.mjs reference
+        env:
+          CI_ARTIFACT_ROLE: release
+          CI_ARTIFACT_ID: ${{ steps.release.outputs.artifact-id }}
+          CI_ARTIFACT_DIGEST: ${{ steps.release.outputs.artifact-digest }}
+          CI_RECORD_DIGEST: ${{ steps.evidence.outputs.release_digest }}
+      - name: Upload immutable receipt
+        id: receipt
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ${{ steps.evidence.outputs.receipt_name }}
+          path: ${{ steps.evidence.outputs.receipt_path }}
+          if-no-files-found: error
+          retention-days: 3
+          include-hidden-files: false
+    outputs:
+      release_reference: ${{ steps['release-reference'].outputs.reference }}
+  export-check:
+    name: export-check
+    needs:
+      - resolve-candidate
+      - prepare-content
+      - build-and-package
+    if: ${{ needs['prepare-content'].outputs.mode == 'full' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      actions: read
+    env:
+      CI_CANDIDATE: ${{ needs['resolve-candidate'].outputs.candidate }}
+      NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
+      NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY }}
+      CI_PLAN: ${{ needs['prepare-content'].outputs.plan }}
+      CI_SNAPSHOT_REFERENCE: ${{ needs['prepare-content'].outputs.snapshot_reference }}
+      CI_RELEASE_REFERENCE: ${{ needs['build-and-package'].outputs.release_reference }}
+    steps:
+      - name: Check out the exact candidate without credentials
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: ${{ needs['resolve-candidate'].outputs.candidate_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Set up the pinned Node runtime
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22.23.3
+          cache: npm
+      - *a2
+      - *a3
+      - name: Install the pinned export-check browser
+        run: npx --no-install playwright install --with-deps chromium
+      - name: Validate exact static output and compiled Pages runtime
+        id: evidence
+        run: node scripts/ci/run.mjs export
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Upload immutable receipt
+        id: receipt
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ${{ steps.evidence.outputs.receipt_name }}
+          path: ${{ steps.evidence.outputs.receipt_path }}
+          if-no-files-found: error
+          retention-days: 3
+          include-hidden-files: false
   security-tools:
     name: security-tools
-    needs: candidate-precheck
-    if: needs.candidate-precheck.result == 'success'
+    needs: resolve-candidate
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - name: Check out the immutable candidate without credentials
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
-          ref: ${{ needs.candidate-precheck.outputs.candidate_sha }}
+          ref: ${{ needs['resolve-candidate'].outputs.candidate_sha }}
           fetch-depth: 1
           persist-credentials: false
-
       - name: Set up Node.js
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
         with:
-          node-version: 22
-
+          node-version: 22.23.3
       - name: Install checksum-verified actionlint
         shell: bash
         run: |
@@ -368,7 +552,6 @@ jobs:
           tool_root="$RUNNER_TEMP/smart-portfolio-tools"
           mkdir -p "$tool_root"
           node scripts/security/installPinnedTool.mjs actionlint "$tool_root" > /dev/null
-
       - name: Validate tracked GitHub Actions workflows without publishing diagnostics
         shell: bash
         run: |
@@ -380,26 +563,36 @@ jobs:
             echo "GitHub Actions syntax validation failed without publishing diagnostics."
             exit 1
           fi
-
+      - name: Record independent source-validation evidence
+        id: evidence
+        run: node scripts/ci/run.mjs source-receipt
+      - name: Upload immutable receipt
+        id: receipt
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ${{ steps.evidence.outputs.receipt_name }}
+          path: ${{ steps.evidence.outputs.receipt_path }}
+          if-no-files-found: error
+          retention-days: 3
+          include-hidden-files: false
+    env: &a5
+      CI_CANDIDATE: ${{ needs['resolve-candidate'].outputs.candidate }}
   security-scans:
     name: security-scans
-    needs: candidate-precheck
-    if: needs.candidate-precheck.result == 'success'
+    needs: resolve-candidate
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - name: Check out the complete immutable history without credentials
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
-          ref: ${{ needs.candidate-precheck.outputs.candidate_sha }}
+          ref: ${{ needs['resolve-candidate'].outputs.candidate_sha }}
           fetch-depth: 0
           persist-credentials: false
-
       - name: Set up Node.js
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
         with:
-          node-version: 22
-
+          node-version: 22.23.3
       - name: Install checksum-verified credential-free scanners
         shell: bash
         run: |
@@ -408,7 +601,6 @@ jobs:
           mkdir -p "$tool_root"
           node scripts/security/installPinnedTool.mjs gitleaks "$tool_root" > /dev/null
           node scripts/security/installPinnedTool.mjs zizmor "$tool_root" > /dev/null
-
       - name: Scan Git history and workflow semantics without publishing scanner details
         shell: bash
         run: |
@@ -418,14 +610,68 @@ jobs:
             --gitleaks-mode git \
             --target . \
             --zizmor "$RUNNER_TEMP/smart-portfolio-tools/zizmor/zizmor"
-
-      - name: Audit locked dependencies independently of application content
+      - name: Audit locked dependencies even when application content is unchanged
         run: npm run audit:check
-
+      - name: Record independent source-validation evidence
+        id: evidence
+        run: node scripts/ci/run.mjs source-receipt
+      - name: Upload immutable receipt
+        id: receipt
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ${{ steps.evidence.outputs.receipt_name }}
+          path: ${{ steps.evidence.outputs.receipt_path }}
+          if-no-files-found: error
+          retention-days: 3
+          include-hidden-files: false
+    env: *a5
+  infrastructure:
+    name: infrastructure
+    needs: resolve-candidate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out the immutable candidate without credentials
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: ${{ needs['resolve-candidate'].outputs.candidate_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Set up the pinned Node runtime
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22.23.3
+      - name: Install checksum-verified Terraform and OPA
+        shell: bash
+        run: |
+          set -euo pipefail
+          tool_root="$RUNNER_TEMP/smart-portfolio-tools"
+          mkdir -p "$tool_root"
+          node scripts/security/installPinnedTool.mjs terraform "$tool_root" > /dev/null
+          node scripts/security/installPinnedTool.mjs opa "$tool_root" > /dev/null
+      - name: Validate every infrastructure root with backend-disabled mocks and policy checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/ci/infrastructure.mjs \
+            "$RUNNER_TEMP/smart-portfolio-tools/terraform/terraform" \
+            "$RUNNER_TEMP/smart-portfolio-tools/opa/opa"
+      - name: Record independent source-validation evidence
+        id: evidence
+        run: node scripts/ci/run.mjs source-receipt
+      - name: Upload immutable receipt
+        id: receipt
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ${{ steps.evidence.outputs.receipt_name }}
+          path: ${{ steps.evidence.outputs.receipt_path }}
+          if-no-files-found: error
+          retention-days: 3
+          include-hidden-files: false
+    env: *a5
   codeql:
     name: codeql
-    needs: candidate-precheck
-    if: needs.candidate-precheck.result == 'success'
+    needs: resolve-candidate
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -433,27 +679,28 @@ jobs:
       security-events: write
     steps:
       - name: Check out the immutable candidate without credentials
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
-          ref: ${{ needs.candidate-precheck.outputs.candidate_sha }}
+          ref: ${{ needs['resolve-candidate'].outputs.candidate_sha }}
           fetch-depth: 1
           persist-credentials: false
-
+      - name: Set up the pinned Node runtime
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22.23.3
       - name: Initialize CodeQL security-extended analysis
-        uses: github/codeql-action/init@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        uses: github/codeql-action/init@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2
         with:
           languages: javascript-typescript
           build-mode: none
           queries: security-extended
-
       - name: Analyze CodeQL SARIF without upload
         id: analyze
-        uses: github/codeql-action/analyze@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        uses: github/codeql-action/analyze@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2
         with:
           category: /language:javascript-typescript
           output: sarif-results
           upload: never
-
       - name: Fail closed for malformed SARIF, scanner errors, or security findings
         shell: bash
         env:
@@ -466,180 +713,178 @@ jobs:
             exit 1
           fi
           node scripts/security/checkSarif.mjs "${sarif_files[0]}"
-
       - name: Upload passed CodeQL SARIF
-        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2
         with:
           sarif_file: ${{ steps.analyze.outputs.sarif-output }}
           category: /language:javascript-typescript
-
+      - name: Record independent source-validation evidence
+        id: evidence
+        run: node scripts/ci/run.mjs source-receipt
+      - name: Upload immutable receipt
+        id: receipt
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ${{ steps.evidence.outputs.receipt_name }}
+          path: ${{ steps.evidence.outputs.receipt_path }}
+          if-no-files-found: error
+          retention-days: 3
+          include-hidden-files: false
+    env: *a5
   dependency-review:
     name: dependency-review
-    needs: candidate-precheck
-    if: github.event_name == 'pull_request' && needs.candidate-precheck.result == 'success'
+    needs: resolve-candidate
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: read
       pull-requests: read
     steps:
+      - name: Check out the exact candidate without credentials
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: ${{ needs['resolve-candidate'].outputs.candidate_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Set up the pinned Node runtime
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22.23.3
       - name: Block newly introduced high-severity dependency vulnerabilities
-        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294
         with:
           fail-on-severity: high
           comment-summary-in-pr: never
-
+      - name: Record independent source-validation evidence
+        id: evidence
+        run: node scripts/ci/run.mjs source-receipt
+      - name: Upload immutable receipt
+        id: receipt
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ${{ steps.evidence.outputs.receipt_name }}
+          path: ${{ steps.evidence.outputs.receipt_path }}
+          if-no-files-found: error
+          retention-days: 3
+          include-hidden-files: false
+    env: *a5
   verify:
     name: verify
+    needs:
+      - resolve-candidate
+      - prepare-content
+      - security-tools
+      - security-scans
+      - codeql
+      - infrastructure
+      - dependency-review
+      - quality
+      - unit-integration
+      - browser-e2e
+      - visual-regression
+      - cross-browser
+      - build-and-package
+      - export-check
     if: always()
-    needs: [candidate-admission, candidate-precheck, application-validation, security-tools, security-scans, codeql, dependency-review]
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    outputs:
-      candidate_branch: ${{ needs.application-validation.outputs.candidate_branch }}
-      candidate_sha: ${{ needs.application-validation.outputs.candidate_sha }}
-      content_hash: ${{ needs.application-validation.outputs.content_hash }}
-      deploy_target: ${{ needs.application-validation.outputs.deploy_target }}
-      pages_domain: ${{ needs.application-validation.outputs.pages_domain }}
-      pages_project_name: ${{ needs.application-validation.outputs.pages_project_name }}
-      should_deploy: ${{ needs.application-validation.outputs.should_deploy }}
-      verification_tier: ${{ needs.application-validation.outputs.verification_tier }}
-    steps:
-      - name: Check out the immutable candidate for the CI gate
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
-        with:
-          ref: ${{ needs.candidate-precheck.outputs.candidate_sha }}
-          fetch-depth: 1
-          persist-credentials: false
-
-      - name: Set up Node.js
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
-        with:
-          node-version: 22
-
-      - name: Require successful application validation and every applicable security gate
-        env:
-          CI_EVENT_NAME: ${{ github.event_name }}
-          CI_GATE_RESULTS: ${{ toJSON(needs) }}
-        run: node scripts/security/ciGate.mjs --event "$CI_EVENT_NAME" --results "$CI_GATE_RESULTS"
-
-  deploy:
-    name: deploy-${{ needs.verify.outputs.deploy_target }}
-    needs: verify
-    if: >-
-      ${{ !cancelled() && github.event_name != 'pull_request' && needs.verify.result == 'success' && needs.verify.outputs.should_deploy == 'true' }}
-    runs-on: ubuntu-latest
+    timeout-minutes: 8
     permissions:
       contents: read
-    concurrency:
-      group: cloudflare-${{ needs.verify.outputs.deploy_target }}
-      cancel-in-progress: true
+      actions: read
+    outputs:
+      accepted: ${{ steps.gate.outputs.accepted }}
+      deploy: ${{ steps.gate.outputs.deploy }}
+      acceptance: ${{ steps.gate.outputs.acceptance }}
     steps:
-      - name: Check out the exact verified candidate
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - name: Check out the exact candidate without credentials
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
-          ref: ${{ needs.verify.outputs.candidate_sha }}
-          fetch-depth: 0
+          ref: ${{ needs['resolve-candidate'].outputs.candidate_sha }}
+          fetch-depth: 1
           persist-credentials: false
-
-      - name: Set up Node.js
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+      - name: Set up the pinned Node runtime
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
         with:
-          node-version: 22
+          node-version: 22.23.3
+      - name: Evaluate all required results and exact producer evidence
+        id: gate
+        run: node scripts/ci/run.mjs verify
+        env:
+          CI_CANDIDATE: ${{ needs['resolve-candidate'].outputs.candidate }}
+          GH_TOKEN: ${{ github.token }}
+          CI_NEEDS: ${{ toJSON(needs) }}
+      - name: Report sanitized timing observations independently of acceptance
+        if: always()
+        continue-on-error: true
+        run: node scripts/ci/metrics.mjs
+        env:
+          CI_CANDIDATE: ${{ needs['resolve-candidate'].outputs.candidate }}
+          CI_ACCEPTANCE: ${{ steps.gate.outputs.acceptance }}
+          GH_TOKEN: ${{ github.token }}
+  deploy:
+    name: deploy-${{ needs['prepare-content'].outputs.target }}
+    needs:
+      - resolve-candidate
+      - prepare-content
+      - build-and-package
+      - verify
+    if: >-
+      ${{ !cancelled() && github.event_name != 'pull_request' && needs.verify.result == 'success' && needs.verify.outputs.deploy == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+      attestations: write
+    concurrency:
+      group: cloudflare-${{ needs['prepare-content'].outputs.target }}
+      cancel-in-progress: false
+    env:
+      CI_CANDIDATE: ${{ needs['resolve-candidate'].outputs.candidate }}
+      NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
+      NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY }}
+      CI_PLAN: ${{ needs['prepare-content'].outputs.plan }}
+      CI_SNAPSHOT_REFERENCE: ${{ needs['prepare-content'].outputs.snapshot_reference }}
+      CLOUDFLARE_PAGES_PROJECT_NAME: ${{ vars.CLOUDFLARE_PAGES_PROJECT_NAME }}
+      CLOUDFLARE_PAGES_DOMAIN: ${{ vars.CLOUDFLARE_PAGES_DOMAIN }}
+      CI_RELEASE_REFERENCE: ${{ needs['build-and-package'].outputs.release_reference }}
+      CI_ACCEPTANCE: ${{ needs.verify.outputs.acceptance }}
+    steps:
+      - name: Check out the exact candidate without credentials
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: ${{ needs['resolve-candidate'].outputs.candidate_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Set up the pinned Node runtime
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22.23.3
           cache: npm
-
-      - name: Install the locked local deployment tool
-        run: npm ci
-
-      - name: Download the immutable verified export
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - *a2
+      - *a3
+      - name: Verify accepted release bytes before trusted signing
+        id: sealed
+        run: node scripts/ci/run.mjs deployment-prepare
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Attest the accepted archive provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8
         with:
-          name: cloudflare-pages-build
-          path: out
-
-      - name: Validate every downloaded artifact file
+          subject-path: ${{ steps.sealed.outputs.archive_path }}
+      - name: Attest the accepted release SBOM
+        uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e
+        with:
+          subject-path: ${{ steps.sealed.outputs.archive_path }}
+          sbom-path: ${{ steps.sealed.outputs.sbom_path }}
+      - name: Verify provenance and serialize preflight, migrations, upload and smoke checks
+        run: node scripts/ci/run.mjs deploy
         env:
-          CANDIDATE_SHA: ${{ needs.verify.outputs.candidate_sha }}
-        run: node scripts/artifactIntegrity.mjs verify out "$CANDIDATE_SHA"
-
-      - name: Recheck the deployment branch immediately before Wrangler
-        shell: bash
-        env:
-          CANDIDATE_BRANCH: ${{ needs.verify.outputs.candidate_branch }}
-          CANDIDATE_SHA: ${{ needs.verify.outputs.candidate_sha }}
-        run: |
-          set -euo pipefail
-          git fetch --no-tags origin "+refs/heads/$CANDIDATE_BRANCH:refs/remotes/origin/$CANDIDATE_BRANCH"
-          latest_sha="$(git rev-parse "refs/remotes/origin/$CANDIDATE_BRANCH")"
-          if [[ "$latest_sha" != "$CANDIDATE_SHA" ]]; then
-            echo "Refusing to deploy stale $CANDIDATE_BRANCH revision $CANDIDATE_SHA; the branch is now $latest_sha."
-            exit 1
-          fi
-
-      - name: Validate the environment-specific D1 binding and apply migrations
-        env:
+          GH_TOKEN: ${{ github.token }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          DEPLOY_TARGET: ${{ needs.verify.outputs.deploy_target }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          node --input-type=module <<'NODE'
-          import { readFileSync } from "node:fs";
-
-          const config = JSON.parse(readFileSync("wrangler.jsonc", "utf8"));
-          const placeholderId = "00000000-0000-0000-0000-000000000000";
-          const production = config.d1_databases?.find(({ binding }) => binding === "CONTACT_RATE_LIMIT_DB");
-          const preview = config.env?.preview?.d1_databases?.find(
-            ({ binding }) => binding === "CONTACT_RATE_LIMIT_DB"
-          );
-
-          if (!['production', 'preview'].includes(process.env.DEPLOY_TARGET ?? '')) {
-            throw new Error(`Unexpected D1 deployment target: ${process.env.DEPLOY_TARGET ?? 'missing'}.`);
-          }
-          for (const [environment, binding] of [['production', production], ['preview', preview]]) {
-            if (!binding?.database_id || binding.database_id === placeholderId) {
-              throw new Error(
-                `CONTACT_RATE_LIMIT_DB for ${environment} still has the non-deployable placeholder database ID.`
-              );
-            }
-          }
-          if (production?.database_id === preview?.database_id) {
-            throw new Error("Production and preview must use separate CONTACT_RATE_LIMIT_DB databases.");
-          }
-          NODE
-
-          if [[ "$DEPLOY_TARGET" == "preview" ]]; then
-            npx --no-install wrangler d1 migrations apply smart-portfolio-contact-rate-limit-preview --env preview --remote
-          else
-            npx --no-install wrangler d1 migrations apply smart-portfolio-contact-rate-limit-production --remote
-          fi
-
-      - name: Deploy the verified export and Pages Function with pinned Wrangler
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_PAGES_PROJECT_NAME: ${{ needs.verify.outputs.pages_project_name }}
-          CANDIDATE_BRANCH: ${{ needs.verify.outputs.candidate_branch }}
-          CANDIDATE_SHA: ${{ needs.verify.outputs.candidate_sha }}
-        run: >-
-          npx --no-install wrangler pages deploy out
-          --project-name "$CLOUDFLARE_PAGES_PROJECT_NAME"
-          --branch "$CANDIDATE_BRANCH"
-          --commit-hash "$CANDIDATE_SHA"
-
-      - name: Smoke test static content, integrity metadata, and both contact APIs
-        env:
-          CLOUDFLARE_PAGES_DOMAIN: ${{ needs.verify.outputs.pages_domain }}
-          CANDIDATE_BRANCH: ${{ needs.verify.outputs.candidate_branch }}
-          CANDIDATE_SHA: ${{ needs.verify.outputs.candidate_sha }}
-          CONTENT_HASH: ${{ needs.verify.outputs.content_hash }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          deployment_url="$(node scripts/checkDeployedContent.mjs url "$CLOUDFLARE_PAGES_DOMAIN" "$CANDIDATE_BRANCH")"
-          node scripts/checkDeployedContent.mjs smoke "$deployment_url" out "$CONTENT_HASH" "$CANDIDATE_SHA"
-
   heartbeat:
     name: develop-schedule-heartbeat
     if: github.event_name == 'schedule'
@@ -651,12 +896,11 @@ jobs:
       cancel-in-progress: false
     steps:
       - name: Check out develop for its guarded keepalive update
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           ref: develop
           fetch-depth: 0
           persist-credentials: false
-
       - name: Refresh the existing develop branch after 30 inactive days
         shell: bash
         env:

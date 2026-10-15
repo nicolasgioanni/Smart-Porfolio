@@ -42,7 +42,7 @@ Do not infer a successful source deployment from the content hash alone. Code-on
 ### Preview a branch change
 
 1. Open or update a pull request targeting `main` or `develop`.
-2. Confirm candidate admission and precheck passed, `application-validation` generated template content and passed documentation integrity, lint, typecheck, the priority unit and browser suites, and the static build, and the independent source-security jobs passed before the `verify` aggregate succeeded.
+2. Confirm the `verify` job accepted the template snapshot, full quality and unit suites, assigned Chromium, visual, Firefox, and WebKit browser coverage, the sealed candidate, export/runtime check, and every applicable source-security receipt.
 3. Merge or push the reviewed change to `develop`.
 4. Confirm the workflow selected `deploy_target=preview`, validated the preview D1 binding, applied pending preview migrations, and deployed the current `develop` SHA.
 5. Review `https://develop.smart-portfolio-bds.pages.dev` manually. Complete the visible gate, observe its automatic transition or use Continue, and confirm the three data-entry steps, two acknowledgments, 500-character limit, responsive behavior, focus, and error states without selecting Send request. The gate may consume a Turnstile token, but this no-delivery inspection must not call `/api/contact`, reserve D1 quota, or send email. Confirm the standalone completion layout through verified component coverage.
@@ -54,11 +54,11 @@ The preview build receives only `NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY`. If tha
 
 1. Merge the reviewed green change into `main` through the repository's approved change flow.
 2. Confirm the push workflow resolves the current `main` SHA.
-3. Confirm strict workbook generation succeeds before the quality gates.
-4. Confirm the deploy job downloads and revalidates `cloudflare-pages-build` instead of rebuilding.
-5. Confirm the final branch-tip check passes before D1 migration and Wrangler.
+3. Confirm strict workbook generation produces one accepted snapshot before full validation.
+4. Confirm `verify` accepts every required job result and original producer receipt or artifact rather than a rerun substitute.
+5. Confirm the deploy job restores the sealed candidate, verifies its archive digest, accepts the bounded exact Direct Upload Pages-project preflight, verifies provenance/SBOM attestations, and checks branch freshness before and after D1 migration.
 6. Confirm the production D1 target check and pending migrations succeed before Pages upload.
-7. Confirm the assigned-domain smoke step passes.
+7. Confirm the unique deployment-host smoke, exact identity check, and stable assigned-domain smoke pass.
 8. Verify the public custom domain, key static routes, security headers, and the contact page manually. Completing the gate is permitted, but do not select Send request.
 9. Record the active `contentHash`, `commitSha`, workflow run, D1 migration result, and any manual checks in the release record.
 
@@ -66,16 +66,16 @@ The preview build receives only `NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY`. If tha
 
 The daily schedule at `13:17 UTC` checks the current `main` source against one newly downloaded and validated workbook snapshot.
 
-An exact-candidate check still performs checkout, dependency installation, target validation, strict workbook download, normalization, hashing, and a no-cache production manifest request. When both the content hash and commit SHA match production, `application-validation` stops before documentation validation, lint, typecheck, tests, build, artifact upload, and deployment; the independent workflow, history, dependency-audit, and CodeQL checks still run.
+An exact-candidate check still resolves the trusted candidate, prepares one strict workbook snapshot, validates target-specific public inputs, and reads no-cache deployed identity. It stops before application validation, release packaging, and deployment only when the current v2 identity has the same target, content hash, candidate commit SHA, target-specific public-build input digest, and trusted GitHub Actions producer kind. Source-security jobs still run and write receipts for every no-op.
 
-When the hash of the canonical normalized content subset or the candidate commit SHA differs, the workflow runs the complete production path. Editing workbook formatting or data outside that subset does not intentionally trigger deployment unless a source revision also changed.
+Valid but non-equivalent metadata, legacy metadata, or an explicit missing-metadata HTTP 404 selects the complete production path. Malformed metadata, failed requests and unavailable observations fail preparation; they do not select a no-op or authorize deployment. Editing workbook formatting or data outside the canonical content subset does not intentionally trigger deployment unless another compared input changes.
 
 ### Run a manual content check
 
 Use the `CI` workflow dispatch input:
 
-- `force_deploy=true`, the default, runs full verification and production deployment even when both candidate identifiers match.
-- `force_deploy=false` uses the same content-hash and commit-SHA comparison as the schedule and stops early only when both match.
+- `force_deploy=true`, the default, runs full verification and production deployment even when the validated v2 deployment identity is equivalent.
+- `force_deploy=false` uses the same target, content-hash, candidate-commit, public-build-input, and trusted GitHub Actions producer-kind comparison as the schedule and stops early only when the current v2 identity is equivalent.
 
 Use a forced run for a first deployment, an intentional rebuild, an immediate retry, or recovery after correcting external configuration. Force does not skip any quality or integrity gate. The daily schedule automatically retries an undeployed code-only `main` revision because its commit SHA differs from production.
 
@@ -191,7 +191,7 @@ Repository checks cannot prove these controls. The live WAF state is unverified 
 
 ## Monitoring the daily schedule
 
-The schedule starts the candidate admission and precheck path, `application-validation`, independent source-security jobs, the `verify` aggregate, and a separate heartbeat. Application validation performs the content comparison and produces a deployment artifact only when required. `security-tools`, `security-scans` with its independent dependency audit, and `codeql` still run when the application candidate is an exact no-op; `verify` accepts deployment metadata only after every applicable job result succeeds. `develop-schedule-heartbeat` separately checks activity and may refresh the existing `develop` branch.
+The schedule starts the candidate/content path and independent source-security jobs, plus `develop-schedule-heartbeat`. `verify` accepts the required receipts and deploys only when the prepared plan is full; security still runs when a snapshot is unchanged or branch revision is obsolete.
 
 The heartbeat does not depend on the verify result and does not deploy. It writes only after 30 days without newer activity on `main` or `develop`, and only after confirming remote `develop` already exists. It accepts only the `.github/schedule-heartbeat` path, rechecks the remote `develop` SHA before a normal non-force push, and fails rather than overwriting a concurrent update. Its `contents: write` permission is intentionally isolated from the verification and deployment jobs. The checked-in workflow is coded and guarded to update only `develop`; that source-level constraint does not make other refs impossible for every possible token or future workflow change. The tracked [permanent-branch ruleset](../../.github/rulesets/protect-permanent-branches.json) protects both permanent refs from deletion and non-fast-forward updates while allowing this guarded fast-forward. It supplements the retained classic `main` governance target; inspect the live GitHub configuration separately after policy changes.
 
@@ -203,20 +203,15 @@ Use the first failing stage to decide whether production could have changed:
 
 | Failure stage | Production impact | First action |
 | --- | --- | --- |
-| Candidate marked stale | None | Review the newer branch run |
+| Candidate marked obsolete | None | Review the newer branch run |
 | Target or content validation | None | Correct configuration or workbook data |
-| Application validation: documentation, lint, typecheck, or tests | None | Fix the reported repository failure |
-| Independent source-security job | None | Fix the scanner or dependency finding; do not treat an application no-op as an exemption |
-| `verify` aggregate | None | Inspect the failed or missing application or required security job result |
-| Static build or manifest creation | None | Reproduce locally with the documented command |
-| Artifact upload, download, or verification | None | Inspect artifact transfer and candidate SHA |
-| Branch recheck | None | Review the newer branch run |
+| Source-security, documentation, lint, typecheck, test, browser, or export receipt | None | Fix the reported repository failure or evidence mismatch |
+| Static build, sealed package, or artifact transfer | None | Inspect original-producer artifact identity and candidate SHA |
+| Branch recheck | No Pages upload after the failed check | Review the newer branch run |
 | D1 target validation | None | Restore the reviewed database ID or correct environment isolation before retrying |
 | D1 migration | The failing migration is rolled back; an earlier migration may already be active | Inspect the selected database and migration ledger before retrying |
 | Wrangler | Usually prior deployment remains active | Check Cloudflare deployment history before retrying |
-| Post-Wrangler smoke | Candidate deployment exists and may already serve through the stable alias; the failed job does not roll it back | Inspect live metadata and Cloudflare history immediately |
-
-Detailed failure signatures and corrective commands are in [Troubleshooting](../development/TROUBLESHOOTING.md).
+| Unique-host or stable-target post-Wrangler smoke | Candidate deployment exists and may already serve through the stable alias; the failed job does not roll it back | Inspect live metadata and Cloudflare history immediately |
 
 ## Rollback
 

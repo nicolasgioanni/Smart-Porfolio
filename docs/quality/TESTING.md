@@ -201,64 +201,55 @@ After `build:generated`, verify `/projects` without JavaScript against the expor
 
 | Test | What it verifies |
 | --- | --- |
-| `scripts/packageScripts.test.mjs` | Node and tool pins, workflow triggers, single-snapshot conditions, branch isolation, permissions, exact-candidate no-op behavior, artifact transfer, target validation, develop-only heartbeat boundaries and race rejection, no-cache metadata, and Wrangler invocation |
-| `scripts/security/installPinnedTool.test.mjs`, `scripts/security/securityScans.test.mjs`, and `scripts/security/checkSarif.test.mjs` | Checksum-pinned tool admission, including credential-free approved redirects, bounded streamed downloads, digest verification, and an exclusive no-follow staging write, temporary scanner-report handling, suppression parsing, and fail-closed CodeQL SARIF parsing. Local tests use fixtures; the pinned Linux scanner binaries execute on the Ubuntu hosted jobs. |
-| `scripts/security/ciGate.test.mjs` and `scripts/security/deployWorkflow.test.mjs` | Event-specific CI gate and parsed-workflow eligibility contract: only explicit green aggregates with the exact deploy decision may deploy; a skipped pull-request-only dependency review remains non-blocking for a push, while cancellation, pull requests, failed, cancelled, missing, or unexpectedly skipped required results, stale candidates, and exact no-ops stay blocked. |
-| `scripts/checkDeployedContent.test.mjs` | Independent deployed content and commit comparison, missing or malformed manifest behavior, and post-deployment smoke requests with exact contact Function method rejection |
-| Artifact tests inside `scripts/packageScripts.test.mjs` | Content-version creation, hidden file inclusion, manifest structure, commit binding, digest verification, and tamper rejection |
+| `scripts/packageScripts.test.mjs` | Node and tool pins, workflow triggers, candidate admission, job graph, permissions, heartbeat boundaries, and deployment wiring |
+| `scripts/security/installPinnedTool.test.mjs`, `scripts/security/securityScans.test.mjs`, and `scripts/security/checkSarif.test.mjs` | Checksum-pinned tool admission with approved credential-free redirects, bounded streamed downloads, digest verification and exclusive no-follow staging, temporary scanner-report handling, suppression parsing, and fail-closed CodeQL SARIF parsing. Local tests use fixtures; the pinned Linux scanner binaries execute on the Ubuntu hosted jobs. |
+| `scripts/ci/plan.test.mjs`, `snapshot.test.mjs`, `receipts.test.mjs`, and `gate.test.mjs` | Candidate/plan parsing, immutable producer artifacts, browser assignments, source-security receipts, no-op decisions, and complete acceptance evidence |
+| `scripts/ci/runner.test.mjs` and `deployment.test.mjs` | Local Git snapshot restoration, original-producer reruns, sealed release identity, pinned Wrangler JSONL, D1 binding admission, deployment ordering, archive mutation, and smoke failure paths through injected providers |
+| `scripts/checkDeployedContent.test.mjs` | Deployed identity comparison and post-deployment sealed-root bytes, effective static headers, metadata cache controls, manifest, and contact-method/header smoke contracts |
+| Release and artifact tests under `scripts/release/` plus `scripts/artifactIntegrity.mjs` | Accepted build input, sealed-package, Function/runtime, SBOM, manifest, and tamper rejection contracts |
 | `scripts/quality/recoveryDrill.test.mjs` | Credential-free local Wrangler D1 export, fresh `0001`–`0003` migration, and pseudonymous reservation restore; v2 sealed-envelope tamper rejection and restoration without collector files |
 | `scripts/localAutomation.test.mjs` | Project discovery, environment copy safety, dependency-state hashing, stale content, and port selection |
 | `scripts/permanentBranchRuleset.test.mjs` | Exact tracked permanent-branch ruleset name, active scope, deletion and non-fast-forward rules only, and empty bypass list |
 
-The workflow contract tests inspect checked-in workflow text and execute the manifest helpers. They do not start a GitHub Actions runner or perform a Cloudflare upload.
+These tests execute local contracts and injected provider boundaries. They do not establish a hosted GitHub Actions run, attestation service, Cloudflare deployment, D1 migration, or external environment configuration. Hosted validation remains pending for the reconciled workflow.
 
 ## CI quality gates
 
-`candidate-admission` validates the event and reference boundary before checkout. `candidate-precheck` checks the immutable candidate and staleness without checkout credentials. `application-validation` installs locked dependencies before content or conditional application-quality work, while the independent scanner jobs run separately from content decisions.
+`resolve-candidate` rejects ineligible event and workflow references before checkout, then resolves one immutable candidate. `prepare-content` produces either an obsolete, unchanged, or full plan. Full plans restore the same snapshot in every application job. `security-tools`, `security-scans`, `codeql`, and `infrastructure` are source-only jobs with independent receipts; they run even when application work is skipped. `dependency-review` is source-only and applies to pull requests.
 
-### Pull requests: priority gate
+### Pull requests: complete validation without deployment
 
 Pull requests targeting `main` or `develop`:
 
 1. Generate validated template content without workbook or Cloudflare credentials.
-2. Run documentation integrity, the bounded dependency audit, lint, and typecheck.
-3. Run the priority Vitest contracts once, including the centralized typography-token contract.
-4. Install Chromium once and run the portable priority browser suite: skeleton alignment and held-navigation transitions, navigation, progressive enhancement across all routes, footer, locally mocked contact, Recommendations, Experience, Projects, and Research flows.
-5. Run the separate Linux-only skeleton visual comparison against the explicit template-content generated for the pull request.
-6. Build with `build:generated`.
-7. Stop without creating a deployment artifact.
+2. Run documentation integrity, lint, typecheck, and the bounded dependency audit; run the complete Vitest suite.
+3. Discover browser identities and run two assigned Chromium functional shards, the Linux visual suite, and critical Firefox/WebKit coverage.
+4. Build once from the accepted template snapshot, seal the candidate with configuration, migrations, manifest, and SBOM, then validate the exact static export and compiled runtime.
+5. Run actionlint, Git-history/workflow scans, CodeQL security-extended analysis, and dependency review; `verify` accepts their exact receipts together with the application receipts.
+6. Stop before deployment, signing, migration, or provider access.
 
-### Push deployments: complete gate
+### Pushes, schedules, and manual runs
 
-Latest pushes to `main` or `develop`:
+`main` and `develop` pushes use one strict remote workbook snapshot, then follow the same full application and source-security path. A green `verify` result may deploy `main` to production or `develop` to preview.
 
-1. Validate the fixed Pages project and assigned domain.
-2. Download and generate one strict workbook snapshot with at most one bounded transient retry.
-3. Read and validate its SHA-256 content hash.
-4. Run the complete Vitest suite once, including local D1 integration coverage.
-5. Install Chromium once and run the complete browser suite once. This includes the direct skeleton alignment matrix, held-navigation semantics, and Linux zero-difference visual matrix.
-6. Build with `build:generated` and the branch-specific public Turnstile key.
-7. Create, verify, and upload the artifact manifest.
-8. Enter the conditional deploy job, validate the selected D1 binding, and apply pending migrations.
-9. Upload the Pages artifact only after migration succeeds.
+Scheduled and non-forced manual runs prepare the strict snapshot and compare a validated deployed identity before application work. A proven unchanged candidate or obsolete branch revision skips application jobs, packaging, and deployment, but source-security jobs and their receipts remain required. A forced manual run selects a full plan after preparation.
 
-### Scheduled and manual checks
+### Acceptance, diagnostics, and deployment boundary
 
-Scheduled runs and non-forced manual runs perform the strict content work before deciding whether full application verification is required. When both the candidate content hash and commit SHA match production, documentation integrity, lint, typecheck, tests, build, artifact upload, and deployment are skipped. The independent workflow, history, dependency-audit, and CodeQL scanner jobs still run. A mismatch in either field selects the complete path, while forced manual runs always select it after strict content validation.
+`verify` reads current-run result states and immutable original-producer evidence. It refuses stale, missing, expired, substituted, ambiguous, or rerun-mismatched inputs; it does not substitute a previous green job or regenerated snapshot. Browser failure diagnostics are separate from acceptance evidence and do not authorize a release.
 
-### Tier boundaries and diagnostics
+The conditional deploy job restores the sealed candidate, verifies its archive digest, then performs one bounded credential-safe Pages-project GET that admits only the reviewed Direct Upload account/project/subdomain/production branch before any attestation, D1 migration, or upload command. It writes and verifies GitHub provenance and SBOM attestations, serializes each target with a non-cancelling lock, rechecks branch freshness around D1 migration, parses only the expected pinned-Wrangler deployment records, then smokes the unique returned host and the stable assigned host. No workflow `environment` setting is activated by this repository configuration; approvals, secrets, deployment protection, branch rules, and provider controls remain external evidence.
 
-`application-validation` selects `priority` for pull requests and `full` for every candidate that can produce a deployment artifact. The priority tier runs its portable browser selection once, then adds its Linux-only visual skeleton comparison as a separate step; the full tier runs `test:e2e:full` once and does not duplicate individual suites. Stale, unchanged scheduled, and non-forced manual candidates select no application tier. The priority unit tier parses the tracked permanent-branch ruleset, but that test proves the tracked payload only and cannot establish future live GitHub state. The stable `verify` job then requires explicit success from application validation, actionlint, history and workflow scans, CodeQL, and dependency review when the event is a pull request. A read-only GitHub observation on 2026-10-12 found that `main` requires pull requests and the current `verify` status, requires the branch to be current, requires no approvals, enforces the policy for administrators, and disallows force pushes and deletion. The workflow name and job name must remain stable; operators must recheck the external policy after governance changes. If application validation fails, the job uploads any available `playwright-report/` and `test-results/` files as a seven-day `playwright-diagnostics-<run-id>-<attempt>` artifact. That failure-only artifact is distinct from, and never used as, the one-day `cloudflare-pages-build` deployment artifact. The legacy per-target deploy concurrency still uses `cancel-in-progress: true`; this bootstrap preserves it pending the release-ordering work.
+The current source and local contracts specify this behavior; they do not claim a completed hosted run or active provider configuration.
 
 ## Post-deployment smoke tests
 
-The deploy job runs `scripts/checkDeployedContent.mjs` against the stable assigned-domain alias. It verifies root HTML, exact content and commit metadata, exact artifact-manifest equality, and the exact HTTP `405` JSON contract for GET requests to both contact Functions.
+The deploy job first runs the same smoke contract against the unique host returned by Wrangler, then against the stable assigned-domain alias. It verifies sealed root HTML bytes, effective static CSP and common security headers, exact content and commit metadata with no-store/Pragma headers, exact artifact-manifest equality with the same cache controls, and the exact HTTP `405` JSON plus no-store, restrictive CSP, permissions, transport, framing, referrer and nosniff headers for `GET` requests to both contact Functions.
 
 It does not test:
 
 - Every static route.
 - The custom domain.
-- Static security headers.
 - Valid contact POST requests.
 - Turnstile completion.
 - D1 migration or reservation behavior.

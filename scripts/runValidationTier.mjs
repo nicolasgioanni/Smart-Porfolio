@@ -7,6 +7,7 @@ const projectRoot = path.resolve(import.meta.dirname, "..");
 const vitestEntryPoint = path.join(projectRoot, "node_modules", "vitest", "vitest.mjs");
 
 export const priorityTestDirectories = [
+  "scripts/ci",
   "scripts/security",
   "src/components/overlay",
   "src/features/home",
@@ -68,13 +69,26 @@ export const priorityTestTargets = [
 
 export const requiredPriorityFiles = [...new Set([
   ...priorityTestTargets.filter((target) => /\.test\.(?:[cm]?[jt]sx?)$/.test(target)),
+  "scripts/ci/plan.test.mjs",
+  "scripts/ci/infrastructure.test.mjs",
+  "scripts/ci/resolve.test.mjs",
+  "scripts/ci/snapshot.test.mjs",
+  "scripts/ci/receipts.test.mjs",
+  "scripts/ci/workflowGraph.test.mjs",
+  "scripts/ci/browserDiscovery.test.mjs",
+  "scripts/ci/githubEvidence.test.mjs",
+  "scripts/ci/validationEvidence.test.mjs",
+  "scripts/ci/artifactTransport.test.mjs",
+  "scripts/ci/workflowYaml.test.mjs",
+  "scripts/ci/runner.test.mjs",
+  "scripts/ci/deployedIdentity.test.mjs",
+  "scripts/security/verifyAttestation.test.mjs",
   "functions/api/contact.test.ts",
   "functions/api/contact/verify.test.ts",
   "scripts/checkDependencyAudit.test.mjs",
   "scripts/candidateAdmissionWorkflow.test.mjs",
   "scripts/security/checkSarif.test.mjs",
-  "scripts/security/ciGate.test.mjs",
-  "scripts/security/deployWorkflow.test.mjs",
+  "scripts/ci/gate.test.mjs",
   "scripts/heartbeatWorkflow.test.mjs",
   "scripts/security/installPinnedTool.test.mjs",
   "scripts/security/securityScans.test.mjs",
