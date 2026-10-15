@@ -39,6 +39,7 @@
     "test:e2e:contact": "playwright test contact.spec.ts --project=chromium",
     "test:e2e:priority": "playwright test skeleton-alignment.spec.ts skeletons.transition.spec.ts navigation.spec.ts progressiveEnhancement.spec.ts footer.spec.ts contact.spec.ts recommendations.spec.ts experience.spec.ts projects.spec.ts research.spec.ts research-mobile-video.spec.ts --project=chromium",
     "test:e2e:full": "playwright test --project=chromium",
+    "test:e2e:release-static": "playwright test --config playwright.release.config.ts --project=chromium-static",
     "verify": "node scripts/runVerification.mjs verify",
     "verify:priority": "node scripts/runVerification.mjs priority",
     "verify:full": "node scripts/runVerification.mjs full",
@@ -49,7 +50,12 @@
     "setup:local:node": "node scripts/setup-local.mjs",
     "dev:smart:node": "node scripts/start-dev.mjs",
     "verify:local:node": "node scripts/verify-local.mjs",
-    "clean:local:node": "node scripts/clean-local.mjs"
+    "clean:local:node": "node scripts/clean-local.mjs",
+    "release:build": "node scripts/release.mjs build",
+    "release:compile": "node scripts/release.mjs compile",
+    "release:package": "node scripts/release.mjs package",
+    "release:runtime": "node scripts/release.mjs runtime",
+    "release:verify": "node scripts/release.mjs verify"
   },
   "dependencies": {
     "csv-parse": "^7.0.2",
@@ -75,6 +81,7 @@
     "jszip": "3.10.1",
     "js-yaml": "4.3.2",
     "miniflare": "5.20261006.0-alpha",
+    "parse5": "7.3.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.20.0",
