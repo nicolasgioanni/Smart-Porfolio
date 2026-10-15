@@ -8,6 +8,14 @@ import { validateWorkflowYaml } from "./workflowYaml.mjs";
 const projectRoot = path.resolve(import.meta.dirname, "..", "..");
 const workflowPath = path.join(projectRoot, ".github", "workflows", "ci.yml");
 const deployEligibility = "${{ !cancelled() && github.event_name != 'pull_request' && needs.verify.result == 'success' && needs.verify.outputs.deploy == 'true' }}";
+const builtOutputScanSteps = [
+  { name: "Install checksum-verified built-output scanner", run: "node scripts/security/installPinnedTool.mjs gitleaks /runner/tools > /dev/null" },
+  { name: "Build once and seal the full candidate", run: "node scripts/ci/run.mjs build", env: { CI_GITLEAKS: "${{ runner.temp }}/smart-portfolio-tools/gitleaks/gitleaks" } },
+  { name: "Upload immutable built-output scanner receipt", uses: "actions/upload-artifact@pin", with: {
+    name: "${{ steps.evidence.outputs.scan_receipt_name }}", path: "${{ steps.evidence.outputs.scan_receipt_path }}", "if-no-files-found": "error"
+  } },
+  { name: "Upload immutable release", uses: "actions/upload-artifact@pin" }
+];
 
 function workflow() {
   return { name: "CI", on: { push: {}, pull_request: {}, schedule: [], workflow_dispatch: {} }, jobs: {
@@ -15,6 +23,7 @@ function workflow() {
     ...Object.fromEntries([...securityJobs, "dependency-review"].map((name) => [name, { needs: "resolve-candidate" }])),
     ...Object.fromEntries(applicationJobs.map((name) => [name, { needs: ["resolve-candidate", "prepare-content", ...(name === "export-check" ? ["build-and-package"] : [])] }])),
     "browser-e2e": { needs: ["resolve-candidate", "prepare-content"], strategy: { matrix: { shard: ["1/2", "2/2"] }, "fail-fast": false } },
+    "build-and-package": { needs: ["resolve-candidate", "prepare-content"], steps: structuredClone(builtOutputScanSteps) },
     verify: { name: "verify", needs: [...gateDependencies], if: "always()" },
     deploy: { needs: ["verify", "prepare-content", "build-and-package"], if: deployEligibility, concurrency: { group: "deployment-target", "cancel-in-progress": false } },
     heartbeat: {}
@@ -22,7 +31,7 @@ function workflow() {
 }
 
 describe("CI graph responsibilities", () => {
-  it("permits arbitrary job and step ordering while retaining acceptance edges", () => {
+  it("permits arbitrary job ordering while retaining acceptance edges", () => {
     const value = workflow(); value.jobs = Object.fromEntries(Object.entries(value.jobs).reverse());
     expect(validateWorkflowGraph(value)).toBe(true);
   });
@@ -51,6 +60,17 @@ describe("CI graph responsibilities", () => {
     ]) {
       const value = workflow(); value.jobs.codeql.needs = ["resolve-candidate"]; change(value);
       expect(() => validateWorkflowGraph(value)).toThrow();
+    }
+  });
+  it("requires a sealed-output scanner receipt before artifact upload", () => {
+    for (const change of [
+      (value) => { value.jobs["build-and-package"].steps.shift(); },
+      (value) => { delete value.jobs["build-and-package"].steps[1].env.CI_GITLEAKS; },
+      (value) => { value.jobs["build-and-package"].steps.splice(2, 1); },
+      (value) => { [value.jobs["build-and-package"].steps[2], value.jobs["build-and-package"].steps[3]] = [value.jobs["build-and-package"].steps[3], value.jobs["build-and-package"].steps[2]]; }
+    ]) {
+      const value = workflow(); change(value);
+      expect(() => validateWorkflowGraph(value)).toThrow(/sealed-output Gitleaks/);
     }
   });
   it("rejects deployment cancellation, bypass paths and broad privilege", () => {

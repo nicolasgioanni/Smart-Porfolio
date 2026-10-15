@@ -224,7 +224,7 @@ Pull requests targeting `main` or `develop`:
 1. Generate validated template content without workbook or Cloudflare credentials.
 2. Run documentation integrity, lint, typecheck, and the bounded dependency audit; run the complete Vitest suite.
 3. Discover browser identities and run two assigned Chromium functional shards, the Linux visual suite, and critical Firefox/WebKit coverage.
-4. Build once from the accepted template snapshot, seal the candidate with configuration, migrations, manifest, and SBOM, then validate the exact static export and compiled runtime.
+4. Build once from the accepted template snapshot, seal the candidate with configuration, migrations, manifest, and SBOM, scan that exact sealed directory with the pinned Gitleaks binary before artifact upload, then validate the exact static export and compiled runtime.
 5. Run actionlint, Git-history/workflow scans, CodeQL security-extended analysis, and dependency review; `verify` accepts their exact receipts together with the application receipts.
 6. Stop before deployment, signing, migration, or provider access.
 
@@ -238,7 +238,7 @@ Scheduled and non-forced manual runs prepare the strict snapshot and compare a v
 
 `verify` reads current-run result states and immutable original-producer evidence. It refuses stale, missing, expired, substituted, ambiguous, or rerun-mismatched inputs; it does not substitute a previous green job or regenerated snapshot. Browser failure diagnostics are separate from acceptance evidence and do not authorize a release.
 
-The conditional deploy job restores the sealed candidate, verifies its archive digest, then performs one bounded credential-safe Pages-project GET that admits only the reviewed Direct Upload account/project/subdomain/production branch before any attestation, D1 migration, or upload command. It writes and verifies GitHub provenance and SBOM attestations, serializes each target with a non-cancelling lock, rechecks branch freshness around D1 migration, parses only the expected pinned-Wrangler deployment records, then smokes the unique returned host and the stable assigned host. No workflow `environment` setting is activated by this repository configuration; approvals, secrets, deployment protection, branch rules, and provider controls remain external evidence.
+The conditional deploy job restores the sealed candidate and verifies its archive digest, writes GitHub provenance and SBOM attestations, then performs one bounded credential-safe Pages-project GET that admits only the reviewed Direct Upload account/project/subdomain/production branch. The deployment command verifies the attestations before D1 migration or upload, serializes each target with a non-cancelling lock, rechecks branch freshness around D1 migration, parses only the expected pinned-Wrangler deployment records, then smokes the unique returned host and the stable assigned host. No workflow `environment` setting is activated by this repository configuration; approvals, secrets, deployment protection, branch rules, and provider controls remain external evidence.
 
 The current source and local contracts specify this behavior; they do not claim a completed hosted run or active provider configuration.
 

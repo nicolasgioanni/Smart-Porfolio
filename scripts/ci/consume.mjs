@@ -49,11 +49,14 @@ export async function verifyAcceptedInputs({ environment = process.env, projectR
 }
 
 export async function writeValidationEvidence({ environment = process.env, projectRoot = process.cwd(),
-  validator, assignment = null, browserReport = null, artifactRecordDigest = null } = {}) {
+  validator, assignment = null, browserReport = null, artifactRecordDigest = null, receiptDirectory = "receipt" } = {}) {
+  if (typeof receiptDirectory !== "string" || !/^[a-z][a-z0-9-]{0,63}$/.test(receiptDirectory)) {
+    throw new Error("Validation receipt directory is invalid.");
+  }
   const { root, plan, durationMs } = await verifyAcceptedInputs({ environment, projectRoot });
   const job = environment.GITHUB_JOB, producer = currentProducer(job, environment);
   const receipt = createValidationReceipt({ plan, validator, job, producer, assignment, browserReport, artifactRecordDigest, durationMs });
-  const directory = path.join(root, "receipt");
+  const directory = path.join(root, receiptDirectory);
   await mkdir(directory, { mode: 0o700 });
   await writeRecord(directory, "receipt.json", receipt);
   return { receipt_path: directory, receipt_name: artifactName({ role: "receipt", producer, validator }) };

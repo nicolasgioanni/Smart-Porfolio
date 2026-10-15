@@ -449,9 +449,26 @@ jobs:
           cache: npm
       - *a2
       - *a3
+      - name: Install checksum-verified built-output scanner
+        shell: bash
+        run: |
+          set -euo pipefail
+          tool_root="$RUNNER_TEMP/smart-portfolio-tools"
+          mkdir -p "$tool_root"
+          node scripts/security/installPinnedTool.mjs gitleaks "$tool_root" > /dev/null
       - name: Build once and seal the full candidate
         id: evidence
         run: node scripts/ci/run.mjs build
+        env:
+          CI_GITLEAKS: ${{ runner.temp }}/smart-portfolio-tools/gitleaks/gitleaks
+      - name: Upload immutable built-output scanner receipt
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ${{ steps.evidence.outputs.scan_receipt_name }}
+          path: ${{ steps.evidence.outputs.scan_receipt_path }}
+          if-no-files-found: error
+          retention-days: 3
+          include-hidden-files: false
       - name: Upload immutable release
         id: release
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a

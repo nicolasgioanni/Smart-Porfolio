@@ -56,7 +56,7 @@ The preview build receives only `NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY`. If tha
 2. Confirm the push workflow resolves the current `main` SHA.
 3. Confirm strict workbook generation produces one accepted snapshot before full validation.
 4. Confirm `verify` accepts every required job result and original producer receipt or artifact rather than a rerun substitute.
-5. Confirm the deploy job restores the sealed candidate, verifies its archive digest, accepts the bounded exact Direct Upload Pages-project preflight, verifies provenance/SBOM attestations, and checks branch freshness before and after D1 migration.
+5. Confirm the deploy job restores the sealed candidate, verifies its archive digest, writes provenance/SBOM attestations, then runs the bounded exact Direct Upload Pages-project preflight and verifies those attestations before checking branch freshness around D1 migration.
 6. Confirm the production D1 target check and pending migrations succeed before Pages upload.
 7. Confirm the unique deployment-host smoke, exact identity check, and stable assigned-domain smoke pass.
 8. Verify the public custom domain, key static routes, security headers, and the contact page manually. Completing the gate is permitted, but do not select Send request.

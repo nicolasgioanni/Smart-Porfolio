@@ -8,6 +8,10 @@ export const applicationJobs = Object.freeze([
 ]);
 export const securityJobs = Object.freeze(["security-tools", "security-scans", "codeql", "infrastructure"]);
 export const chromiumShards = Object.freeze(["1/2", "2/2"]);
+// This is a full-plan receipt produced by build-and-package, rather than a
+// separate job. The gate still requires its own artifact because source scans
+// cannot establish what the generated/sealed release contains.
+export const sealedReleaseValidators = Object.freeze(["built-output-scan"]);
 
 export function exactKeys(value, keys, label) {
   if (!value || typeof value !== "object" || Array.isArray(value) ||

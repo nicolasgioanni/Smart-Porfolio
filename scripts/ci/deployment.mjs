@@ -2,7 +2,7 @@ import { execFile } from "node:child_process";
 import { readFile, writeFile } from "node:fs/promises";
 import { promisify } from "node:util";
 import path from "node:path";
-import { assertDigest, exactKeys, recordDigest, securityJobs } from "./plan.mjs";
+import { assertDigest, exactKeys, recordDigest, sealedReleaseValidators, securityJobs } from "./plan.mjs";
 import { currentProducer, digestFile, jsonEnvironment, writeRecord } from "./context.mjs";
 import { verifyAcceptedInputs } from "./consume.mjs";
 import { assertReleaseProducer, restoreSealedCandidate } from "./releaseStages.mjs";
@@ -28,7 +28,7 @@ export function assertDeploymentAcceptance(plan, acceptance, reference) {
   if (acceptance.schemaVersion !== 1 || acceptance.accepted !== true || acceptance.deploy !== true || acceptance.mode !== "full" ||
       acceptance.candidateDigest !== recordDigest(plan.candidate) || acceptance.planDigest !== recordDigest(plan) ||
       acceptance.snapshot?.recordDigest !== plan.snapshotDigest || recordDigest(acceptance.release) !== recordDigest(reference)) throw new Error("Release acceptance differs from the exact candidate generation.");
-  const validators = [...securityJobs, "quality", "unit-integration", "chromium-1-of-2", "chromium-2-of-2",
+  const validators = [...securityJobs, ...sealedReleaseValidators, "quality", "unit-integration", "chromium-1-of-2", "chromium-2-of-2",
     "visual-regression", "cross-browser", "build-and-package", "export-check"];
   exactKeys(acceptance.receiptDigests, validators, "Accepted release receipts");
   Object.values(acceptance.receiptDigests).forEach((digest) => assertDigest(digest, "Accepted receipt digest"));

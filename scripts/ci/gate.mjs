@@ -1,7 +1,7 @@
 import { mkdtemp, realpath, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { applicationJobs, evaluateResults, exactKeys, parsePlan, positiveInteger, recordDigest, securityJobs } from "./plan.mjs";
+import { applicationJobs, evaluateResults, exactKeys, parsePlan, positiveInteger, recordDigest, sealedReleaseValidators, securityJobs } from "./plan.mjs";
 import { artifactName, readRunCollection, readRunEvidence, transferForCompletedJob, verifyReceiptProducer } from "./githubEvidence.mjs";
 import { downloadArtifact, extractArtifact } from "./artifactTransport.mjs";
 import { parseArtifactReference, verifyArtifactReference } from "./snapshot.mjs";
@@ -87,15 +87,18 @@ export async function verifyCompleteEvidence({ plan: input, results, currentAtte
     const validators = [
       ...securityJobs.map((name) => ({ name, job: name, sourceOnly: true })),
       ...(candidate.event === "pull_request" ? [{ name: "dependency-review", job: "dependency-review", sourceOnly: true }] : []),
-      ...(plan.mode === "full" ? applicationJobs.flatMap((job) => job === "browser-e2e" ? [
+      ...(plan.mode === "full" ? [
+        ...sealedReleaseValidators.map((name) => ({ name, job: "build-and-package", completedJob: "build-and-package" })),
+        ...applicationJobs.flatMap((job) => job === "browser-e2e" ? [
         { name: "chromium-1-of-2", job }, { name: "chromium-2-of-2", job }
-      ] : [{ name: job, job }]) : [])
+        ] : [{ name: job, job }])
+      ] : [])
     ];
     // Do not remove the temporary root while sibling artifact transports still
     // own destinations inside it. A rejected Promise.all settles immediately;
     // awaiting every bounded task keeps cleanup deterministic on bad evidence.
-    const validationResults = await Promise.allSettled(validators.map(async ({ name, job: producerJob, sourceOnly = false }) => {
-      const { transfer, job } = transferForCompletedJob({ ...expected, jobName: name, producerJob, validator: name, role: "receipt" });
+    const validationResults = await Promise.allSettled(validators.map(async ({ name, job: producerJob, completedJob = name, sourceOnly = false }) => {
+      const { transfer, job } = transferForCompletedJob({ ...expected, jobName: completedJob, producerJob, validator: name, role: "receipt" });
       const receipt = await load(transfer, `receipt-${name}`, "receipt.json");
       verifyReceiptProducer(receipt.producer, job, producerJob);
       if (sourceOnly) {
@@ -103,7 +106,7 @@ export async function verifyCompleteEvidence({ plan: input, results, currentAtte
       } else {
         const assignment = name === "cross-browser" ? discovery.crossBrowser.identities :
           discovery.chromium.assignments[name]?.identities ?? null;
-        const artifactRecordDigest = ["build-and-package", "export-check"].includes(name) ? release.recordDigest : null;
+        const artifactRecordDigest = [...sealedReleaseValidators, "build-and-package", "export-check"].includes(name) ? release.recordDigest : null;
         summaries[name] = verifyReceipt(receipt, { plan, validator: name, job: producerJob, assignment, artifactRecordDigest, allowedSkips: allowedBrowserSkips });
       }
       receiptDigests[name] = recordDigest(receipt);

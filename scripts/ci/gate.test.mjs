@@ -6,7 +6,7 @@ import JSZip from "jszip";
 import { describe, expect, it, vi } from "vitest";
 import { extractArtifact } from "./artifactTransport.mjs";
 import { artifactName } from "./githubEvidence.mjs";
-import { applicationJobs, chromiumShards, createPlan, recordDigest, repository, requiredJobs, securityJobs, workflowPath } from "./plan.mjs";
+import { applicationJobs, chromiumShards, createPlan, recordDigest, repository, requiredJobs, sealedReleaseValidators, securityJobs, workflowPath } from "./plan.mjs";
 import { createSourceReceipt, createValidationReceipt } from "./validationEvidence.mjs";
 import { allowedBrowserSkips } from "./browserSkips.mjs";
 import { testIdentity } from "./receipts.mjs";
@@ -172,18 +172,19 @@ async function fixture({
     });
 
     const application = [
+      ...sealedReleaseValidators,
       ...applicationJobs.filter((name) => name !== "browser-e2e"),
       "chromium-1-of-2", "chromium-2-of-2"
     ];
     for (const name of application) {
-      const producerJob = name.startsWith("chromium-") ? "browser-e2e" : name;
+      const producerJob = name.startsWith("chromium-") ? "browser-e2e" : sealedReleaseValidators.includes(name) ? "build-and-package" : name;
       const producer = { runId: plan.candidate.runId, runNumber: plan.candidate.runNumber, attempt: 1, job: producerJob };
       const assignment = name === "cross-browser" ? crossBrowser.identities :
         chromium.assignments[name]?.identities ?? null;
       let receipt = createValidationReceipt({
         plan, validator: name, job: producerJob, producer, assignment,
         browserReport: assignment === null ? null : executionReport(assignment), durationMs: 1,
-        artifactRecordDigest: ["build-and-package", "export-check"].includes(name) ? references.release.recordDigest : null
+        artifactRecordDigest: [...sealedReleaseValidators, "build-and-package", "export-check"].includes(name) ? references.release.recordDigest : null
       });
       if (receiptPatch[name]) receipt = receiptPatch[name](receipt);
       await addEvidence({ validator: name, producer, file: "receipt.json", value: receipt });
@@ -236,7 +237,7 @@ describe("complete CI evidence gate", () => {
     expect(value.calls.run[0].options).toMatchObject({ token: "read-only-test-token" });
     expect(value.calls.collections.map(({ kind }) => kind).sort()).toEqual(["artifacts", "jobs"]);
     // One receipt per validator (one per native shard), plus discovery.
-    const receiptCount = applicationJobs.length - 1 + chromiumShards.length + securityJobs.length + Number(options.event === "pull_request");
+    const receiptCount = sealedReleaseValidators.length + applicationJobs.length - 1 + chromiumShards.length + securityJobs.length + Number(options.event === "pull_request");
     expect(value.downloaded).toHaveLength(receiptCount + 1);
     expect(value.downloaded.map(({ role }) => role)).not.toContain("release");
     expect(value.downloaded.map(({ role }) => role)).not.toContain("snapshot");
@@ -282,6 +283,24 @@ describe("complete CI evidence gate", () => {
       mutate(value);
       await expect(verify(value)).rejects.toThrow(/Latest job execution|Job evidence is missing/);
     }
+  }, 30_000);
+
+  it("rejects a missing or release-mismatched sealed-output scan receipt even when build-and-package succeeded", async () => {
+    const missing = await fixture();
+    const scanArtifact = missing.artifacts.find(({ name }) => name.includes("receipt-built-output-scan"));
+    missing.artifacts.splice(missing.artifacts.indexOf(scanArtifact), 1);
+    await expect(verify(missing)).rejects.toThrow("Original producer artifact is missing");
+
+    const mismatched = await fixture();
+    const scan = mismatched.artifacts.find(({ name }) => name.includes("receipt-built-output-scan"));
+    const scanBytes = mismatched.archives.get(scan.id);
+    const archiveValue = await JSZip.loadAsync(scanBytes);
+    const receipt = JSON.parse(await archiveValue.file("receipt.json").async("text"));
+    receipt.artifactRecordDigest = "c".repeat(64);
+    const altered = await archive("receipt.json", receipt);
+    mismatched.archives.set(scan.id, altered);
+    scan.digest = `sha256:${hash(altered)}`;
+    await expect(verify(mismatched)).rejects.toThrow("different inputs");
   }, 30_000);
 
   it("does not prefer a prior green job over a newer failed execution", async () => {

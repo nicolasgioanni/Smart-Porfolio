@@ -12,7 +12,7 @@ import { collectPublicBuildInputs, publicBuildInputDigest } from "../release/pub
 import { packageSealedRelease } from "../release/sealedRelease.mjs";
 import { assertDeploymentAcceptance, executeDeployment, pagesDeploymentArguments, parseDeploymentOutput, validateDeploymentConfig } from "./deployment.mjs";
 import { artifactName } from "./githubEvidence.mjs";
-import { createPlan, recordDigest, repository, securityJobs, workflowPath } from "./plan.mjs";
+import { createPlan, recordDigest, repository, sealedReleaseValidators, securityJobs, workflowPath } from "./plan.mjs";
 import { createSnapshot, generatedContentPath } from "./snapshot.mjs";
 
 const execute = promisify(execFile);
@@ -75,7 +75,7 @@ function candidate(sha) {
 
 function receiptDigests() {
   return Object.fromEntries([
-    ...securityJobs,
+    ...securityJobs, ...sealedReleaseValidators,
     "quality", "unit-integration", "chromium-1-of-2", "chromium-2-of-2",
     "visual-regression", "cross-browser", "build-and-package", "export-check"
   ].map((name) => [name, "a".repeat(64)]));
