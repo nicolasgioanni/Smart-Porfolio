@@ -47,7 +47,7 @@ describe("RecommendationCard", () => {
   it("renders Billy's attributed recommendation with safe LinkedIn destinations and no avatar field", () => {
     const { container } = render(<RecommendationCard item={billyRecommendation} />);
 
-    expect(screen.getByRole("heading", { name: "Billy Gardner McIntyre" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "Billy Gardner McIntyre" })).toBeInTheDocument();
     expect(screen.getByText("AI Engineer at U.S. Department of the Treasury")).toBeInTheDocument();
     expect(screen.getByText("October 5, 2026")).toBeInTheDocument();
     expect(screen.getByText("Mentored Nicolas")).toBeInTheDocument();

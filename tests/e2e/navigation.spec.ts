@@ -25,6 +25,7 @@ async function openHome(page: Page) {
 async function scrollRailToEnd(page: Page) {
   const rail = page.locator(".mobile-navigation__rail");
 
+  await expect(rail).toHaveAttribute("data-overflow", "true");
   await rail.hover();
   await page.mouse.wheel(10_000, 0);
   await expect.poll(() => rail.evaluate(

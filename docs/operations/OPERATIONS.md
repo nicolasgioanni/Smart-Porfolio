@@ -235,6 +235,12 @@ Provider rollback procedures and retention are external Cloudflare behavior and 
 
 A Pages rollback does not revert D1 migrations. Before rolling back to older Function code, confirm that the active schema remains backward compatible. Database restoration or destructive corrective SQL is a separate operation that requires explicit review and should not be inferred from a Pages rollback.
 
+### Local recovery-drill evidence
+
+`scripts/quality/recoveryDrill.test.mjs` uses only temporary directories, a credential-free child environment, and `wrangler d1 --local`. It applies the checked-in migrations through `0003_contact_delivery_rendering.sql`, exports a fixture reservation, rebuilds a fresh local database, and verifies that the pseudonymous reservation fields restore unchanged. It also verifies that a tampered v2 sealed envelope is rejected and can be replaced only by its previously verified local fixture; the sealed fixture contains no audit collector input.
+
+This is a repository-level drill, not a Cloudflare D1 backup, retention, export, import, or restore procedure. It does not establish a durable release archive or authorize production database recovery. Any provider recovery remains a separately reviewed operation against verified provider state.
+
 ### Forward recovery
 
 When provider rollback is unavailable or a corrected release is preferable:

@@ -28,6 +28,8 @@ Run this checklist before shipping meaningful changes.
 - System resolves device light and dark preferences, follows live changes, and never marks an effective palette as a manual selection.
 - Reduced-motion users do not receive entrance or compression effects; skeletons remain static in every motion setting.
 - Dialog focus, disclosure state, and form errors remain keyboard accessible.
+- Run the axe scan across all public routes and the covered theme, dialog, contact, Research-video, and Experience-disclosure states.
+- Check the focused Firefox and WebKit critical paths after changing navigation, themes, dialogs, or contact recovery.
 
 ## Code
 
@@ -54,8 +56,14 @@ Run this checklist before shipping meaningful changes.
 - `npm run test:e2e:navigation`
 - `npm run test:e2e:footer`
 - `npm run test:e2e:recommendations`
+- `npm run test:e2e:accessibility`
+- `npm run test:e2e:critical:firefox`
+- `npm run test:e2e:critical:webkit`
+- `npm run test:quality:properties`
+- `npm run test:quality:mutations`
 - `npm run test`
-- `npm run build`
+- `npm run build:generated`
+- `npm run test:quality:payload`
 - `npm run verify`
 
-`npm run verify` includes documentation validation, lint, typecheck, the full test suite, and a normal build. The focused footer and navigation commands remain separate named CI gates, while CI also runs the Chromium skeleton, navigation, footer, recommendation, experience, and research regressions after one browser installation.
+`npm run verify` includes documentation validation, lint, typecheck, the full test suite, and a normal build. The focused browser, contact-boundary, and payload commands remain explicit until the CI orchestration selects them; the existing Chromium skeleton, navigation, footer, recommendation, experience, and research regressions are unchanged.
