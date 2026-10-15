@@ -310,7 +310,7 @@ Avoid snapshot tests that hide semantic changes. Prefer explicit assertions for 
 - No coverage percentage is generated or enforced.
 - The default CI browser gate runs Chromium, including a local mocked contact journey. The scoped mobile Research video and Projects preview commands also run WebKit locally; neither emulates physical iPhone Safari or exercises a live security provider, D1 binding, delivery service, or mailbox.
 - No automated Lighthouse or Core Web Vitals measurement runs in CI. The local payload command enforces reviewed static gzip limits after a generated build.
-- The axe and cross-browser critical commands are available locally but are not selected by the current stable CI orchestration.
+- The axe scan runs through `test:e2e:full` for full Chromium candidates, but not in the pull-request priority tier. The cross-browser critical commands remain locally selected until later CI orchestration adopts them.
 - No Workers emulator integration test runs in CI.
 - No automated live contact delivery test is performed.
 - CI covers one Linux and Node-major configuration. Local `verify:full` on another operating system cannot replace the required Ubuntu 24.04 visual comparison.
