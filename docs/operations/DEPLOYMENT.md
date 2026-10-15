@@ -202,14 +202,16 @@ flowchart TD
     S --> G[Verify exact jobs and producer artifacts]
     D --> G
     G --> H[Restore and verify sealed release]
-    H --> I[Attest archive and SBOM]
-    I --> J[Pages preflight, provenance verification and branch freshness]
-    J --> K[Apply selected D1 migrations]
-    K --> L[Recheck freshness and deploy with Wrangler]
-    L --> M[Smoke unique deployment, then stable target]
+    H --> I[Create archive provenance and SBOM attestations]
+    I --> J[Validate sealed runtime configuration]
+    J --> K[Read-only Pages project preflight]
+    K --> L[Cryptographically verify provenance and SBOM]
+    L --> M[Check branch freshness and apply selected D1 migrations]
+    M --> N[Recheck freshness and deploy with Wrangler]
+    N --> O[Smoke unique deployment, then stable target]
 ```
 
-`npm run build:generated` invokes Next.js, whose local build-completion adapter normalizes any Windows-emitted nested segment-cache filenames to Next's flat static-export URL layout, and then writes the content version without running the `prebuild` content generator. The normalization is a no-op on the already-flat Linux output and fails on malformed trees or collisions. This keeps generation at one accepted workbook snapshot even if its download needs the single bounded retry. The deploy job does not rebuild or download the workbook.
+The exact job graph, receipt contracts, and hosted-evidence limits are maintained in [CI input and evidence contracts](../quality/CI_CONTRACTS.md). `npm run build:generated` invokes Next.js, whose local build-completion adapter normalizes any Windows-emitted nested segment-cache filenames to Next's flat static-export URL layout, and then writes the content version without running the `prebuild` content generator. The normalization is a no-op on the already-flat Linux output and fails on malformed trees or collisions. This keeps generation at one accepted workbook snapshot even if its download needs the single bounded retry. The deploy job does not rebuild or download the workbook.
 
 `quality` runs documentation validation, ESLint with zero warnings, and strict TypeScript checking. The independent `security-scans` job runs the dependency audit for every plan, including no-ops. `unit-integration` runs the complete Vitest suite. Browser discovery creates one complete identity set; its two Chromium functional shards, the separate visual selection, and Firefox/WebKit selection must cover their exact assignments. `build-and-package` builds once from the accepted bytes, compiles Functions, creates an artifact manifest and CycloneDX SBOM, then seals the release. It scans that exact sealed directory with pinned Gitleaks before uploading either its scan receipt or release artifact; the aggregate requires the distinct scan receipt bound to the sealed manifest. `export-check` restores that same sealed package and validates static output and compiled Pages runtime. Pull-request verification is deliberately deployment-free, but it uses this complete application path rather than a reduced priority tier.
 
@@ -217,7 +219,7 @@ Consumers restore the original snapshot artifact by immutable same-run ID, provi
 
 For production and preview builds, `DEPLOYMENT_COMMIT_SHA` binds deployment metadata to the candidate. Production receives only the production Turnstile site key. Preview receives only the optional preview key.
 
-The deploy job checks out the same SHA so `functions/`, `migrations/`, and `wrangler.jsonc` match the tested source. It restores and validates the sealed release and its archive digest, then writes GitHub provenance and SBOM attestations for that archive. The subsequent deployment command makes one bounded authenticated `GET` for the exact Pages project in the configured account. That preflight accepts only the reviewed `smart-portfolio` Direct Upload project, `smart-portfolio-bds.pages.dev` subdomain, and `main` production branch; it rejects redirects, malformed or oversized responses, timeouts, and Git-connected projects without logging provider details. The command verifies the attestations against the candidate repository, source, workflow certificate, signer digest, and OIDC issuer before D1 migration or Wrangler upload. It holds a non-cancelling target-specific concurrency lock, checks branch freshness before and after migrations, validates the selected D1 binding, applies pending migrations, then accepts only the exact pinned-Wrangler structured deployment result. It smokes the returned unique Pages host before confirming its identity, then smokes the stable assigned target and confirms the final deployed identity. Migration targeting uses fixed database names rather than an interchangeable binding name.
+The deploy job checks out the same SHA so `functions/`, `migrations/`, and `wrangler.jsonc` match the tested source. The trusted workflow creates GitHub provenance and SBOM attestations for the restored, validated archive before invoking the deployment command. Before that command makes any provider call, it admits the sealed runtime configuration as the reviewed narrow capability boundary, including the selected target's D1 binding and the sealed toolchain compatibility settings. The command then makes one bounded read-only authenticated `GET` for the exact Pages project in the configured account. The preflight accepts only the reviewed `smart-portfolio` Direct Upload project, `smart-portfolio-bds.pages.dev` subdomain, and `main` production branch; it rejects redirects, malformed or oversized responses, timeouts, and Git-connected projects without logging provider details. After that read-only preflight, the command cryptographically verifies the attestations against the candidate repository, source, workflow certificate, signer digest, and OIDC issuer before D1 migration or Wrangler upload. It holds a non-cancelling target-specific concurrency lock, checks branch freshness before and after migrations, validates the selected D1 binding, applies pending migrations, then accepts only the exact pinned-Wrangler structured deployment result. It smokes the returned unique Pages host before confirming its identity, then smokes the stable assigned target and confirms the final deployed identity. Migration targeting uses fixed database names rather than an interchangeable binding name.
 
 ## D1 migration lifecycle
 
@@ -277,7 +279,7 @@ npm run release:runtime -- --directory <release-dir>/release
 
 `release:compile` parses the completed HTML export to hash only real inline script nodes, then reads the emitted worker, configuration, and routes through bounded no-follow descriptors before validating and writing those exact bytes into `out/`. It uses the pinned local Wrangler CLI to compile the two reviewed Functions and routing file, and creates the static artifact manifest. `release:package` seals exactly `out/`, `wrangler.jsonc`, numbered migrations, a CycloneDX SBOM, and the candidate identity. The package rejects symlinks, traversal, private deployment inputs in `out/`, unexpected entries, configuration or migration substitutions, and replacement of an unowned release directory.
 
-`release:runtime` verifies the sealed package before and after running the compiled worker in local Miniflare and a browser check through pinned `wrangler pages dev`. It uses the packaged `out/` and configuration so the command can check an exact downloaded candidate without modifying its compiled public-key bytes. These checks use isolated Turnstile/D1 fixtures and prohibit provider email delivery; they are not evidence of live Cloudflare, D1, email, or environment settings. The commands are dormant local preparation: the existing workflow neither invokes them nor supplies `RELEASE_TARGET`, so its normal writer keeps emitting schema-v1 metadata until a separately reviewed orchestration change activates the staged path.
+`release:runtime` verifies the sealed package before and after running the compiled worker in local Miniflare and a browser check through pinned `wrangler pages dev`. It uses the packaged `out/` and configuration so the command can check an exact downloaded candidate without modifying its compiled public-key bytes. These checks use isolated Turnstile/D1 fixtures and prohibit provider email delivery; they are not evidence of live Cloudflare, D1, email, or environment settings. A full CI plan invokes the accepted-snapshot build, compile/package, and packaged-runtime stages with explicit `RELEASE_TARGET` identities. Ordinary callers that omit those release identities retain schema-v1 output; v1 remains ineligible to establish no-op equivalence or release-producer ordering.
 
 ### Artifact integrity
 
@@ -310,12 +312,12 @@ The automated smoke test does not request every static route, test the custom do
 
 ## Routing and response headers
 
-`public/_routes.json` invokes Pages Functions only for:
+The Pages Functions compiler emits sealed `out/_routes.json` only after it matches both the reviewed `public/_routes.json` source intent and the static output route contract. The sealed route file invokes Pages Functions only for:
 
 - `/api/contact/verify`
 - `/api/contact`
 
-All other route and asset requests remain on the static Pages path. `public/_headers` supplies the static Content Security Policy, permissions policy, referrer policy, HSTS, content-type protection, frame denial, and the non-cache rules for both public metadata files.
+All other route and asset requests remain on the static Pages path. The sealed compiler emits `out/_headers` from the reviewed `public/_headers` source; its static Content Security Policy, permissions policy, referrer policy, HSTS, content-type protection, frame denial, and metadata cache rules are the exact values compared by assigned-alias smoke.
 
 Pages `_headers` rules do not apply to Function responses. Both Functions set their own JSON content type, no-store caching, referrer, and content-type-sniffing headers.
 
@@ -331,7 +333,7 @@ Failure behavior depends on where the run stops:
 - A changed workbook hash that fails before deployment differs from the active manifest, so a later scheduled run attempts it again.
 - A code-only candidate can have the same content hash as production. Its differing commit SHA makes a later scheduled or non-forced run retry the complete verified deployment path automatically.
 
-The one-day GitHub artifact is not a long-term rollback archive. Use Cloudflare Pages deployment history for an authorized provider rollback, or restore the intended source and workbook state and perform a forced green deployment. After either path, verify both assigned and custom domains and record the active content and commit metadata.
+The three-day GitHub Actions artifact is not a long-term rollback archive. Use Cloudflare Pages deployment history for an authorized provider rollback, or restore the intended source and workbook state and perform a forced green deployment. After either path, verify both assigned and custom domains and record the active content and commit metadata.
 
 See [Operations](OPERATIONS.md) for the release, incident, and rollback runbooks.
 

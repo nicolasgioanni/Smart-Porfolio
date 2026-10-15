@@ -1,6 +1,6 @@
 # Operations
 
-This runbook covers recurring deployment, monitoring, incident response, and rollback for the active Smart Portfolio Cloudflare Pages service. Complete the environment setup in [Deployment](DEPLOYMENT.md) before using these procedures.
+This runbook covers recurring deployment, monitoring, incident response, and rollback for the Smart Portfolio Cloudflare Pages service. Complete the environment setup in [Deployment](DEPLOYMENT.md) before using these procedures. The checked-in workflow graph and repository evidence boundary are defined in [CI input and evidence contracts](../quality/CI_CONTRACTS.md); this runbook does not prove a hosted deployment completed.
 
 ## Service map
 
@@ -31,8 +31,8 @@ Use the narrowest authoritative source for each question:
 | What non-secret Pages values were reviewed? | `wrangler.jsonc` at the candidate SHA |
 | What D1 schema should be active? | Numbered SQL under `migrations/` at the candidate SHA |
 | Which D1 migrations are actually active? | The selected database's D1 migration ledger in Cloudflare |
-| Which static requests invoke Functions? | `public/_routes.json` at the candidate SHA |
-| Which static headers are intended? | `public/_headers` at the candidate SHA |
+| Which static requests invoke Functions? | Sealed `out/_routes.json`, emitted after validation against reviewed `public/_routes.json`, at the candidate SHA |
+| Which static headers are intended? | Sealed `out/_headers`, generated from reviewed `public/_headers`, at the candidate SHA |
 | Do required secrets, WAF, domains, DNS, and branch rules match the intended state? | Verify the external, repository-unverified state in the Cloudflare and GitHub dashboards |
 
 Do not infer a successful source deployment from the content hash alone. Code-only revisions can share the same hash.
@@ -56,7 +56,7 @@ The preview build receives only `NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY`. If tha
 2. Confirm the push workflow resolves the current `main` SHA.
 3. Confirm strict workbook generation produces one accepted snapshot before full validation.
 4. Confirm `verify` accepts every required job result and original producer receipt or artifact rather than a rerun substitute.
-5. Confirm the deploy job restores the sealed candidate, verifies its archive digest, writes provenance/SBOM attestations, then runs the bounded exact Direct Upload Pages-project preflight and verifies those attestations before checking branch freshness around D1 migration.
+5. Confirm the deploy job restores the sealed candidate and verifies its archive digest; the trusted workflow creates provenance/SBOM attestations, then the deployment command performs its bounded read-only Direct Upload Pages-project preflight and cryptographically verifies those attestations before branch freshness, D1 migration, or upload.
 6. Confirm the production D1 target check and pending migrations succeed before Pages upload.
 7. Confirm the unique deployment-host smoke, exact identity check, and stable assigned-domain smoke pass.
 8. Verify the public custom domain, key static routes, security headers, and the contact page manually. Completing the gate is permitted, but do not select Send request.
@@ -112,7 +112,7 @@ Both metadata endpoints should return explicit no-store and no-cache headers.
 
 ### Verify static routes
 
-The automated deployment smoke requests only `/`. For a release, use the current route registry and check the exported portfolio, contact, and legal routes. At minimum, include:
+The automated deployment smoke compares the assigned alias against the sealed release for `/`, `robots.txt`, `sitemap.xml`, both metadata documents, and safe Function method rejections, including their exact scoped headers. It does not cover every static route or the custom domain. For a release, use the current route registry and check the exported portfolio, contact, and legal routes manually. At minimum, include:
 
 - `/`
 - `/experience`
@@ -128,7 +128,7 @@ Check both the assigned production domain and the primary custom domain. Confirm
 
 ### Verify static response headers
 
-On representative static pages, confirm the Cloudflare response includes the intended policy from `public/_headers`:
+On representative static pages, confirm the Cloudflare response includes the intended policy from sealed `out/_headers`, generated from reviewed `public/_headers`:
 
 - `Content-Security-Policy`
 - `Permissions-Policy`
@@ -137,7 +137,7 @@ On representative static pages, confirm the Cloudflare response includes the int
 - `X-Content-Type-Options`
 - `X-Frame-Options`
 
-The repository does not automatically smoke-test these headers after deployment.
+The assigned-alias smoke compares the root response headers against sealed `out/_headers`; manually confirm representative routes and the custom domain as well.
 
 ### Verify contact routing without delivery
 
@@ -246,7 +246,7 @@ When provider rollback is unavailable or a corrected release is preferable:
 4. Dispatch the workflow with `force_deploy=true`.
 5. Complete all post-deployment checks.
 
-The Actions artifact is retained for one day and is not a durable release archive. Production workbook snapshots are transient build inputs, so repository history alone may not reproduce an earlier content deployment.
+The Actions artifact is retained for three days and is not a durable release archive. Production workbook snapshots are transient build inputs, so repository history alone may not reproduce an earlier content deployment.
 
 ## Secret and configuration rotation
 
@@ -269,10 +269,10 @@ Rotating `TURNSTILE_SECRET_KEY` also changes the verification-ticket signing key
 - CI validates only the assigned `pages.dev` aliases, not the custom domain.
 - Automated smoke checks do not exercise valid POST requests, D1 queries, DNS validation, or downstream delivery.
 - Live D1 binding and migration state, WAF, Cloudflare plan, DNS, TLS, custom-domain, provider-secret, and branch-protection state are external and unverified by repository tests.
-- The pre-deployment comparison verifies the active content hash and commit SHA, but does not prove that a prior post-upload smoke test or external runtime configuration succeeded.
+- For scheduled checks and non-forced manual dispatches, preparation can recognize an equivalent active v2 identity only when target, candidate commit SHA, content hash, target-specific public-build-input digest, and GitHub Actions producer kind match. Under the deployment lock, smoke-only execution separately requires the exact deployed identity, while run-number/attempt ordering rejects older or conflicting generations before mutation. Neither comparison proves that a prior post-upload smoke test or external runtime configuration succeeded.
 - A successful Wrangler upload creates the candidate deployment before smoke runs. A later smoke failure does not undo or automatically roll back that deployment.
-- There is no uptime monitor, performance monitor, or synthetic browser test in the repository.
-- GitHub's one-day artifact retention is not a long-term recovery mechanism.
+- The repository has no continuous hosted uptime, performance, or deployed-site browser monitor. Packaged-runtime and browser receipts are release validation, not ongoing monitoring.
+- GitHub's three-day artifact retention is not a long-term recovery mechanism.
 
 ## Related guides
 
