@@ -301,16 +301,18 @@ test("keeps Education disclosure growth in flow without overflow at its responsi
       await expect(details).toBeVisible();
       await settleEducationDisclosureAnimations(content);
 
-      const [itemBoxAfter, contentBox, detailsBox] = await Promise.all([
+      const [itemBoxAfter, summaryBoxAfter, contentBox, detailsBox] = await Promise.all([
         educationItem.boundingBox(),
+        summary.boundingBox(),
         content.boundingBox(),
         details.boundingBox()
       ]);
       expect(itemBoxAfter).not.toBeNull();
+      expect(summaryBoxAfter).not.toBeNull();
       expect(contentBox).not.toBeNull();
       expect(detailsBox).not.toBeNull();
       expect(itemBoxAfter!.height).toBeGreaterThan(itemBoxBefore!.height);
-      expect(contentBox!.y).toBeGreaterThanOrEqual(summaryBox!.y + summaryBox!.height - 1);
+      expect(contentBox!.y).toBeGreaterThanOrEqual(summaryBoxAfter!.y + summaryBoxAfter!.height - 1);
       expect(detailsBox!.x).toBeGreaterThanOrEqual(itemBoxAfter!.x - 1);
       expect(detailsBox!.x + detailsBox!.width).toBeLessThanOrEqual(itemBoxAfter!.x + itemBoxAfter!.width + 1);
       await expectNoDocumentOverflow(page);
