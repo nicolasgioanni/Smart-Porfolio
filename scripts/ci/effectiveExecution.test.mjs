@@ -165,6 +165,14 @@ describe("effective GitHub Actions executions", () => {
     expect(() => normalize({ currentAttempt: 2, attempts, jobs: [original, alteredCopy], names: ["quality"] }))
       .toThrow("unique physical origin");
 
+    const renumberedCopy = copied(original, 2);
+    // This stays a valid positive, strictly increasing one-step sequence. Its
+    // rejection proves that provider step numbers remain part of the copy
+    // fingerprint rather than only validating their shape.
+    renumberedCopy.steps[0] = { ...renumberedCopy.steps[0], number: 2 };
+    expect(() => normalize({ currentAttempt: 2, attempts, jobs: [original, renumberedCopy], names: ["quality"] }))
+      .toThrow("unique physical origin");
+
     const invalidCalendar = job("quality", 1, 101, 109);
     invalidCalendar.started_at = "2026-02-30T00:00:01Z";
     expect(() => normalize({ currentAttempt: 2, attempts, jobs: [invalidCalendar, physicalCurrent()], names: ["quality"] }))
