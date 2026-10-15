@@ -11,9 +11,9 @@ Smart Portfolio uses a layered quality gate for documentation, static content, R
 | Test runner | Vitest 4.1.11 |
 | Default test environment | jsdom |
 | DOM assertions | Testing Library and `@testing-library/jest-dom` |
-| Browser runner | Playwright 1.x with Chromium plus narrow Firefox and WebKit critical projects |
+| Browser runner | Playwright 1.x with Chromium plus narrow Firefox critical, WebKit critical, and WebKit mobile Research/Projects projects |
 | TypeScript mode | Strict, no emit |
-| CI runner | Verify: `ubuntu-24.04`; deploy and scheduled heartbeat: `ubuntu-latest` |
+| CI runner | Candidate, validation, verification, and deploy jobs: `ubuntu-24.04`; scheduled heartbeat: `ubuntu-latest` |
 
 `vitest.config.ts` enables globals, loads `vitest.setup.ts`, maps `@` to `src`, excludes `tests/e2e/`, and uses one fork worker so local D1 and jsdom contracts do not compete for host resources. Playwright likewise runs one worker and starts an owned Next.js server; select a unique `PLAYWRIGHT_PORT` when another worktree is active. The verification path has one explicit Ubuntu 24.04 and Node 22 configuration, not a multi-platform test matrix.
 
@@ -25,12 +25,12 @@ Smart Portfolio uses a layered quality gate for documentation, static content, R
 | `npm run generate:content` | Content source download or template read, normalization, validation, and generated JSON write | Uses `.env` when run through the CLI |
 | `npm run lint` | ESLint over the repository with `--max-warnings=0` | Generated content and build directories are ignored; direct library/component import boundaries cover alias and relative specifiers |
 | `npm run typecheck` | `next typegen && tsc --noEmit` | Regenerates Next route types and the ignored managed `next-env.d.ts` before strict TypeScript checking |
-| `npm run test:priority` | High-risk documentation, deployment, contact, shared dialog, typography, theme palette, Projects, Research, Experience, Recommendations, navigation, and skeleton contracts | Pull-request unit and contract gate; it includes `SmartLink` route recognition and internal-link behavior, every Function test under `functions/`, and feature directories for future shared-detail tests. |
+| `npm run test:priority` | High-risk documentation, deployment, contact, shared dialog, typography, theme palette, Projects, Research, Experience, Recommendations, navigation, and skeleton contracts | Focused local unit and contract gate; it includes `SmartLink` route recognition and internal-link behavior, every Function test under `functions/`, and feature directories for future shared-detail tests. |
 | `npm run test:footer` | Two focused footer regression files | Use while changing the footer; release CI covers them through `test` |
 | `npm run test:navigation` | Focused mobile rail, header, responsive-query, theme, and navigation style tests | Use while changing navigation; release CI covers them through `test` |
 | `npm run test:skeletons` | Focused skeleton component, content, style, and page-entry tests | Protects route fallback semantics, fixture geometry, and static no-motion placeholders |
-| `npm run test:e2e:priority` | Playwright skeleton alignment and held-navigation transitions, navigation, footer, mocked-contact, Recommendations, Projects, Experience, and Research flows | Portable pull-request browser gate; uses no provider credentials or delivery endpoint and intentionally excludes Linux-only visual comparison |
-| `npm run test:e2e:full` | Every supported Playwright specification in one Chromium process | Release browser gate; includes every skeleton part, the mocked-contact flow, and axe accessibility coverage |
+| `npm run test:e2e:priority` | Playwright skeleton alignment and held-navigation transitions, navigation, footer, mocked-contact, Recommendations, Projects, Experience, and Research flows | Portable local focused browser command; uses no provider credentials or delivery endpoint and intentionally excludes Linux-only visual comparison |
+| `npm run test:e2e:full` | Every supported Playwright specification in one Chromium process | Local Chromium aggregate. Full CI derives the same discovery into two functional Chromium shards, a separate Linux visual gate, and Firefox critical, WebKit critical, and WebKit mobile Research/Projects coverage |
 | `npm run test:e2e:contact` | Playwright contact flow specification in Chromium | Mocks Turnstile and both same-origin contact endpoints; never submits to a provider |
 | `npm run test:e2e:accessibility` | Axe scan of all public routes and selected interactive states in Chromium | Requires zero violations and uses no rule suppression |
 | `npm run test:e2e:critical:firefox` | Narrow navigation, theme, dialog, and mocked-contact recovery path in Firefox | Does not run Linux skeleton screenshots |
@@ -46,7 +46,7 @@ Smart Portfolio uses a layered quality gate for documentation, static content, R
 | `npm run test` | Complete Vitest suite, including local D1 and Workers transport integration coverage | Uses mocks, jsdom, isolated local D1, and local workerd; no live provider credentials |
 | `npm run build` | `prebuild`, Next.js static export, segment-cache normalization, then content-version write | Regenerates content before building |
 | `npm run build:generated` | Next.js static export, segment-cache normalization, and content-version write | Consumes existing generated JSON without another content fetch |
-| `npm run release:build`, `release:compile`, `release:package`, `release:runtime`, and `release:verify` | Explicit accepted-snapshot build, CSP/Functions compilation, sealed package, local runtime/static-browser check, and verification | Dormant local preparation commands; existing workflow builds remain schema-v1 until later orchestration activation |
+| `npm run release:build`, `release:compile`, `release:package`, `release:runtime`, and `release:verify` | Explicit accepted-snapshot build, CSP/Functions compilation, sealed package, local runtime/static-browser check, and verification | Full CI invokes the sealed-release stages with immutable accepted inputs and emits v2 release identity. Local callers must supply explicit identities; ordinary `build:generated` without `RELEASE_TARGET` retains v1 metadata |
 | `npm audit` | Locked full dependency graph audit | Covers development and deployment dependencies |
 | `npm audit --omit=dev` | Locked production dependency graph audit | Covers the deployed runtime dependency graph |
 | `npm run audit:check` | Full locked audit with exact, expiring GHSA exceptions | Blocks unlisted, expired, and production findings |
@@ -55,9 +55,11 @@ Smart Portfolio uses a layered quality gate for documentation, static content, R
 | `npm run test:quality:payload` | Route, initial-JavaScript, framework, and asset-role gzip budget | Requires the generated `out/` and `.next/` directories from `build:generated` |
 | `npm run db:migrate:local` | Pending tracked migrations against Wrangler's local D1 state | Never targets preview or production |
 | `npm run verify` | One content snapshot, docs check, dependency audit, lint, typecheck, full Vitest suite, and generated-snapshot build | Compatibility local gate; does not install Chromium or download content again during the build |
-| `npm run verify:priority` | One content snapshot, docs check, dependency audit, lint, typecheck, priority Vitest and browser suites, and generated-snapshot build | Portable pull-request-sized local gate; install Chromium first. Linux CI runs the visual skeleton comparison as its separate priority-only step |
-| `npm run verify:full` | One content snapshot, docs check, dependency audit, lint, typecheck, complete Vitest and Playwright suites, and generated-snapshot build | Release-candidate gate; its Linux-only visual comparison must run on Ubuntu 24.04 |
+| `npm run verify:priority` | One content snapshot, docs check, dependency audit, lint, typecheck, priority Vitest and browser suites, and generated-snapshot build | Portable focused local gate; install Chromium first. Full CI runs the visual skeleton selection in its separate Ubuntu job |
+| `npm run verify:full` | One content snapshot, docs check, dependency audit, lint, typecheck, complete Vitest suite, Chromium Playwright aggregate, and generated-snapshot build | Local complete Vitest plus Chromium aggregate; checked-in full CI additionally requires Firefox critical, WebKit critical, and WebKit mobile evidence, with Linux visual comparison on Ubuntu 24.04 |
 | `npm run verify:local` | Dependency preparation, then `verify` | The shared runner creates one snapshot and uses `build:generated` |
+
+The checked-in CI graph, artifact receipts, browser partition, and deploy eligibility are defined in [CI input and evidence contracts](CI_CONTRACTS.md). This guide describes local commands and repository wiring; it does not prove that a hosted workflow or deployment completed.
 
 Use the cross-platform `verify:local:node` alias when PowerShell is unavailable.
 
@@ -141,13 +143,13 @@ The contact browser specification also checks unchanged gate geometry across loa
 | Static security contracts | `src/lib/content/security.test.ts` | No Next.js runtime endpoints, scoped Pages routing, safe structured links, responsive and motion contracts |
 | Architecture import direction | `src/lib/architecture/importBoundaries.test.ts` | Direct alias and relative import policy for library and component layers, plus permitted shared dependencies |
 
-Many accessibility assertions verify semantic roles, names, focus behavior, keyboard handling, `aria` state, and reduced-motion fallbacks. `tests/e2e/accessibility.spec.ts` adds axe scans across the eleven public routes and the theme chooser, graphical-abstract dialog, contact validation/review, Research video settings, and Experience evidence state. It is intentionally a local focused command until the CI orchestration selects it.
+Many accessibility assertions verify semantic roles, names, focus behavior, keyboard handling, `aria` state, and reduced-motion fallbacks. `tests/e2e/accessibility.spec.ts` adds axe scans across the eleven public routes and the theme chooser, graphical-abstract dialog, contact validation/review, Research video settings, and Experience evidence state. It remains a focused local command and is assigned through the full-plan Chromium discovery.
 
 ## Browser skeleton coverage
 
 `tests/e2e/skeleton-alignment.spec.ts` measures resolved header Range fragments against the canonical loader ink at compact, phone, tablet, navigation-transition, and fluid desktop widths. It also covers representative wrap boundaries, the generated Experience summary override, Home overflow and its `720/721`, `860/861`, and `980/981` hero boundaries, Projects and Research detail footprints, Light and Dark, and reduced motion. Both alignment and screenshot suites use `tests/e2e/standaloneSkeletonDocument.ts` to render canonical server markup in a separate same-origin inert page with real shell attributes, compiled stylesheets, and the generated body font; they never replace React-owned DOM.
 
-`tests/e2e/skeletons.visual.spec.ts` compares 25 reviewed Ubuntu 24.04 images with zero pixel difference. `tests/e2e/skeletons.transition.spec.ts` holds each non-Home route's first non-prefetch RSC request and asserts that the source body remains in place. Static export does not stream `loading.tsx`; the transition suite must not claim otherwise. The portable `test:e2e:priority` command runs alignment and transition semantics, while the priority CI job adds the visual suite as a separate Ubuntu-only step. The `npm run test:e2e:skeletons` aggregate remains the canonical three-part command; the full tier discovers all three specifications through `npm run test:e2e:full`.
+`tests/e2e/skeletons.visual.spec.ts` compares 25 reviewed Ubuntu 24.04 images with zero pixel difference. `tests/e2e/skeletons.transition.spec.ts` holds each non-Home route's first non-prefetch RSC request and asserts that the source body remains in place. Static export does not stream `loading.tsx`; the transition suite must not claim otherwise. The portable `test:e2e:priority` command runs alignment and transition semantics, while every full plan runs the visual selection in its separate Ubuntu-only visual-regression job. The `npm run test:e2e:skeletons` aggregate remains the canonical three-part command; full-plan discovery assigns all three specifications without treating the local aggregate as one workflow step.
 
 ## Browser navigation coverage
 
@@ -159,7 +161,7 @@ The suite verifies the fixed bottom dock at 320, 390, and 768 CSS pixels; a view
 
 `tests/e2e/footer.spec.ts` records semantic footer mutations and painted animation frames. It verifies that every registered page and the not-found route remain compact through hydration and layout settlement, and that expanded state never carries into a client-side route transition. It also covers restored deep scroll positions and confirms that expansion occurs only after real downward wheel input reaches the reserved runway.
 
-Home cases in `tests/e2e/navigation.spec.ts` verify immediate rail startup with the five-second interaction pause, concise summaries, hidden Project skills, single-row skill geometry and dialog operation at 320/390/720px, the `721–980px` greeting/profile/details order with adjacent portrait/contact columns, 44px contact rows, dock clearance, no document overflow, `860/861` content-density restoration, desktop preservation at `981/1280px`, and first-sentence recommendation disclosure on both Home and Recommendations. Education cases derive the expected institutions and bullets from the generated snapshot and verify the compact disclosure, keyboard operation, palette states, natural-flow expansion, interrupted animation, and reduced motion at desktop and phone widths. These cases run in the existing priority browser gate.
+Home cases in `tests/e2e/navigation.spec.ts` verify immediate rail startup with the five-second interaction pause, concise summaries, hidden Project skills, single-row skill geometry and dialog operation at 320/390/720px, the `721–980px` greeting/profile/details order with adjacent portrait/contact columns, 44px contact rows, dock clearance, no document overflow, `860/861` content-density restoration, desktop preservation at `981/1280px`, and first-sentence recommendation disclosure on both Home and Recommendations. Education cases derive the expected institutions and bullets from the generated snapshot and verify the compact disclosure, keyboard operation, palette states, natural-flow expansion, interrupted animation, and reduced motion at desktop and phone widths. These cases run through the full-plan Chromium functional discovery.
 
 Verify Home Education without JavaScript against the built static export as well as component output: academic metadata stays visible, each populated entry exposes its native disclosure, and opening it reveals the complete authored bullet list. A component server-rendering assertion alone cannot establish that a streamed route boundary remains visible without scripting.
 
@@ -201,71 +203,62 @@ After `build:generated`, verify `/projects` without JavaScript against the expor
 
 | Test | What it verifies |
 | --- | --- |
-| `scripts/packageScripts.test.mjs` | Node and tool pins, workflow triggers, single-snapshot conditions, branch isolation, permissions, exact-candidate no-op behavior, artifact transfer, target validation, develop-only heartbeat boundaries and race rejection, no-cache metadata, and Wrangler invocation |
-| `scripts/security/installPinnedTool.test.mjs`, `scripts/security/securityScans.test.mjs`, and `scripts/security/checkSarif.test.mjs` | Checksum-pinned tool admission, including credential-free approved redirects, bounded streamed downloads, digest verification, and an exclusive no-follow staging write, temporary scanner-report handling, suppression parsing, and fail-closed CodeQL SARIF parsing. Local tests use fixtures; the pinned Linux scanner binaries execute on the Ubuntu hosted jobs. |
-| `scripts/security/ciGate.test.mjs` and `scripts/security/deployWorkflow.test.mjs` | Event-specific CI gate and parsed-workflow eligibility contract: only explicit green aggregates with the exact deploy decision may deploy; a skipped pull-request-only dependency review remains non-blocking for a push, while cancellation, pull requests, failed, cancelled, missing, or unexpectedly skipped required results, stale candidates, and exact no-ops stay blocked. |
-| `scripts/checkDeployedContent.test.mjs` | Independent deployed content and commit comparison, missing or malformed manifest behavior, and post-deployment smoke requests with exact contact Function method rejection |
-| Artifact tests inside `scripts/packageScripts.test.mjs` | Content-version creation, hidden file inclusion, manifest structure, commit binding, digest verification, and tamper rejection |
+| `scripts/packageScripts.test.mjs` | Node and tool pins, workflow triggers, candidate admission, job graph, permissions, heartbeat boundaries, and deployment wiring |
+| `scripts/security/installPinnedTool.test.mjs`, `scripts/security/securityScans.test.mjs`, and `scripts/security/checkSarif.test.mjs` | Checksum-pinned tool admission with approved credential-free redirects, bounded streamed downloads, digest verification and exclusive no-follow staging, temporary scanner-report handling, suppression parsing, and fail-closed CodeQL SARIF parsing. Local tests use fixtures; the pinned Linux scanner binaries execute on the Ubuntu hosted jobs. |
+| `scripts/ci/plan.test.mjs`, `snapshot.test.mjs`, `receipts.test.mjs`, and `gate.test.mjs` | Candidate/plan parsing, immutable producer artifacts, browser assignments, source-security receipts, no-op decisions, and complete acceptance evidence |
+| `scripts/ci/runner.test.mjs` and `deployment.test.mjs` | Local Git snapshot restoration, original-producer reruns, sealed release identity, pinned Wrangler JSONL, D1 binding admission, deployment ordering, archive mutation, and smoke failure paths through injected providers |
+| `scripts/checkDeployedContent.test.mjs` | Deployed identity comparison and post-deployment sealed-root bytes, effective static headers, metadata cache controls, manifest, and contact-method/header smoke contracts |
+| Release and artifact tests under `scripts/release/` plus `scripts/artifactIntegrity.mjs` | Accepted build input, sealed-package, Function/runtime, SBOM, manifest, and tamper rejection contracts |
 | `scripts/quality/recoveryDrill.test.mjs` | Credential-free local Wrangler D1 export, fresh `0001`–`0003` migration, and pseudonymous reservation restore; v2 sealed-envelope tamper rejection and restoration without collector files |
 | `scripts/localAutomation.test.mjs` | Project discovery, environment copy safety, dependency-state hashing, stale content, and port selection |
 | `scripts/permanentBranchRuleset.test.mjs` | Exact tracked permanent-branch ruleset name, active scope, deletion and non-fast-forward rules only, and empty bypass list |
 
-The workflow contract tests inspect checked-in workflow text and execute the manifest helpers. They do not start a GitHub Actions runner or perform a Cloudflare upload.
+These tests execute local contracts and injected provider boundaries. They do not establish a hosted GitHub Actions run, attestation service, Cloudflare deployment, D1 migration, or external environment configuration. Hosted validation remains pending for the reconciled workflow.
 
 ## CI quality gates
 
-`candidate-admission` validates the event and reference boundary before checkout. `candidate-precheck` checks the immutable candidate and staleness without checkout credentials. `application-validation` installs locked dependencies before content or conditional application-quality work, while the independent scanner jobs run separately from content decisions.
+`resolve-candidate` rejects ineligible event and workflow references before checkout, then resolves one immutable candidate. `prepare-content` produces either an obsolete, unchanged, or full plan. Full plans restore the same snapshot in every application job. `security-tools`, `security-scans`, `codeql`, and `infrastructure` are source-only jobs with independent receipts; they run even when application work is skipped. `dependency-review` is source-only and applies to pull requests.
 
-### Pull requests: priority gate
+### Pull requests: complete validation without deployment
 
 Pull requests targeting `main` or `develop`:
 
 1. Generate validated template content without workbook or Cloudflare credentials.
-2. Run documentation integrity, the bounded dependency audit, lint, and typecheck.
-3. Run the priority Vitest contracts once, including the centralized typography-token contract.
-4. Install Chromium once and run the portable priority browser suite: skeleton alignment and held-navigation transitions, navigation, progressive enhancement across all routes, footer, locally mocked contact, Recommendations, Experience, Projects, and Research flows.
-5. Run the separate Linux-only skeleton visual comparison against the explicit template-content generated for the pull request.
-6. Build with `build:generated`.
-7. Stop without creating a deployment artifact.
+2. Run documentation integrity, lint, typecheck, and the bounded dependency audit; run the complete Vitest suite.
+3. Discover browser identities and run two assigned Chromium functional shards, the Linux visual suite, Firefox critical, WebKit critical, and WebKit mobile Research/Projects coverage.
+4. Build once from the accepted template snapshot, seal the candidate with configuration, migrations, manifest, and SBOM, scan that exact sealed directory with the pinned Gitleaks binary before artifact upload, then validate the exact static export and compiled runtime.
+5. Run actionlint, Git-history/workflow scans, CodeQL security-extended analysis, and dependency review; `verify` accepts their exact receipts together with the application receipts.
+6. Stop before deployment, signing, migration, or provider access.
 
-### Push deployments: complete gate
+### Pushes, schedules, and manual runs
 
-Latest pushes to `main` or `develop`:
+`main` and `develop` pushes use one strict remote workbook snapshot, then follow the same full application and source-security path. A green `verify` result may deploy `main` to production or `develop` to preview.
 
-1. Validate the fixed Pages project and assigned domain.
-2. Download and generate one strict workbook snapshot with at most one bounded transient retry.
-3. Read and validate its SHA-256 content hash.
-4. Run the complete Vitest suite once, including local D1 integration coverage.
-5. Install Chromium once and run the complete browser suite once. This includes the direct skeleton alignment matrix, held-navigation semantics, and Linux zero-difference visual matrix.
-6. Build with `build:generated` and the branch-specific public Turnstile key.
-7. Create, verify, and upload the artifact manifest.
-8. Enter the conditional deploy job, validate the selected D1 binding, and apply pending migrations.
-9. Upload the Pages artifact only after migration succeeds.
+Scheduled and non-forced manual runs prepare the strict snapshot and compare a validated deployed identity before application work. A proven unchanged candidate or obsolete branch revision skips application jobs, packaging, and deployment, but source-security jobs and their receipts remain required. A forced manual run selects a full plan after preparation.
 
-### Scheduled and manual checks
+### Acceptance, diagnostics, and deployment boundary
 
-Scheduled runs and non-forced manual runs perform the strict content work before deciding whether full application verification is required. When both the candidate content hash and commit SHA match production, documentation integrity, lint, typecheck, tests, build, artifact upload, and deployment are skipped. The independent workflow, history, dependency-audit, and CodeQL scanner jobs still run. A mismatch in either field selects the complete path, while forced manual runs always select it after strict content validation.
+`verify` reads current-run result states and immutable original-producer evidence. It refuses stale, missing, expired, substituted, ambiguous, or rerun-mismatched inputs; it does not substitute a previous green job or regenerated snapshot. Browser failure diagnostics are separate from acceptance evidence and do not authorize a release.
 
-### Tier boundaries and diagnostics
+The conditional deploy job restores the sealed candidate and verifies its archive digest, writes GitHub provenance and SBOM attestations, then performs one bounded credential-safe Pages-project GET that admits only the reviewed Direct Upload account/project/subdomain/production branch. The deployment command verifies the attestations before D1 migration or upload, serializes each target with a non-cancelling lock, rechecks branch freshness around D1 migration, parses only the expected pinned-Wrangler deployment records, then smokes the unique returned host and the stable assigned host. No workflow `environment` setting is activated by this repository configuration; approvals, secrets, deployment protection, branch rules, and provider controls remain external evidence.
 
-`application-validation` selects `priority` for pull requests and `full` for every candidate that can produce a deployment artifact. The priority tier runs its portable browser selection once, then adds its Linux-only visual skeleton comparison as a separate step; the full tier runs `test:e2e:full` once and does not duplicate individual suites. Stale, unchanged scheduled, and non-forced manual candidates select no application tier. The priority unit tier parses the tracked permanent-branch ruleset, but that test proves the tracked payload only and cannot establish future live GitHub state. The stable `verify` job then requires explicit success from application validation, actionlint, history and workflow scans, CodeQL, and dependency review when the event is a pull request. A read-only GitHub observation on 2026-10-12 found that `main` requires pull requests and the current `verify` status, requires the branch to be current, requires no approvals, enforces the policy for administrators, and disallows force pushes and deletion. The workflow name and job name must remain stable; operators must recheck the external policy after governance changes. If application validation fails, the job uploads any available `playwright-report/` and `test-results/` files as a seven-day `playwright-diagnostics-<run-id>-<attempt>` artifact. That failure-only artifact is distinct from, and never used as, the one-day `cloudflare-pages-build` deployment artifact. The legacy per-target deploy concurrency still uses `cancel-in-progress: true`; this bootstrap preserves it pending the release-ordering work.
+The current source and local contracts specify this behavior; they do not claim a completed hosted run or active provider configuration.
 
 ## Post-deployment smoke tests
 
-The deploy job runs `scripts/checkDeployedContent.mjs` against the stable assigned-domain alias. It verifies root HTML, exact content and commit metadata, exact artifact-manifest equality, and the exact HTTP `405` JSON contract for GET requests to both contact Functions.
+The deploy job first runs the same smoke contract against the unique host returned by Wrangler, then against the stable assigned-domain alias. It verifies sealed root HTML bytes, effective static CSP and common security headers, exact content and commit metadata with no-store/Pragma headers, exact artifact-manifest equality with the same cache controls, and the exact HTTP `405` JSON plus no-store, restrictive CSP, permissions, transport, framing, referrer and nosniff headers for `GET` requests to both contact Functions.
 
 It does not test:
 
 - Every static route.
 - The custom domain.
-- Static security headers.
 - Valid contact POST requests.
 - Turnstile completion.
 - D1 migration or reservation behavior.
 - Mail-domain DNS results.
 - Resend delivery.
 - WAF behavior.
-- Browser layout or interaction against the deployed URL. The pre-deployment Playwright suite runs against the exact source candidate through Next.js development mode.
+- Browser layout or interaction against the deployed URL. The pre-deployment Playwright suite runs against the exact source candidate through Next.js development mode; the separate `export-check` validates the restored sealed static export and compiled runtime locally, but is not deployed-browser evidence.
 
 See [Deployment](../operations/DEPLOYMENT.md#exact-automated-smoke-scope) and [Operations](../operations/OPERATIONS.md#post-deployment-verification) for the automated and manual boundaries.
 
@@ -290,7 +283,7 @@ npx playwright install chromium
 npm run verify:priority
 ```
 
-Run the complete release-candidate gate on Ubuntu 24.04, after installing Chromium:
+Run the local complete Vitest plus Chromium aggregate on Ubuntu 24.04, after installing Chromium. Checked-in full CI separately requires Firefox critical, WebKit critical, and WebKit mobile evidence:
 
 ```bash
 npx playwright install chromium
@@ -308,16 +301,15 @@ When behavior changes:
 3. Add or update a Playwright case when responsive geometry, native browser scrolling, fixed positioning, or cross-component interaction is the contract under test.
 4. Update workflow contract tests when a CI trigger, condition, permission, action, command, artifact, or environment variable changes.
 5. Update documentation and its cross-links in the same change.
-6. Run the targeted tests first, then `npm run verify:priority`; run `npm run verify:full` on Ubuntu 24.04 before deployment.
+6. Run the targeted tests first, then `npm run verify:priority`; run `npm run verify:full` on Ubuntu 24.04 for the local Vitest plus Chromium aggregate. It does not replace checked-in Firefox critical, WebKit critical, WebKit mobile, or Linux visual evidence.
 
 Avoid snapshot tests that hide semantic changes. Prefer explicit assertions for user-visible text, accessibility state, response contracts, validation errors, and integrity metadata.
 
 ## Current limitations
 
 - No coverage percentage is generated or enforced.
-- The default CI browser gate runs Chromium, including a local mocked contact journey. The scoped mobile Research video and Projects preview commands also run WebKit locally; neither emulates physical iPhone Safari or exercises a live security provider, D1 binding, delivery service, or mailbox.
+- The full CI browser matrix runs two Chromium functional shards with axe in its discovered functional suite, a separate Linux visual selection, Firefox critical, WebKit critical, and WebKit mobile Research/Projects coverage. It uses local contact fixtures; WebKit emulation does not replace a physical iPhone Safari check when one is required, and neither proves a live security provider, D1 binding, delivery service, or mailbox.
 - No automated Lighthouse or Core Web Vitals measurement runs in CI. The local payload command enforces reviewed static gzip limits after a generated build.
-- The axe scan runs through `test:e2e:full` for full Chromium candidates, but not in the pull-request priority tier. The cross-browser critical commands remain locally selected until later CI orchestration adopts them.
 - Workers emulator integration runs through the unit suite against local workerd and Miniflare fixtures; it is not evidence of a deployed runtime.
 - No automated live contact delivery test is performed.
 - CI covers one Linux and Node-major configuration. Local `verify:full` on another operating system cannot replace the required Ubuntu 24.04 visual comparison.

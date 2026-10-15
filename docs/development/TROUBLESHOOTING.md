@@ -18,7 +18,7 @@ npm run test
 npm run build
 ```
 
-Stop at the first failure and use the matching section below. `npm run verify` runs the same documentation, lint, typecheck, test, and normal-build sequence after dependencies are ready.
+Stop at the first failure and use the matching section below. `npm run verify` uses one accepted content snapshot, then runs documentation checks, the audited dependency gate, lint, type checking, tests, and `build:generated` without another workbook fetch after dependencies are ready. See [CI input and evidence contracts](../quality/CI_CONTRACTS.md) for the workflow graph.
 
 ## Local setup
 

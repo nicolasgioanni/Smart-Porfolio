@@ -12,6 +12,8 @@ const projectRoot = path.resolve(import.meta.dirname, "..");
 describe("priority validation tier", () => {
   it("selects the required trust-boundary contracts before running Vitest", () => {
     expect(priorityTestTargets).toContain("functions");
+    expect(priorityTestDirectories).toContain("scripts/ci");
+    expect(requiredPriorityFiles).toContain("scripts/ci/workflowGraph.test.mjs");
     expect(priorityTestTargets).toEqual(expect.arrayContaining([
       "scripts/permanentBranchRuleset.test.mjs",
       "scripts/contactTransport.integration.test.ts",
@@ -30,8 +32,8 @@ describe("priority validation tier", () => {
       "scripts/checkDependencyAudit.test.mjs",
       "scripts/candidateAdmissionWorkflow.test.mjs",
       "scripts/security/checkSarif.test.mjs",
-      "scripts/security/ciGate.test.mjs",
-      "scripts/security/deployWorkflow.test.mjs",
+      "scripts/ci/gate.test.mjs",
+      "scripts/ci/effectiveExecution.test.mjs",
       "scripts/heartbeatWorkflow.test.mjs",
       "scripts/security/installPinnedTool.test.mjs",
       "scripts/security/securityScans.test.mjs",

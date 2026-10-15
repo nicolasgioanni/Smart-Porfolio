@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
+import { parseWorkflowYaml } from "./ci/workflowYaml.mjs";
 
 const projectRoot = path.resolve(import.meta.dirname, "..");
 const workflowPath = path.join(projectRoot, ".github", "workflows", "ci.yml");
@@ -12,14 +13,11 @@ const workflowPathname = ".github/workflows/ci.yml";
 const sha = (character) => character.repeat(40);
 
 function workflowScript(source) {
-  const start = source.indexOf("      - name: Reject ineligible events and untrusted workflow references before checkout");
-  const end = source.indexOf("\n  candidate-precheck:", start);
-  expect(start).toBeGreaterThanOrEqual(0);
-  expect(end).toBeGreaterThan(start);
-  const step = source.slice(start, end);
-  const marker = "        run: |\n";
-  const body = step.slice(step.indexOf(marker) + marker.length).replace(/\n+$/, "");
-  return body.split("\n").map((line) => line ? line.slice(10) : "").join("\n");
+  const job = parseWorkflowYaml(source).jobs['resolve-candidate'];
+  const selected = job.steps.find((step) => step.name === 'Reject ineligible events and untrusted workflow references before checkout');
+  expect(typeof selected?.run).toBe("string");
+  expect(job.steps.indexOf(selected)).toBeLessThan(job.steps.findIndex((step) => step.uses?.startsWith("actions/checkout@")));
+  return selected.run;
 }
 
 async function runAdmission(script, { eventName, eventRef, eventBaseRef = "", eventSha = sha("a"), workflowSha = eventSha }) {

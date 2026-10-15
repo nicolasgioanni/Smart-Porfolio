@@ -208,17 +208,14 @@ The package scripts deliberately separate generation from candidate consumption:
 - `npm run build` runs `prebuild`, regenerates content, creates the static export, and writes `out/content-version.json`.
 - `npm run build:generated` consumes the existing generated JSON without another workbook download, then writes `out/content-version.json`.
 
-Pull requests generate from local templates without remote credentials. Current `main` and `develop` pushes, scheduled checks, and manual deployment candidates use strict remote mode. The verify job accepts one complete workbook snapshot through the bounded download policy, tests and builds that snapshot, creates an integrity manifest, and uploads the exact `out/` artifact. The deploy job downloads and verifies the artifact without rebuilding or fetching content again.
+Pull requests generate from local templates without remote credentials. Current `main` and `develop` pushes, scheduled checks, and manual deployment candidates use strict remote mode. CI accepts one complete workbook snapshot through the bounded download policy, restores it for parallel consumers, and produces one sealed candidate. A lightweight `verify` aggregate accepts the exact required receipts and producer artifacts before deployment restores that exact artifact without rebuilding or fetching content again. See [CI input and evidence contracts](../quality/CI_CONTRACTS.md) for the authoritative job and receipt graph.
 
-`out/content-version.json` contains only:
+`out/content-version.json` has two valid forms:
 
-- schema version;
-- content hash;
-- exact candidate commit SHA;
-- generated timestamp;
-- deployment timestamp.
+- Ordinary local callers without `RELEASE_TARGET` write schema-v1 metadata: content hash, exact candidate commit SHA, generation timestamp, and deployment timestamp.
+- A full CI candidate writes schema-v2 metadata: target, content hash, exact candidate commit SHA, generation and deployment timestamps, target-specific public-build-input digest, and a GitHub Actions producer (`kind`, `runId`, `runNumber`, and `attempt`).
 
-Scheduled and non-forced manual checks compare both the candidate content hash and exact commit SHA with the active production manifest. Equality on both fields is a successful no-op before lint, tests, build, artifact upload, and deployment. If either field differs, the complete verified deployment path runs. A failure before Wrangler Direct Upload does not change the active target. Once Wrangler returns successfully, a later smoke failure can mean the new deployment is already active; the workflow does not roll it back automatically.
+Scheduled and non-forced manual preparation can recognize an equivalent active v2 identity only when target, producer kind, candidate commit SHA, content hash, and public-build-input digest match. This validated no-op omits heavy application work and cannot authorize deployment; independent source-security jobs and the aggregate gate still run. For a fully verified deployment candidate, the deployment lock permits smoke-only execution when its exact identity is already active, rejects older or conflicting generations, and admits a newer generation for deployment. Legacy identity requires full validation; malformed or ambiguous identity fails closed. A failure before Pages upload leaves the previous Pages deployment active, but any completed D1 migration remains applied. After upload, a smoke failure can leave the new deployment serving; the workflow performs no automatic rollback.
 
 See [Deployment](../operations/DEPLOYMENT.md) for branch, artifact, Cloudflare, and rollback behavior.
 
