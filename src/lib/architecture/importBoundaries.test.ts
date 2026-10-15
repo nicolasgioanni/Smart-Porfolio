@@ -45,7 +45,7 @@ function resolveConfiguredAsset(specifier: string, fromFile: string): string | u
     if (!specifier.startsWith(prefix) || !specifier.endsWith(suffix)) continue;
     const wildcard = specifier.slice(prefix.length, specifier.length - suffix.length);
     for (const target of targets) {
-      const assetPath = path.resolve(compilerOptions.baseUrl ?? projectRoot, target.replace("*", wildcard));
+      const assetPath = path.resolve(compilerOptions.baseUrl ?? projectRoot, target.replaceAll("*", wildcard));
       if (existsSync(assetPath)) return assetPath;
     }
   }
@@ -166,6 +166,22 @@ function fixture(...parts: string[]): string {
 }
 
 describe("architecture import boundaries", () => {
+  it("resolves every wildcard in configured local asset targets", () => {
+    const paths = compilerOptions.paths ?? (compilerOptions.paths = {});
+    const pattern = "@architecture-fixture/*.json";
+    const previous = paths[pattern];
+    paths[pattern] = ["src/lib/architecture/fixtures/*/asset-*.json"];
+
+    try {
+      expect(resolveConfiguredAsset("@architecture-fixture/repeated.json", configPath)).toBe(
+        path.join(projectRoot, "src/lib/architecture/fixtures/repeated/asset-repeated.json")
+      );
+    } finally {
+      if (previous) paths[pattern] = previous;
+      else delete paths[pattern];
+    }
+  });
+
   it("rejects UI and feature imports from library modules by alias and relative path", async () => {
     await expectRestrictedImport("src/lib/content/example.ts", "@/components/navigation/navigationItems",
       "Library modules must not depend on presentation or feature modules."
