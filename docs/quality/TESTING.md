@@ -119,7 +119,7 @@ These are unit and integration-style tests with temporary files and injected fet
 
 The Function tests call exported handlers with web-standard `Request` and `Response` objects while mocking Turnstile, DNS, D1, and Resend. They do not execute in a real Workers runtime, cross a WAF rule, use live provider credentials, mutate remote D1, or send production email.
 
-The separate transport integration test executes the actual shared transport in local workerd through the Miniflare version pinned alongside Wrangler. Its local provider fixture accepts credential-bearing requests and advertises redirects to an instrumented destination. Both helpers must accept successful exchanges and reject every status from 300 through 399 without a destination request. This catches Workers API incompatibilities that Node mocks miss. It runs in the priority PR gate and full suite; it does not prove live Turnstile, WAF, DNS, or Resend configuration.
+The separate transport integration test executes the actual shared transport in local workerd through the Miniflare version pinned alongside Wrangler. Its local provider fixture accepts credential-bearing requests and advertises redirects to an instrumented destination. Both helpers must accept successful exchanges and reject every status from 300 through 399 without a destination request. This catches Workers API incompatibilities that Node mocks miss. It runs in the local priority suite and, in the full CI graph, the unit-integration job; it does not prove live Turnstile, WAF, DNS, or Resend configuration.
 
 The contact browser specification also checks unchanged gate geometry across loading, expiry, widget shrink/removal, failure, retry, pending server confirmation, and success at desktop/mobile widths, in all themes and reduced motion. Its normal-motion geometry baseline waits for the finite route-entry animation to finish. It samples the contact card and normal-flow email fallback during measured grow and shrink transitions, checks rapid rebase, and retains reduced-motion immediate behavior. Normal-motion Back cases use the actual scrolled lower-step control at desktop and phone widths, then verify settled heading focus, viewport visibility, released clipping, and preserved values. It also covers stacked notification peeks, touch/keyboard expansion and dismissal, focus recovery, viewport scrolling, email suffix typos, and retained completion/recovery. Unit tests separately control independent 30-second clocks, duplicate refresh, capacity eviction, announcements, and bounded step-transition cleanup. Existing skeleton baselines and all three skeleton regression gates remain unchanged.
 
@@ -258,7 +258,7 @@ It does not test:
 - Mail-domain DNS results.
 - Resend delivery.
 - WAF behavior.
-- Browser layout or interaction against the deployed URL. The pre-deployment Playwright suite runs against the exact source candidate through Next.js development mode.
+- Browser layout or interaction against the deployed URL. The pre-deployment Playwright suite runs against the exact source candidate through Next.js development mode; the separate `export-check` validates the restored sealed static export and compiled runtime locally, but is not deployed-browser evidence.
 
 See [Deployment](../operations/DEPLOYMENT.md#exact-automated-smoke-scope) and [Operations](../operations/OPERATIONS.md#post-deployment-verification) for the automated and manual boundaries.
 
@@ -308,10 +308,9 @@ Avoid snapshot tests that hide semantic changes. Prefer explicit assertions for 
 ## Current limitations
 
 - No coverage percentage is generated or enforced.
-- The default CI browser gate runs Chromium, including a local mocked contact journey. The scoped mobile Research video and Projects preview commands also run WebKit locally; neither emulates physical iPhone Safari or exercises a live security provider, D1 binding, delivery service, or mailbox.
+- The full CI browser matrix runs two Chromium functional shards with axe in its discovered functional suite, a separate Linux visual selection, and narrow Firefox/WebKit critical coverage. It uses local contact fixtures; WebKit emulation does not replace a physical iPhone Safari check when one is required, and neither proves a live security provider, D1 binding, delivery service, or mailbox.
 - No automated Lighthouse or Core Web Vitals measurement runs in CI. The local payload command enforces reviewed static gzip limits after a generated build.
-- The full CI browser graph includes axe through Chromium functional discovery and narrow Firefox/WebKit coverage. The focused commands remain available locally for diagnosis; WebKit emulation does not replace a physical Safari check when one is required.
-- No Workers emulator integration test runs in CI.
+- Workers emulator integration runs through the unit suite against local workerd and Miniflare fixtures; it is not evidence of a deployed runtime.
 - No automated live contact delivery test is performed.
 - CI covers one Linux and Node-major configuration. Local `verify:full` on another operating system cannot replace the required Ubuntu 24.04 visual comparison.
 - Remote D1 binding and migration state, external WAF, DNS, TLS, provider-secret, and branch-protection state are not testable from the repository.
