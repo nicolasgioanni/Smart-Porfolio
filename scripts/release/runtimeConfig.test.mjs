@@ -36,6 +36,11 @@ describe("sealed Pages runtime configuration admission", () => {
       (config) => { config.d1_databases = []; },
       (config) => { config.d1_databases[0].database_id = "not-a-uuid"; },
       (config) => { config.d1_databases[0].database_id = "00000000-0000-0000-0000-000000000000"; },
+      (config) => { config.d1_databases[0].database_id = [config.d1_databases[0].database_id]; },
+      (config) => { config.d1_databases[0].database_id = ["00000000-0000-0000-0000-000000000000"]; },
+      (config) => { config.env.preview.d1_databases[0].database_id = 42; },
+      (config) => { config.env.preview.d1_databases[0].database_id = [config.env.preview.d1_databases[0].database_id]; },
+      (config) => { config.env.preview.d1_databases[0].database_id = ["00000000-0000-0000-0000-000000000000"]; },
       (config) => { config.env.preview.d1_databases[0].database_name = "smart-portfolio-contact-rate-limit-production"; },
       (config) => { config.env.preview.d1_databases[0].database_id = config.d1_databases[0].database_id; }
     ];

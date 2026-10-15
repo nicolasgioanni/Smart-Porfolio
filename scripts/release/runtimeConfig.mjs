@@ -58,7 +58,7 @@ function validateRateLimitBinding(value, target) {
     : ["binding", "database_name", "database_id", "migrations_dir"];
   exactObject(value, expectedKeys, [], `${target} D1 binding`);
   if (value.binding !== rateLimitBinding || value.database_name !== `smart-portfolio-contact-rate-limit-${target}` ||
-      !uuid.test(value.database_id) || value.database_id === zeroUuid || value.migrations_dir !== "migrations" ||
+      typeof value.database_id !== "string" || !uuid.test(value.database_id) || value.database_id === zeroUuid || value.migrations_dir !== "migrations" ||
       (target === "production" && value.preview_database_id !== "contact-rate-limit-local")) {
     throw new Error("Invalid or unbound environment-specific contact database.");
   }
