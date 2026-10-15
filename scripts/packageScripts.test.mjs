@@ -10,6 +10,7 @@ import {
   priorityTestTargets,
   requiredPriorityFiles
 } from "./runValidationTier.mjs";
+import { sealedRuntimeConfigContracts } from "./release/runtimeConfig.mjs";
 import { readContentVersion, writeContentVersion } from "./writeContentVersion.mjs";
 
 const projectRoot = path.resolve(import.meta.dirname, "..");
@@ -286,7 +287,7 @@ describe("package and CI deployment automation", () => {
     const wranglerConfig = JSON.parse(await readFile(path.join(projectRoot, "wrangler.jsonc"), "utf8"));
     const serializedConfig = JSON.stringify(wranglerConfig);
 
-    for (const secretName of ["TURNSTILE_SECRET_KEY", "RESEND_API_KEY", "CONTACT_RECIPIENT_EMAIL"]) {
+    for (const secretName of sealedRuntimeConfigContracts.runtimeSecrets) {
       expect(serializedConfig).not.toContain(secretName);
     }
     expect(wranglerConfig.vars.TURNSTILE_ALLOWED_HOSTNAMES).toBe(

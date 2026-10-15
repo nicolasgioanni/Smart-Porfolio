@@ -12,6 +12,7 @@ import { createStaticCsp } from "./csp.mjs";
 import { effectivePublicBuildEnvironment, collectPublicBuildInputs, publicBuildInputDigest } from "./publicBuildInputs.mjs";
 import { packageSealedRelease, verifySealedRelease } from "./sealedRelease.mjs";
 import { readRegularFile } from "../lib/readRegularFile.mjs";
+import { validateRuntimeConfig } from "./runtimeConfig.mjs";
 
 const execFileAsync = promisify(execFile);
 const generatedRelativePath = "src/content/generated/portfolio.generated.json";
@@ -64,13 +65,8 @@ async function digestDirectory(directory) {
 }
 
 export function validateReleaseConfig(config) {
-  if (!config || typeof config !== "object" || Array.isArray(config)) throw new Error("Wrangler configuration must be an object");
-  if (config.name !== "smart-portfolio") throw new Error("Wrangler Pages project must be smart-portfolio");
-  if (config.pages_build_output_dir !== "./out") throw new Error("Wrangler Pages build output must be ./out");
-  if (typeof config.compatibility_date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(config.compatibility_date)) throw new Error("Wrangler compatibility date is required");
-  const compatibilityFlags = config.compatibility_flags ?? [];
-  if (!Array.isArray(compatibilityFlags) || compatibilityFlags.some((flag) => typeof flag !== "string" || !flag.trim()) || new Set(compatibilityFlags).size !== compatibilityFlags.length) throw new Error("Wrangler compatibility flags are invalid");
-  return { compatibilityDate: config.compatibility_date, compatibilityFlags };
+  const runtime = validateRuntimeConfig(config);
+  return { compatibilityDate: runtime.compatibilityDate, compatibilityFlags: runtime.compatibilityFlags };
 }
 
 export function validateGeneratedSource(content, target) {
@@ -262,13 +258,15 @@ export async function createSealedPackage({ projectRoot = process.cwd(), outDire
   if (!commitPattern.test(sourceCommit ?? "") || !digestPattern.test(snapshotDigest ?? "") || !digestPattern.test(snapshotRecordDigest ?? "") || !digestPattern.test(expectedPublicDigest ?? "")) throw new Error("Sealed package candidate identity is invalid");
   const root = path.resolve(projectRoot);
   const out = path.resolve(root, outDirectory);
+  const config = await readJson(path.join(root, "wrangler.jsonc"));
+  const runtime = validateRuntimeConfig(config, { target });
   const generated = await assertAcceptedSnapshot({ projectRoot: root, snapshotDigest, target });
   const version = await readContentVersion(path.join(out, "content-version.json"));
   const expectedProducer = typeof producer === "string" ? parseGeneration(producer, target) : producer;
   if (version.schemaVersion !== 2 || version.commitSha !== sourceCommit || version.contentHash !== generated.content.metadata.contentHash || version.target !== target || version.publicBuildInputDigest !== expectedPublicDigest || JSON.stringify(version.producer) !== JSON.stringify(expectedProducer)) throw new Error("Cannot package a content version outside the accepted identity");
   await verifyArtifactManifest(out, sourceCommit);
-  const [config, inputs] = await Promise.all([readJson(path.join(root, "wrangler.jsonc")), collectPublicBuildInputs({ projectRoot: root, target, sourceCommit, environment })]);
-  const { compatibilityDate, compatibilityFlags } = validateReleaseConfig(config);
+  const inputs = await collectPublicBuildInputs({ projectRoot: root, target, sourceCommit, environment });
+  const { compatibilityDate, compatibilityFlags } = runtime.target;
   if (publicBuildInputDigest(inputs) !== expectedPublicDigest) throw new Error("Cannot package with stale public build inputs");
   const packageJson = await readJson(path.join(root, "package.json"));
   const candidate = {
@@ -300,7 +298,11 @@ export async function verifyPackagedRuntime({ projectRoot = process.cwd(), relea
   const root = path.resolve(projectRoot);
   const release = path.resolve(releaseDirectory);
   const manifest = await verifySealedRelease(release);
-  const { compatibilityDate, compatibilityFlags } = validateReleaseConfig(await readJson(path.join(release, "wrangler.jsonc")));
+  const runtime = validateRuntimeConfig(await readJson(path.join(release, "wrangler.jsonc")), {
+    target: manifest.candidate.target,
+    toolchain: manifest.candidate.toolchain
+  });
+  const { compatibilityDate, compatibilityFlags } = runtime.target;
   await verifyCompiledWorker({ outDirectory: path.join(release, "out"), compatibilityDate, compatibilityFlags });
   await runCommand("npm", ["run", "test:e2e:release-static"], { cwd: root, env: { ...environment, PLAYWRIGHT_RELEASE_OUT: path.join(release, "out") } });
   await verifySealedRelease(release, { sourceCommit: manifest.candidate.sourceCommit, contentHash: manifest.candidate.contentHash, target: manifest.candidate.target, publicBuildInputDigest: manifest.candidate.publicBuildInputDigest });

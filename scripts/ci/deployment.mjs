@@ -19,6 +19,7 @@ import { verifyCloudflarePagesProject } from "./cloudflarePagesPreflight.mjs";
 import { decideDeployment, sameDeploymentIdentity, smokeDeployment } from "../checkDeployedContent.mjs";
 import { readContentVersion } from "../writeContentVersion.mjs";
 import { verifySealedRelease } from "../release/sealedRelease.mjs";
+import { validateRuntimeConfig } from "../release/runtimeConfig.mjs";
 import { verifyTrustedAttestation } from "../security/verifyAttestation.mjs";
 
 const execute = promisify(execFile);
@@ -50,16 +51,8 @@ export async function prepareDeployment({ environment = process.env, projectRoot
 }
 
 export function validateDeploymentConfig(config, target) {
-  if (config?.name !== reviewedPagesProjectName || config.pages_build_output_dir !== "./out" || !["production", "preview"].includes(target)) throw new Error("Invalid sealed Pages deployment target.");
-  const production = config.d1_databases?.filter((binding) => binding.binding === "CONTACT_RATE_LIMIT_DB");
-  const preview = config.env?.preview?.d1_databases?.filter((binding) => binding.binding === "CONTACT_RATE_LIMIT_DB");
-  const uuid = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
-  for (const [label, bindings] of [["production", production], ["preview", preview]]) {
-    if (bindings?.length !== 1 || !uuid.test(bindings[0].database_id) || bindings[0].database_id === "00000000-0000-0000-0000-000000000000" ||
-        bindings[0].database_name !== `smart-portfolio-contact-rate-limit-${label}` || bindings[0].migrations_dir !== "migrations") throw new Error("Invalid or unbound environment-specific contact database.");
-  }
-  if (production[0].database_id === preview[0].database_id) throw new Error("Production and preview databases must remain separate.");
-  return target === "preview" ? preview[0] : production[0];
+  if (!new Set(["production", "preview"]).has(target)) throw new Error("Invalid sealed Pages deployment target.");
+  return validateRuntimeConfig(config, { target }).target.binding;
 }
 
 export function pagesDeploymentArguments({ target, sourceSha }) {
@@ -139,7 +132,9 @@ export async function executeDeployment({ environment = process.env, projectRoot
   assertReleaseProducer(manifest, reference, plan);
   const candidate = await readContentVersion(path.join(out, "content-version.json"));
   const origin = approvedPagesOrigin(plan.target, environment), branch = plan.target === "production" ? "main" : "develop";
-  const binding = validateDeploymentConfig(JSON.parse(await readFile(path.join(directory, "wrangler.jsonc"), "utf8")), plan.target);
+  const sealedConfig = JSON.parse(await readFile(path.join(directory, "wrangler.jsonc"), "utf8"));
+  const runtime = validateRuntimeConfig(sealedConfig, { target: plan.target, toolchain: manifest.candidate.toolchain });
+  const binding = runtime.target.binding;
   if (!environment.GH_TOKEN || !environment.CLOUDFLARE_API_TOKEN || !/^[a-f0-9]{32}$/.test(environment.CLOUDFLARE_ACCOUNT_ID ?? "")) throw new Error("Required deployment credentials are missing or invalid.");
   const archive = path.join(root, "accepted-release.zip");
   if (await digestFile(archive) !== reference.digest) throw new Error("Accepted release archive changed before provenance verification.");

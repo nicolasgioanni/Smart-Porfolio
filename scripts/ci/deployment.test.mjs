@@ -130,7 +130,7 @@ async function directoryDigest(directory) {
   return digest(Buffer.concat([Buffer.from(`${name}\0`), bytes, Buffer.from("\0")]));
 }
 
-async function deploymentFixture() {
+async function deploymentFixture({ mutateConfig } = {}) {
   const parent = await mkdtemp(path.join(os.tmpdir(), "portfolio-deployment-runner-"));
   temporary.push(parent);
   const root = path.join(parent, "repository");
@@ -212,6 +212,11 @@ async function deploymentFixture() {
     writeFile(path.join(migrations, "0001_fixture.sql"), "select 1;\n"),
     copyFile(path.join(root, "wrangler.jsonc"), config)
   ]);
+  if (mutateConfig) {
+    const configValue = JSON.parse(await readFile(config, "utf8"));
+    mutateConfig(configValue);
+    await writeFile(config, `${JSON.stringify(configValue)}\n`, "utf8");
+  }
   await createArtifactManifest(out);
   releaseCandidate.migrationsHash = await directoryDigest(migrations);
   releaseCandidate.wranglerConfigHash = digest(await readFile(config));
@@ -393,6 +398,29 @@ describe("sealed deployment execution", () => {
     })).rejects.toThrow("fixture migration failure");
     expect(executeCommand).toHaveBeenCalledOnce();
     expect(smoke).not.toHaveBeenCalled();
+  });
+
+  it("rejects an invalid sealed runtime configuration before attestation, preflight, migration, or upload", async () => {
+    const fixture = await deploymentFixture({
+      mutateConfig: (config) => { config.env.preview.queues = { producers: [{ binding: "AUDIT_QUEUE", queue: "audit" }] }; }
+    });
+    const executeCommand = vi.fn();
+    const verifyProvenance = vi.fn();
+    const preflight = vi.fn();
+
+    await expect(executeDeployment({
+      environment: fixture.environment,
+      projectRoot: fixture.root,
+      observe: vi.fn(),
+      branchTip: vi.fn(),
+      executeCommand,
+      verifyProvenance,
+      preflight,
+      smoke: vi.fn()
+    })).rejects.toThrow("unsupported fields");
+    expect(verifyProvenance).not.toHaveBeenCalled();
+    expect(preflight).not.toHaveBeenCalled();
+    expect(executeCommand).not.toHaveBeenCalled();
   });
 
   it("rejects a release reference whose producer differs from the sealed package", async () => {
