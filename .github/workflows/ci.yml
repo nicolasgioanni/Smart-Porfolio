@@ -526,7 +526,8 @@ jobs:
   deploy:
     name: deploy-${{ needs.verify.outputs.deploy_target }}
     needs: verify
-    if: needs.verify.result == 'success' && needs.verify.outputs.should_deploy == 'true'
+    if: >-
+      ${{ !cancelled() && github.event_name != 'pull_request' && needs.verify.result == 'success' && needs.verify.outputs.should_deploy == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read

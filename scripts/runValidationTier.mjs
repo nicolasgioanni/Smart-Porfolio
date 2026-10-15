@@ -24,6 +24,7 @@ export const priorityTestDirectories = [
 
 export const priorityTestTargets = [
   "scripts/validateDocumentation.test.mjs",
+  "scripts/permanentBranchRuleset.test.mjs",
   "scripts/contactTransport.integration.test.ts",
   "scripts/updateContactTlds.test.mjs",
   "scripts/packageScripts.test.mjs",
@@ -73,6 +74,7 @@ export const requiredPriorityFiles = [...new Set([
   "scripts/candidateAdmissionWorkflow.test.mjs",
   "scripts/security/checkSarif.test.mjs",
   "scripts/security/ciGate.test.mjs",
+  "scripts/security/deployWorkflow.test.mjs",
   "scripts/heartbeatWorkflow.test.mjs",
   "scripts/security/installPinnedTool.test.mjs",
   "scripts/security/securityScans.test.mjs",
