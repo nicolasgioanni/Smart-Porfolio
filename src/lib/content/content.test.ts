@@ -12,33 +12,13 @@ import {
   normalizePortfolioContent,
   type RawPortfolioSheets
 } from "@/lib/content/normalizePortfolioContent";
-import {
-  groupSkillsByCategory,
-  selectHeaderLinks,
-  selectHomeContent
-} from "@/lib/content/selectHomeContent";
-import {
-  createRecommendationExcerpt,
-  hasRecommendations,
-  selectHomeRecommendations,
-  shouldShowRecommendationsRoute
-} from "@/lib/content/selectRecommendationContent";
-import {
-  getRecommendationVerificationUrl,
-  linkedInRecommendationsUrl
-} from "@/lib/content/recommendationVerification";
-import {
-  createProfileOverviewContent,
-  createShortAboutText,
-  formatCompactGraduationDate,
-  getCurrentExperience,
-  getCurrentWorkLabel,
-  getEducationDisplayLabel,
-  getPrimaryEducation,
-  getProfileIdentityItems,
-  getProfileContactLinks,
-  getSelectedResearch
-} from "@/lib/content/profileOverview";
+import { groupSkillsByCategory, selectHomeContent } from "@/features/home/content/selectHomeContent";
+import { selectHeaderLinks } from "@/lib/content/selectHeaderLinks";
+import { createRecommendationExcerpt, selectHomeRecommendations } from "@/features/recommendations/content/selectRecommendationContent";
+import { hasRecommendations, shouldShowRecommendationsRoute } from "@/lib/content/shouldShowRecommendationsRoute";
+import { getRecommendationVerificationUrl, linkedInRecommendationsUrl } from "@/features/recommendations/content/recommendationVerification";
+import { createProfileOverviewContent, createShortAboutText, getCurrentExperience, getCurrentWorkLabel, getEducationDisplayLabel, getPrimaryEducation, getProfileIdentityItems, getProfileContactLinks, getSelectedResearch } from "@/features/home/content/profileOverview";
+import { formatCompactGraduationDate } from "@/lib/formatting/profileContent";
 import { sortForDetail, sortForHome, sortRecommendationsForDetail } from "@/lib/content/sortPortfolioContent";
 import { isHttpsUrl, isIsoDate, isSupportedUrl } from "@/lib/content/validatePortfolioContent";
 import { formatDateRange } from "@/lib/formatting/formatDateRange";

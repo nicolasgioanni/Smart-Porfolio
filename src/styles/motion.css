@@ -4,15 +4,25 @@
 
 .motion-reveal,
 .motion-compress {
+  opacity: 1;
+  transform: none;
+}
+
+.motion-reveal.motion-ready:not(.is-visible),
+.motion-compress.motion-ready:not(.is-visible) {
   opacity: 0;
   transform: translateY(24px) scale(0.985);
+}
+
+.motion-reveal.motion-ready,
+.motion-compress.motion-ready {
   transition:
     opacity 680ms cubic-bezier(0.16, 1, 0.3, 1),
     transform 680ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.motion-reveal.is-visible,
-.motion-compress.is-visible {
+.motion-reveal.motion-ready.is-visible,
+.motion-compress.motion-ready.is-visible {
   opacity: 1;
   transform: translateY(0) scale(1);
 }

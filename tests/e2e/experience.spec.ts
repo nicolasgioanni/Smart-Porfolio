@@ -27,8 +27,8 @@ import { expectDetailOutlineMotion, expectReducedMotionDetailOutline } from "./d
 import { readGeneratedPortfolioContent } from "./generatedContent";
 import { settleLayout, settlePageEntryMotion } from "./settleLayout";
 import { selectThemeWithChooser } from "./themePreference";
-import { formatProfileOverviewDateRange } from "../../src/lib/content/profileOverview";
-import { selectExperienceDetailContent } from "../../src/lib/content/selectDetailContent";
+import { formatProfileOverviewDateRange } from "../../src/lib/formatting/profileContent";
+import { selectExperienceDetailContent } from "../../src/features/experience/content/selectExperienceDetailContent";
 
 test.beforeEach(async ({ page }) => {
   captureBrowserConsole(page);

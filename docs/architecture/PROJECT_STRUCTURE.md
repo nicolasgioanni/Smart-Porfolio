@@ -53,6 +53,7 @@ Smart-Porfolio/
 |-- src/
 |   |-- app/
 |   |-- components/
+|   |-- features/
 |   |-- content/
 |   |   |-- generated/
 |   |   `-- templates/
@@ -90,7 +91,7 @@ Every route under `src/app/` is compatible with the Next.js static export. Clien
 
 | Route | Source | Role | Primary navigation |
 | --- | --- | --- | --- |
-| `/` | `src/app/page.tsx` | Profile and portfolio overview | Yes |
+| `/` | `src/app/(home)/page.tsx` | Profile and portfolio overview | Yes |
 | `/experience` | `src/app/experience/page.tsx` | Two-depth, expandable experience showcase | Yes |
 | `/research` | `src/app/research/page.tsx` | Two-depth, alternating visual research showcase | Yes |
 | `/projects` | `src/app/projects/page.tsx` | Concise project gallery with independent Concept and How it works views | Yes |
@@ -117,21 +118,21 @@ The recommendation route and navigation item remain discoverable only when recom
 
 ### Portfolio components
 
-`src/components/portfolio/` groups the Home summary layer and evidence-focused route components by owner: `home/`, `profile/`, `experience/`, `recommendations/`, `skills/`, and `resume/`. `shared/` contains only domain-neutral display and control primitives. Skills components remain under `skills/` when another portfolio domain consumes them. `home/HomeOverview.tsx` owns Home section order and receives feature-owned project highlights through app composition. `selectHomeContent.ts`, `selectVisibleContent.ts`, `selectDetailContent.ts`, `selectRecommendationContent.ts`, and `profileOverview.ts` divide shared content selection by surface and domain.
+`src/features/` owns domain presentation: `home/`, `experience/`, `projects/`, `research/`, `recommendations/`, `skills/`, `legal/`, `contact/`, and `resume/`. Components, domain selectors, loading compositions, tests, and styles live with their feature. `src/components/portfolio/shared/` retains neutral display and disclosure primitives. Home owns its section order, native education disclosures, profile content, and project/research highlights; Skills owns the reusable skill presentation consumed by Home and Projects. Shared visibility, sorting, header-link selection, route eligibility, and formatting stay under `src/lib/`.
 
-`src/features/research/` owns the Research feature vertically: route components, media resolvers and selectors, loading composition, and `research.css`. `components/ResearchGraphicalAbstractPreview.tsx` owns Research thumbnails; `ResearchVideoPreview.tsx` coordinates inline/enlarged playback handoff. Both use the feature's `ResearchMediaDialog.tsx` over the shared modal lifecycle. `ResearchVideoPlayer.tsx` owns the progressively enhanced player, browser caption cues, responsive controls, measured mobile caption placement, and container-fullscreen requests. `ResearchVideoPreview` hosts the persistent in-place fullscreen wrappers and owns the separate paused inline/enlarged handoff. Fullscreen preserves the media element; the shared `ModalDialog` owns its fallback lifecycle. App composition passes the Research no-JavaScript fallback into `SiteShell` so shared layout components do not import feature modules.
+`src/features/research/` owns the Research feature vertically: route components, media resolvers and selectors, loading composition, and `research.css`. `components/ResearchGraphicalAbstractPreview.tsx` owns Research thumbnails; `ResearchVideoPreview.tsx` coordinates inline/enlarged playback handoff. Both use the feature's `ResearchMediaDialog.tsx` over the shared modal lifecycle. `ResearchVideoPlayer.tsx` owns the progressively enhanced player, browser caption cues, responsive controls, measured mobile caption placement, and container-fullscreen requests. `ResearchVideoPreview` hosts the persistent in-place fullscreen wrappers and owns the separate paused inline/enlarged handoff. Fullscreen preserves the media element; the shared `ModalDialog` owns its fallback lifecycle. The Research segment supplies the no-JavaScript showcase through the neutral fallback wrapper; `SiteShell` never imports feature modules.
 
 Focused client behavior includes the configured role rotation, modal media and skills dialogs, recommendation measurement and expansion, optional scroll reveals, and the shared shell interactions. Content rendering remains server-generated. Modal consumers provide their content and geometry while `src/components/overlay/ModalDialog.tsx` provides the common accessible interaction contract.
 
-`src/features/projects/` owns gallery and Home-project presentation, loading profiles, and `projects.css`. `ProjectVisualTabs.tsx` owns each gallery card's small client boundary. Its server-compatible preview/link components support `ProjectStaticVisual` for static fallback. `ProjectDiagram.tsx` renders readable HTML steps and native SVG geometry, while `LeetNotesPreview.tsx` renders the native sheet-to-files preview. `HomeFeaturedProjects.tsx` supplies the Home highlight slot through app composition. `selectors/projectVisualRegistry.ts` owns the five established preview definitions and badges; `projectActions.ts` shares source-first action selection with feature loading profiles. Published preview assets retain their workbook-compatible paths under `public/images/projects/`; [Project showcase content](../content/PROJECT_SHOWCASE.md) records provenance and the workbook handoff.
+`src/features/projects/` owns gallery presentation, loading profiles, action and preview selectors, and `projects.css`. `ProjectVisualTabs.tsx` owns each gallery card's small client boundary. Its server-compatible preview/link components support `ProjectStaticVisual` for static fallback. `ProjectDiagram.tsx` renders readable HTML steps and native SVG geometry, while `LeetNotesPreview.tsx` renders the native sheet-to-files preview. `src/features/home/components/HomeFeaturedProjects.tsx` supplies the Home highlight slot and consumes the Projects contracts. `selectors/projectVisualRegistry.ts` owns the five established preview definitions and badges; `projectActions.ts` shares source-first action selection with feature loading profiles. Published preview assets retain their workbook-compatible paths under `public/images/projects/`; [Project showcase content](../content/PROJECT_SHOWCASE.md) records provenance and the workbook handoff.
 
-### Direct import boundary
+### Import graph boundary
 
-`eslint.config.mjs` enforces direct import direction for both alias and relative specifiers. Files under `src/lib/` cannot import `src/components` or `src/features`; production files under `src/components/` cannot import feature modules, generated content, Cloudflare Functions, or scripts. Shared components receive feature composition through props and generated content through supported app and library boundaries. The rule intentionally does not analyze transitive dependency graphs or constrain `src/app/`; `src/lib/architecture/importBoundaries.test.ts` keeps the direct policy executable.
+`eslint.config.mjs` enforces direct import direction for both alias and relative specifiers. Files under `src/lib/` cannot import `src/components` or `src/features`; production files under `src/components/` cannot import feature modules, generated content, Cloudflare Functions, or scripts. Shared components receive feature composition through props and generated content through supported app and library boundaries. `src/lib/architecture/importBoundaries.test.ts` also resolves source edges through the installed TypeScript configuration, including aliases, relative imports, type imports, re-exports, and literal dynamic imports. It rejects unresolved edges, ambiguous dynamic imports, and cycles. The only cross-feature directions are Home to Experience, Projects, Research, Recommendations, or Skills, and Projects to Skills. Tests and deliberate negative fixtures are excluded from the production graph; fixture cases prove rejection behavior. Routes retain the composition boundary.
 
 ### Surface and loading primitives
 
-`src/components/glass/` owns reusable solid surfaces, cards, controls, links, chips, dividers, and blobs. `src/components/loading/` owns shared skeleton primitives and non-feature compositions, while `src/app/RouteSkeleton.tsx` owns cross-feature route delegation and `src/features/research/loading/` owns the Research loading composition. `RouteHeaderSkeleton` retains the shared intrinsic header ink. Components consume semantic values from `src/styles/` or their owning feature style sheet rather than defining theme colors locally.
+`src/components/glass/` owns reusable solid surfaces, cards, controls, links, chips, dividers, and blobs. `src/components/loading/` owns shared skeleton primitives, while `src/app/RouteSkeleton.tsx` owns cross-feature route delegation and each feature owns its loading composition. `RouteHeaderSkeleton` retains the shared intrinsic header ink. Components consume semantic values from `src/styles/` or their owning feature style sheet rather than defining theme colors locally.
 
 Shared dialog lifecycle and transition state live in `src/components/overlay/ModalDialog.tsx` and `src/styles/dialog.css`. Consumer style sheets define only domain-specific backdrop color, frame size, and internal presentation.
 
@@ -149,10 +150,12 @@ Shared dialog lifecycle and transition state live in `src/components/overlay/Mod
 | `src/lib/csv/` | CSV parsing. |
 | `src/lib/content/normalizePortfolioContent.ts` | Conversion from source rows to typed content. |
 | `src/lib/content/validatePortfolioContent.ts` | Required values, references, URLs, and cross-field invariants. |
-| `src/lib/content/selectHomeContent.ts` | Home ordering, limits, links, skill grouping, and assembled Home content. |
+| `src/features/home/content/selectHomeContent.ts` | Home ordering, limits, links, skill grouping, and assembled Home content. |
 | `src/lib/content/selectVisibleContent.ts` | Shared Home explicit-visibility, featured, then all-items fallback and item-limit resolution. |
-| `src/lib/content/selectDetailContent.ts` | Project, experience, and education detail ordering. |
-| `src/lib/content/selectRecommendationContent.ts` | Recommendation visibility, ordering, route eligibility, detail selection, and excerpt fallback. |
+| Feature `content/select*DetailContent.ts` modules | Project, Experience, and Research detail ordering. Home selects education through `selectHomeContent.ts`. |
+| `src/features/recommendations/content/` | Recommendation selection, excerpts, and verification destinations. |
+| `src/lib/content/shouldShowRecommendationsRoute.ts` and `selectHeaderLinks.ts` | Neutral navigation visibility and header-link selection. |
+| `src/lib/formatting/` | Reusable dates, education labels, and Experience-duration formatting. |
 | `src/lib/content/routeHeaderContent.ts` | Exhaustive canonical route-header registry and the sole generated Experience summary resolver shared by resolved pages and loaders. |
 | `src/features/research/content/` | Research detail selection, narratives, graphical-abstract resolution, and video resolution. |
 | `scripts/fetchPortfolioContent.ts` | Source-mode selection, anonymous workbook fetch, timeout and byte-cap enforcement, generated-file I/O, and command output. |
@@ -175,11 +178,12 @@ The local `resume.csv` compatibility template must remain header-only. It is nev
 | `layout.css` | Shell, containers, page introductions, header, and footer layout. |
 | `glass.css` | Solid surface primitives, cards, buttons, links, chips, dividers, and blobs. |
 | `navigation.css` | Desktop and mobile navigation, theme disclosure, profile preview, and route indicator. |
-| `portfolio.css` | Home profile, cards, timelines, skills, recommendations, and detail layouts. |
+| `src/features/home/portfolio.css` | Home composition, profile, highlights, and native education presentation. |
+| Feature `*.css` files | Experience, Projects, Research, Recommendations, Skills, Legal, Contact, and Resume presentation. |
+| `content.css` | Neutral cards, featured grids, content typography, and empty states. |
 | `src/features/research/research.css` | Research modules, evidence rows, graphical-abstract containment, video presentation, and preview-dialog presentation. |
 | `motion.css` | CSS-only page entrance plus scroll reveal and compression states. |
 | `skeletons.css` | Static solid loading placeholders and transparent canonical header ink whose line fragments follow resolved typography. |
-| `contact.css` | Contact wizard, fields, review, consent, status, and responsive rules. |
 | `interactions.css` | Shared Hover Base states and reduced-motion behavior. |
 | `utilities.css` | Small reusable utility classes. |
 
@@ -227,4 +231,4 @@ Vitest discovers the complete suite. ESLint, TypeScript, the static build, docum
 - [Testing](../quality/TESTING.md)
 - [Maintenance](../development/MAINTENANCE.md)
 
-The shell composes `StaticPortfolioRouteGate` outside route loading boundaries. Its server-resolved pathname exposes the Home overview, Research showcase, or native Projects gallery only when scripting is disabled. Home reuses `HomeOverview` with scroll motion disabled and native Education disclosures. Normal route children retain their direct `site-main` relationship for motion and skeleton checks. No runtime content fetching or export rewriting is involved.
+Each route segment layout composes `RouteNoScriptFallback` outside its sibling loading boundary. Its native fallback exposes the complete server page only when scripting is disabled, while normal route children retain their direct `site-main` relationship for motion and skeleton checks. Research supplies its feature fallback through `ResearchNoScriptRouteGate`; shared layout components do not import feature modules. No runtime content fetching or export rewriting is involved.
