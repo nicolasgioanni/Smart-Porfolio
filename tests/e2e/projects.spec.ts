@@ -755,8 +755,13 @@ test.describe("Projects showcase", () => {
       await expect(media).toHaveCSS("transition-duration", "0.28s");
       await media.scrollIntoViewIfNeeded();
       const before = await mediaOffsetWithinViewport(media);
-      await media.hover();
-      await page.waitForTimeout(300);
+      // A palette transition can move the visual after input, so each sample re-targets the real hover.
+      await expect
+        .poll(async () => {
+          await media.hover();
+          return media.evaluate((element) => getComputedStyle(element, "::after").opacity);
+        })
+        .toBe("1");
       const after = await mediaOffsetWithinViewport(media);
       expect(after.y - before.y, `${theme} media should lift on hover`).toBeLessThanOrEqual(-2);
       const outline = await media.evaluate((element) => {
@@ -771,11 +776,11 @@ test.describe("Projects showcase", () => {
       expect(outline.color).not.toBe("rgba(0, 0, 0, 0)");
       expect(outline.opacity).toBe("1");
       await page.mouse.move(0, 0);
-      await page.waitForTimeout(300);
-      const hiddenOutlineOpacity = await media.evaluate(
-        (element) => getComputedStyle(element, "::after").opacity,
-      );
-      expect(hiddenOutlineOpacity).toBe("0");
+      await expect
+        .poll(() =>
+          media.evaluate((element) => getComputedStyle(element, "::after").opacity),
+        )
+        .toBe("0");
       const returned = await mediaOffsetWithinViewport(media);
       expect(Math.abs(returned.y - before.y)).toBeLessThanOrEqual(1);
     }
