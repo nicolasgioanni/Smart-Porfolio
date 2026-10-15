@@ -42,13 +42,13 @@ Do not infer a successful source deployment from the content hash alone. Code-on
 ### Preview a branch change
 
 1. Open or update a pull request targeting `main` or `develop`.
-2. Confirm the `verify` job accepted the template snapshot, full quality and unit suites, assigned Chromium, visual, Firefox, and WebKit browser coverage, the sealed candidate, export/runtime check, and every applicable source-security receipt.
+2. Confirm the `verify` job accepted the template snapshot, full quality and unit suites, assigned Chromium, visual, Firefox critical, WebKit critical, and WebKit mobile Research/Projects browser coverage, the sealed candidate, export/runtime check, and every applicable source-security receipt.
 3. Merge or push the reviewed change to `develop`.
 4. Confirm the workflow selected `deploy_target=preview`, validated the preview D1 binding, applied pending preview migrations, and deployed the current `develop` SHA.
 5. Review `https://develop.smart-portfolio-bds.pages.dev` manually. Complete the visible gate, observe its automatic transition or use Continue, and confirm the three data-entry steps, two acknowledgments, 500-character limit, responsive behavior, focus, and error states without selecting Send request. The gate may consume a Turnstile token, but this no-delivery inspection must not call `/api/contact`, reserve D1 quota, or send email. Confirm the standalone completion layout through verified component coverage.
 6. Confirm the preview workflow and the pull-request verification workflow both pass for the exact candidate before merge. The automated smoke check covers only the scope listed in [Deployment](DEPLOYMENT.md#exact-automated-smoke-scope).
 
-The preview build receives only `NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY`. If that variable is blank, the contact form remains unavailable instead of using the production key. The key should identify a Managed Turnstile widget restricted to the preview hostname; visible upfront rendering is controlled by the client.
+A preview build maps `NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY` into the only browser-visible input, `NEXT_PUBLIC_TURNSTILE_SITE_KEY`. If the preview variable is blank, the contact form remains unavailable and never falls back to the production key. The key should identify a Managed Turnstile widget restricted to the preview hostname; visible upfront rendering is controlled by the client.
 
 ### Release source changes to production
 

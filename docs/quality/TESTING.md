@@ -11,7 +11,7 @@ Smart Portfolio uses a layered quality gate for documentation, static content, R
 | Test runner | Vitest 4.1.11 |
 | Default test environment | jsdom |
 | DOM assertions | Testing Library and `@testing-library/jest-dom` |
-| Browser runner | Playwright 1.x with Chromium plus narrow Firefox and WebKit critical projects |
+| Browser runner | Playwright 1.x with Chromium plus narrow Firefox critical, WebKit critical, and WebKit mobile Research/Projects projects |
 | TypeScript mode | Strict, no emit |
 | CI runner | Candidate, validation, verification, and deploy jobs: `ubuntu-24.04`; scheduled heartbeat: `ubuntu-latest` |
 
@@ -30,7 +30,7 @@ Smart Portfolio uses a layered quality gate for documentation, static content, R
 | `npm run test:navigation` | Focused mobile rail, header, responsive-query, theme, and navigation style tests | Use while changing navigation; release CI covers them through `test` |
 | `npm run test:skeletons` | Focused skeleton component, content, style, and page-entry tests | Protects route fallback semantics, fixture geometry, and static no-motion placeholders |
 | `npm run test:e2e:priority` | Playwright skeleton alignment and held-navigation transitions, navigation, footer, mocked-contact, Recommendations, Projects, Experience, and Research flows | Portable local focused browser command; uses no provider credentials or delivery endpoint and intentionally excludes Linux-only visual comparison |
-| `npm run test:e2e:full` | Every supported Playwright specification in one Chromium process | Local Chromium aggregate. Full CI derives the same discovery into two functional Chromium shards, a separate Linux visual gate, and narrow Firefox/WebKit coverage |
+| `npm run test:e2e:full` | Every supported Playwright specification in one Chromium process | Local Chromium aggregate. Full CI derives the same discovery into two functional Chromium shards, a separate Linux visual gate, and Firefox critical, WebKit critical, and WebKit mobile Research/Projects coverage |
 | `npm run test:e2e:contact` | Playwright contact flow specification in Chromium | Mocks Turnstile and both same-origin contact endpoints; never submits to a provider |
 | `npm run test:e2e:accessibility` | Axe scan of all public routes and selected interactive states in Chromium | Requires zero violations and uses no rule suppression |
 | `npm run test:e2e:critical:firefox` | Narrow navigation, theme, dialog, and mocked-contact recovery path in Firefox | Does not run Linux skeleton screenshots |
@@ -56,7 +56,7 @@ Smart Portfolio uses a layered quality gate for documentation, static content, R
 | `npm run db:migrate:local` | Pending tracked migrations against Wrangler's local D1 state | Never targets preview or production |
 | `npm run verify` | One content snapshot, docs check, dependency audit, lint, typecheck, full Vitest suite, and generated-snapshot build | Compatibility local gate; does not install Chromium or download content again during the build |
 | `npm run verify:priority` | One content snapshot, docs check, dependency audit, lint, typecheck, priority Vitest and browser suites, and generated-snapshot build | Portable focused local gate; install Chromium first. Full CI runs the visual skeleton selection in its separate Ubuntu job |
-| `npm run verify:full` | One content snapshot, docs check, dependency audit, lint, typecheck, complete Vitest and Playwright suites, and generated-snapshot build | Release-candidate gate; its Linux-only visual comparison must run on Ubuntu 24.04 |
+| `npm run verify:full` | One content snapshot, docs check, dependency audit, lint, typecheck, complete Vitest suite, Chromium Playwright aggregate, and generated-snapshot build | Local complete Vitest plus Chromium aggregate; checked-in full CI additionally requires Firefox critical, WebKit critical, and WebKit mobile evidence, with Linux visual comparison on Ubuntu 24.04 |
 | `npm run verify:local` | Dependency preparation, then `verify` | The shared runner creates one snapshot and uses `build:generated` |
 
 The checked-in CI graph, artifact receipts, browser partition, and deploy eligibility are defined in [CI input and evidence contracts](CI_CONTRACTS.md). This guide describes local commands and repository wiring; it does not prove that a hosted workflow or deployment completed.
@@ -225,7 +225,7 @@ Pull requests targeting `main` or `develop`:
 
 1. Generate validated template content without workbook or Cloudflare credentials.
 2. Run documentation integrity, lint, typecheck, and the bounded dependency audit; run the complete Vitest suite.
-3. Discover browser identities and run two assigned Chromium functional shards, the Linux visual suite, and critical Firefox/WebKit coverage.
+3. Discover browser identities and run two assigned Chromium functional shards, the Linux visual suite, Firefox critical, WebKit critical, and WebKit mobile Research/Projects coverage.
 4. Build once from the accepted template snapshot, seal the candidate with configuration, migrations, manifest, and SBOM, scan that exact sealed directory with the pinned Gitleaks binary before artifact upload, then validate the exact static export and compiled runtime.
 5. Run actionlint, Git-history/workflow scans, CodeQL security-extended analysis, and dependency review; `verify` accepts their exact receipts together with the application receipts.
 6. Stop before deployment, signing, migration, or provider access.
@@ -283,7 +283,7 @@ npx playwright install chromium
 npm run verify:priority
 ```
 
-Run the complete release-candidate gate on Ubuntu 24.04, after installing Chromium:
+Run the local complete Vitest plus Chromium aggregate on Ubuntu 24.04, after installing Chromium. Checked-in full CI separately requires Firefox critical, WebKit critical, and WebKit mobile evidence:
 
 ```bash
 npx playwright install chromium
@@ -301,14 +301,14 @@ When behavior changes:
 3. Add or update a Playwright case when responsive geometry, native browser scrolling, fixed positioning, or cross-component interaction is the contract under test.
 4. Update workflow contract tests when a CI trigger, condition, permission, action, command, artifact, or environment variable changes.
 5. Update documentation and its cross-links in the same change.
-6. Run the targeted tests first, then `npm run verify:priority`; run `npm run verify:full` on Ubuntu 24.04 before deployment.
+6. Run the targeted tests first, then `npm run verify:priority`; run `npm run verify:full` on Ubuntu 24.04 for the local Vitest plus Chromium aggregate. It does not replace checked-in Firefox critical, WebKit critical, WebKit mobile, or Linux visual evidence.
 
 Avoid snapshot tests that hide semantic changes. Prefer explicit assertions for user-visible text, accessibility state, response contracts, validation errors, and integrity metadata.
 
 ## Current limitations
 
 - No coverage percentage is generated or enforced.
-- The full CI browser matrix runs two Chromium functional shards with axe in its discovered functional suite, a separate Linux visual selection, and narrow Firefox/WebKit critical coverage. It uses local contact fixtures; WebKit emulation does not replace a physical iPhone Safari check when one is required, and neither proves a live security provider, D1 binding, delivery service, or mailbox.
+- The full CI browser matrix runs two Chromium functional shards with axe in its discovered functional suite, a separate Linux visual selection, Firefox critical, WebKit critical, and WebKit mobile Research/Projects coverage. It uses local contact fixtures; WebKit emulation does not replace a physical iPhone Safari check when one is required, and neither proves a live security provider, D1 binding, delivery service, or mailbox.
 - No automated Lighthouse or Core Web Vitals measurement runs in CI. The local payload command enforces reviewed static gzip limits after a generated build.
 - Workers emulator integration runs through the unit suite against local workerd and Miniflare fixtures; it is not evidence of a deployed runtime.
 - No automated live contact delivery test is performed.
