@@ -422,13 +422,30 @@ test.describe("Projects showcase", () => {
       await expect(footerDivider).toHaveCount(actions.length > 0 ? 1 : 0);
       if (actions.length > 0) {
         await expect(footerDivider).toHaveAttribute("aria-hidden", "true");
-        const [dividerBox, actionsBox] = await Promise.all([
-          footerDivider.boundingBox(),
-          card.locator(".project-card__actions").boundingBox(),
-        ]);
-        expect(dividerBox).not.toBeNull();
-        expect(actionsBox).not.toBeNull();
-        expect(actionsBox!.y).toBeGreaterThanOrEqual(dividerBox!.y + dividerBox!.height - 1);
+        await expect(footerDivider).toBeVisible();
+        const footerActions = card.locator(".project-card__actions");
+        await expect(footerActions).toHaveCount(1);
+        await expect(footerActions).toBeVisible();
+        // Subgrid layout may settle between protocol reads; sample both boxes in one layout task.
+        await expect
+          .poll(() =>
+            card.evaluate((element) => {
+              const divider = element.querySelector<HTMLElement>(
+                ".project-card__footer-divider",
+              );
+              const actions = element.querySelector<HTMLElement>(
+                ".project-card__actions",
+              );
+              if (!divider || !actions) return false;
+
+              const dividerBox = divider.getBoundingClientRect();
+              const actionsBox = actions.getBoundingClientRect();
+              if (dividerBox.width === 0 || dividerBox.height === 0 ||
+                  actionsBox.width === 0 || actionsBox.height === 0) return false;
+              return actionsBox.top >= dividerBox.bottom - 1;
+            }),
+          )
+          .toBe(true);
       }
 
       if (!visual) continue;
