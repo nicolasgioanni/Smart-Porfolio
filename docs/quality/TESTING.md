@@ -206,6 +206,7 @@ After `build:generated`, verify `/projects` without JavaScript against the expor
 | `scripts/security/ciGate.test.mjs` | Event-specific CI gate dependency graph requiring explicit success from application validation and all applicable scanner jobs. |
 | `scripts/checkDeployedContent.test.mjs` | Independent deployed content and commit comparison, missing or malformed manifest behavior, and post-deployment smoke requests with exact contact Function method rejection |
 | Artifact tests inside `scripts/packageScripts.test.mjs` | Content-version creation, hidden file inclusion, manifest structure, commit binding, digest verification, and tamper rejection |
+| `scripts/quality/recoveryDrill.test.mjs` | Credential-free local Wrangler D1 export, fresh `0001`–`0003` migration, and pseudonymous reservation restore; v2 sealed-envelope tamper rejection and restoration without collector files |
 | `scripts/localAutomation.test.mjs` | Project discovery, environment copy safety, dependency-state hashing, stale content, and port selection |
 
 The workflow contract tests inspect checked-in workflow text and execute the manifest helpers. They do not start a GitHub Actions runner or perform a Cloudflare upload.
