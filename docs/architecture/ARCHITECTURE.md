@@ -59,6 +59,7 @@ The build-time content path, static delivery path, and runtime contact path rema
 | Content generation | One source snapshot | Validated generated JSON and semantic hash | Local process or GitHub Actions |
 | Static application | Generated JSON, components, styles, public assets | `out/` static export | Next.js build |
 | Deployment | Tested export, exact commit, Functions, Wrangler config | Cloudflare Pages deployment | GitHub Actions |
+| Infrastructure preparation | Terraform source, locked providers, mock plans, and private review inputs | Offline source contracts only | Local developer tooling |
 | Contact verification | Turnstile token and opaque submission ID | Signed host-only verification ticket | `/api/contact/verify` Pages Function |
 | Contact delivery | Verification ticket and contact payload | DNS result, D1 reservation, and two Resend acceptances | `/api/contact` Pages Function |
 

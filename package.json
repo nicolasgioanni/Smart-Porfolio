@@ -61,7 +61,10 @@
     "release:compile": "node scripts/release.mjs compile",
     "release:package": "node scripts/release.mjs package",
     "release:runtime": "node scripts/release.mjs runtime",
-    "release:verify": "node scripts/release.mjs verify"
+    "release:verify": "node scripts/release.mjs verify",
+    "infrastructure:check": "node infra/validate-ownership.mjs",
+    "test:infrastructure": "node --test infra/tests/saved-plan.test.mjs",
+    "test:infrastructure:policy": "node --test infra/tests/check-plan.test.mjs infra/tests/mock-plan-export.test.mjs"
   },
   "dependencies": {
     "csv-parse": "^7.0.2",
