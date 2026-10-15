@@ -190,6 +190,35 @@ describe("CI runner boundaries", () => {
     expect(record).toMatchObject({ target: "local", sourceMode: "templates", producer: { job: "prepare-content", attempt: 1 } });
   });
 
+  it("observes the production identity before a scheduled candidate can use the no-op comparison", async () => {
+    const fixture = await createFixture();
+    const input = candidate(fixture.sha, { event: "schedule" });
+    const environment = environmentFor(input, fixture, { extra: {
+      CLOUDFLARE_PAGES_PROJECT_NAME: "smart-portfolio",
+      CLOUDFLARE_PAGES_DOMAIN: "smart-portfolio-bds.pages.dev",
+      PORTFOLIO_WORKBOOK_URL: "https://private.example.invalid/workbook",
+      NEXT_PUBLIC_TURNSTILE_SITE_KEY: "production-test-site-key"
+    } });
+    const generate = vi.fn(async (root, childEnvironment) => {
+      expect(childEnvironment.PORTFOLIO_REQUIRE_REMOTE_CONTENT).toBe("true");
+      const generated = JSON.parse(generatedBytes("prepared-schedule"));
+      generated.metadata.sourceMode = "remote";
+      generated.metadata.sources = {
+        profile: "remote", links: "remote", research: "remote", projects: "remote", experience: "remote",
+        recommendations: "remote", education: "remote", skills: "remote", site_settings: "remote", resume: "template"
+      };
+      await writeFile(path.join(root, generatedContentPath), `${JSON.stringify(generated)}\n`);
+    });
+    const discover = vi.fn(async () => browserDiscovery());
+    const observe = vi.fn().mockResolvedValue(null);
+
+    const result = await prepareCandidate({ environment, projectRoot: fixture.root, generate, discover, observe });
+
+    expect(result).toMatchObject({ mode: "full", target: "production" });
+    expect(observe).toHaveBeenCalledExactlyOnceWith("production", { environment });
+    expect(discover).toHaveBeenCalledOnce();
+  });
+
   it("returns an obsolete plan before content, deployment, or browser IO", async () => {
     const fixture = await createFixture();
     const input = candidate(fixture.sha, { event: "push", branchTip: "e".repeat(40) });
