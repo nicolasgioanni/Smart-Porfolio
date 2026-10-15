@@ -55,6 +55,7 @@ describe("package and CI deployment automation", () => {
     expect(packageJson.devDependencies["@next/eslint-plugin-next"]).toBe("^16.4.0");
     expect(packageJson.devDependencies.wrangler).toBe("4.148.0");
     expect(packageJson.devDependencies.miniflare).toBe("5.20261006.0-alpha");
+    expect(packageJson.devDependencies["js-yaml"]).toBe("4.3.2");
     expect(packageJson.devDependencies.vitest).toBe("4.1.11");
     expect(packageJson.devDependencies["@playwright/test"]).toMatch(/^\^1\./);
     expect(packageJson.scripts["test:footer"]).toBe(
@@ -100,7 +101,7 @@ describe("package and CI deployment automation", () => {
       "playwright test contact.spec.ts --project=chromium"
     );
     expect(packageJson.scripts["test:e2e:priority"]).toBe(
-      "playwright test skeleton-alignment.spec.ts skeletons.transition.spec.ts navigation.spec.ts footer.spec.ts contact.spec.ts recommendations.spec.ts experience.spec.ts projects.spec.ts research.spec.ts research-mobile-video.spec.ts --project=chromium"
+      "playwright test skeleton-alignment.spec.ts skeletons.transition.spec.ts navigation.spec.ts progressiveEnhancement.spec.ts footer.spec.ts contact.spec.ts recommendations.spec.ts experience.spec.ts projects.spec.ts research.spec.ts research-mobile-video.spec.ts --project=chromium"
     );
     expect(packageJson.scripts["test:e2e:full"]).toBe(
       "playwright test --project=chromium"
@@ -113,12 +114,17 @@ describe("package and CI deployment automation", () => {
     const packageJson = JSON.parse(await readFile(path.join(projectRoot, "package.json"), "utf8"));
     expect(packageJson.scripts["test:priority"]).toBe("node scripts/runValidationTier.mjs priority");
     expect(priorityTestTargets).toContain("functions");
+    expect(priorityTestTargets).toContain("scripts/permanentBranchRuleset.test.mjs");
     expect(priorityTestDirectories).toEqual([
       "scripts/security",
       "src/components/overlay",
-      "src/components/portfolio/experience",
+      "src/features/home",
+      "src/features/contact",
+      "src/features/legal",
+      "src/features/skills",
+      "src/features/experience",
       "src/features/projects",
-      "src/components/portfolio/recommendations",
+      "src/features/recommendations",
       "src/components/portfolio/shared",
       "src/components/theme",
       "src/features/research",
@@ -143,10 +149,10 @@ describe("package and CI deployment automation", () => {
         "src/styles/themePalette.test.ts",
         "src/components/portfolio/shared/DetailDisclosureList.test.tsx",
         "src/components/portfolio/shared/detailDisclosureStyles.test.ts",
-        "src/components/portfolio/experience/ExperienceShowcase.test.tsx",
+        "src/features/experience/components/ExperienceShowcase.test.tsx",
         "src/features/projects/components/ProjectSkillShowcase.test.tsx",
         "src/features/projects/components/ProjectShowcase.test.tsx",
-        "src/components/portfolio/recommendations/RecommendationsList.test.tsx",
+        "src/features/recommendations/components/RecommendationsList.test.tsx",
         "src/features/research/components/ResearchShowcase.test.tsx",
         "src/components/overlay/ModalDialog.test.tsx"
       ])
@@ -415,8 +421,9 @@ describe("package and CI deployment automation", () => {
     expect(verifyJob).toContain("CI_GATE_RESULTS: ${{ toJSON(needs) }}");
     expect(verifyJob).toContain("node scripts/security/ciGate.mjs");
     expect(deployJob).toContain("needs: verify");
+    expect(deployJob).toContain("if: >-");
     expect(deployJob).toContain(
-      "if: needs.verify.result == 'success' && needs.verify.outputs.should_deploy == 'true'"
+      "${{ !cancelled() && github.event_name != 'pull_request' && needs.verify.result == 'success' && needs.verify.outputs.should_deploy == 'true' }}"
     );
     expect(deployJob).toContain("ref: ${{ needs.verify.outputs.candidate_sha }}");
     expect(deployJob).toContain('run: node scripts/artifactIntegrity.mjs verify out "$CANDIDATE_SHA"');

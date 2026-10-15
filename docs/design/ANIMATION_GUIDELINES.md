@@ -134,3 +134,5 @@ Use layered solid tiers, fine borders, and restrained neutral shadows. Accent co
 - [Accessibility](ACCESSIBILITY.md)
 - [Skeleton loading guidelines](SKELETON_LOADING_GUIDELINES.md)
 - [Testing](../quality/TESTING.md)
+
+Scroll-reveal and compression content is visible in server output. Client code adds the motion-ready class only when IntersectionObserver is available and motion is permitted. Without that enhancement, including no-JavaScript and reduced-motion visits, the content retains its readable static presentation.

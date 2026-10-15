@@ -57,8 +57,8 @@ function quoteSqlValue(value: number | string): string {
   return `'${value.replaceAll("'", "''")}'`;
 }
 
-function bindReservationSql(values: [string, string, string, number, number]): string {
-  return CONTACT_RESERVATION_INSERT_SQL.replace(/\?([1-5])/g, (_match, parameterIndex: string) => {
+function bindReservationSql(values: [string, string, string, string, number, number, number]): string {
+  return CONTACT_RESERVATION_INSERT_SQL.replace(/\?([1-7])/g, (_match, parameterIndex: string) => {
     const value = values[Number(parameterIndex) - 1];
     if (value === undefined) throw new Error(`Missing SQL parameter ${parameterIndex}.`);
     return quoteSqlValue(value);
@@ -78,7 +78,7 @@ function localD1Arguments(command: string): string[] {
   ];
 }
 
-function runReservation(values: [string, string, string, number, number]): void {
+function runReservation(values: [string, string, string, string, number, number, number]): void {
   const result = executeD1(localD1Arguments(bindReservationSql(values)));
   expect(result).toHaveLength(1);
   expect(result[0]).toMatchObject({ success: true });
@@ -87,7 +87,7 @@ function runReservation(values: [string, string, string, number, number]): void 
 function readReservations(): Array<Record<string, unknown>> {
   const result = executeD1(
     localD1Arguments(
-      "SELECT submission_id, email_hash, payload_hash, reserved_at, expires_at FROM contact_rate_reservations ORDER BY submission_id"
+      "SELECT submission_id, email_hash, payload_hash, delivery_config_hash, render_version, reserved_at, expires_at FROM contact_rate_reservations ORDER BY submission_id"
     )
   );
   expect(result).toHaveLength(1);
@@ -102,21 +102,66 @@ afterEach(async () => {
 });
 
 describe("local D1 contact reservation migration", () => {
-  it("preserves an existing payload fingerprint and refuses a third address reservation", async () => {
+  it("preserves a retry identity and refuses a third address reservation", async () => {
     persistenceDirectory = await mkdtemp(path.join(tmpdir(), "smart-portfolio-d1-"));
     applyLocalMigrations();
 
     const emailHash = "keyed-address-hash";
-    runReservation(["11111111-1111-4111-8111-111111111111", emailHash, "original-payload", nowSeconds, expiresAt]);
-    runReservation(["11111111-1111-4111-8111-111111111111", emailHash, "changed-payload", nowSeconds + 1, expiresAt + 1]);
-    runReservation(["22222222-2222-4222-8222-222222222222", emailHash, "second-payload", nowSeconds + 2, expiresAt + 2]);
-    runReservation(["33333333-3333-4333-8333-333333333333", emailHash, "third-payload", nowSeconds + 3, expiresAt + 3]);
+    const deliveryConfigHash = "keyed-delivery-config-hash";
+    const renderVersion = 1;
+    runReservation([
+      "11111111-1111-4111-8111-111111111111",
+      emailHash,
+      "original-payload",
+      deliveryConfigHash,
+      renderVersion,
+      nowSeconds,
+      expiresAt
+    ]);
+    runReservation([
+      "11111111-1111-4111-8111-111111111111",
+      emailHash,
+      "changed-payload",
+      deliveryConfigHash,
+      renderVersion,
+      nowSeconds + 1,
+      expiresAt + 1
+    ]);
+    runReservation([
+      "11111111-1111-4111-8111-111111111111",
+      emailHash,
+      "original-payload",
+      "changed-delivery-config",
+      renderVersion,
+      nowSeconds + 1,
+      expiresAt + 1
+    ]);
+    runReservation([
+      "22222222-2222-4222-8222-222222222222",
+      emailHash,
+      "second-payload",
+      deliveryConfigHash,
+      renderVersion,
+      nowSeconds + 2,
+      expiresAt + 2
+    ]);
+    runReservation([
+      "33333333-3333-4333-8333-333333333333",
+      emailHash,
+      "third-payload",
+      deliveryConfigHash,
+      renderVersion,
+      nowSeconds + 3,
+      expiresAt + 3
+    ]);
 
     expect(readReservations()).toEqual([
       {
         submission_id: "11111111-1111-4111-8111-111111111111",
         email_hash: emailHash,
         payload_hash: "original-payload",
+        delivery_config_hash: deliveryConfigHash,
+        render_version: renderVersion,
         reserved_at: nowSeconds,
         expires_at: expiresAt
       },
@@ -124,6 +169,8 @@ describe("local D1 contact reservation migration", () => {
         submission_id: "22222222-2222-4222-8222-222222222222",
         email_hash: emailHash,
         payload_hash: "second-payload",
+        delivery_config_hash: deliveryConfigHash,
+        render_version: renderVersion,
         reserved_at: nowSeconds + 2,
         expires_at: expiresAt + 2
       }

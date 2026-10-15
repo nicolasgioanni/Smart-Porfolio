@@ -13,16 +13,17 @@ describe("priority validation tier", () => {
   it("selects the required trust-boundary contracts before running Vitest", () => {
     expect(priorityTestTargets).toContain("functions");
     expect(priorityTestTargets).toEqual(expect.arrayContaining([
+      "scripts/permanentBranchRuleset.test.mjs",
       "scripts/contactTransport.integration.test.ts",
       "scripts/checkDependencyAudit.test.mjs",
       "scripts/security",
       "scripts/localAutomation.test.mjs",
       "scripts/runVerification.test.mjs",
       "scripts/updateContactTlds.test.mjs",
-      "src/components/contact/ContactNotifications.test.tsx",
-      "src/components/contact/useContactStepTransition.test.tsx",
+      "src/features/contact/components/ContactNotifications.test.tsx",
+      "src/features/contact/components/useContactStepTransition.test.tsx",
       "src/components/navigation/smartLink.test.tsx",
-      "src/styles/contactStyles.test.ts",
+      "src/features/contact/contactStyles.test.ts",
       "src/styles/typographyStyles.test.ts"
     ]));
     expect(requiredPriorityFiles).toEqual(expect.arrayContaining([
@@ -30,6 +31,7 @@ describe("priority validation tier", () => {
       "scripts/candidateAdmissionWorkflow.test.mjs",
       "scripts/security/checkSarif.test.mjs",
       "scripts/security/ciGate.test.mjs",
+      "scripts/security/deployWorkflow.test.mjs",
       "scripts/heartbeatWorkflow.test.mjs",
       "scripts/security/installPinnedTool.test.mjs",
       "scripts/security/securityScans.test.mjs",

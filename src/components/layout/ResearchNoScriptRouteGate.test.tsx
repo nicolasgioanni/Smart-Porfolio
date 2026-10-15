@@ -1,48 +1,18 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
-import { StaticPortfolioRouteGate } from "@/components/layout/StaticPortfolioRouteGate";
+import { describe, expect, it } from "vitest";
+import { ResearchNoScriptRouteGate } from "@/components/layout/ResearchNoScriptRouteGate";
 
-const route = vi.hoisted(() => ({ pathname: "/research" }));
-vi.mock("next/navigation", () => ({ usePathname: () => route.pathname }));
-
-describe("StaticPortfolioRouteGate", () => {
+describe("ResearchNoScriptRouteGate", () => {
   it("server-renders an inert Research fallback without wrapping the regular route body", () => {
-    route.pathname = "/research";
     const markup = renderToStaticMarkup(
-      <StaticPortfolioRouteGate homeFallback={<p>Native home fallback</p>} projectsFallback={<p>Native projects fallback</p>} researchFallback={<p>Native fallback</p>}>
+      <ResearchNoScriptRouteGate fallback={<p>Native fallback</p>}>
         <section>Regular route body</section>
-      </StaticPortfolioRouteGate>
+      </ResearchNoScriptRouteGate>
     );
+
     expect(markup).toContain("<noscript>");
     expect(markup).toContain("<p>Native fallback</p>");
     expect(markup).toContain(".site-main > :not(noscript)");
     expect(markup.endsWith("</noscript><section>Regular route body</section>")).toBe(true);
-  });
-
-  it("server-renders a Projects fallback when one is provided", () => {
-    route.pathname = "/projects";
-    expect(renderToStaticMarkup(
-      <StaticPortfolioRouteGate homeFallback={<p>Native home fallback</p>} projectsFallback={<p>Native projects fallback</p>} researchFallback={<p>Native research fallback</p>}>
-        <section>Regular route body</section>
-      </StaticPortfolioRouteGate>
-    )).toContain("Native projects fallback");
-  });
-
-  it("server-renders a Home fallback when one is provided", () => {
-    route.pathname = "/";
-    expect(renderToStaticMarkup(
-      <StaticPortfolioRouteGate homeFallback={<p>Native home fallback</p>} projectsFallback={<p>Native projects fallback</p>} researchFallback={<p>Native research fallback</p>}>
-        <section>Regular route body</section>
-      </StaticPortfolioRouteGate>
-    )).toContain("Native home fallback");
-  });
-
-  it("leaves unrelated route output unchanged", () => {
-    route.pathname = "/contact";
-    expect(renderToStaticMarkup(
-      <StaticPortfolioRouteGate homeFallback={<p>Native home fallback</p>} projectsFallback={<p>Native projects fallback</p>} researchFallback={<p>Native fallback</p>}>
-        <section>Regular route body</section>
-      </StaticPortfolioRouteGate>
-    )).toBe("<section>Regular route body</section>");
   });
 });

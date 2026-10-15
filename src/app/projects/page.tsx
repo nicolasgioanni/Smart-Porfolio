@@ -5,7 +5,7 @@ import { ProjectList } from "@/features/projects/components/ProjectList";
 import { createPageMetadata } from "@/lib/content/createPageMetadata";
 import { getPortfolioContent } from "@/lib/content/getPortfolioContent";
 import { routeHeaderContent } from "@/lib/content/routeHeaderContent";
-import { selectProjectDetailContent } from "@/lib/content/selectDetailContent";
+import { selectProjectDetailContent } from "@/features/projects/content/selectProjectDetailContent";
 
 const projectsHeader = routeHeaderContent[siteRoutes.projects];
 
