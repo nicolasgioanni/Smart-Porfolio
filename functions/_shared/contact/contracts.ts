@@ -2,7 +2,7 @@ export const CONTACT_ACTION = "portfolio_contact";
 export const MAX_REQUEST_BYTES = 16_384;
 export const CONTACT_RATE_LIMIT_WINDOW_SECONDS = 24 * 60 * 60;
 export const CONTACT_RATE_LIMIT_MAX_SUBMISSIONS = 2;
-export const CONTACT_EMAIL_RENDER_VERSION = 1;
+export const CONTACT_EMAIL_RENDER_VERSION = 2;
 export const CONTACT_RESERVATION_INSERT_SQL = `INSERT INTO contact_rate_reservations (submission_id, email_hash, payload_hash, delivery_config_hash, render_version, reserved_at, expires_at)
   SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?7
   WHERE NOT EXISTS (

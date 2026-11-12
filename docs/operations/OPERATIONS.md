@@ -167,7 +167,7 @@ Use only an owned test mailbox and non-sensitive fixture text. In preview first,
 2. Complete the visible gate, allow its automatic transition or use Continue, complete all three data-entry steps and both acknowledgments, then select Send request once.
 3. Confirm the standalone green completion view includes the entered address and offers <em>Send another message</em>.
 4. Confirm Resend accepted the visitor confirmation before the owner notification and recorded the expected separate idempotency keys.
-5. Inspect both HTML and plain-text messages. Confirm the visitor copy, correction instructions, absolute Privacy and Terms links, owner reply-to, and compact owner summary.
+5. Inspect both HTML and plain-text messages. Confirm the visitor copy contains no submitted fields, includes correction instructions and absolute Privacy and Terms links, and that the owner notification has the expected reply-to and compact summary.
 6. Select <em>Send another message</em>, complete the new gate, then submit a second fresh request with the same normalized address. Confirm it receives a new submission UUID and Turnstile token and succeeds.
 7. Submit a third new message and confirm HTTP `429`, JSON error `rate_limited`, a valid `Retry-After` header, a red in-page limit notice, and no Resend request.
 8. Check D1 only through bounded aggregate or redacted queries. Confirm no raw email, name, phone, or message columns exist; do not copy hashes or UUIDs into tickets or logs.

@@ -166,7 +166,7 @@ export default function PrivacyPage() {
         <p>
           After acceptance, Resend is asked first to deliver a transactional confirmation to the email address you supplied.
           Only after Resend accepts that request is it asked to deliver the private notification to the portfolio owner. The
-          confirmation summarizes the information you submitted and links to this Privacy Notice and the Site Terms &amp;
+          confirmation uses fixed copy without repeating your submitted details and links to this Privacy Notice and the Site Terms &amp;
           Accuracy Notice. Acceptance by Resend does not guarantee final mailbox delivery; a receiving system can reject or
           bounce the message later. The private owner recipient is server-side configuration and is not included in the page,
           browser bundle, or endpoint response.

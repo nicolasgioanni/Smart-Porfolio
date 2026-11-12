@@ -701,7 +701,7 @@ describe("pseudonymous rolling quota", () => {
       now + 2_000
     );
 
-    expect(first).toEqual({ kind: "reserved", reservedAt: Math.floor(now / 1_000), renderVersion: 1 });
+    expect(first).toEqual({ kind: "reserved", reservedAt: Math.floor(now / 1_000), renderVersion: 2 });
     expect(second.kind).toBe("reserved");
     expect(third).toEqual({
       kind: "rate-limited",
@@ -935,6 +935,8 @@ describe("sequential contact delivery", () => {
     expect(retry.status).toBe(200);
     expect(rateLimitDatabase.rows).toHaveLength(1);
     const resendCalls = fetchMock.mock.calls.filter(([url]) => url === "https://api.resend.com/emails");
+    expect((resendCalls[0]?.[1] as RequestInit).body).toBe((resendCalls[2]?.[1] as RequestInit).body);
+    expect((resendCalls[1]?.[1] as RequestInit).body).toBe((resendCalls[3]?.[1] as RequestInit).body);
     expect(
       resendCalls.map(([, init]) => new Headers((init as RequestInit).headers).get("Idempotency-Key"))
     ).toEqual([
@@ -943,6 +945,22 @@ describe("sequential contact delivery", () => {
       `portfolio-contact/visitor/${submissionId}`,
       `portfolio-contact/owner/${submissionId}`
     ]);
+  });
+
+  it("rejects an old-render reservation without sending provider email", async () => {
+    const payload = validPayload();
+    await reserveContactSubmission(payload, env);
+    const row = rateLimitDatabase.rows.get(submissionId);
+    if (!row) throw new Error("Expected test reservation.");
+    row.render_version = 1;
+    const fetchMock = vi.fn().mockResolvedValueOnce(mxResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await invoke(requestFor(payload, { cookie: await ticketCookie() }));
+
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({ ok: false, error: "delivery_failed" });
+    expect(fetchMock.mock.calls.filter(([url]) => url === "https://api.resend.com/emails")).toHaveLength(0);
   });
 
   it("rejects a changed payload after a partial delivery without making another Resend request", async () => {
@@ -1022,7 +1040,9 @@ describe("contact email templates", () => {
       validPayload({
         firstName: "Avery <script>",
         lastName: "Nguyen & Co.",
-        message: "Hello <img src=x onerror=alert(1)>\nSecond line"
+        email: "hostile-marker@example.com",
+        phone: "+1 425 555 0199",
+        message: "Hello <img src=x onerror=alert(1)> https://attacker.example/path\nSecond line"
       }),
       privateRecipient,
       configuredFromEmail,
@@ -1032,28 +1052,34 @@ describe("contact email templates", () => {
 
     expect(visitor).toMatchObject({
       from: configuredFromEmail,
-      to: ["avery@example.com"],
+      to: ["hostile-marker@example.com"],
       reply_to: configuredReplyToEmail,
       subject: "I received your message!"
     });
-    expect(visitor.text).toContain("Information you submitted");
+    expect(visitor.text).toContain("Thank you for reaching out.");
     expect(visitor.text).toContain("https://nicolasmgioanni.dev/privacy");
     expect(visitor.text).toContain("https://nicolasmgioanni.dev/terms");
     expect(visitor.text).toContain("© 2026 Nicolas Gioanni. All rights reserved.");
     expect(visitor.html).toContain("Privacy Notice");
     expect(visitor.html).toContain("Site Terms &amp; Accuracy Notice");
-    expect(visitor.html).toContain("Avery &lt;script&gt;");
-    expect(visitor.html).toContain("&lt;img src=x onerror=alert(1)&gt;<br>Second line");
+    for (const value of ["Avery", "Nguyen", "hostile-marker@example.com", "+1 425 555 0199", "https://attacker.example/path", "<script>", "&lt;script&gt;", "<img", "&lt;img", "Second line"]) {
+      expect(visitor.subject).not.toContain(value);
+      expect(visitor.text).not.toContain(value);
+      expect(visitor.html).not.toContain(value);
+    }
+    expect(owner.html).toContain("Avery &lt;script&gt;");
+    expect(owner.html).toContain("&lt;img src=x onerror=alert(1)&gt; https://attacker.example/path<br>Second line");
     expect(visitor.html).not.toContain("<script>");
     expect(visitor.html).not.toContain("<img");
 
     expect(owner).toMatchObject({
       from: configuredFromEmail,
       to: [privateRecipient],
-      reply_to: "avery@example.com",
+      reply_to: "hostile-marker@example.com",
       subject: "New contact request from Avery <script> Nguyen & Co."
     });
-    expect(owner.html).toContain('href="mailto:avery%40example.com"');
+    expect(owner.html).toContain('href="mailto:hostile-marker%40example.com"');
+    expect(owner.text).toContain("+1 425 555 0199");
     expect(owner.html).not.toContain("Privacy Notice");
     expect(owner.html).not.toContain("Site Terms");
     expect(owner.text).not.toContain("Acknowledgments");

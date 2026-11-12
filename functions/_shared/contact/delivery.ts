@@ -96,16 +96,7 @@ export function createEmailMessages(
   ].join("\n");
 
   const confirmationText = [
-    `Hi ${payload.firstName},`,
-    "",
     "Thank you for reaching out. I received your message and will get back to you as soon as I can.",
-    "",
-    "Information you submitted",
-    `Name: ${fullName}`,
-    `Email: ${payload.email}`,
-    `Phone: ${phone}`,
-    "Message:",
-    payload.message,
     "",
     `If you need to correct or update this information, please submit a new form at ${CANONICAL_SITE_URL}/contact or email ${replyToEmail}.`,
     "",
@@ -126,15 +117,7 @@ export function createEmailMessages(
       html: emailShell(
         "MESSAGE CONFIRMATION",
         "I received your message!",
-        `<p style="margin:0 0 12px;color:#334155;line-height:1.65;">Hi ${escapeHtml(payload.firstName)},</p><p style="margin:0 0 20px;color:#334155;line-height:1.65;">Thank you for reaching out. I received your message and will get back to you as soon as I can.</p>${detailTable(
-          "Information you submitted",
-          [
-            ["Name", escapedName],
-            ["Email", escapedEmail],
-            ["Phone", escapedPhone]
-          ],
-          escapedMessage
-        )}<div style="margin-top:20px;padding:14px;border:1px solid #cbd8e6;border-radius:8px;background:#f7fafc;color:#334155;font-size:13px;line-height:1.6;">If you need to correct or update this information, please <a href="${CANONICAL_SITE_URL}/contact" style="color:#174f87;font-weight:600;">submit a new form</a> or email <a href="mailto:${replyToMailto}" style="color:#174f87;font-weight:600;">${escapeHtml(replyToEmail)}</a>.</div>`,
+        `<p style="margin:0 0 20px;color:#334155;line-height:1.65;">Thank you for reaching out. I received your message and will get back to you as soon as I can.</p><div style="margin-top:20px;padding:14px;border:1px solid #cbd8e6;border-radius:8px;background:#f7fafc;color:#334155;font-size:13px;line-height:1.6;">If you need to correct or update this information, please <a href="${CANONICAL_SITE_URL}/contact" style="color:#174f87;font-weight:600;">submit a new form</a> or email <a href="mailto:${replyToMailto}" style="color:#174f87;font-weight:600;">${escapeHtml(replyToEmail)}</a>.</div><p style="margin:20px 0 0;color:#475569;font-size:13px;line-height:1.6;">This is an automated confirmation. Replies are directed to the email address above.</p>`,
         visitorLegalFooter(reservationYear)
       )
     },
