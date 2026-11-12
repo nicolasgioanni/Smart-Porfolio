@@ -10,7 +10,7 @@
     "dev": "next dev",
     "dev:pages": "npm run build && npm run db:migrate:local && npx --no-install wrangler pages dev out --env-file .env",
     "db:migrate:local": "npx --no-install wrangler d1 migrations apply CONTACT_RATE_LIMIT_DB --local",
-    "docs:check": "node scripts/validateDocumentation.mjs",
+    "docs:check": "node scripts/validateDocumentation.mjs && npm run agents:check",
     "audit:check": "node scripts/checkDependencyAudit.mjs",
     "update:contact-tlds": "node scripts/updateContactTlds.mjs",
     "generate:content": "node scripts/generateContent.mjs",
@@ -64,7 +64,12 @@
     "release:verify": "node scripts/release.mjs verify",
     "infrastructure:check": "node infra/validate-ownership.mjs",
     "test:infrastructure": "node --test infra/tests/saved-plan.test.mjs",
-    "test:infrastructure:policy": "node --test infra/tests/check-plan.test.mjs infra/tests/mock-plan-export.test.mjs"
+    "test:infrastructure:policy": "node --test infra/tests/check-plan.test.mjs infra/tests/mock-plan-export.test.mjs",
+    "agents:route": "node scripts/agentNavigation.mjs",
+    "agents:check": "node scripts/agentNavigation.mjs --check",
+    "test:agents": "vitest run scripts/agentNavigation.test.mjs",
+    "test:content-pipeline": "vitest run scripts/portfolioContentGeneration.test.ts",
+    "test:contact-functions": "vitest run functions/api/contact.test.ts functions/api/contact/verify.test.ts"
   },
   "dependencies": {
     "csv-parse": "^7.0.2",

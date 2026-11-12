@@ -1,16 +1,5 @@
 # Repository agent system
 
-This directory contains portable guidance for work in this repository. Start with [AGENTS.md](../AGENTS.md) for shared constraints, then select only the skill that matches the change.
+Read [AGENTS.md](../AGENTS.md), then [system decisions](knowledge/SYSTEM_DECISIONS.md). Run `npm run agents:route` for a compact index. Route by `npm run agents:route -- --domain theme`, `npm run agents:route -- --path src/lib/theme/themeTransition.ts`, or `npm run agents:route -- --task "theme transition"`. Add `--json` for machine-readable output. The command is read-only, reports one primary owner and its consumers, or reports ambiguity for a task; select one domain or use a path when ambiguous. No match is not an ownership claim.
 
-| Work | Skill |
-| --- | --- |
-| System boundaries, modules, routes, or documentation ownership | [Architecture](skills/portfolio-architecture/SKILL.md) |
-| Workbook input, generated content, or public assets | [Content pipeline](skills/portfolio-content-pipeline/SKILL.md) |
-| Components, themes, motion, dialogs, or accessibility | [Interface contracts](skills/portfolio-interface-contracts/SKILL.md) |
-| Tests, regressions, or quality evidence | [Validation](skills/portfolio-validation/SKILL.md) |
-| Endpoints, deployment, configuration, or release checks | [Release security](skills/portfolio-release-security/SKILL.md) |
-| Route skeletons, visual baselines, or held navigation | [Skeleton regression](skills/portfolio-skeleton-regression/SKILL.md) |
-
-The compact, durable project facts live in [system decisions](knowledge/SYSTEM_DECISIONS.md). Read a linked product document when the current task needs its details; do not load unrelated guidance by default.
-
-For a fresh clone, follow the ordered [agent workflow](../docs/development/AGENT_WORKFLOW.md) after reading this map. It leads from a focused worktree through local setup, skill selection, validation, and the authorized pull-request handoff; [local development](../docs/development/LOCAL_DEVELOPMENT.md) owns the dependency and server commands.
+Open the selected card, its relevant specialist, and the linked product section. Expand only when the task crosses a listed contract. [Agent workflow](../docs/development/AGENT_WORKFLOW.md) documents the registry schema, fixed-baseline workflow, checks, and budgets. Run `npm run agents:check` after registry changes; `npm run docs:check` includes it.

@@ -1,0 +1,978 @@
+{
+  "version": 1,
+  "patternSyntax": "literal paths or directory/**; exclusions override inclusion",
+  "excluded": [
+    {
+      "pattern": "src/content/generated/portfolio.generated.json",
+      "reason": "Generated development snapshot; templates and workbook own content."
+    },
+    {
+      "pattern": "docs/quality/evidence/**",
+      "reason": "Historical review evidence, not maintained guidance."
+    }
+  ],
+  "cards": [
+    {
+      "id": "home",
+      "card": ".agents/cards/home.md",
+      "responsibility": "Home composition and feature-local UI",
+      "ownerPatterns": [
+        "src/features/home/**"
+      ],
+      "ownerExclusions": [],
+      "consumers": [],
+      "entrypoints": [
+        "src/features/home/components/HomeOverview.tsx"
+      ],
+      "tests": [
+        "src/features/home/components/HomeEducationDetails.test.tsx"
+      ],
+      "specialists": [
+        "portfolio-interface-contracts"
+      ],
+      "authority": [
+        "docs/architecture/PROJECT_STRUCTURE.md#application-composition"
+      ],
+      "commands": [
+        "test:priority"
+      ],
+      "triggers": [
+        "home",
+        "landing",
+        "education"
+      ],
+      "expandWhen": [
+        "Expand to the relevant feature and content owners when its selected records or shared cards change."
+      ]
+    },
+    {
+      "id": "experience",
+      "card": ".agents/cards/experience.md",
+      "responsibility": "Experience detail UI and narratives",
+      "ownerPatterns": [
+        "src/features/experience/**"
+      ],
+      "ownerExclusions": [],
+      "consumers": [
+        "home"
+      ],
+      "entrypoints": [
+        "src/features/experience/components/ExperienceShowcase.tsx"
+      ],
+      "tests": [
+        "src/features/experience/components/ExperienceShowcase.test.tsx"
+      ],
+      "specialists": [
+        "portfolio-interface-contracts"
+      ],
+      "authority": [
+        "docs/architecture/PROJECT_STRUCTURE.md#application-composition"
+      ],
+      "commands": [
+        "test:e2e:experience"
+      ],
+      "triggers": [
+        "experience",
+        "employment"
+      ],
+      "expandWhen": [
+        "Expand to routes and skeletons for header geometry, or content for workbook changes."
+      ]
+    },
+    {
+      "id": "research",
+      "card": ".agents/cards/research.md",
+      "responsibility": "Research detail UI, media presentation and selectors",
+      "ownerPatterns": [
+        "src/features/research/**"
+      ],
+      "ownerExclusions": [],
+      "consumers": [
+        "home"
+      ],
+      "entrypoints": [
+        "src/features/research/components/ResearchShowcase.tsx"
+      ],
+      "tests": [
+        "src/features/research/components/ResearchShowcase.test.tsx"
+      ],
+      "specialists": [
+        "portfolio-interface-contracts"
+      ],
+      "authority": [
+        "docs/content/RESEARCH_MEDIA.md#cytocv-supplementary-video-s1"
+      ],
+      "commands": [
+        "test:e2e:research"
+      ],
+      "triggers": [
+        "research",
+        "video",
+        "captions"
+      ],
+      "expandWhen": [
+        "Fullscreen or captions require interface and content specialists; geometry requires skeleton guidance."
+      ]
+    },
+    {
+      "id": "projects",
+      "card": ".agents/cards/projects.md",
+      "responsibility": "Project showcase and feature-local preview behavior",
+      "ownerPatterns": [
+        "src/features/projects/**"
+      ],
+      "ownerExclusions": [],
+      "consumers": [
+        "home"
+      ],
+      "entrypoints": [
+        "src/features/projects/components/ProjectList.tsx"
+      ],
+      "tests": [
+        "src/features/projects/components/ProjectShowcase.test.tsx"
+      ],
+      "specialists": [
+        "portfolio-interface-contracts"
+      ],
+      "authority": [
+        "docs/content/PROJECT_SHOWCASE.md#preview-and-action-contract"
+      ],
+      "commands": [
+        "test:e2e:projects:webkit"
+      ],
+      "triggers": [
+        "projects",
+        "project preview",
+        "leetnotes"
+      ],
+      "expandWhen": [
+        "Asset or workbook changes require content guidance; card geometry requires skeleton guidance."
+      ]
+    },
+    {
+      "id": "recommendations",
+      "card": ".agents/cards/recommendations.md",
+      "responsibility": "Recommendation cards and selection",
+      "ownerPatterns": [
+        "src/features/recommendations/**"
+      ],
+      "ownerExclusions": [],
+      "consumers": [
+        "home"
+      ],
+      "entrypoints": [
+        "src/features/recommendations/components/RecommendationsList.tsx"
+      ],
+      "tests": [
+        "src/features/recommendations/components/RecommendationsList.test.tsx"
+      ],
+      "specialists": [
+        "portfolio-interface-contracts"
+      ],
+      "authority": [
+        "docs/architecture/PROJECT_STRUCTURE.md#application-composition"
+      ],
+      "commands": [
+        "test:e2e:recommendations"
+      ],
+      "triggers": [
+        "recommendations",
+        "recommendation"
+      ],
+      "expandWhen": [
+        "Expand to content when source fields change and shared UI when disclosure contracts change."
+      ]
+    },
+    {
+      "id": "skills",
+      "card": ".agents/cards/skills.md",
+      "responsibility": "Skill showcase UI",
+      "ownerPatterns": [
+        "src/features/skills/**"
+      ],
+      "ownerExclusions": [],
+      "consumers": [
+        "home",
+        "projects"
+      ],
+      "entrypoints": [
+        "src/features/skills/components/PortfolioSkillShowcase.tsx"
+      ],
+      "tests": [
+        "src/features/skills/components/PortfolioSkillShowcase.test.tsx"
+      ],
+      "specialists": [
+        "portfolio-interface-contracts"
+      ],
+      "authority": [
+        "docs/architecture/PROJECT_STRUCTURE.md#application-composition"
+      ],
+      "commands": [
+        "test:priority"
+      ],
+      "triggers": [
+        "skills showcase",
+        "skills cloud",
+        "skills"
+      ],
+      "expandWhen": [
+        "Expand to Home and Projects when shared skill presentation changes."
+      ]
+    },
+    {
+      "id": "legal",
+      "card": ".agents/cards/legal.md",
+      "responsibility": "Legal document presentation",
+      "ownerPatterns": [
+        "src/features/legal/**"
+      ],
+      "ownerExclusions": [],
+      "consumers": [],
+      "entrypoints": [
+        "src/features/legal/components/LegalDocument.tsx"
+      ],
+      "tests": [
+        "src/features/legal/components/legal.test.tsx"
+      ],
+      "specialists": [
+        "portfolio-interface-contracts"
+      ],
+      "authority": [
+        "docs/architecture/PROJECT_STRUCTURE.md#application-composition"
+      ],
+      "commands": [
+        "test:priority"
+      ],
+      "triggers": [
+        "legal",
+        "privacy",
+        "terms"
+      ],
+      "expandWhen": [
+        "Expand to routes and contact security when a policy or trust boundary changes."
+      ]
+    },
+    {
+      "id": "resume",
+      "card": ".agents/cards/resume.md",
+      "responsibility": "Resume panel presentation",
+      "ownerPatterns": [
+        "src/features/resume/**"
+      ],
+      "ownerExclusions": [],
+      "consumers": [],
+      "entrypoints": [
+        "src/features/resume/components/ResumePanel.tsx"
+      ],
+      "tests": [
+        "src/app/resume/resume.test.tsx"
+      ],
+      "specialists": [
+        "portfolio-interface-contracts"
+      ],
+      "authority": [
+        "docs/architecture/PROJECT_STRUCTURE.md#application-composition"
+      ],
+      "commands": [
+        "test:priority"
+      ],
+      "triggers": [
+        "resume",
+        "r\u00e9sum\u00e9"
+      ],
+      "expandWhen": [
+        "Expand to content and routes when source or exported fallback behavior changes."
+      ]
+    },
+    {
+      "id": "contact-ui",
+      "card": ".agents/cards/contact-ui.md",
+      "responsibility": "Contact form, notifications and browser validation",
+      "ownerPatterns": [
+        "src/features/contact/**"
+      ],
+      "ownerExclusions": [],
+      "consumers": [],
+      "entrypoints": [
+        "src/features/contact/components/ContactForm.tsx"
+      ],
+      "tests": [
+        "src/features/contact/components/contactRequest.test.ts"
+      ],
+      "specialists": [
+        "portfolio-interface-contracts"
+      ],
+      "authority": [
+        "docs/security/CONTACT_SYSTEM.md#client-experience"
+      ],
+      "commands": [
+        "test:e2e:contact"
+      ],
+      "triggers": [
+        "contact form",
+        "contact ui",
+        "turnstile widget",
+        "contact"
+      ],
+      "expandWhen": [
+        "Endpoint or validation changes require contact-functions and release-security guidance."
+      ]
+    },
+    {
+      "id": "routes-seo",
+      "card": ".agents/cards/routes-seo.md",
+      "responsibility": "Route composition, metadata, static fallback and indexing",
+      "ownerPatterns": [
+        "src/app/**",
+        "src/components/seo/**",
+        "src/lib/routing/**",
+        "src/lib/seo/**"
+      ],
+      "ownerExclusions": [
+        "src/app/RouteSkeleton.tsx"
+      ],
+      "consumers": [],
+      "entrypoints": [
+        "src/app/layout.tsx"
+      ],
+      "tests": [
+        "tests/e2e/progressiveEnhancement.spec.ts"
+      ],
+      "specialists": [
+        "portfolio-architecture"
+      ],
+      "authority": [
+        "docs/architecture/PROJECT_STRUCTURE.md#documented-application-routes"
+      ],
+      "commands": [
+        "test:e2e:priority"
+      ],
+      "triggers": [
+        "routes",
+        "route",
+        "seo",
+        "no javascript",
+        "no-js",
+        "static fallback"
+      ],
+      "expandWhen": [
+        "Expand to the feature and skeleton owners for content or loader changes; test static export without JavaScript."
+      ]
+    },
+    {
+      "id": "content",
+      "card": ".agents/cards/content.md",
+      "responsibility": "Workbook ingestion, templates, assets and content normalization",
+      "ownerPatterns": [
+        "public/images/**",
+        "scripts/demoAssets.test.mjs",
+        "scripts/fetchPortfolioContent.ts",
+        "scripts/generateContent.mjs",
+        "scripts/lib/pngMetadata.mjs",
+        "scripts/lib/portfolioContentGeneration.ts",
+        "scripts/lib/workbookArchive.ts",
+        "scripts/lib/workbookTransport.test.ts",
+        "scripts/lib/workbookTransport.ts",
+        "scripts/pngMetadata.test.mjs",
+        "scripts/portfolioContentGeneration.test.ts",
+        "scripts/stripPngMetadata.mjs",
+        "src/content/templates/**",
+        "src/content/types.ts",
+        "src/lib/content/**",
+        "src/lib/csv/**",
+        "src/lib/formatting/**",
+        "src/lib/media/**"
+      ],
+      "ownerExclusions": [],
+      "consumers": [
+        "home",
+        "experience",
+        "research",
+        "projects",
+        "recommendations",
+        "skills",
+        "routes-seo"
+      ],
+      "entrypoints": [
+        "scripts/generateContent.mjs"
+      ],
+      "tests": [
+        "scripts/portfolioContentGeneration.test.ts"
+      ],
+      "specialists": [
+        "portfolio-content-pipeline"
+      ],
+      "authority": [
+        "docs/content/CONTENT_PIPELINE.md#pipeline-overview"
+      ],
+      "commands": [
+        "test:content-pipeline"
+      ],
+      "triggers": [
+        "workbook",
+        "content pipeline",
+        "content",
+        "assets"
+      ],
+      "expandWhen": [
+        "Expand to affected features for presentation and release guidance for strict candidate changes."
+      ]
+    },
+    {
+      "id": "contact-functions",
+      "card": ".agents/cards/contact-functions.md",
+      "responsibility": "Contact endpoint handlers and shared server modules",
+      "ownerPatterns": [
+        "functions/**"
+      ],
+      "ownerExclusions": [],
+      "consumers": [
+        "contact-ui"
+      ],
+      "entrypoints": [
+        "functions/api/contact.ts"
+      ],
+      "tests": [
+        "functions/api/contact.test.ts"
+      ],
+      "specialists": [
+        "portfolio-release-security"
+      ],
+      "authority": [
+        "docs/security/CONTACT_SYSTEM.md#endpoint-contract"
+      ],
+      "commands": [
+        "test:contact-functions"
+      ],
+      "triggers": [
+        "contact endpoint",
+        "contact function",
+        "contact api",
+        "contact delivery",
+        "contact"
+      ],
+      "expandWhen": [
+        "Migrations, endpoint routes or provider configuration require migrations and release-security guidance."
+      ]
+    },
+    {
+      "id": "migrations",
+      "card": ".agents/cards/migrations.md",
+      "responsibility": "Contact D1 migration history",
+      "ownerPatterns": [
+        "migrations/**"
+      ],
+      "ownerExclusions": [],
+      "consumers": [
+        "contact-functions",
+        "release"
+      ],
+      "entrypoints": [
+        "migrations/0001_contact_rate_reservations.sql"
+      ],
+      "tests": [
+        "scripts/d1Reservation.integration.test.ts"
+      ],
+      "specialists": [
+        "portfolio-release-security"
+      ],
+      "authority": [
+        "docs/security/CONTACT_SYSTEM.md#configuration"
+      ],
+      "commands": [
+        "test:infrastructure"
+      ],
+      "triggers": [
+        "migration",
+        "d1 schema"
+      ],
+      "expandWhen": [
+        "Expand to contact-functions and release for query compatibility and deployment migration sequencing."
+      ]
+    },
+    {
+      "id": "theme",
+      "card": ".agents/cards/theme.md",
+      "responsibility": "Theme preference, transition and palette tokens",
+      "ownerPatterns": [
+        "src/components/theme/**",
+        "src/lib/theme/**",
+        "src/styles/themePalette.test.ts",
+        "src/styles/tokens.css"
+      ],
+      "ownerExclusions": [],
+      "consumers": [
+        "shared-ui"
+      ],
+      "entrypoints": [
+        "src/lib/theme/themeTransition.ts"
+      ],
+      "tests": [
+        "src/lib/theme/themeTransition.test.ts"
+      ],
+      "specialists": [
+        "portfolio-interface-contracts"
+      ],
+      "authority": [
+        "docs/design/DESIGN_SYSTEM.md#themes"
+      ],
+      "commands": [
+        "test:navigation"
+      ],
+      "triggers": [
+        "theme",
+        "dark mode",
+        "palette"
+      ],
+      "expandWhen": [
+        "Palette, reduced-motion or transition changes require interface guidance and affected shared UI tests."
+      ]
+    },
+    {
+      "id": "shared-ui",
+      "card": ".agents/cards/shared-ui.md",
+      "responsibility": "Neutral shared components, shell, styles and contact validation",
+      "ownerPatterns": [
+        "public/favicon.ico",
+        "public/favicon/**",
+        "src/components/glass/**",
+        "src/components/icons/**",
+        "src/components/layout/**",
+        "src/components/navigation/**",
+        "src/components/overlay/**",
+        "src/components/portfolio/**",
+        "src/components/responsive/**",
+        "src/lib/contact/**",
+        "src/styles/base.css",
+        "src/styles/content.css",
+        "src/styles/detail.css",
+        "src/styles/dialog.css",
+        "src/styles/glass.css",
+        "src/styles/interactions.css",
+        "src/styles/layout.css",
+        "src/styles/navigation.css",
+        "src/styles/typographyStyles.test.ts",
+        "src/styles/utilities.css"
+      ],
+      "ownerExclusions": [],
+      "consumers": [
+        "home",
+        "experience",
+        "research",
+        "projects",
+        "recommendations",
+        "skills",
+        "legal",
+        "resume",
+        "contact-ui",
+        "routes-seo"
+      ],
+      "entrypoints": [
+        "src/components/overlay/ModalDialog.tsx"
+      ],
+      "tests": [
+        "src/components/overlay/ModalDialog.test.tsx"
+      ],
+      "specialists": [
+        "portfolio-interface-contracts"
+      ],
+      "authority": [
+        "docs/design/DESIGN_SYSTEM.md#surface-primitives"
+      ],
+      "commands": [
+        "test:navigation"
+      ],
+      "triggers": [
+        "modal",
+        "navigation",
+        "shared ui",
+        "dialog"
+      ],
+      "expandWhen": [
+        "Theme writes, dialogs or feature composition require the relevant theme or feature owner."
+      ]
+    },
+    {
+      "id": "motion",
+      "card": ".agents/cards/motion.md",
+      "responsibility": "Shared motion primitives and reduced-motion behavior",
+      "ownerPatterns": [
+        "src/components/motion/**",
+        "src/styles/motion.css"
+      ],
+      "ownerExclusions": [],
+      "consumers": [
+        "shared-ui",
+        "home"
+      ],
+      "entrypoints": [
+        "src/components/motion/ScrollReveal.tsx"
+      ],
+      "tests": [
+        "src/components/motion/motion.test.tsx"
+      ],
+      "specialists": [
+        "portfolio-interface-contracts"
+      ],
+      "authority": [
+        "docs/design/ANIMATION_GUIDELINES.md#reduced-motion"
+      ],
+      "commands": [
+        "test:priority"
+      ],
+      "triggers": [
+        "motion",
+        "animation",
+        "reduced motion"
+      ],
+      "expandWhen": [
+        "Expand to interface guidance for focus or geometry and the consuming feature for its animation."
+      ]
+    },
+    {
+      "id": "skeletons",
+      "card": ".agents/cards/skeletons.md",
+      "responsibility": "Shared loader routing, alignment, transitions and visual baselines",
+      "ownerPatterns": [
+        ".github/workflows/skeleton-baselines.yml",
+        "scripts/renderRouteSkeleton.test.mjs",
+        "scripts/skeletonBaselineWorkflow.test.mjs",
+        "scripts/skeletonGuidance.test.mjs",
+        "src/app/RouteSkeleton.tsx",
+        "src/components/loading/**",
+        "src/styles/skeletons.css",
+        "tests/e2e/__screenshots__/**",
+        "tests/e2e/experienceOverrideSkeletonMarkup.ts",
+        "tests/e2e/renderExperienceOverrideSkeleton.tsx",
+        "tests/e2e/renderRouteSkeleton.tsx",
+        "tests/e2e/renderSkeletonAlignment.tsx",
+        "tests/e2e/skeleton-alignment.spec.ts",
+        "tests/e2e/skeletonAlignmentMarkup.ts",
+        "tests/e2e/skeletonMarkup.ts",
+        "tests/e2e/skeletonTestHelpers.ts",
+        "tests/e2e/skeletons.transition.spec.ts",
+        "tests/e2e/skeletons.visual.spec.ts",
+        "tests/e2e/standaloneSkeletonDocument.ts",
+        "tests/fixtures/**"
+      ],
+      "ownerExclusions": [],
+      "consumers": [
+        "routes-seo"
+      ],
+      "entrypoints": [
+        "src/app/RouteSkeleton.tsx"
+      ],
+      "tests": [
+        "tests/e2e/skeleton-alignment.spec.ts"
+      ],
+      "specialists": [
+        "portfolio-skeleton-regression"
+      ],
+      "authority": [
+        "docs/design/SKELETON_LOADING_GUIDELINES.md#visual-and-transition-regression-coverage"
+      ],
+      "commands": [
+        "test:e2e:skeletons"
+      ],
+      "triggers": [
+        "skeleton",
+        "loader",
+        "loading geometry"
+      ],
+      "expandWhen": [
+        "Any geometry, transition or baseline change requires the skeleton specialist and reviewed Linux baselines."
+      ]
+    },
+    {
+      "id": "tests",
+      "card": ".agents/cards/tests.md",
+      "responsibility": "Cross-domain browser and quality test harness",
+      "ownerPatterns": [
+        "playwright.ci.config.ts",
+        "playwright.config.ts",
+        "playwright.release.config.ts",
+        "scripts/quality/**",
+        "src/lib/architecture/**",
+        "tests/e2e/**",
+        "vitest.config.ts",
+        "vitest.setup.ts"
+      ],
+      "ownerExclusions": [
+        "tests/e2e/__screenshots__/**",
+        "tests/e2e/experienceOverrideSkeletonMarkup.ts",
+        "tests/e2e/renderExperienceOverrideSkeleton.tsx",
+        "tests/e2e/renderRouteSkeleton.tsx",
+        "tests/e2e/renderSkeletonAlignment.tsx",
+        "tests/e2e/skeleton-alignment.spec.ts",
+        "tests/e2e/skeletonAlignmentMarkup.ts",
+        "tests/e2e/skeletonMarkup.ts",
+        "tests/e2e/skeletonTestHelpers.ts",
+        "tests/e2e/skeletons.transition.spec.ts",
+        "tests/e2e/skeletons.visual.spec.ts",
+        "tests/e2e/standaloneSkeletonDocument.ts"
+      ],
+      "consumers": [
+        "ci"
+      ],
+      "entrypoints": [
+        "playwright.config.ts"
+      ],
+      "tests": [
+        "tests/e2e/accessibility.spec.ts"
+      ],
+      "specialists": [
+        "portfolio-validation"
+      ],
+      "authority": [
+        "docs/quality/TESTING.md#command-matrix"
+      ],
+      "commands": [
+        "test:e2e:accessibility"
+      ],
+      "triggers": [
+        "test harness",
+        "accessibility scan",
+        "browser tests"
+      ],
+      "expandWhen": [
+        "CI assignment changes require CI evidence guidance; loader regressions require the skeleton specialist."
+      ]
+    },
+    {
+      "id": "tooling",
+      "card": ".agents/cards/tooling.md",
+      "responsibility": "Local automation, build adapters and package configuration",
+      "ownerPatterns": [
+        ".env.example",
+        ".gitattributes",
+        ".gitignore",
+        ".nvmrc",
+        "LICENSE",
+        "eslint.config.mjs",
+        "next.config.mjs",
+        "package-lock.json",
+        "package.json",
+        "scripts/checkDependencyAudit.mjs",
+        "scripts/checkDependencyAudit.test.mjs",
+        "scripts/clean-local.mjs",
+        "scripts/clean-local.ps1",
+        "scripts/contactTransport.integration.test.ts",
+        "scripts/d1Configuration.test.mjs",
+        "scripts/d1Reservation.integration.test.ts",
+        "scripts/envConfiguration.test.mjs",
+        "scripts/lib/localAutomation.mjs",
+        "scripts/lib/readRegularFile.mjs",
+        "scripts/lib/readRegularFile.test.mjs",
+        "scripts/localAutomation.test.mjs",
+        "scripts/nextBuildAdapter.mjs",
+        "scripts/normalizeNextStaticExport.mjs",
+        "scripts/normalizeNextStaticExport.test.mjs",
+        "scripts/packageScripts.test.mjs",
+        "scripts/runValidationTier.mjs",
+        "scripts/runValidationTier.test.mjs",
+        "scripts/runVerification.mjs",
+        "scripts/runVerification.test.mjs",
+        "scripts/setup-local.mjs",
+        "scripts/setup-local.ps1",
+        "scripts/start-dev.mjs",
+        "scripts/start-dev.ps1",
+        "scripts/updateContactTlds.mjs",
+        "scripts/updateContactTlds.test.mjs",
+        "scripts/verify-local.mjs",
+        "scripts/verify-local.ps1",
+        "tsconfig.json"
+      ],
+      "ownerExclusions": [],
+      "consumers": [],
+      "entrypoints": [
+        "package.json"
+      ],
+      "tests": [
+        "scripts/localAutomation.test.mjs"
+      ],
+      "specialists": [
+        "portfolio-architecture"
+      ],
+      "authority": [
+        "docs/development/LOCAL_DEVELOPMENT.md#dependency-contract"
+      ],
+      "commands": [
+        "lint"
+      ],
+      "triggers": [
+        "tooling",
+        "local setup",
+        "build adapter"
+      ],
+      "expandWhen": [
+        "Static export changes require routes and release review; CI command changes require CI guidance."
+      ]
+    },
+    {
+      "id": "ci",
+      "card": ".agents/cards/ci.md",
+      "responsibility": "Workflow orchestration, candidate snapshots and rerun evidence",
+      "ownerPatterns": [
+        ".github/workflows/ci.yml",
+        "scripts/candidateAdmissionWorkflow.test.mjs",
+        "scripts/ci/**",
+        "scripts/heartbeatWorkflow.test.mjs"
+      ],
+      "ownerExclusions": [],
+      "consumers": [
+        "release"
+      ],
+      "entrypoints": [
+        "scripts/ci/run.mjs"
+      ],
+      "tests": [
+        "scripts/ci/workflowGraph.test.mjs"
+      ],
+      "specialists": [
+        "portfolio-validation"
+      ],
+      "authority": [
+        "docs/quality/CI_CONTRACTS.md#candidate-and-execution-plan"
+      ],
+      "commands": [
+        "test"
+      ],
+      "triggers": [
+        "ci",
+        "rerun",
+        "workflow",
+        "snapshot evidence"
+      ],
+      "expandWhen": [
+        "Reruns, artifact identity or job dependencies require the CI evidence guide and workflow tests."
+      ]
+    },
+    {
+      "id": "release",
+      "card": ".agents/cards/release.md",
+      "responsibility": "Release artifacts, deployment and security checks",
+      "ownerPatterns": [
+        "public/_headers",
+        "public/_routes.json",
+        "scripts/artifactIntegrity.mjs",
+        "scripts/checkDeployedContent.mjs",
+        "scripts/checkDeployedContent.test.mjs",
+        "scripts/release.mjs",
+        "scripts/release/**",
+        "scripts/security/**",
+        "scripts/writeContentVersion.mjs",
+        "security/**",
+        "wrangler.jsonc"
+      ],
+      "ownerExclusions": [],
+      "consumers": [],
+      "entrypoints": [
+        "scripts/release.mjs"
+      ],
+      "tests": [
+        "scripts/release/sealedRelease.test.mjs"
+      ],
+      "specialists": [
+        "portfolio-release-security"
+      ],
+      "authority": [
+        "docs/operations/DEPLOYMENT.md#single-snapshot-exact-artifact-pipeline"
+      ],
+      "commands": [
+        "release:verify"
+      ],
+      "triggers": [
+        "release",
+        "deployment",
+        "artifact",
+        "security scan"
+      ],
+      "expandWhen": [
+        "Changes to endpoints, migrations or infrastructure require those owners and release-security guidance."
+      ]
+    },
+    {
+      "id": "infrastructure",
+      "card": ".agents/cards/infrastructure.md",
+      "responsibility": "Terraform ownership, plan policy and branch ruleset",
+      "ownerPatterns": [
+        ".github/rulesets/**",
+        "infra/**",
+        "scripts/permanentBranchRuleset.test.mjs"
+      ],
+      "ownerExclusions": [],
+      "consumers": [
+        "ci",
+        "release"
+      ],
+      "entrypoints": [
+        "infra/validate-ownership.mjs"
+      ],
+      "tests": [
+        "infra/tests/saved-plan.test.mjs"
+      ],
+      "specialists": [
+        "portfolio-release-security"
+      ],
+      "authority": [
+        "docs/infrastructure/TERRAFORM_OWNERSHIP.md#local-source-checks"
+      ],
+      "commands": [
+        "infrastructure:check"
+      ],
+      "triggers": [
+        "terraform",
+        "infrastructure",
+        "plan policy",
+        "branch ruleset"
+      ],
+      "expandWhen": [
+        "Adoption or cloud mutation requires explicit authorization; coordinate with release and CI owners."
+      ]
+    },
+    {
+      "id": "documentation",
+      "card": ".agents/cards/documentation.md",
+      "responsibility": "Agent navigation and product documentation",
+      "ownerPatterns": [
+        ".agents/**",
+        "AGENTS.md",
+        "README.md",
+        "docs/**",
+        "scripts/agentNavigation.mjs",
+        "scripts/agentNavigation.test.mjs",
+        "scripts/validateDocumentation.mjs",
+        "scripts/validateDocumentation.test.mjs"
+      ],
+      "ownerExclusions": [
+        "docs/quality/evidence/**"
+      ],
+      "consumers": [],
+      "entrypoints": [
+        "scripts/validateDocumentation.mjs"
+      ],
+      "tests": [
+        "scripts/agentNavigation.test.mjs"
+      ],
+      "specialists": [
+        "portfolio-architecture"
+      ],
+      "authority": [
+        "docs/development/AGENT_WORKFLOW.md#agent-registry-and-routing"
+      ],
+      "commands": [
+        "test:agents",
+        "docs:check"
+      ],
+      "triggers": [
+        "documentation",
+        "docs",
+        "agent navigation",
+        "ownership map"
+      ],
+      "expandWhen": [
+        "Ownership, command or section changes require the affected domain card and registry checks."
+      ]
+    }
+  ]
+}

@@ -5,9 +5,9 @@ Repository-local guidance makes the architecture and validation contracts availa
 ## Start a repository task
 
 1. Read [AGENTS.md](../../AGENTS.md), then the scoped map in [.agents](../../.agents/README.md) and its system decisions before opening unrelated documentation.
-2. Before creating a new focused branch and worktree for a cohesive change, the coordinating checkout must fetch `origin`, fast-forward local `main` from `origin/main`, and record the resulting SHA as the fixed baseline. To continue that same change, retain its existing worktree and original recorded baseline without refresh, re-recording, or sync. After recording the baseline, do not merge, rebase, cherry-pick, pull, or otherwise sync newer `main` or unrelated branch work into it, except for an integration delta expressly authorized by the current task and recorded with the original baseline.
+2. Create an isolated fixed-baseline worktree only when the current task authorizes it. When authorized, the coordinator fetches and fast-forwards `main` first and records the baseline; continuation retains that baseline without refresh or sync. An explicit current-worktree or local-only instruction forbids fetches, worktrees, imports, rebases, branch recreation, pushes, and remote mutation; record a supplied baseline privately. Only an explicitly authorized and recorded integration delta may change the baseline relationship.
 3. Complete the Windows or cross-platform setup path in [Local development](LOCAL_DEVELOPMENT.md) inside that worktree. It defines the Node and npm dependency contract, `.env` handling, local content source, and when to use the static UI or Pages Function server. Do not create a `requirements.txt`; `package.json`, `package-lock.json`, and `.nvmrc` are authoritative.
-4. Search for the closest implementation, test, selector, and style primitive. Select the smallest relevant repository skill below and read its linked authoritative product guide before making the change.
+4. Route to one ownership card, then search for the closest implementation, test, selector, and style primitive. Read its relevant specialist and linked authoritative product section before making the change.
 5. For deployment, configuration, or release changes, select the release-security skill and read [Deployment](../operations/DEPLOYMENT.md) before editing the workflow, Wrangler configuration, bindings, secrets documentation, or operator instructions. Pull requests never deploy; `develop` deploys preview and `main` deploys production.
 6. Make the narrowest coherent change, updating the guide that owns every changed contract.
 7. Run the focused checks and the appropriate gate from [Testing](../quality/TESTING.md). Use `npm run verify:priority` for pull-request-sized work after installing Chromium; reserve `npm run verify:full` on Ubuntu 24.04 for a release candidate.
@@ -30,8 +30,16 @@ Read the linked product document only when the selected task needs its detail. T
 
 ## Model routing
 
-Use Sol or Astra for coordination, review, decomposition, and evidence synthesis. Use GPT-5.6 Terra at High or Extra High for implementation. If a requested capability is unavailable in a cloned environment, follow the same checked repository contracts with the available tooling and report the validation actually performed.
+Use GPT-6.1 Sol for coordination, review, decomposition, and evidence synthesis. Use GPT-6.1 Terra at High or Extra High for implementation. If a requested capability is unavailable in a cloned environment, follow the same checked repository contracts with the available tooling and report the validation actually performed.
 
 ## Complete a change
 
 Find an existing implementation before adding a new one. Keep work in a focused branch or worktree, update the applicable product and agent documentation with a changed contract, and run the relevant checks from [Testing](../quality/TESTING.md). A passing CI status is evidence from the configured workflow; merge enforcement remains a repository setting and must not be assumed from this documentation.
+
+## Agent registry and routing
+
+The versioned [registry](../../.agents/agent-map.json) has 23 cards. Each defines responsibility, disjoint primary owner patterns and optional exclusions, downstream consumers, entrypoints and tests, specialist IDs, authoritative sections, npm script names, task triggers, and expansion triggers. Patterns are exact repository-relative paths or directory prefixes ending in `/**`; exclusions override inclusions. Generated snapshots and historical evidence are explicitly excluded. `npm run agents:check` checks tracked and unignored new files for exactly one owner or one exclusion, rejects unused patterns, missing cards or references, stale commands and anchors, and validates guidance budgets. `npm run docs:check` runs this after the bounded Markdown validator.
+
+Use `npm run agents:route` for a compact index, `npm run agents:route -- --domain theme`, `npm run agents:route -- --path src/lib/theme/themeTransition.ts`, or `npm run agents:route -- --task "theme transition"`; add `--json` for structured results. Task triggers select the longest matching phrase; ties are reported as ambiguous. A path reports its primary owner, not every consumer. Open one card and its specialist and linked authority, then expand when the task crosses their contracts. Routing reads local files only and does not change the tree.
+
+Core guidance is limited to 6,144 bytes combined, each card to 2,048, each specialist to 4,096, and normal startup (core, one card, and its specialists) to 12,288. Keep detailed contracts in their authoritative product sections and links in focused guidance.

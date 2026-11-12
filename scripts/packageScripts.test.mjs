@@ -46,7 +46,8 @@ describe("package and CI deployment automation", () => {
     expect(nextConfigSource).toMatch(/adapterPath:\s*fileURLToPath\(new URL\("\.\/scripts\/nextBuildAdapter\.mjs"/);
     expect(nextConfigSource).toMatch(/output:\s*"export"/);
     expect(packageJson.scripts["dev:pages"]).toContain("npx --no-install wrangler");
-    expect(packageJson.scripts["docs:check"]).toBe("node scripts/validateDocumentation.mjs");
+    expect(packageJson.scripts["docs:check"]).toBe("node scripts/validateDocumentation.mjs && npm run agents:check");
+    expect(packageJson.scripts["agents:check"]).toBe("node scripts/agentNavigation.mjs --check");
     expect(packageJson.scripts["audit:check"]).toBe("node scripts/checkDependencyAudit.mjs");
     expect(packageJson.scripts["generate:content"]).toBe("node scripts/generateContent.mjs");
     expect(packageJson.scripts.verify).toBe("node scripts/runVerification.mjs verify");

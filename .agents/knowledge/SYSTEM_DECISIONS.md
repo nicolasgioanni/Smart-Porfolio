@@ -1,17 +1,14 @@
 # System decisions
 
-This is a compact routing reference. The linked implementation and product documents remain authoritative when detail matters.
+This compact reference links to authoritative product documentation; update it when a durable decision changes.
 
-| Decision | Current contract | Authority |
+| Decision | Contract | Authority |
 | --- | --- | --- |
-| Rendering | Portfolio pages are static-first. Browser code enhances interaction and does not fetch portfolio content. | [Architecture](../../docs/architecture/ARCHITECTURE.md) |
-| Content | Checked-in templates support local and pull-request work. Strict production candidates use one validated workbook snapshot, then generate public-safe JSON. | [Content pipeline](../../docs/content/CONTENT_PIPELINE.md) |
-| UI primitives | Reuse shared navigation, modal, theme-transition, content, loading, and detail-disclosure primitives before adding variants. Research fullscreen retains its video element through container fullscreen or the shared modal’s persistent in-place presentation. `DetailDisclosureList` and `useDetailDisclosure` keep one Research or Experience evidence row active per route; above `980px` only its opaque panel overlays below an in-flow summary, while smaller viewports use normal flow. | [Project structure](../../docs/architecture/PROJECT_STRUCTURE.md), [Design system](../../docs/design/DESIGN_SYSTEM.md), [Accessibility](../../docs/design/ACCESSIBILITY.md) |
-| Project previews | Workbook records stay authoritative; five known IDs gain a typed local screenshot registry (including optional narrow source metadata) or a native LeetNotes preview, status badges, source-linked workflows, and independent accessible 3D switchers. Source-first actions and content-derived skeletons are shared with Home. | [Project showcase](../../docs/content/PROJECT_SHOWCASE.md) |
-| Module direction | Features own domain components, selectors, loaders, and styles; routes compose. Libraries and shared components remain neutral. ESLint and a TypeScript-resolved import graph enforce aliases, relative and re-export edges, documented feature directions, and cycle rejection. | [Project structure](../../docs/architecture/PROJECT_STRUCTURE.md) |
-| Appearance | Surfaces are solid semantic tiers, with translucency and restrained blur allowed only in Research video controls with an opaque fallback. Theme writes use the shared transition helper; motion must have a reduced-motion fallback. | [Design system](../../docs/design/DESIGN_SYSTEM.md) |
-| Contact | Static pages and isolated Pages Functions have separate trust boundaries. Outcomes use a contact body-portal stack; shared email validation uses an offline IANA snapshot. Shared provider transport is tested in local Workers. Endpoint changes require validation, abuse controls, and documented runtime configuration. | [Contact system](../../docs/security/CONTACT_SYSTEM.md) |
-| Deployment | A verified static artifact is built from an exact candidate and deployed only after its integrity checks. `main` is production and `develop` is preview. The tracked permanent-branch ruleset blocks deletion and non-fast-forward updates for both exact refs; `main`'s separate pull-request and required-`verify` policy remains the retained governance target. | [Deployment](../../docs/operations/DEPLOYMENT.md) |
-| Regressions | Unit, integration, browser, and Linux-only skeleton visual contracts protect distinct behavior. Keep assertions strict and select the narrowest relevant command first. | [Testing](../../docs/quality/TESTING.md) |
-
-When a durable decision changes, update this table and its linked authoritative document in the same change. Do not turn task history into permanent guidance.
+| Rendering | Static-first pages; browser code enhances interaction and never fetches portfolio content. | [Architecture](../../docs/architecture/ARCHITECTURE.md) |
+| Content | Templates support local work; production uses one validated workbook snapshot and public-safe generated JSON. | [Content pipeline](../../docs/content/CONTENT_PIPELINE.md) |
+| Ownership | Features own domain UI, selectors, loaders and styles; routes compose, shared components and libraries stay neutral. Enforced import directions allow Home to selected features and Projects to Skills. | [Project structure](../../docs/architecture/PROJECT_STRUCTURE.md#application-composition) |
+| UI | Reuse shared theme transition, modal, navigation and loading primitives. Keep solid semantic surfaces and reduced-motion fallbacks. | [Design system](../../docs/design/DESIGN_SYSTEM.md), [Accessibility](../../docs/design/ACCESSIBILITY.md) |
+| Media | Projects records remain workbook-owned; Research uses existing resolvers and captions. The reviewed transcript remains an integrity asset without an interface link. | [Project showcase](../../docs/content/PROJECT_SHOWCASE.md), [Research media](../../docs/content/RESEARCH_MEDIA.md) |
+| Contact | Static pages and Pages Functions have separate trust boundaries. Shared offline validation does not replace endpoint validation or abuse controls. | [Contact system](../../docs/security/CONTACT_SYSTEM.md) |
+| Deployment | Verify the exact static artifact; `main` is production and `develop` preview. Tracked branch policy is distinct from observed live settings. | [Deployment](../../docs/operations/DEPLOYMENT.md) |
+| Regressions | Unit, integration, browser, and Linux-only skeleton visual contracts protect distinct behavior. | [Testing](../../docs/quality/TESTING.md) |

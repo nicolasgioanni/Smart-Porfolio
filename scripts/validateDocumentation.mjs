@@ -370,7 +370,7 @@ function hasPrivateWorkbookUrl(source) {
   );
 }
 
-function extractHeadingAnchors(source) {
+export function extractHeadingAnchors(source) {
   const anchors = new Set();
   const duplicateCounts = new Map();
 
