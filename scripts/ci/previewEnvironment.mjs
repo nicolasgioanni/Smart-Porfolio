@@ -35,7 +35,7 @@ export async function verifyPreviewEnvironment({ environment = process.env, fetc
       settings.deployment_branch_policy?.custom_branch_policies !== true || !Array.isArray(settings.protection_rules) ||
       settings.protection_rules.filter((rule) => rule.type === "branch_policy").length !== 1 ||
       settings.protection_rules.some((rule) => !["branch_policy", "wait_timer", "required_reviewers"].includes(rule.type)) ||
-      (Object.hasOwn(settings, "can_admins_bypass") && settings.can_admins_bypass !== false) ||
+      settings.can_admins_bypass !== false ||
       branches.total_count !== 1 || !Array.isArray(branches.branch_policies) || branches.branch_policies.length !== 1 ||
       branches.branch_policies[0].name !== "develop" ||
       (Object.hasOwn(branches.branch_policies[0], "type") && branches.branch_policies[0].type !== "branch")) throw failure();

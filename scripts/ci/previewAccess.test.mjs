@@ -41,6 +41,9 @@ describe("private preview activation", () => {
     expect(fetcher).toHaveBeenCalledTimes(4);
   });
   it.each([
+    ["end-user Pages path", [...apps, { type: "end_user", domain: "develop.smart-portfolio-bds.pages.dev/research", destinations: [{ type: "public", uri: "develop.smart-portfolio-bds.pages.dev/research", overrides: [{ behavior: "public", path_pattern: "/*" }] }] }], policies],
+    ["end-user custom-host path", [...apps, { type: "end_user", destinations: [{ type: "public", uri: "preview.example.com/research", overrides: [{ behavior: "public", path_pattern: "/*" }] }] }], policies],
+    ["public destination without URI", [...apps, { type: "end_user", destinations: [{ type: "public" }] }], policies],
     ["extra broad app", [...apps, { type: "self_hosted", domain: "*.pages.dev" }], policies],
     ["preflight bypass", [apps[0], { ...apps[1], options_preflight_bypass: true }], policies],
     ["public destination", [apps[0], { ...apps[1], destinations: [{ uri: "*.smart-portfolio-bds.pages.dev", overrides: [{ behavior: "public", path_pattern: "/" }] }] }], policies],
@@ -48,6 +51,10 @@ describe("private preview activation", () => {
     ["incorrect token", apps, [policies[0], [{ ...servicePolicy, include: [{ service_token: { token_id: "other" } }] }, policies[1][1]]]],
     ["bypass decision", apps, [policies[0], [{ ...servicePolicy, decision: "bypass" }, policies[1][1]]]]
   ])("rejects %s", async (_name, data, rules) => { await expect(verifyPreviewAccess({ environment, fetcher: provider(data, rules) })).rejects.toThrow(); });
+  it("allows an unrelated end-user public destination", async () => {
+    const unrelated = { type: "end_user", domain: "unrelated.example.net/research", destinations: [{ type: "public", uri: "unrelated.example.net/research", overrides: [{ behavior: "public", path_pattern: "/*" }] }] };
+    await expect(verifyPreviewAccess({ environment, fetcher: provider([...apps, unrelated]) })).resolves.toBeUndefined();
+  });
   it("rejects incomplete pagination and provider failures", async () => {
     await expect(verifyPreviewAccess({ environment, fetcher: provider(apps, policies, (body) => ({ ...body, result_info: { ...body.result_info, total_pages: 2 } })) })).rejects.toThrow();
     await expect(verifyPreviewAccess({ environment, fetcher: async () => new Response(null, { status: 302, headers: { location: "https://evil.test" } }) })).rejects.toThrow();

@@ -67,12 +67,23 @@ function overlaps(domain, hostname) {
     const suffix = host.slice(2);
     return hostname.endsWith(`.${suffix}`) || reviewedPagesDomain === suffix || reviewedPagesDomain.endsWith(`.${suffix}`);
   }
+  if (!/^[a-z0-9.-]+$/.test(host)) return true;
   return host === hostname || host === reviewedPagesDomain || host.endsWith(`.${reviewedPagesDomain}`);
 }
 
 function appOverlaps(app, hostname) {
-  if (app.type !== "self_hosted") return false;
-  const domains = [app.domain, ...(app.self_hosted_domains ?? []), ...(app.destinations ?? []).map((item) => item.uri)];
+  if (!app || typeof app !== "object" || Array.isArray(app) || typeof app.type !== "string") throw fail();
+  if (app.self_hosted_domains != null && !Array.isArray(app.self_hosted_domains)) throw fail();
+  if (app.destinations != null && !Array.isArray(app.destinations)) throw fail();
+  const domains = [];
+  if (app.domain != null) domains.push(app.domain);
+  if (app.self_hosted_domains) domains.push(...app.self_hosted_domains);
+  for (const destination of app.destinations ?? []) {
+    if (!destination || typeof destination !== "object" || Array.isArray(destination)) throw fail();
+    if (destination.uri != null) domains.push(destination.uri);
+    else throw fail();
+  }
+  if (app.type === "self_hosted" && domains.length === 0) throw fail();
   return domains.some((domain) => overlaps(domain, hostname));
 }
 
