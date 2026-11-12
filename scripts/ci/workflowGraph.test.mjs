@@ -21,6 +21,12 @@ function workflow() {
   return { name: "CI", on: { push: {}, pull_request: {}, schedule: [], workflow_dispatch: {} }, jobs: {
     "resolve-candidate": {}, "prepare-content": { needs: "resolve-candidate" },
     ...Object.fromEntries([...securityJobs, "dependency-review"].map((name) => [name, { needs: "resolve-candidate" }])),
+    codeql: { needs: "resolve-candidate", steps: [
+      { id: "analyze", uses: "github/codeql-action/analyze@pin", with: { upload: "never", output: "${{ runner.temp }}/smart-portfolio-codeql-sarif" } },
+      { env: { SARIF_OUTPUT: "${{ steps.analyze.outputs.sarif-output }}" }, run: 'node scripts/security/checkSarif.mjs "${sarif_files[0]}"' },
+      { uses: "github/codeql-action/upload-sarif@pin", with: { sarif_file: "${{ steps.analyze.outputs.sarif-output }}" } },
+      { run: "node scripts/ci/run.mjs source-receipt" }
+    ] },
     ...Object.fromEntries(applicationJobs.map((name) => [name, { needs: ["resolve-candidate", "prepare-content", ...(name === "export-check" ? ["build-and-package"] : [])] }])),
     "browser-e2e": { needs: ["resolve-candidate", "prepare-content"], strategy: { matrix: { shard: ["1/2", "2/2"] }, "fail-fast": false } },
     "build-and-package": { needs: ["resolve-candidate", "prepare-content"], steps: structuredClone(builtOutputScanSteps) },
@@ -60,6 +66,20 @@ describe("CI graph responsibilities", () => {
     ]) {
       const value = workflow(); value.jobs.codeql.needs = ["resolve-candidate"]; change(value);
       expect(() => validateWorkflowGraph(value)).toThrow();
+    }
+  });
+  it("keeps CodeQL reports outside the checkout and validates before upload and receipt", () => {
+    for (const change of [
+      (steps) => { steps.find((step) => step.id === "analyze").with.output = "sarif-results"; },
+      (steps) => { steps.find((step) => step.id === "analyze").with.output = "${{ runner.temp }}/../workspace/report"; },
+      (steps) => { steps.find((step) => step.id === "analyze").with.upload = "always"; },
+      (steps) => { steps.find((step) => step.env?.SARIF_OUTPUT).env.SARIF_OUTPUT = "sarif-results"; },
+      (steps) => { steps.find((step) => step.uses?.startsWith("github/codeql-action/upload-sarif@")).with.sarif_file = "other"; },
+      (steps) => { const index = steps.findIndex((step) => step.env?.SARIF_OUTPUT); steps.splice(index, 1); }
+    ]) {
+      const value = workflow();
+      change(value.jobs.codeql.steps);
+      expect(() => validateWorkflowGraph(value)).toThrow(/CodeQL must write SARIF outside/);
     }
   });
   it("requires a sealed-output scanner receipt before artifact upload", () => {

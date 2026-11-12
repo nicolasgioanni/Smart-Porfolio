@@ -24,7 +24,7 @@ Only an obsolete permanent-branch revision or a validated unchanged deployment c
 
 `scripts/ci/sourceIdentity.mjs` checks the candidate's HEAD, index, and working tree separately and rejects nonignored untracked inputs. Initial and source-only checks permit no source changes. During content preparation and snapshot restoration, only the generated content JSON working-tree bytes may differ; staging, file type, and mode changes are rejected. Consumers verify those bytes against the accepted snapshot. Checks run after preparation and discovery, before receipts and build outputs, and before deployment mutations. A mismatch fails the evidence or pre-mutation boundary; restore a clean candidate and rerun all affected work rather than reusing its evidence.
 
-These checks observe persistent changes at checkpoints; they do not continuously isolate subprocesses or prove that no temporary modification occurred between checks. The local release CLI retains its existing behavior.
+These checks observe persistent changes at checkpoints; they do not continuously isolate subprocesses or prove that no temporary modification occurred between checks. The local release CLI retains its existing behavior. CodeQL raw SARIF stays in a dedicated runner temporary directory, is validated, and is uploaded via the action’s absolute `sarif-output` path, so the source guard needs no scanner-output exception.
 
 ## Content snapshot and artifact identity
 
