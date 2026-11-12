@@ -10,11 +10,13 @@ export {
 } from "./contact/config";
 export {
   CONTACT_ACTION,
+  CONTACT_EMAIL_RENDER_VERSION,
   CONTACT_RATE_LIMIT_MAX_SUBMISSIONS,
   CONTACT_RATE_LIMIT_WINDOW_SECONDS,
   CONTACT_RESERVATION_INSERT_SQL,
   MAX_REQUEST_BYTES,
   type ContactEnv,
+  type ContactDeliveryResult,
   type ContactPayload,
   type ContactRateLimitDatabase,
   type ContactRateLimitPreparedStatement,

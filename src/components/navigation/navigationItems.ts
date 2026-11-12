@@ -1,4 +1,5 @@
 import type { SiteSettings } from "@/content/types";
+import { shouldShowRecommendationsRoute } from "@/lib/content/shouldShowRecommendationsRoute";
 import { siteRoutes, type SiteRoutePath } from "@/lib/routing/siteRoutes";
 
 export type NavigationItem = {
@@ -11,10 +12,14 @@ type NavigationSettings = Partial<Pick<SiteSettings, "enableRecommendations" | "
 };
 
 export function createNavigationItems(siteSettings?: NavigationSettings): NavigationItem[] {
-  const recommendationsEnabled = siteSettings?.enableRecommendations !== false;
   const recommendationCount = siteSettings?.recommendationCount;
-  const hasRecommendationData = recommendationCount === undefined ? true : recommendationCount > 0;
-  const shouldShowRecommendations = recommendationsEnabled && (hasRecommendationData || siteSettings?.showEmptyRecommendations === true);
+  const shouldShowRecommendations = shouldShowRecommendationsRoute({
+    recommendations: recommendationCount === undefined || recommendationCount > 0 ? [true] : [],
+    siteSettings: {
+      enableRecommendations: siteSettings?.enableRecommendations ?? true,
+      showEmptyRecommendations: siteSettings?.showEmptyRecommendations ?? false
+    }
+  });
   const recommendationsLabel = siteSettings?.recommendationsNavLabel || "Recommendations";
   const items: NavigationItem[] = [
     { href: siteRoutes.home, label: "Home" },

@@ -48,6 +48,7 @@ async function createOwnershipFixture(mutateManifest = () => {}) {
     ".agents/README.md": "# Agent map\n",
     ".agents/knowledge/SYSTEM_DECISIONS.md": "# System decisions\n",
     "docs/development/AGENT_MAP.md": "# Agent map\n",
+    "docs/quality/CI_CONTRACTS.md": "# CI contracts\n",
   };
   const documentAnchors = new Map();
   const addFile = (relativePath, contents = "") => {
@@ -141,6 +142,64 @@ describe("documentation validation", () => {
         checkedFiles: ["README.md", "docs/GUIDE_(v1).md", "docs/README.md"],
         errors: [],
       });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("parses nested and escaped Markdown destinations without unbounded regular-expression matching", async () => {
+    const root = await createFixture({
+      "README.md": `# Project\n\n[Nested guide](docs/GUIDE_(v1).md "reference")\n\n[Escaped guide](docs/GUIDE\\_(v1).md)\n\n[Incomplete](${"\\!".repeat(20_000)}`,
+      "docs/GUIDE_(v1).md": "# Guide\n",
+    });
+
+    try {
+      await expect(validateMinimalFixture(root)).resolves.toMatchObject({ errors: [] });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("scans long unmatched Markdown labels and parentheses in linear time", async () => {
+    const unmatchedSource = `${"[".repeat(15_000)}](${"(".repeat(15_000)}`;
+    const root = await createFixture({
+      "README.md": `# Project\n\n${unmatchedSource}`,
+      "docs/README.md": "# Documentation\n",
+    });
+
+    try {
+      await expect(validateMinimalFixture(root)).resolves.toMatchObject({ errors: [] });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not rescan unterminated angle destinations for every later label", async () => {
+    const root = await createFixture({
+      "README.md": `# Project\n\n${"[x](<".repeat(160_000)}`,
+      "docs/README.md": "# Documentation\n",
+    });
+
+    try {
+      await expect(validateMinimalFixture(root)).resolves.toMatchObject({ errors: [] });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it.each([
+    ["bare", "[unfinished](somewhere\n\n[Missing](docs/MISSING.md)", "docs/MISSING.md"],
+    ["nested", "[unfinished](somewhere(\n\n[Missing](docs/MISSING-NESTED.md)", "docs/MISSING-NESTED.md"],
+    ["angle", "[unfinished](<somewhere\n\n[Missing](docs/MISSING-ANGLE.md)", "docs/MISSING-ANGLE.md"],
+  ])("recovers from an incomplete %s link at a paragraph boundary and validates the next link", async (_kind, source, target) => {
+    const root = await createFixture({
+      "README.md": `# Project\n\n${source}\n`,
+      "docs/README.md": "# Documentation\n",
+    });
+
+    try {
+      const result = await validateDocumentation({ projectRoot: root });
+      expect(result.errors).toEqual(expect.arrayContaining([expect.stringContaining(`relative link target does not exist: ${target}`)]));
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -363,8 +422,8 @@ describe("documentation validation", () => {
     }, "invalid or private entrypoint: .env.local");
     await expectOwnershipError((manifest) => {
       manifest.owners.find((owner) => owner.id === "portfolio-home-profile").pathPatterns[0] =
-        "src/features/home/**";
-    }, "must use src/components/portfolio instead of src/features");
+        "src/features/missing/**";
+    }, "path pattern matches no repository file: src/features/missing/**");
   });
 
   it("rejects manifest references that escape through file and parent-directory symlinks", async () => {
@@ -725,7 +784,7 @@ describe("documentation validation", () => {
   it("enforces bootstrap and task-card budgets", async () => {
     const root = await createOwnershipFixture();
     try {
-      await writeFile(path.join(root, "AGENTS.md"), "x".repeat(8193), "utf8");
+      await writeFile(path.join(root, "AGENTS.md"), "x".repeat(12289), "utf8");
       const result = await validateDocumentation({ projectRoot: root });
       expect(result.errors).toEqual(
         expect.arrayContaining([
@@ -770,7 +829,7 @@ describe("documentation validation", () => {
             "infrastructure/README.md: contains an obvious unresolved placeholder",
           ),
           expect.stringContaining(
-            "infrastructure exists but is still marked not-implemented",
+            "infrastructure owner must cover every infrastructure path",
           ),
         ]),
       );
@@ -781,16 +840,8 @@ describe("documentation validation", () => {
 
   it("accepts owned implemented infrastructure", async () => {
     const root = await createOwnershipFixture((manifest) => {
-      manifest.future = [
-        {
-          id: "infrastructure",
-          status: "implemented",
-          owner: "infrastructure-baseline",
-          reason: "The fixture adds a reviewed infrastructure implementation.",
-        },
-      ];
       manifest.owners
-        .find((owner) => owner.id === "infrastructure-baseline")
+        .find((owner) => owner.id === "infrastructure")
         .pathPatterns.push("infrastructure/**");
     });
     try {

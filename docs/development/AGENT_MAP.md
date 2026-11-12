@@ -21,10 +21,10 @@ The optional read-only shortcut is `node scripts/routeAgentWork.mjs <intent>`; u
 | `release`, `deployment` | [Deployment](../../.agents/cards/release-deployment.md) | [exact artifact](../operations/DEPLOYMENT.md#single-snapshot-exact-artifact-pipeline) | package/deploy test |
 | `docs`, `documentation` | [Docs](../../.agents/cards/docs-maintenance.md) | [documentation principles](../README.md#documentation-principles) | `npm run docs:check` |
 | `skeleton`, `loading` | [Skeletons](../../.agents/cards/skeleton-regression.md) | [visual and transition coverage](../design/SKELETON_LOADING_GUIDELINES.md#visual-and-transition-regression-coverage) | `npm run test:skeletons` |
-| `infra`, `terraform` | [Infrastructure baseline](../../.agents/cards/infrastructure-baseline.md) | [repository map](../architecture/PROJECT_STRUCTURE.md#repository-map) | `npm run docs:check` |
+| `infra`, `terraform` | [Infrastructure baseline](../../.agents/cards/infrastructure.md) | [repository map](../architecture/PROJECT_STRUCTURE.md#repository-map) | `npm run docs:check` |
 
 ## Boundaries and future areas
 
-Route and metadata work stays in `src/app/`; portfolio work stays in `src/components/portfolio/`, not a speculative `src/features/` tree. Use the shared theme transition helper and `ModalDialog` boundary named by the owner cards. The manifest records root-level configuration paths as explicit exceptions instead of trying to infer paths from every inline-code span.
+Route and metadata work stays in `src/app/`; portfolio features own domain UI, selectors, loading, and styles in `src/features/`. Use the shared theme transition helper and `ModalDialog` boundary named by the owner cards. The manifest records root-level configuration paths as explicit exceptions.
 
-Infrastructure ownership is intentionally **not implemented** on this baseline: there is no `infrastructure/`, `infra/`, or Terraform source tree. Add an owner, paths, anchored documentation, and validation before introducing one. The documentation checker will include its Markdown automatically when either directory exists.
+Infrastructure is tracked under `infra/`; its owner card links the source, tests, and ownership documentation.

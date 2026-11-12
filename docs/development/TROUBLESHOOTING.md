@@ -18,7 +18,7 @@ npm run test
 npm run build
 ```
 
-Stop at the first failure and use the matching section below. `npm run verify` runs the same documentation, lint, typecheck, test, and normal-build sequence after dependencies are ready.
+Stop at the first failure and use the matching section below. `npm run verify` uses one accepted content snapshot, then runs documentation checks, the audited dependency gate, lint, type checking, tests, and `build:generated` without another workbook fetch after dependencies are ready. See [CI input and evidence contracts](../quality/CI_CONTRACTS.md) for the workflow graph.
 
 ## Local setup
 
@@ -46,7 +46,7 @@ Run:
 npm run setup:local
 ```
 
-The helper compares package and setup hashes, validates an existing install, and runs `npm ci` when the lockfile is available. Use the force option only when a clean locked reinstall is intentional:
+The helper compares package and setup hashes, validates the installed Node.js and npm identities, and runs `npm ci` when the lockfile is available. Generated-content freshness uses recorded source, schema, environment-selection, and toolchain hashes rather than file timestamps. Use the force option only when a clean locked reinstall is intentional:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup-local.ps1 -ForceInstall

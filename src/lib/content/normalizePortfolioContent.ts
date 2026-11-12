@@ -5,16 +5,15 @@
   GeneratedPortfolioContent,
   PortfolioContentLink,
   PortfolioLink,
-  ProfileContent,
   ProjectItem,
   ProjectSkill,
   RecommendationItem,
   ResearchItem,
   ResumeEntry,
-  SiteSettings,
   SkillItem
 } from "@/content/types";
 import type { CsvRow } from "@/lib/csv/parseCsv";
+import { getCanonicalContentKey, validateContentKeyRows } from "@/lib/content/contentSheetKeys";
 import {
   isHttpsUrl,
   isIsoDate,
@@ -36,65 +35,7 @@ export type PortfolioSheetName =
 
 export type RawPortfolioSheets = Record<PortfolioSheetName, CsvRow[]>;
 
-const profileKeyMap: Record<string, keyof ProfileContent> = {
-  full_name: "fullName",
-  preferred_name: "preferredName",
-  headline: "headline",
-  role_engineer_prefixes: "roleEngineerPrefixes",
-  role_engineer_suffix: "roleEngineerSuffix",
-  role_alternate: "roleAlternate",
-  current_title: "currentTitle",
-  current_company: "currentCompany",
-  current_experience_id: "currentExperienceId",
-  previous_experience_id: "previousExperienceId",
-  featured_research_id: "featuredResearchId",
-  primary_education_id: "primaryEducationId",
-  location: "location",
-  timezone: "timezone",
-  time_zone: "timezone",
-  email: "email",
-  pronouns: "pronouns",
-  university: "university",
-  degree: "degree",
-  field_of_study: "fieldOfStudy",
-  graduation: "graduation",
-  short_bio: "shortBio",
-  long_bio: "longBio",
-  experience_summary: "experienceSummary",
-  portrait_image: "portraitImage",
-  favicon_image: "faviconImage",
-  resume_url: "resumeUrl",
-  resume_download_label: "resumeDownloadLabel",
-  primary_cta_label: "primaryCtaLabel",
-  secondary_cta_label: "secondaryCtaLabel"
-};
-
-const settingKeyMap: Record<string, keyof SiteSettings> = {
-  site_title: "siteTitle",
-  site_description: "siteDescription",
-  default_theme: "defaultTheme",
-  enable_skeletons: "enableSkeletons",
-  enable_scroll_motion: "enableScrollMotion",
-  enable_glass_effects: "enableGlassEffects",
-  enable_recommendations: "enableRecommendations",
-  show_empty_recommendations: "showEmptyRecommendations",
-  max_home_research_items: "maxHomeResearchItems",
-  max_home_project_items: "maxHomeProjectItems",
-  max_home_experience_items: "maxHomeExperienceItems",
-  max_home_recommendation_items: "maxHomeRecommendationItems",
-  max_home_skill_items: "maxHomeSkillItems",
-  recommendations_nav_label: "recommendationsNavLabel",
-  license_name: "licenseName",
-  license_url: "licenseUrl",
-  copyright_owner: "copyrightOwner",
-  repository_url: "repositoryUrl",
-  legal_contact_email: "legalContactEmail",
-  legal_effective_date: "legalEffectiveDate",
-  hosting_provider_name: "hostingProviderName",
-  hosting_privacy_url: "hostingPrivacyUrl"
-};
-
-const booleanSettingKeys = new Set<keyof SiteSettings>([
+const booleanSettingKeys = new Set<keyof GeneratedPortfolioContent["siteSettings"]>([
   "enableSkeletons",
   "enableScrollMotion",
   "enableGlassEffects",
@@ -102,7 +43,7 @@ const booleanSettingKeys = new Set<keyof SiteSettings>([
   "showEmptyRecommendations"
 ]);
 
-const numberSettingKeys = new Set<keyof SiteSettings>([
+const numberSettingKeys = new Set<keyof GeneratedPortfolioContent["siteSettings"]>([
   "maxHomeResearchItems",
   "maxHomeProjectItems",
   "maxHomeExperienceItems",
@@ -228,11 +169,11 @@ export function normalizeLinkList(value: string | undefined, fieldName = "links"
     const url = separatorIndex > 0 ? item.slice(separatorIndex + 1).trim() : item.trim();
 
     if (!label) {
-      throw new Error(`Invalid link label for ${fieldName}: ${item}`);
+      throw new Error(`Invalid link label for ${fieldName}`);
     }
 
     if (!isSupportedUrl(url)) {
-      throw new Error(`Invalid link URL for ${fieldName}: ${url}`);
+      throw new Error(`Invalid link URL for ${fieldName}`);
     }
 
     return { label, url };
@@ -262,8 +203,9 @@ function validateUniqueRowId(id: string, collectionName: string, seenIds: Set<st
   seenIds.add(id);
 }
 
-function normalizeProfile(rows: CsvRow[]): ProfileContent {
-  const profile = {} as ProfileContent;
+function normalizeProfile(rows: CsvRow[]): GeneratedPortfolioContent["profile"] {
+  validateContentKeyRows(rows, "profile");
+  const profile = {} as GeneratedPortfolioContent["profile"];
 
   for (const row of rows) {
     const key = requiredText(row, "key", "profile");
@@ -271,7 +213,7 @@ function normalizeProfile(rows: CsvRow[]): ProfileContent {
 
     if (!value) continue;
 
-    const mappedKey = profileKeyMap[key] ?? key.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
+    const mappedKey = getCanonicalContentKey("profile", key)! as keyof GeneratedPortfolioContent["profile"];
     profile[mappedKey] = value;
   }
 
@@ -289,7 +231,7 @@ function normalizeLinks(rows: CsvRow[]): PortfolioLink[] {
     validateUniqueRowId(id, "links", seenIds);
 
     if (!isSupportedUrl(url)) {
-      throw new Error(`${location} has invalid url: ${url}`);
+      throw new Error(`${location} has invalid url`);
     }
 
     return {
@@ -416,7 +358,7 @@ function normalizeRecommendationHttpsUrl(value: string | undefined, fieldName: s
   if (!normalizedValue) return undefined;
 
   if (!isHttpsUrl(normalizedValue)) {
-    throw new Error(`${fieldName} must be a safe https URL: ${value}`);
+    throw new Error(`${fieldName} must be a safe https URL`);
   }
 
   return normalizedValue;
@@ -438,7 +380,7 @@ function normalizeRecommendationFullQuoteLink(
   }
 
   if (!isHttpsUrl(url)) {
-    throw new Error(`${location}.full_quote_link_url must be a safe https URL: ${urlValue}`);
+    throw new Error(`${location}.full_quote_link_url must be a safe https URL`);
   }
 
   if (fullQuote.indexOf(label) < 0 || fullQuote.indexOf(label) !== fullQuote.lastIndexOf(label)) {
@@ -556,8 +498,9 @@ function normalizeResume(rows: CsvRow[]): ResumeEntry[] {
   });
 }
 
-function normalizeSiteSettings(rows: CsvRow[]): SiteSettings {
-  const settings: SiteSettings = {
+function normalizeSiteSettings(rows: CsvRow[]): GeneratedPortfolioContent["siteSettings"] {
+  validateContentKeyRows(rows, "site_settings");
+  const settings: GeneratedPortfolioContent["siteSettings"] = {
     siteTitle: "Portfolio",
     siteDescription: "A professional portfolio with experience, projects, research, and technical skills.",
     defaultTheme: "navy",
@@ -580,7 +523,7 @@ function normalizeSiteSettings(rows: CsvRow[]): SiteSettings {
 
     if (!rawValue) continue;
 
-    const mappedKey = settingKeyMap[key] ?? key.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
+    const mappedKey = getCanonicalContentKey("site_settings", key)! as keyof GeneratedPortfolioContent["siteSettings"];
 
     if (booleanSettingKeys.has(mappedKey)) {
       settings[mappedKey] = normalizeBoolean(rawValue, `site_settings.${key}`);

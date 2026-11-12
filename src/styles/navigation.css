@@ -446,6 +446,13 @@
   padding-top: var(--space-8);
 }
 
+.blob-footer__noscript {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-6);
+  padding-top: var(--space-6);
+}
+
 .blob-footer__identity,
 .blob-footer__column {
   min-width: 0;
@@ -589,7 +596,7 @@
   padding: 0 var(--space-3);
   border: 0;
   border-radius: var(--radius-card);
-  color: var(--color-muted);
+  color: var(--color-ink);
   background: transparent;
   cursor: pointer;
   font-size: var(--font-size-small);
@@ -759,6 +766,10 @@
     grid-template-columns: minmax(0, 1fr);
     gap: var(--space-6);
     padding-top: var(--space-6);
+  }
+
+  .blob-footer__noscript {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .blob-footer__closing {

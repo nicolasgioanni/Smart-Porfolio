@@ -2,20 +2,18 @@
 
 Repository-local guidance makes the architecture and validation contracts available after a clone without requiring a separate install. [AGENTS.md](../../AGENTS.md) contains shared constraints, and [.agents](../../.agents/README.md) routes work to focused skills and compact durable decisions.
 
-## Branch and baseline
-
-`main` is the production integration branch and `develop` deploys previews. Before creating a new improvement worktree, refresh `origin`, fast-forward only local `main`, record that fixed baseline, then create one `codex/` branch. Continue an existing worktree from its recorded baseline without synchronizing it to newer branches, agents, or pull requests. Keep one coherent improvement per branch, open one pull request to `main`, and stop there: do not merge or enable auto-merge.
-
 ## Start a repository task
 
 1. Read [AGENTS.md](../../AGENTS.md), then the scoped map in [.agents](../../.agents/README.md) and its system decisions before opening unrelated documentation.
-2. Follow [Branch and baseline](#branch-and-baseline) before creating a new worktree or continuing an existing one.
+2. Before creating a new focused branch and worktree for a cohesive change, the coordinating checkout must fetch `origin`, fast-forward local `main` from `origin/main`, and record the resulting SHA as the fixed baseline. To continue that same change, retain its existing worktree and original recorded baseline without refresh, re-recording, or sync. After recording the baseline, do not merge, rebase, cherry-pick, pull, or otherwise sync newer `main` or unrelated branch work into it, except for an integration delta expressly authorized by the current task and recorded with the original baseline.
 3. Complete the Windows or cross-platform setup path in [Local development](LOCAL_DEVELOPMENT.md) inside that worktree. It defines the Node and npm dependency contract, `.env` handling, local content source, and when to use the static UI or Pages Function server. Do not create a `requirements.txt`; `package.json`, `package-lock.json`, and `.nvmrc` are authoritative.
 4. Search for the closest implementation, test, selector, and style primitive. Select the smallest relevant repository skill below and read its linked authoritative product guide before making the change.
 5. For deployment, configuration, or release changes, select the release-security skill and read [Deployment](../operations/DEPLOYMENT.md) before editing the workflow, Wrangler configuration, bindings, secrets documentation, or operator instructions. Pull requests never deploy; `develop` deploys preview and `main` deploys production.
 6. Make the narrowest coherent change, updating the guide that owns every changed contract.
 7. Run the focused checks and the appropriate gate from [Testing](../quality/TESTING.md). Use `npm run verify:priority` for pull-request-sized work after installing Chromium; reserve `npm run verify:full` on Ubuntu 24.04 for a release candidate.
 8. Commit a documented cohesive change, push its branch, and open a pull request into `main` when authorized. Inspect the matching CI result, resolve relevant failures, and stop at the user's requested review or merge boundary.
+
+`main` and `develop` are permanent branches. Never delete, rename, force-update, or recreate either local or remote ref, and never weaken their protection. Exclude both refs from branch-cleanup work. The tracked [permanent-branch ruleset](../../.github/rulesets/protect-permanent-branches.json) blocks deletion and non-fast-forward updates only for those exact refs, leaving the guarded ordinary `develop` heartbeat valid. It supplements `main`'s separate pull-request and required-`verify` policy. The tracked JSON is not evidence that GitHub has applied it; verify the live configuration independently. The current task's explicit authorization controls generic workflow defaults but does not relax this permanent-branch invariant.
 
 ## Select the smallest relevant guidance
 
@@ -32,7 +30,7 @@ Read the linked product document only when the selected task needs its detail. T
 
 ## Model routing
 
-Use GPT-5.6 Sol for coordination, architecture, review, decomposition, and evidence synthesis. Use GPT-5.6 Terra at High or Extra High for implementation. Use `main` as the integration target. If a requested capability is unavailable in a cloned environment, follow the same checked repository contracts with the available tooling and report the validation actually performed.
+Use Sol or Astra for coordination, review, decomposition, and evidence synthesis. Use GPT-5.6 Terra at High or Extra High for implementation. If a requested capability is unavailable in a cloned environment, follow the same checked repository contracts with the available tooling and report the validation actually performed.
 
 ## Complete a change
 

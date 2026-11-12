@@ -12,6 +12,8 @@ type ApplyThemeOptions = {
 
 type NativeViewTransition = {
   finished: Promise<unknown>;
+  ready?: Promise<unknown>;
+  updateCallbackDone?: Promise<unknown>;
 };
 
 export type ThemeTransition = {
@@ -37,6 +39,10 @@ function hasFinishedPromise(value: unknown): value is NativeViewTransition {
     "then" in value.finished &&
     typeof value.finished.then === "function"
   );
+}
+
+function markRejectedLifecycleHandled(lifecycle: Promise<unknown> | undefined) {
+  void lifecycle?.catch(() => {});
 }
 
 /**
@@ -73,10 +79,13 @@ export function applyTheme(theme: ThemeName, { animate }: ApplyThemeOptions): Th
       return { animated: false };
     }
 
-    // System and storage updates do not have a consumer for the lifecycle.
-    // Mark rejection handled while still exposing the original promise to the
-    // theme chooser when it needs to coordinate pointer leave behavior.
-    void transition.finished.catch(() => {});
+    // A native transition can be aborted by a later viewport or document-state
+    // change. System and storage updates do not consume its lifecycle; mark
+    // every rejecting lifecycle promise handled while preserving `finished`
+    // for the chooser's pointer-leave coordination.
+    markRejectedLifecycleHandled(transition.ready);
+    markRejectedLifecycleHandled(transition.updateCallbackDone);
+    markRejectedLifecycleHandled(transition.finished);
     return { animated: true, finished: transition.finished };
   } catch {
     updateTheme();

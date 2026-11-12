@@ -10,7 +10,7 @@ Portfolio: [Home/profile](cards/portfolio-home-profile.md) · [Research / Experi
 
 Shared: [Theme](cards/shared-theme.md) · [Modal](cards/shared-modal.md) · [Motion](cards/shared-motion.md) · [Navigation](cards/shared-navigation.md)
 
-Systems: [Content](cards/content.md) · [Browser contact](cards/contact-browser.md) · [Functions/D1](cards/contact-functions-d1.md) · [Tests](cards/quality-tests.md) · [Deployment](cards/release-deployment.md) · [Docs](cards/docs-maintenance.md) · [Skeletons](cards/skeleton-regression.md) · [Infrastructure](cards/infrastructure-baseline.md)
+Systems: [Content](cards/content.md) · [Browser contact](cards/contact-browser.md) · [Functions/D1](cards/contact-functions-d1.md) · [Tests](cards/quality-tests.md) · [Deployment](cards/release-deployment.md) · [Docs](cards/docs-maintenance.md) · [Skeletons](cards/skeleton-regression.md) · [Infrastructure](cards/infrastructure.md)
 
 Skills: [architecture](skills/portfolio-architecture/SKILL.md), [content](skills/portfolio-content-pipeline/SKILL.md), [interface](skills/portfolio-interface-contracts/SKILL.md), [validation](skills/portfolio-validation/SKILL.md), [release](skills/portfolio-release-security/SKILL.md), [skeletons](skills/portfolio-skeleton-regression/SKILL.md).
 

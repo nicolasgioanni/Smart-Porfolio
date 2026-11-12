@@ -1,4 +1,5 @@
-import { lstat, readFile, readdir } from "node:fs/promises";
+import { readRegularFile } from "./lib/readRegularFile.mjs";
+import { lstat, readdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -60,7 +61,7 @@ async function readRepositoryFile(projectRoot, filePath) {
   }
 
   try {
-    return await readFile(filePath, "utf8");
+    return (await readRegularFile(filePath, { maximumBytes: 2 * 1024 * 1024 })).toString("utf8");
   } catch {
     throw new Error("repository file could not be read");
   }

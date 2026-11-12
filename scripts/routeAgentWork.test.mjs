@@ -44,7 +44,7 @@ describe("agent work routing", () => {
       ["skeleton", "skeleton-regression"],
       ["deployment", "release-deployment"],
       ["docs", "docs-maintenance"],
-      ["terraform", "infrastructure-baseline"],
+      ["terraform", "infrastructure"],
     ];
 
     for (const [intent, id] of cases) {
@@ -95,6 +95,17 @@ describe("agent work routing", () => {
       await expect(
         readRouteCard({ card: ".agents/cards/escaped.md" }, root),
       ).rejects.toThrow("Owner card must stay inside .agents/cards");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects oversized cards before reading their contents", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "agent-route-large-"));
+    try {
+      await mkdir(path.join(root, ".agents/cards"), { recursive: true });
+      await writeFile(path.join(root, ".agents/cards/large.md"), "x".repeat(2 * 1024 * 1024 + 1));
+      await expect(readRouteCard({ card: ".agents/cards/large.md" }, root)).rejects.toThrow("Owner card must stay inside .agents/cards");
     } finally {
       await rm(root, { recursive: true, force: true });
     }

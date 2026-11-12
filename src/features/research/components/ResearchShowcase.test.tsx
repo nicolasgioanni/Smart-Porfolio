@@ -1,0 +1,224 @@
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import type { ResearchItem } from "@/content/types";
+import { ResearchShowcase } from "@/features/research/components/ResearchShowcase";
+import { getResearchModeContent } from "@/features/research/content/researchNarratives";
+
+const researchItems: ResearchItem[] = [
+  {
+    id: "cytocv-miller-lab",
+    title: "CytoCV: Reproducible Yeast Microscopy Analysis",
+    homeTitle: "CytoCV",
+    role: "Graduate Research Assistant",
+    organization: "UW Bothell School of STEM",
+    organizationLogo: "/images/organizations/uwb_stem_logo.png",
+    organizationLogoAlt: "UW Bothell School of STEM logo",
+    location: "Bothell, Washington, United States",
+    startDate: "2024-08",
+    endDate: "2026-08",
+    impact: "Released as citable open-source software.",
+    bullets: [],
+    skills: [],
+    links: [
+      { label: "Live site", url: "https://cytocv.uwb.edu" },
+      { label: "Source code", url: "https://github.com/BrentLagesse/CytoCV" },
+      { label: "Software DOI", url: "https://doi.org/10.5281/zenodo.21988218" }
+    ],
+    pendingLinks: ["Manuscript"],
+    featured: true,
+    showOnHome: true
+  },
+  {
+    id: "adversarial-machine-learning",
+    title: "Adversarial Machine Learning",
+    homeTitle: "Adversarial Machine Learning",
+    role: "Undergraduate Researcher",
+    organization: "UW Bothell School of STEM",
+    organizationLogo: "/images/organizations/uwb_stem_logo.png",
+    organizationLogoAlt: "UW Bothell School of STEM logo",
+    bullets: [],
+    skills: [],
+    links: [
+      { label: "Source code", url: "https://github.com/nicolasgioanni/Independent-Study" },
+      { label: "Manuscript", url: "https://example.com/reference.pdf" }
+    ],
+    featured: false,
+    showOnHome: true
+  },
+  {
+    id: "yeast-dna-target-selection",
+    title: "Guide Donor Scheduler: Yeast CRISPR Sequence Design",
+    homeTitle: "Guide Donor Scheduler",
+    role: "Research Assistant",
+    organization: "UW Bothell School of STEM",
+    organizationLogo: "/images/organizations/uwb_stem_logo.png",
+    organizationLogoAlt: "UW Bothell School of STEM logo",
+    bullets: [],
+    skills: [],
+    links: [{ label: "Source code", url: "https://github.com/BrentLagesse/GuideDonorScheduler" }],
+    featured: false,
+    showOnHome: true
+  }
+];
+
+describe("ResearchShowcase", () => {
+  it("renders a concise research introduction and alternating visual project rows", () => {
+    const { container } = render(<ResearchShowcase items={researchItems} motionEnabled={false} />);
+    const intro = screen
+      .getByRole("heading", { level: 1, name: "Applied AI Research" })
+      .closest<HTMLElement>(".page-intro__surface");
+    const projects = Array.from(container.querySelectorAll<HTMLElement>(".research-project"));
+
+    expect(intro).not.toBeNull();
+    expect(within(intro!).getByText(/My research centers on CytoCV and adversarial machine learning/)).toBeInTheDocument();
+    expect(intro!.textContent).not.toContain("—");
+    expect(screen.getByRole("group", { name: "Research detail level" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Overview" })).toHaveAttribute("aria-pressed", "true");
+    expect(projects).toHaveLength(3);
+    expect(projects.map((project) => project.dataset.visualSide)).toEqual(["left", "right", "left"]);
+    expect(screen.getAllByRole("img", { name: "UW Bothell School of STEM logo" })).toHaveLength(3);
+    expect(projects.map((project) => project.querySelector(".research-project__index")?.textContent)).toEqual([
+      "1",
+      "2",
+      "3"
+    ]);
+    expect(
+      screen.getAllByRole("button", { name: /Open graphical abstract for/ }).map((button) => button.getAttribute("aria-label"))
+    ).toEqual([
+      "Open graphical abstract for CytoCV",
+      "Open graphical abstract for Adversarial Machine Learning",
+      "Open graphical abstract for Guide Donor Scheduler"
+    ]);
+    expect(
+      projects.map((project) => project.querySelector(".research-abstract__thumbnail")?.getAttribute("src"))
+    ).toEqual([
+      "/images/research/cytocv-graphical-abstract.png",
+      "/images/research/independent-study-graphical-abstract.png",
+      "/images/research/guide-donor-scheduler-graphical-abstract.png"
+    ]);
+    const cytocvProject = projects[0]!;
+    expect(cytocvProject.querySelector(".research-video-player__media source")).toHaveAttribute(
+      "src",
+      "/images/research/cytocv-supplementary-video-s1.mp4"
+    );
+    expect(cytocvProject.querySelector(".research-abstract__thumbnail")).toHaveAttribute(
+      "src",
+      "/images/research/cytocv-graphical-abstract.png"
+    );
+    expect(
+      projects.map((project) => Array.from(project.querySelectorAll(".research-media-title"), (title) => title.textContent))
+    ).toEqual([
+      ["CytoCV Graphical Abstract", "CytoCV Demo"],
+      ["AML Graphical Abstract"],
+      ["GuideDonorScheduler Graphical Abstract"]
+    ]);
+    expect(projects.map((project) => project.querySelectorAll(".research-media-stack").length)).toEqual([1, 0, 0]);
+    expect(projects.map((project) => project.querySelectorAll(".research-project__media-row").length)).toEqual([2, 0, 0]);
+    expect(projects.map((project) => project.querySelectorAll(".research-project__media-divider").length)).toEqual([1, 0, 0]);
+    expect(projects.map((project) => project.querySelectorAll(".research-project__single-media").length)).toEqual([0, 1, 1]);
+    expect(projects.map((project) => project.querySelectorAll(".research-video").length)).toEqual([1, 0, 0]);
+    expect(container.querySelectorAll("[data-research-explainer]")).toHaveLength(0);
+    expect(container.querySelectorAll(".research-explainer__playback-control")).toHaveLength(0);
+    expect(screen.queryByRole("img", { name: /segmentation diagram|attack and defense matrix|sequence design diagram/i })).not.toBeInTheDocument();
+    expect(screen.queryByText("Graduate Research Assistant")).not.toBeInTheDocument();
+    expect(screen.queryByText("Bothell, Washington, United States")).not.toBeInTheDocument();
+    expect(screen.queryByText("Research 1")).not.toBeInTheDocument();
+  });
+
+  it("keeps technical skills visible for research items without authored bullets", () => {
+    const item: ResearchItem = {
+      ...researchItems[0]!,
+      id: "future-research-system",
+      title: "Future Research System",
+      homeTitle: undefined,
+      bullets: [],
+      skills: ["Python", "Scientific computing"]
+    };
+
+    expect(getResearchModeContent(item, "technical").sections).toEqual([
+      expect.objectContaining({
+        lead: "Implemented the project with the technologies listed below.",
+        tools: ["Python", "Scientific computing"]
+      })
+    ]);
+  });
+
+  it("exposes verified resources and keeps the CytoCV manuscript placeholder inactive", () => {
+    render(<ResearchShowcase items={researchItems} motionEnabled={false} />);
+    const cytocvProject = screen.getByRole("heading", { level: 2, name: "CytoCV" }).closest("article");
+
+    expect(cytocvProject).not.toBeNull();
+    const resources = cytocvProject!.querySelector<HTMLElement>(".research-project__resources");
+    expect(resources).not.toBeNull();
+    expect(within(resources!).getAllByRole("link").map((link) => link.textContent)).toEqual([
+      "Live site",
+      "Source code",
+      "Software DOI"
+    ]);
+    expect(within(cytocvProject!).getByRole("link", { name: "Source code for CytoCV" })).toHaveAttribute(
+      "rel",
+      "noopener noreferrer"
+    );
+    const manuscript = within(cytocvProject!).getByRole("button", { name: "Manuscript — not yet published" });
+    expect(manuscript).toBeDisabled();
+    expect(manuscript).toHaveTextContent("Manuscript");
+    expect(manuscript).toHaveAttribute("title", "Not yet published");
+    expect(within(cytocvProject!).queryByRole("link", { name: /Manuscript/i })).not.toBeInTheDocument();
+    expect(within(cytocvProject!).queryByText(/forthcoming/i)).not.toBeInTheDocument();
+
+    const amlProject = screen.getByRole("heading", { level: 2, name: "Adversarial Machine Learning" }).closest("article");
+    expect(within(amlProject!).getByRole("link", { name: "Reference manuscript for Adversarial Machine Learning" })).toBeInTheDocument();
+  });
+
+  it("deduplicates pending resource labels before rendering disabled controls", () => {
+    const item = {
+      ...researchItems[0]!,
+      pendingLinks: ["Manuscript", " manuscript ", "Source code"]
+    };
+    render(<ResearchShowcase items={[item]} motionEnabled={false} />);
+
+    const project = screen.getByRole("heading", { level: 2, name: "CytoCV" }).closest("article");
+    const resources = project!.querySelector<HTMLElement>(".research-project__resources");
+
+    expect(resources).not.toBeNull();
+    expect(within(resources!).getAllByRole("link")).toHaveLength(3);
+    expect(within(resources!).getAllByRole("button")).toHaveLength(1);
+    expect(within(resources!).getByRole("button", { name: "Manuscript — not yet published" })).toBeDisabled();
+  });
+
+  it("switches every project to technical copy and keeps one disclosure open across the route", async () => {
+    render(<ResearchShowcase items={researchItems} motionEnabled={false} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Technical" }));
+
+    expect(screen.getByRole("button", { name: "Technical" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("Showing technical details.")).toHaveClass("visually-hidden");
+    expect(screen.getByText(/Architected a Django system with DIC-guided Mask R-CNN inference/)).toBeInTheDocument();
+
+    const ingestion = screen.getByRole("button", { name: /Microscopy ingestion/i });
+    const segmentation = screen.getByRole("button", { name: /Vision pipeline/i });
+
+    fireEvent.click(ingestion);
+    expect(ingestion).toHaveAttribute("aria-expanded", "true");
+
+    fireEvent.click(segmentation);
+    expect(ingestion).toHaveAttribute("aria-expanded", "false");
+    expect(segmentation).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("list", { name: "Vision pipeline tools" })).toBeInTheDocument();
+
+    fireEvent.keyDown(segmentation, { key: "Escape" });
+    await waitFor(() => expect(segmentation).toHaveAttribute("aria-expanded", "false"));
+
+    const projectCards = screen.getAllByRole("article");
+    const firstProjectDisclosure = within(projectCards[0]!).getByRole("button", { name: /Microscopy ingestion/i });
+    const secondProjectDisclosure = projectCards[1]!.querySelector<HTMLButtonElement>(".detail-section__trigger");
+
+    expect(secondProjectDisclosure).not.toBeNull();
+
+    fireEvent.click(firstProjectDisclosure);
+    expect(firstProjectDisclosure).toHaveAttribute("aria-expanded", "true");
+    fireEvent.click(secondProjectDisclosure!);
+    expect(firstProjectDisclosure).toHaveAttribute("aria-expanded", "false");
+    expect(secondProjectDisclosure!).toHaveAttribute("aria-expanded", "true");
+  });
+});

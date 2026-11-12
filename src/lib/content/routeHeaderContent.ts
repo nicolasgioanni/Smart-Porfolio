@@ -38,7 +38,7 @@ export const routeHeaderContent = {
   },
   [siteRoutes.projects]: {
     accessory: "none",
-    description: "Applied AI, full-stack, automation, and desktop projects—each with a concept view and an implementation flow.",
+    description: "Applied AI, full-stack, automation, and desktop projects—each with a real preview and implementation flow.",
     placement: "page",
     title: "Projects"
   },
