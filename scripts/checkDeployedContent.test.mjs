@@ -236,7 +236,9 @@ describe("deployment smoke checks", () => {
           return new Response(sitemapXml, { headers: { "Content-Type": "application/xml; charset=utf-8" } });
         }
         if (url.pathname === "/api/contact/verify" || url.pathname === "/api/contact") {
-          return Response.json({ ok: false, error: "method_not_allowed" }, { status: 405, headers: functionHeaders });
+          return init?.method === "POST"
+            ? Response.json({ ok: false, error: "request_rejected" }, { status: 403, headers: functionHeaders })
+            : Response.json({ ok: false, error: "method_not_allowed" }, { status: 405, headers: functionHeaders });
         }
         throw new Error(`Unexpected smoke-check URL: ${url}`);
       })
@@ -251,10 +253,10 @@ describe("deployment smoke checks", () => {
       `/${artifactManifestFileName}`,
       "/robots.txt",
       "/sitemap.xml",
-      "/api/contact/verify",
-      "/api/contact"
+      "/api/contact/verify", "/api/contact/verify", "/api/contact/verify",
+      "/api/contact", "/api/contact", "/api/contact"
     ]);
-    expect(redirectModes).toEqual(Array(7).fill("manual"));
+    expect(redirectModes).toEqual(Array(11).fill("manual"));
   });
 
   it("rejects substituted root bytes and a static CSP that bypasses a route replacement", async () => {

@@ -30,6 +30,17 @@ describe("sealed Pages runtime configuration admission", () => {
       .toBe("smart-portfolio-contact-rate-limit-production");
   });
 
+  it("rejects changes to either target's reviewed contact hosts", async () => {
+    for (const target of ["production", "preview"]) {
+      for (const name of ["CONTACT_ALLOWED_ORIGINS", "TURNSTILE_ALLOWED_HOSTNAMES"]) {
+        const config = await currentConfig();
+        const vars = target === "production" ? config.vars : config.env.preview.vars;
+        vars[name] += name === "CONTACT_ALLOWED_ORIGINS" ? ",https://smart-portfolio-bds.pages.dev" : ",smart-portfolio-bds.pages.dev";
+        expect(() => validateRuntimeConfig(config, { target })).toThrow("unreviewed contact host");
+      }
+    }
+  });
+
   it("rejects extra, missing, duplicated, malformed, and target-mismatched D1 bindings", async () => {
     const changes = [
       (config) => config.d1_databases.push({ ...config.d1_databases[0], binding: "OTHER_DB" }),

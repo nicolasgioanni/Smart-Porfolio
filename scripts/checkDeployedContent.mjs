@@ -310,6 +310,20 @@ async function smokeAttempt(baseUrl, artifactDirectory, expectedContentHash, exp
       { ok: false, error: "method_not_allowed" },
       `/${endpoint} did not return the expected method rejection`
     );
+    // Unique deployment hosts and the assigned production alias establish artifact
+    // identity, but are not authorized to issue contact tickets or send mail.
+    const origin = normalizeBaseUrl(baseUrl).origin;
+    if (origin !== "https://nicolasmgioanni.dev" && origin !== "https://develop.smart-portfolio-bds.pages.dev") {
+      for (const claimedOrigin of [origin, "https://nicolasmgioanni.dev"]) {
+        const rejection = await fetch(endpointUrl(baseUrl, endpoint, cacheBust), {
+          method: "POST", headers: { "Content-Type": "application/json", Origin: claimedOrigin, "Cache-Control": "no-cache", Pragma: "no-cache" },
+          body: "{}", redirect: "manual", signal: AbortSignal.timeout(20_000)
+        });
+        assert.equal(rejection.status, 403, `/${endpoint} accepted an identity-only host`);
+        assertFunctionHeaders(rejection, endpoint);
+        assert.deepEqual(await rejection.json(), { ok: false, error: "request_rejected" });
+      }
+    }
   }
 }
 
