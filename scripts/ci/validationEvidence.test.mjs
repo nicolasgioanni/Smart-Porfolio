@@ -58,7 +58,7 @@ describe("validation evidence creation and admission", () => {
   });
 
   it("binds independent security evidence to source instead of content preparation", () => {
-    const options = { candidate, validator: "security-scans", producer: { ...producer, job: "security-scans" } };
+    const options = { candidate, validator: "dependency-audit", producer: { ...producer, job: "dependency-audit" } };
     const receipt = createSourceReceipt(options);
     expect(verifySourceReceipt(receipt, options)).toEqual(receipt);
     expect(receipt).not.toHaveProperty("snapshotDigest");

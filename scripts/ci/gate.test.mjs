@@ -381,6 +381,23 @@ describe("complete CI evidence gate", () => {
     }
   }, 30_000);
 
+  it("requires each independent source lane's original and current evidence", async () => {
+    for (const lane of securityJobs) {
+      const missing = await fixture({ mode: "unchanged" });
+      const artifact = missing.artifacts.find(({ name }) => name.includes(`receipt-${lane}`));
+      expect(artifact).toBeDefined();
+      missing.artifacts.splice(missing.artifacts.indexOf(artifact), 1);
+      await expect(verify(missing)).rejects.toThrow("Original producer artifact is missing");
+
+      const rerun = await fixture({ mode: "obsolete" });
+      physicalCurrentJob(rerun, lane);
+      await expect(verify(rerun)).rejects.toThrow("Original producer artifact is missing");
+
+      const tampered = await fixture({ mode: "unchanged", receiptPatch: { [lane]: (receipt) => ({ ...receipt, candidateDigest: "c".repeat(64) }) } });
+      await expect(verify(tampered)).rejects.toThrow();
+    }
+  }, 30_000);
+
   it("rejects every failed, cancelled, skipped, missing, or unexpected required dependency before providers run", async () => {
     const value = await fixture({ event: "pull_request" });
     const required = [...value.plan.requiredJobs, "browser-e2e"];

@@ -76,6 +76,24 @@ describe("private security scanner gate", () => {
     expect(() => parseSecurityScansCli(["--gitleaks", "/tools/gitleaks", "--gitleaks-mode", "git", "--target", "../repo", "--temp-root", "/tmp/scans"])).toThrow("invalid");
   });
 
+  it("runs each standalone scanner and keeps failures independent", async () => {
+    const fixture = await createScanFixture();
+    try {
+      const gitleaks = await writeScanner(fixture.root, "history", gitleaksStub({ report: "[]" }));
+      const zizmor = await writeScanner(fixture.root, "workflow", 'process.stdout.write("[]");');
+      const options = { root: fixture.root, scannerPolicyPath: fixture.scannerPolicyPath, tempRoot: fixture.tempRoot };
+      expect(await runSecurityScans({ ...options, gitleaks, gitleaksMode: "git", target: "." })).toEqual([{ tool: "gitleaks", status: "clean", findings: 0 }]);
+      expect(await runSecurityScans({ ...options, zizmor })).toEqual([{ tool: "zizmor", status: "clean", findings: 0 }]);
+      expect(await runSecurityScans({ ...options, zizmor: "/missing" })).toEqual([{ tool: "zizmor", status: "error", findings: 0 }]);
+      const finding = await writeScanner(fixture.root, "finding", gitleaksStub({ report: JSON.stringify([{ Secret: "private" }]), exitCode: 1 }));
+      expect(await runSecurityScans({ ...options, gitleaks: finding, gitleaksMode: "git", target: "." })).toEqual([{ tool: "gitleaks", status: "findings", findings: 1 }]);
+      expect(await runSecurityScans({ ...options, zizmor })).toEqual([{ tool: "zizmor", status: "clean", findings: 0 }]);
+      expect(parseSecurityScansCli(["--zizmor", zizmor, "--temp-root", fixture.tempRoot])).toMatchObject({ zizmor });
+      expect(() => parseSecurityScansCli(["--temp-root", fixture.tempRoot])).toThrow();
+      await expect(runSecurityScans(options)).rejects.toThrow("At least one scanner");
+    } finally { await rm(fixture.root, { recursive: true, force: true }); }
+  });
+
   it("accepts only an ignored zizmor record covered by the exact active suppression", () => {
     const report = [{
       ident: "template-injection",

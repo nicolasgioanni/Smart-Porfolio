@@ -594,8 +594,8 @@ jobs:
           include-hidden-files: false
     env: &a5
       CI_CANDIDATE: ${{ needs['resolve-candidate'].outputs.candidate }}
-  security-scans:
-    name: security-scans
+  history-secrets:
+    name: history-secrets
     needs: resolve-candidate
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -617,16 +617,85 @@ jobs:
           tool_root="$RUNNER_TEMP/smart-portfolio-tools"
           mkdir -p "$tool_root"
           node scripts/security/installPinnedTool.mjs gitleaks "$tool_root" > /dev/null
-          node scripts/security/installPinnedTool.mjs zizmor "$tool_root" > /dev/null
-      - name: Scan Git history and workflow semantics without publishing scanner details
+      - name: Scan Git history without publishing scanner details
         shell: bash
         run: |
           set -euo pipefail
           node scripts/security/securityScans.mjs \
             --gitleaks "$RUNNER_TEMP/smart-portfolio-tools/gitleaks/gitleaks" \
             --gitleaks-mode git \
-            --target . \
+            --target .
+      - name: Record independent source-validation evidence
+        id: evidence
+        run: node scripts/ci/run.mjs source-receipt
+      - name: Upload immutable receipt
+        id: receipt
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ${{ steps.evidence.outputs.receipt_name }}
+          path: ${{ steps.evidence.outputs.receipt_path }}
+          if-no-files-found: error
+          retention-days: 3
+          include-hidden-files: false
+    env: *a5
+  workflow-security:
+    name: workflow-security
+    needs: resolve-candidate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out the immutable candidate without credentials
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: ${{ needs['resolve-candidate'].outputs.candidate_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22.23.3
+      - name: Install checksum-verified credential-free scanners
+        shell: bash
+        run: |
+          set -euo pipefail
+          tool_root="$RUNNER_TEMP/smart-portfolio-tools"
+          mkdir -p "$tool_root"
+          node scripts/security/installPinnedTool.mjs zizmor "$tool_root" > /dev/null
+      - name: Scan workflow semantics without publishing scanner details
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/security/securityScans.mjs \
             --zizmor "$RUNNER_TEMP/smart-portfolio-tools/zizmor/zizmor"
+      - name: Record independent source-validation evidence
+        id: evidence
+        run: node scripts/ci/run.mjs source-receipt
+      - name: Upload immutable receipt
+        id: receipt
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ${{ steps.evidence.outputs.receipt_name }}
+          path: ${{ steps.evidence.outputs.receipt_path }}
+          if-no-files-found: error
+          retention-days: 3
+          include-hidden-files: false
+    env: *a5
+  dependency-audit:
+    name: dependency-audit
+    needs: resolve-candidate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out the immutable candidate without credentials
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: ${{ needs['resolve-candidate'].outputs.candidate_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22.23.3
       - name: Audit locked dependencies even when application content is unchanged
         run: npm run audit:check
       - name: Record independent source-validation evidence
@@ -691,9 +760,6 @@ jobs:
     needs: resolve-candidate
     runs-on: ubuntu-24.04
     timeout-minutes: 30
-    permissions:
-      contents: read
-      security-events: write
     steps:
       - name: Check out the immutable candidate without credentials
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
@@ -716,7 +782,7 @@ jobs:
         uses: github/codeql-action/analyze@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2
         with:
           category: /language:javascript-typescript
-          output: sarif-results
+          output: ${{ runner.temp }}/smart-portfolio-codeql
           upload: never
       - name: Fail closed for malformed SARIF, scanner errors, or security findings
         shell: bash
@@ -730,11 +796,6 @@ jobs:
             exit 1
           fi
           node scripts/security/checkSarif.mjs "${sarif_files[0]}"
-      - name: Upload passed CodeQL SARIF
-        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2
-        with:
-          sarif_file: ${{ steps.analyze.outputs.sarif-output }}
-          category: /language:javascript-typescript
       - name: Record independent source-validation evidence
         id: evidence
         run: node scripts/ci/run.mjs source-receipt
@@ -792,7 +853,9 @@ jobs:
       - resolve-candidate
       - prepare-content
       - security-tools
-      - security-scans
+      - history-secrets
+      - workflow-security
+      - dependency-audit
       - codeql
       - infrastructure
       - dependency-review

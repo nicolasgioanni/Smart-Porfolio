@@ -56,13 +56,14 @@ export function validateAuditReport(audit) {
   }
 }
 
-export function validateAuditExceptions(exceptions, lock) {
+export function validateAuditExceptions(exceptions, lock, now = new Date()) {
   const advisoryIds = new Set();
   const packagePaths = new Set();
   for (const exception of exceptions) {
     if (!/^GHSA-[a-z0-9-]+$/i.test(exception.advisory) || exception.owner !== "nicolasgioanni" || !isCanonicalDate(exception.expires) || !exception.exposure || !exception.remediation || !exception.package || !exception.version || !exception.path) {
       throw new Error("Each audit exception requires its exact advisory, owner, canonical expiry, exposure, remediation, package, version, and path.");
     }
+    if (new Date(`${exception.expires}T23:59:59.999Z`) < now) throw new Error("Dependency audit exception expired.");
     const advisory = exception.advisory.toUpperCase();
     if (advisoryIds.has(advisory) || packagePaths.has(exception.path)) throw new Error("Audit exceptions may not duplicate an advisory or locked package path.");
     advisoryIds.add(advisory);
@@ -104,8 +105,12 @@ async function main() {
   const result = spawnSync(npmEntry ? process.execPath : "npm", npmEntry ? [npmEntry, "audit", "--json"] : ["audit", "--json"], { cwd: projectRoot, encoding: "utf8", timeout: auditTimeoutMs, maxBuffer: auditMaxBytes });
   const audit = parseAuditCommandResult(result);
   const unresolved = unresolvedAuditAdvisories(audit, exceptionsDocument.exceptions);
-  if (unresolved.length > 0) throw new Error(`Dependency audit has unapproved or expired advisories: ${[...new Set(unresolved.map((entry) => entry.advisory ?? entry.name))].join(", ")}`);
-  console.log("Dependency audit contains no unapproved or expired advisories.");
+  if (unresolved.length > 0) {
+    console.error(`dependency-audit: rejected; findings=${unresolved.length}`);
+    process.exitCode = 1;
+    return;
+  }
+  console.log("dependency-audit: clean; findings=0");
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main().catch((error) => { console.error(error instanceof Error ? error.message : String(error)); process.exitCode = 1; });
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main().catch(() => { console.error("dependency-audit: error; findings=0"); process.exitCode = 1; });

@@ -86,6 +86,7 @@ export function validateWorkflowGraph(workflow) {
   if (!needs(jobs["prepare-content"]).includes("resolve-candidate")) problems.push("Content preparation must consume the resolved candidate.");
   for (const name of [...securityJobs, "dependency-review"]) {
     if (sorted(needs(jobs[name])) !== "resolve-candidate") problems.push(`${name} must run independently after candidate resolution.`);
+    if (name !== "dependency-review" && jobs[name]?.if !== undefined) problems.push(`${name} must run for every candidate plan.`);
   }
   for (const name of applicationJobs) {
     const dependencies = needs(jobs[name]);
