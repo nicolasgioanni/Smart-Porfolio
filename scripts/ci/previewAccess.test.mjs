@@ -43,6 +43,10 @@ describe("private preview activation", () => {
   it.each([
     ["end-user Pages path", [...apps, { type: "end_user", domain: "develop.smart-portfolio-bds.pages.dev/research", destinations: [{ type: "public", uri: "develop.smart-portfolio-bds.pages.dev/research", overrides: [{ behavior: "public", path_pattern: "/*" }] }] }], policies],
     ["end-user custom-host path", [...apps, { type: "end_user", destinations: [{ type: "public", uri: "preview.example.com/research", overrides: [{ behavior: "public", path_pattern: "/*" }] }] }], policies],
+    ["end-user malformed host evidence", [...apps, { type: "end_user", domain: "localhost" }], policies],
+    ["end-user missing host evidence", [...apps, { type: "end_user" }], policies],
+    ["end-user null host evidence", [...apps, { type: "end_user", domain: null, destinations: null }], policies],
+    ["end-user empty destinations", [...apps, { type: "end_user", destinations: [] }], policies],
     ["public destination without URI", [...apps, { type: "end_user", destinations: [{ type: "public" }] }], policies],
     ["extra broad app", [...apps, { type: "self_hosted", domain: "*.pages.dev" }], policies],
     ["preflight bypass", [apps[0], { ...apps[1], options_preflight_bypass: true }], policies],

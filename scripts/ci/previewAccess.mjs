@@ -67,7 +67,7 @@ function overlaps(domain, hostname) {
     const suffix = host.slice(2);
     return hostname.endsWith(`.${suffix}`) || reviewedPagesDomain === suffix || reviewedPagesDomain.endsWith(`.${suffix}`);
   }
-  if (!/^[a-z0-9.-]+$/.test(host)) return true;
+  if (!/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(host)) return true;
   return host === hostname || host === reviewedPagesDomain || host.endsWith(`.${reviewedPagesDomain}`);
 }
 
@@ -83,7 +83,7 @@ function appOverlaps(app, hostname) {
     if (destination.uri != null) domains.push(destination.uri);
     else throw fail();
   }
-  if (app.type === "self_hosted" && domains.length === 0) throw fail();
+  if (["self_hosted", "end_user"].includes(app.type) && domains.length === 0) throw fail();
   return domains.some((domain) => overlaps(domain, hostname));
 }
 
