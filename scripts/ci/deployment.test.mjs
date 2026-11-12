@@ -87,7 +87,7 @@ function deploymentOutput({ target = "production", sourceSha, mutate = (records)
     {
       type: "wrangler-session",
       version: 1,
-      wrangler_version: "4.148.0",
+      wrangler_version: "4.160.1",
       command_line_args: pagesDeploymentArguments({ target, sourceSha }),
       log_file_path: "/tmp/wrangler.log",
       timestamp
@@ -193,8 +193,8 @@ async function deploymentFixture({ mutateConfig } = {}) {
     producer,
     toolchain: {
       node: process.version,
-      next: "16.4.0",
-      wrangler: "4.148.0",
+      next: "16.4.6",
+      wrangler: "4.160.1",
       compatibilityDate: "2026-08-27",
       compatibilityFlags: [],
       lockfileHash: digest(await readFile(path.join(root, "package-lock.json")))
@@ -315,12 +315,12 @@ describe("deployment admission and provider evidence", () => {
     expect(() => assertDeploymentAcceptance(prPlan, acceptance, reference)).toThrow("ineligible");
   });
 
-  it("accepts only the pinned Wrangler 4.148.0 three-record JSONL result", () => {
+  it("accepts only the pinned Wrangler 4.160.1 three-record JSONL result", () => {
     const sourceSha = "a".repeat(40);
     expect(parseDeploymentOutput(deploymentOutput({ sourceSha }), { target: "production", sourceSha })).toBe(deploymentUrl);
     for (const mutate of [
       (records) => [...records, { type: "notice" }],
-      (records) => [{ ...records[0], wrangler_version: "4.148.1" }, ...records.slice(1)],
+      (records) => [{ ...records[0], wrangler_version: "4.160.2" }, ...records.slice(1)],
       (records) => [{ ...records[0], command_line_args: ["pages", "deploy"] }, ...records.slice(1)],
       (records) => [{ ...records[0], extra: true }, ...records.slice(1)],
       (records) => records.map((record) => record.url ? { ...record, url: record.url.replace("pages.dev", "pagesXdev") } : record),
