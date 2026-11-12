@@ -22,9 +22,13 @@ export function currentProducer(job, environment = process.env) {
     attempt: number("GITHUB_RUN_ATTEMPT"), job }, job);
 }
 
+export function gitIdentityEnvironment(environment = process.env) {
+  return { ...environment, PREVIEW_ACCESS_CLIENT_ID: undefined, PREVIEW_ACCESS_CLIENT_SECRET: undefined };
+}
+
 export function checkedCandidate(environment = process.env, projectRoot = process.cwd()) {
   const candidate = parseCandidate(jsonEnvironment("CI_CANDIDATE", environment));
-  const sha = execFileSync("git", ["rev-parse", "HEAD"], { cwd: projectRoot, encoding: "utf8", maxBuffer: 1024 }).trim();
+  const sha = execFileSync("git", ["rev-parse", "HEAD"], { cwd: projectRoot, encoding: "utf8", maxBuffer: 1024, env: gitIdentityEnvironment() }).trim();
   if (sha !== candidate.sourceSha || environment.GITHUB_SHA !== candidate.eventSha ||
       environment.GITHUB_REPOSITORY !== candidate.repository || environment.GITHUB_RUN_ID !== String(candidate.runId) ||
       environment.GITHUB_RUN_NUMBER !== String(candidate.runNumber)) throw new Error("Checkout/run identity differs from the accepted candidate.");

@@ -7,7 +7,7 @@ import { validateWorkflowYaml } from "./workflowYaml.mjs";
 
 const projectRoot = path.resolve(import.meta.dirname, "..", "..");
 const workflowPath = path.join(projectRoot, ".github", "workflows", "ci.yml");
-const deployEligibility = "${{ !cancelled() && github.event_name != 'pull_request' && needs.verify.result == 'success' && needs.verify.outputs.deploy == 'true' }}";
+const deployEligibility = "${{ !cancelled() && github.event_name != 'pull_request' && needs.verify.result == 'success' && needs.verify.outputs.deploy == 'true' && needs['preview-environment'].result == 'success' }}";
 const builtOutputScanSteps = [
   { name: "Install checksum-verified built-output scanner", run: "node scripts/security/installPinnedTool.mjs gitleaks /runner/tools > /dev/null" },
   { name: "Build once and seal the full candidate", run: "node scripts/ci/run.mjs build", env: { CI_GITLEAKS: "${{ runner.temp }}/smart-portfolio-tools/gitleaks/gitleaks" } },
@@ -25,7 +25,8 @@ function workflow() {
     "browser-e2e": { needs: ["resolve-candidate", "prepare-content"], strategy: { matrix: { shard: ["1/2", "2/2"] }, "fail-fast": false } },
     "build-and-package": { needs: ["resolve-candidate", "prepare-content"], steps: structuredClone(builtOutputScanSteps) },
     verify: { name: "verify", needs: [...gateDependencies], if: "always()" },
-    deploy: { needs: ["verify", "prepare-content", "build-and-package"], if: deployEligibility, concurrency: { group: "deployment-target", "cancel-in-progress": false } },
+    "preview-environment": { needs: ["resolve-candidate", "verify", "prepare-content"], if: "${{ !cancelled() && github.event_name != 'pull_request' && needs.verify.result == 'success' && needs.verify.outputs.deploy == 'true' }}", permissions: { contents: "read", actions: "read" }, outputs: { environment: "${{ steps.check.outputs.environment }}", enabled: "${{ steps.check.outputs.enabled }}" }, steps: [{ id: "check", run: "node scripts/ci/previewEnvironment.mjs", env: { GH_TOKEN: "${{ github.token }}", PREVIEW_ACCESS_ENABLED: "${{ vars.PREVIEW_ACCESS_ENABLED }}", CI_DEPLOY_TARGET: "${{ needs['prepare-content'].outputs.target }}" } }] },
+    deploy: { environment: "${{ needs['preview-environment'].outputs.environment }}", env: { PREVIEW_ACCESS_ENABLED: "${{ needs['preview-environment'].outputs.enabled }}" }, needs: ["verify", "prepare-content", "build-and-package", "preview-environment"], if: deployEligibility, concurrency: { group: "deployment-target", "cancel-in-progress": false } },
     heartbeat: {}
   } };
 }
@@ -76,6 +77,9 @@ describe("CI graph responsibilities", () => {
   it("rejects deployment cancellation, bypass paths and broad privilege", () => {
     for (const change of [
       (value) => { value.jobs.deploy.needs = ["build-and-package"]; },
+      (value) => { value.jobs["preview-environment"].if = "always()"; },
+      (value) => { value.jobs["preview-environment"].permissions.actions = "write"; },
+      (value) => { value.jobs.deploy.environment = "preview"; },
       (value) => { value.jobs.deploy.concurrency["cancel-in-progress"] = true; },
       (value) => { value.concurrency = { "cancel-in-progress": true }; },
       (value) => { value.concurrency = { "cancel-in-progress": "${{ true }}" }; },

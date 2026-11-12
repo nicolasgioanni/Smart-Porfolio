@@ -51,8 +51,8 @@ async function git(directory, ...args) {
   });
 }
 
-function candidate(sha) {
-  const ref = "refs/heads/main";
+function candidate(sha, target = "production") {
+  const ref = target === "preview" ? "refs/heads/develop" : "refs/heads/main";
   return {
     schemaVersion: 1,
     repository,
@@ -130,7 +130,7 @@ async function directoryDigest(directory) {
   return digest(Buffer.concat([Buffer.from(`${name}\0`), bytes, Buffer.from("\0")]));
 }
 
-async function deploymentFixture({ mutateConfig } = {}) {
+async function deploymentFixture({ mutateConfig, target = "production" } = {}) {
   const parent = await mkdtemp(path.join(os.tmpdir(), "portfolio-deployment-runner-"));
   temporary.push(parent);
   const root = path.join(parent, "repository");
@@ -154,13 +154,14 @@ async function deploymentFixture({ mutateConfig } = {}) {
   await git(root, "add", "--all");
   await git(root, "commit", "-qm", "fixture");
   const { stdout } = await git(root, "rev-parse", "HEAD");
-  const input = candidate(stdout.trim());
+  const input = candidate(stdout.trim(), target);
   const baseEnvironment = {
     NEXT_PUBLIC_TURNSTILE_SITE_KEY: "fixture-public-turnstile-key",
+    NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY: "fixture-preview-turnstile-key",
     CLOUDFLARE_PAGES_PROJECT_NAME: "smart-portfolio",
     CLOUDFLARE_PAGES_DOMAIN: "smart-portfolio-bds.pages.dev"
   };
-  const publicInputs = await collectPublicBuildInputs({ projectRoot: root, target: "production", sourceCommit: input.sourceSha, environment: baseEnvironment });
+  const publicInputs = await collectPublicBuildInputs({ projectRoot: root, target, sourceCommit: input.sourceSha, environment: baseEnvironment });
   const snapshot = createSnapshot({
     bytes: accepted,
     candidate: input,
@@ -189,7 +190,7 @@ async function deploymentFixture({ mutateConfig } = {}) {
     migrationsHash: "0".repeat(64),
     wranglerConfigHash: "0".repeat(64),
     sourceMode: "remote",
-    target: "production",
+    target,
     producer,
     toolchain: {
       node: process.version,
@@ -206,7 +207,7 @@ async function deploymentFixture({ mutateConfig } = {}) {
     writeFile(path.join(out, "_routes.json"), '{"version":1,"include":["/api/contact","/api/contact/verify"],"exclude":[]}\n'),
     writeFile(path.join(out, "content-version.json"), `${JSON.stringify({
       schemaVersion: 2, commitSha: input.sourceSha, contentHash, generatedAt: "2026-10-12T00:00:00.000Z",
-      deployedAt: "2026-10-12T00:00:01.000Z", target: "production", publicBuildInputDigest: snapshot.publicBuildInputDigest, producer
+      deployedAt: "2026-10-12T00:00:01.000Z", target, publicBuildInputDigest: snapshot.publicBuildInputDigest, producer
     })}\n`),
     writeFile(path.join(out, "_next", "fixture.js"), "export {};"),
     writeFile(path.join(migrations, "0001_fixture.sql"), "select 1;\n"),
@@ -293,13 +294,42 @@ function providerCommand(calls) {
     await mkdir(cache, { recursive: true });
     await writeFile(path.join(cache, args.includes("pages") ? "pages.json" : "d1.json"), "{}\n");
     if (args.includes("pages")) {
-      await writeFile(options.env.WRANGLER_OUTPUT_FILE_PATH, deploymentOutput({ sourceSha: args.at(-3) }));
+      await writeFile(options.env.WRANGLER_OUTPUT_FILE_PATH, deploymentOutput({ sourceSha: args.at(-3), target: args.includes("develop") ? "preview" : "production" }));
     }
     return { stdout: "", stderr: "" };
   });
 }
 
 describe("deployment admission and provider evidence", () => {
+  it("requires environment, Access evidence, denial and exact identity at both private preview hosts", async () => {
+    const fixture = await deploymentFixture({ target: "preview" });
+    const config = { emails: ["owner@example.com"], groups: [], hostname: "preview.example.com", humanAppId: "11111111-1111-1111-1111-111111111111", idpId: "22222222-2222-2222-2222-222222222222", pagesAppId: "33333333-3333-3333-3333-333333333333", serviceTokenId: "44444444-4444-4444-4444-444444444444" };
+    Object.assign(fixture.environment, { PREVIEW_ACCESS_ENABLED: "true", PREVIEW_ACCESS_CONFIG: JSON.stringify(config), PREVIEW_ACCESS_CLIENT_ID: "client", PREVIEW_ACCESS_CLIENT_SECRET: "secret" });
+    const calls = [], events = [];
+    const observe = vi.fn(async (_target, options) => { events.push(options.exactDeployment ? "hash-identity" : "alias-identity"); return events.filter((event) => event === "alias-identity").length <= 2 && !options.exactDeployment ? null : fixture.identity; });
+    const accessDenial = vi.fn(async (origin) => { events.push(origin === deploymentUrl ? "hash-denial" : "alias-denial"); });
+    const smoke = vi.fn(async (origin, _out, _hash, _sha, options) => { expect(options.privatePreview).toBe(true); events.push(origin === deploymentUrl ? "hash-smoke" : "alias-smoke"); });
+    await executeDeployment({ environment: fixture.environment, projectRoot: fixture.root, observe, branchTip: async () => fixture.input.sourceSha, executeCommand: providerCommand(calls), verifyProvenance: async () => {}, preflight: approvedPreflight(), environmentPreflight: async () => { events.push("environment"); }, accessPreflight: async () => { events.push("access"); }, accessDenial, smoke });
+    expect(events).toEqual(["environment", "access", "alias-denial", "alias-identity", "alias-identity", "hash-denial", "hash-smoke", "hash-identity", "alias-smoke", "alias-identity"]);
+    expect(calls).toHaveLength(2);
+    for (const call of calls) { expect(call.options.env.PREVIEW_ACCESS_CLIENT_ID).toBeUndefined(); expect(call.options.env.PREVIEW_ACCESS_CLIENT_SECRET).toBeUndefined(); }
+  });
+
+  it("retries an exact private preview without migration or upload while verifying the existing hash", async () => {
+    const fixture = await deploymentFixture({ target: "preview" });
+    const config = { emails: ["owner@example.com"], groups: [], hostname: "preview.example.com", humanAppId: "11111111-1111-1111-1111-111111111111", idpId: "22222222-2222-2222-2222-222222222222", pagesAppId: "33333333-3333-3333-3333-333333333333", serviceTokenId: "44444444-4444-4444-4444-444444444444" };
+    Object.assign(fixture.environment, { PREVIEW_ACCESS_ENABLED: "true", PREVIEW_ACCESS_CONFIG: JSON.stringify(config), PREVIEW_ACCESS_CLIENT_ID: "client", PREVIEW_ACCESS_CLIENT_SECRET: "secret" });
+    const calls = [], events = [];
+    const observe = vi.fn(async (_target, options) => { events.push(options.exactDeployment ? "hash-identity" : "alias-identity"); return fixture.identity; });
+    const accessDenial = vi.fn(async (origin) => { events.push(origin === deploymentUrl ? "hash-denial" : "alias-denial"); });
+    const smoke = vi.fn(async (origin) => { events.push(origin === deploymentUrl ? "hash-smoke" : "alias-smoke"); });
+    const currentPreviewDeployment = vi.fn(async () => deploymentUrl);
+    await executeDeployment({ environment: fixture.environment, projectRoot: fixture.root, observe, branchTip: async () => fixture.input.sourceSha, executeCommand: providerCommand(calls), verifyProvenance: async () => {}, preflight: approvedPreflight(), environmentPreflight: async () => { events.push("environment"); }, accessPreflight: async () => { events.push("access"); }, accessDenial, smoke, currentPreviewDeployment });
+    expect(events).toEqual(["environment", "access", "alias-denial", "alias-identity", "hash-denial", "hash-smoke", "hash-identity", "alias-smoke", "alias-identity"]);
+    expect(currentPreviewDeployment).toHaveBeenCalledOnce();
+    expect(calls).toHaveLength(0);
+  });
+
   it("binds deploy acceptance to a deployable target, plan, and original release reference", () => {
     const input = candidate("a".repeat(40));
     const plan = createPlan(input, { snapshotDigest: "b".repeat(64) });

@@ -3,14 +3,15 @@ import { applicationJobs, chromiumShards, securityJobs } from "./plan.mjs";
 export const gateDependencies = Object.freeze([
   "resolve-candidate", "prepare-content", ...securityJobs, "dependency-review", ...applicationJobs
 ]);
-const auxiliaryJobs = ["verify", "deploy", "heartbeat"];
+const auxiliaryJobs = ["verify", "preview-environment", "deploy", "heartbeat"];
 const sorted = (values) => [...values].sort().join(",");
 const needs = (job) => typeof job?.needs === "string" ? [job.needs] : Array.isArray(job?.needs) ? job.needs : [];
 const deployEligibilityTerms = Object.freeze([
   "!cancelled()",
   "github.event_name != 'pull_request'",
   "needs.verify.result == 'success'",
-  "needs.verify.outputs.deploy == 'true'"
+  "needs.verify.outputs.deploy == 'true'",
+  "needs['preview-environment'].result == 'success'"
 ]);
 
 function stepIndex(steps, predicate) {
@@ -53,7 +54,8 @@ function deployEligibilityProblems(value) {
     ["!cancelled()", "block cancellation"],
     ["github.event_name != 'pull_request'", "exclude pull requests"],
     ["needs.verify.result == 'success'", "require explicit verify success"],
-    ["needs.verify.outputs.deploy == 'true'", "require the exact deploy output"]
+    ["needs.verify.outputs.deploy == 'true'", "require the exact deploy output"],
+    ["needs['preview-environment'].result == 'success'", "require preview environment preflight success"]
   ]);
   for (const [term, label] of labels) {
     const occurrences = terms.filter((candidate) => candidate === term).length;
@@ -97,6 +99,19 @@ export function validateWorkflowGraph(workflow) {
     }
   }
   problems.push(...builtOutputScanProblems(jobs["build-and-package"]));
+  const preview = jobs["preview-environment"];
+  if (!needs(jobs.deploy).includes("preview-environment") ||
+      jobs.deploy?.environment !== "${{ needs['preview-environment'].outputs.environment }}" ||
+      jobs.deploy?.env?.PREVIEW_ACCESS_ENABLED !== "${{ needs['preview-environment'].outputs.enabled }}" ||
+      sorted(needs(preview)) !== sorted(["resolve-candidate", "prepare-content", "verify"]) ||
+      preview?.if !== "${{ !cancelled() && github.event_name != 'pull_request' && needs.verify.result == 'success' && needs.verify.outputs.deploy == 'true' }}" ||
+      sorted(Object.keys(preview?.permissions ?? {})) !== "actions,contents" ||
+      preview.permissions.actions !== "read" || preview.permissions.contents !== "read" ||
+      preview?.outputs?.environment !== "${{ steps.check.outputs.environment }}" ||
+      preview?.outputs?.enabled !== "${{ steps.check.outputs.enabled }}" ||
+      !preview?.steps?.some((step) => step.id === "check" && step.run === "node scripts/ci/previewEnvironment.mjs" &&
+        step.env?.GH_TOKEN === "${{ github.token }}" && step.env?.PREVIEW_ACCESS_ENABLED === "${{ vars.PREVIEW_ACCESS_ENABLED }}" &&
+        step.env?.CI_DEPLOY_TARGET === "${{ needs['prepare-content'].outputs.target }}" && Object.keys(step.env).length === 3)) problems.push("Deployment must use the validated preview environment selection.");
   if (!needs(jobs.deploy).includes("verify")) problems.push("Deployment must depend on verify.");
   problems.push(...deployEligibilityProblems(jobs.deploy?.if));
   if (jobs.deploy?.concurrency?.["cancel-in-progress"] !== false) problems.push("An active deployment must never be interrupted by concurrency.");

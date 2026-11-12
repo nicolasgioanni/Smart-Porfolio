@@ -7,6 +7,7 @@ import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { gitIdentityEnvironment } from "./context.mjs";
 import { browserAssignment } from "./browserRun.mjs";
 import { restoreAcceptedInputs, verifyAcceptedInputs } from "./consume.mjs";
 import { artifactName } from "./githubEvidence.mjs";
@@ -18,6 +19,12 @@ import { testIdentity } from "./receipts.mjs";
 import { uploadedReference } from "./run.mjs";
 import { createSnapshot, generatedContentPath } from "./snapshot.mjs";
 import { collectPublicBuildInputs, publicBuildInputDigest } from "../release/publicBuildInputs.mjs";
+
+it("keeps Access client credentials out of Git identity subprocesses", () => {
+  expect(gitIdentityEnvironment({ PATH: "/bin", PREVIEW_ACCESS_CLIENT_ID: "client", PREVIEW_ACCESS_CLIENT_SECRET: "secret" })).toEqual({
+    PATH: "/bin", PREVIEW_ACCESS_CLIENT_ID: undefined, PREVIEW_ACCESS_CLIENT_SECRET: undefined
+  });
+});
 
 const execute = promisify(execFile);
 const projectRoot = path.resolve(import.meta.dirname, "../..");
