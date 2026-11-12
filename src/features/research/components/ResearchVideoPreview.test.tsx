@@ -1,6 +1,8 @@
+import { createRef } from "react";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ResearchVideoPlayer } from "@/features/research/components/ResearchVideoPlayer";
 import { ResearchVideoPreview } from "@/features/research/components/ResearchVideoPreview";
 
 const motionPreference = vi.hoisted(() => ({ reduced: false }));
@@ -679,6 +681,8 @@ describe("ResearchVideoPreview", () => {
 
     fireEvent.click(settingsButton);
     const settings = screen.getByRole("group", { name: "Video settings" });
+    const settingsViewport = settings.querySelector<HTMLElement>(".research-video-player__settings-viewport");
+    expect(settingsViewport).toContainElement(within(settings).getByRole("button", { name: "Playback speed: 1x" }));
     const speedMenu = within(settings).getByRole("button", { name: "Playback speed: 1x" });
     speedMenu.focus();
     fireEvent.keyDown(speedMenu, { key: "Enter" });
@@ -686,6 +690,8 @@ describe("ResearchVideoPreview", () => {
     expect(settings).toHaveAttribute("data-view", "speeds");
     expect(within(settings).getByRole("button", { name: "Back to video settings" })).toBeInTheDocument();
     const speedRange = within(settings).getByRole("slider", { name: "Playback speed" });
+    expect(settingsViewport).toContainElement(speedRange);
+    expect(speedMenu.closest(".research-video-player__settings-root")).toHaveAttribute("inert");
     expect(speedRange).toHaveAttribute("min", "0");
     expect(speedRange).toHaveAttribute("max", "5");
     expect(speedRange).toHaveAttribute("step", "1");
@@ -711,13 +717,49 @@ describe("ResearchVideoPreview", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Playback speed: 2x" }));
     const back = within(settings).getByRole("button", { name: "Back to video settings" });
+    fireEvent.pointerDown(back, { pointerType: "mouse" });
     fireEvent.click(back);
+    expect(settings).toHaveAttribute("data-open", "true");
     expect(settings).toHaveAttribute("data-view", "root");
     await waitFor(() => expect(screen.getByRole("button", { name: "Playback speed: 2x" })).toHaveFocus());
 
     await act(async () => fireEvent.keyDown(settings, { key: "Escape" }));
     expect(settings).toHaveAttribute("data-open", "false");
     await waitFor(() => expect(settingsButton).toHaveFocus());
+  });
+
+  it("omits the secondary settings grouping when playback speed is the only available action", () => {
+    const originalPictureInPictureEnabled = Object.getOwnPropertyDescriptor(document, "pictureInPictureEnabled");
+
+    try {
+      Object.defineProperty(document, "pictureInPictureEnabled", { configurable: true, value: false });
+      const videoRef = createRef<HTMLVideoElement>();
+      const { container } = render(
+        <ResearchVideoPlayer
+          captionsEnabled
+          label="Example Research supplementary workflow video"
+          onCaptionsEnabledChange={() => undefined}
+          poster={graphicalAbstract}
+          video={video}
+          videoRef={videoRef}
+        />
+      );
+      const playerRoot = getInlinePlayer(container);
+
+      revealPlayerControls(playerRoot);
+      fireEvent.click(screen.getByRole("button", { name: "Open video settings" }));
+
+      const settings = screen.getByRole("group", { name: "Video settings" });
+      expect(settings.querySelector(".research-video-player__settings-secondary")).toBeNull();
+      expect(within(settings).getAllByRole("button")).toHaveLength(1);
+      expect(within(settings).getByRole("button", { name: "Playback speed: 1x" })).toBeInTheDocument();
+    } finally {
+      if (originalPictureInPictureEnabled) {
+        Object.defineProperty(document, "pictureInPictureEnabled", originalPictureInPictureEnabled);
+      } else {
+        Reflect.deleteProperty(document, "pictureInPictureEnabled");
+      }
+    }
   });
 
   it("keeps a pointer-open settings root available for its enlarged-view action after submenu Escape", async () => {
