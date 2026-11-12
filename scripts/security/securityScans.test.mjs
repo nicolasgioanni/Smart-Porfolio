@@ -94,6 +94,24 @@ describe("private security scanner gate", () => {
     } finally { await rm(fixture.root, { recursive: true, force: true }); }
   });
 
+  it("binds Git scanning to the complete checked-out HEAD ancestry only", async () => {
+    const fixture = await createScanFixture();
+    try {
+      const scanner = await writeScanner(fixture.root, "scope-check", [
+        'import { writeFileSync } from "node:fs";',
+        'const args = process.argv.slice(2);',
+        'const mode = args[0];',
+        'const options = args.filter((value) => value === "--log-opts");',
+        'if (mode === "git" ? options.length !== 1 || args[args.indexOf("--log-opts") + 1] !== "--full-history HEAD" : options.length !== 0) process.exit(2);',
+        'writeFileSync(args[args.indexOf("--report-path") + 1], "[]");',
+      ].join("\n"));
+      const options = { root: fixture.root, scannerPolicyPath: fixture.scannerPolicyPath, tempRoot: fixture.tempRoot, gitleaks: scanner, target: "." };
+      for (const gitleaksMode of ["git", "dir"]) {
+        expect(await runSecurityScans({ ...options, gitleaksMode })).toEqual([{ tool: "gitleaks", status: "clean", findings: 0 }]);
+      }
+    } finally { await rm(fixture.root, { recursive: true, force: true }); }
+  });
+
   it("accepts only an ignored zizmor record covered by the exact active suppression", () => {
     const report = [{
       ident: "template-injection",

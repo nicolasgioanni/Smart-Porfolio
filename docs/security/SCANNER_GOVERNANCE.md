@@ -2,6 +2,8 @@
 
 The release-security owner maintains the independent `security-tools` (actionlint), `history-secrets` (Gitleaks), `workflow-security` (Zizmor), `dependency-audit` (npm audit), `codeql`, and `infrastructure` source jobs. Every candidate, including unchanged and obsolete plans, requires each exact source receipt. Pull requests additionally require dependency review. The build separately scans the sealed release and binds its receipt to the sealed manifest. `verify` admits only exact candidate and producer evidence; a rerun with new physical execution requires its new receipt.
 
+History scanning uses the full ancestry of the checked-out exact candidate (`HEAD`), with full history fetched by the job. Other shared refs do not expand that candidate scope.
+
 Pinned scanner binaries and checksums are recorded in `scripts/security/pinnedTools.json`; update them together after reviewing the official release and validating the installer. Infrastructure checks use provider-specific Terraform mock and OPA saved-plan policies, not a generic claim of Cloudflare coverage. They establish local configuration evidence, not live posture.
 
 Detailed Gitleaks and Zizmor output stays in private runner temporary files and is removed by the wrapper. CodeQL SARIF is locally validated and is not uploaded. Audit output is parsed privately; job logs contain only redacted status and counts. Do not publish reports or raw diagnostics as artifacts. Investigate findings locally in a private environment, without copying secrets into issues or logs.

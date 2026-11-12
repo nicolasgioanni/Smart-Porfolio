@@ -251,6 +251,7 @@ async function scanGitleaks({ binary, mode, target, tempDir, inputs, root }) {
   const reportPath = path.join(tempDir, "gitleaks-report.json");
   const process = await capturePrivateOutput(binary, [
     mode,
+    ...(mode === "git" ? ["--log-opts", "--full-history HEAD"] : []),
     "--redact",
     "--verbose",
     "--no-banner",
