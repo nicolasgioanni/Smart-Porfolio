@@ -41,6 +41,8 @@ The repository cannot verify Cloudflare or GitHub dashboard state. Operators mus
 
 Provider-dashboard uploads and deploy hooks bypass the repository quality gate and are not part of the supported release path.
 
+At baseline `da1199cd`, the security proposal in [PR 111](https://github.com/nicolasgioanni/Smart-Porfolio/pull/111) is superseded by merged security work, while the private-preview proposal in [PR 113](https://github.com/nicolasgioanni/Smart-Porfolio/pull/113) remains unmerged. Any later private-preview integration must apply preview authentication to comparison and exact-deployment smoke checks within the existing serialized deployment path, while preserving matching artifact and identity checks and freshness checks, and avoiding parallel promotion.
+
 ## Trigger and branch behavior
 
 `resolve-candidate` admits an eligible event and workflow revision before checkout, then records one immutable candidate. `prepare-content` creates the plan and accepted snapshot. A full plan fans out to application validation; the independent source-security jobs fan out directly from resolution. `verify` accepts only the required successful jobs and their original evidence artifacts. `deploy-<target>` is conditional on that acceptance. The schedule-only `develop-schedule-heartbeat` is independent.
