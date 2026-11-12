@@ -15,6 +15,9 @@ updates:
       interval: weekly
   - package-ecosystem: terraform
     directories:
+      - /infra/modules/edge-controls
+      - /infra/modules/pages-environments
+      - /infra/modules/preview-access
       - /infra/states/cloudflare-audit
       - /infra/states/cloudflare-preview
       - /infra/states/cloudflare-production
@@ -22,3 +25,8 @@ updates:
       - /infra/states/github-governance
     schedule:
       interval: weekly
+    groups:
+      terraform-providers:
+        group-by: dependency-name
+        patterns:
+          - "*"

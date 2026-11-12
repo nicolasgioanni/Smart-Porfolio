@@ -9,6 +9,8 @@ describe("dependency update configuration", () => {
     expect(config.updates.map((entry) => entry["package-ecosystem"])).toEqual(["npm", "github-actions", "terraform"]);
     expect(config.updates.every((entry) => entry.schedule.interval === "weekly")).toBe(true);
     expect(config.updates[0].groups["next-framework"].patterns).toEqual(["next", "@next/eslint-plugin-next"]);
-    expect(config.updates[2].directories).toEqual(["/infra/states/cloudflare-audit", "/infra/states/cloudflare-preview", "/infra/states/cloudflare-production", "/infra/states/cloudflare-shared", "/infra/states/github-governance"]);
+    expect(config.updates[2].directories).toEqual(["/infra/modules/edge-controls", "/infra/modules/pages-environments", "/infra/modules/preview-access", "/infra/states/cloudflare-audit", "/infra/states/cloudflare-preview", "/infra/states/cloudflare-production", "/infra/states/cloudflare-shared", "/infra/states/github-governance"]);
+    expect(config.updates[2].groups["terraform-providers"]["group-by"]).toBe("dependency-name");
+    expect(config.updates[2].groups["terraform-providers"].patterns).toEqual(["*"]);
   });
 });
