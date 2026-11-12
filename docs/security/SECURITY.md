@@ -4,6 +4,8 @@ The portfolio is a static-first site with a deliberately narrow dynamic boundary
 
 This document separates controls that the repository enforces from controls that an operator must configure in external services. For the exact contact request and response contract, use [Contact System](CONTACT_SYSTEM.md). For environment activation and deployment checks, use [Deployment](../operations/DEPLOYMENT.md). Use [Security Checklist](SECURITY_CHECKLIST.md) when reviewing a change or release.
 
+[Implementation inventory](../architecture/IMPLEMENTATION_INVENTORY.md) uses the same evidence distinction across architecture, content, quality, operations, and security: source and tests establish implemented behavior; dashboard policy, provider configuration, and deployed posture need independent observation.
+
 ## Control status
 
 | Status | Meaning |

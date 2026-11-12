@@ -4,6 +4,8 @@ Smart Portfolio is deployed to Cloudflare Pages by GitHub Actions. The repositor
 
 This guide defines the deployment architecture and initial configuration. Use [Operations](OPERATIONS.md) for recurring releases, monitoring, rollback, and incident response. Use [Troubleshooting](../development/TROUBLESHOOTING.md) when a local or hosted check fails.
 
+The workflow and checked-in configuration are repository-declared release behavior. Cloudflare and GitHub dashboard settings, encrypted values, and the state of a deployed alias are operator-managed evidence; [Implementation inventory](../architecture/IMPLEMENTATION_INVENTORY.md) explains the distinction.
+
 ## Current deployment targets
 
 These are the reviewed targets for this deployed portfolio. They are not generic defaults for a fork or a different Cloudflare account; see [Set up or restore a deployment](#set-up-or-restore-a-deployment) before changing them.

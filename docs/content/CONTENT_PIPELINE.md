@@ -4,6 +4,8 @@ Smart Portfolio turns spreadsheet rows into validated JSON before Next.js render
 
 Use this guide for source selection, generation, hashing, and deployment semantics. See [Content Sheet Schema](CONTENT_SHEET_SCHEMA.md) for the exact columns and field rules, [Content Mapping](CONTENT_MAPPING.md) for selectors and UI consumers, and [Local Content Editing](LOCAL_CONTENT_EDITING.md) for the editing workflow.
 
+The generator, templates, types, and validators below are implemented repository contracts. The current availability or contents of an external workbook are operator-managed state, not evidence supplied by this guide. [Implementation inventory](../architecture/IMPLEMENTATION_INVENTORY.md) defines that distinction and maps the complete content path.
+
 ## Pipeline overview
 
 ```mermaid
