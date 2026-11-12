@@ -8,6 +8,7 @@ import {
   assertNoCacheMetadataHeaders,
   assertRootResponse,
   assertStaticHeaders,
+  checkFunctionResponse,
   compareDeployedContent,
   compareProducerGeneration,
   decideDeployment,
@@ -257,6 +258,67 @@ describe("deployment smoke checks", () => {
       "/api/contact", "/api/contact", "/api/contact"
     ]);
     expect(redirectModes).toEqual(Array(11).fill("manual"));
+  });
+
+  it("bounds and strictly decodes Function rejection bodies", async () => {
+    const cases = [
+      [new Uint8Array(16 * 1024 + 1), /budget/],
+      [new Uint8Array([0xff]), /encoded data|encoding/i],
+      [new TextEncoder().encode("not json"), /JSON|Unexpected token/i]
+    ];
+    for (const [bytes, error] of cases) {
+      const cancel = vi.fn();
+      const stream = new ReadableStream({ start(controller) { controller.enqueue(bytes); }, cancel });
+      // Close malformed finite bodies so strict decoding and JSON parsing run.
+      if (bytes.length <= 16 * 1024) {
+        const finite = new Response(bytes, { status: 403, headers: { ...functionHeaders, "Content-Type": "application/json" } });
+        await expect(checkFunctionResponse(new URL("https://identity.example/api/contact"), "api/contact", {
+          method: "POST", origin: "https://identity.example", fetchImplementation: async () => finite
+        })).rejects.toThrow(error);
+      } else {
+        await expect(checkFunctionResponse(new URL("https://identity.example/api/contact"), "api/contact", {
+          method: "POST", origin: "https://identity.example", fetchImplementation: async () => new Response(stream, { status: 403, headers: { ...functionHeaders, "Content-Type": "application/json" } })
+        })).rejects.toThrow(error);
+        expect(cancel).toHaveBeenCalledOnce();
+      }
+    }
+    const cancel = vi.fn();
+    const oversized = new Response(new ReadableStream({ cancel }), { status: 403, headers: { ...functionHeaders, "Content-Type": "application/json", "Content-Length": "16385" } });
+    await expect(checkFunctionResponse(new URL("https://identity.example/api/contact"), "api/contact", {
+      method: "POST", origin: "https://identity.example", fetchImplementation: async () => oversized
+    })).rejects.toThrow("budget");
+    expect(cancel).toHaveBeenCalledOnce();
+  });
+
+  it("cancels a stalled Function body when the shared deadline expires", async () => {
+    const controller = new AbortController();
+    const cancel = vi.fn();
+    const response = new Response(new ReadableStream({ cancel }), { status: 403, headers: { ...functionHeaders, "Content-Type": "application/json" } });
+    const observation = checkFunctionResponse(new URL("https://identity.example/api/contact"), "api/contact", {
+      method: "POST", origin: "https://identity.example", signal: controller.signal, fetchImplementation: async () => response
+    });
+    const rejection = expect(observation).rejects.toThrow("timed out");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    controller.abort();
+    await rejection;
+    expect(cancel).toHaveBeenCalledOnce();
+  });
+
+  it("cancels a late Function response after the header deadline", async () => {
+    const controller = new AbortController();
+    const cancel = vi.fn();
+    let finishFetch;
+    const pending = new Promise((resolve) => { finishFetch = resolve; });
+    const observation = checkFunctionResponse(new URL("https://identity.example/api/contact"), "api/contact", {
+      method: "POST", origin: "https://identity.example", signal: controller.signal, fetchImplementation: () => pending
+    });
+    const rejection = expect(observation).rejects.toThrow("timed out");
+    controller.abort();
+    await rejection;
+    finishFetch(new Response(new ReadableStream({ cancel }), { status: 403 }));
+    await pending;
+    await Promise.resolve();
+    expect(cancel).toHaveBeenCalledOnce();
   });
 
   it("rejects substituted root bytes and a static CSP that bypasses a route replacement", async () => {
