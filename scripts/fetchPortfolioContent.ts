@@ -405,10 +405,19 @@ export async function generatePortfolioContent(options: GeneratePortfolioContent
     sources
   };
 
-  const normalizedContent = normalizePortfolioContent(sheets, metadata);
+  const validateSource = <T>(operation: () => T): T => {
+    try { return operation(); } catch (error) {
+      if (!workbookUrl) throw error;
+      if (error instanceof Error && error.message.startsWith("Invalid boolean for ")) {
+        throw new Error("Invalid boolean in remote workbook content");
+      }
+      throw new Error("The remote workbook content failed validation");
+    }
+  };
+  const normalizedContent = validateSource(() => normalizePortfolioContent(sheets, metadata));
   const previousContent = await readPreviousContent(outputFile);
   const finalized = finalizeGeneratedPortfolioContent(normalizedContent, previousContent ?? undefined);
-  const content = validatePortfolioContent(finalized.content);
+  const content = validateSource(() => validatePortfolioContent(finalized.content));
   const { contentChanged } = finalized;
 
   await mkdir(path.dirname(outputFile), { recursive: true });

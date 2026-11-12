@@ -18,6 +18,7 @@ import {
   createPortfolioContentHash,
   finalizeGeneratedPortfolioContent,
   parsePortfolioWorkbook,
+  parsePortfolioWorkbookInChild,
   portfolioWorkbookSheetNames,
   validatePortfolioWorkbookUrl,
   type PortfolioWorkbookSheetName
@@ -720,7 +721,7 @@ describe("XLSX workbook structure and cells", () => {
     const bytes = Uint8Array.from(await archive.generateAsync({ type: "uint8array", compression: "DEFLATE" }));
     const xlsxGetter = vi.spyOn(ExcelJS.Workbook.prototype, "xlsx", "get");
 
-    await expect(parsePortfolioWorkbook(bytes)).rejects.toThrow(/archive contains too many entries/);
+    await expect(parsePortfolioWorkbookInChild(bytes)).rejects.toThrow(/archive contains too many entries/);
     expect(xlsxGetter).not.toHaveBeenCalled();
   });
 
@@ -736,7 +737,7 @@ describe("XLSX workbook structure and cells", () => {
     const xlsxGetter = vi.spyOn(ExcelJS.Workbook.prototype, "xlsx", "get");
 
     expect(bytes.byteLength).toBeLessThan(portfolioWorkbookMaxBytes);
-    await expect(parsePortfolioWorkbook(bytesWithFalsifiedSize)).rejects.toThrow(
+    await expect(parsePortfolioWorkbookInChild(bytesWithFalsifiedSize)).rejects.toThrow(
       /archive exceeds the allowed decoded size limit/
     );
     expect(xlsxGetter).not.toHaveBeenCalled();
@@ -767,8 +768,20 @@ describe("XLSX workbook structure and cells", () => {
     expect(atLimitBytes.byteLength).toBeLessThan(portfolioWorkbookMaxBytes);
     await expect(parsePortfolioWorkbook(atLimitBytes)).resolves.toHaveProperty("profile");
     const xlsxGetter = vi.spyOn(ExcelJS.Workbook.prototype, "xlsx", "get");
-    await expect(parsePortfolioWorkbook(oneByteOverLimit)).rejects.toThrow(/archive exceeds the allowed decoded size limit/);
+    await expect(parsePortfolioWorkbookInChild(oneByteOverLimit)).rejects.toThrow(/archive exceeds the allowed decoded size limit/);
     expect(xlsxGetter).not.toHaveBeenCalled();
+  });
+
+  it("rejects excessive worksheet expansion before ExcelJS in the isolated parser", async () => {
+    const archive = await JSZip.loadAsync(await createWorkbookBytes());
+    const entry = archive.file("xl/worksheets/sheet1.xml")!;
+    const xml = await entry.async("string");
+    archive.file("xl/worksheets/sheet1.xml", xml.replace("</worksheet>", '<mergeCells><mergeCell ref="A1:DX5000"/></mergeCells></worksheet>'));
+    const bytes = await archive.generateAsync({ type: "uint8array", compression: "DEFLATE" });
+    const xlsxGetter = vi.spyOn(ExcelJS.Workbook.prototype, "xlsx", "get");
+    await expect(parsePortfolioWorkbookInChild(bytes)).rejects.toThrow(/dimensions/);
+    expect(xlsxGetter).not.toHaveBeenCalled();
+    await expect(parsePortfolioWorkbook(bytes)).rejects.toThrow(/dimensions/);
   });
 
   it("writes and reads a data-bar workbook through ExcelJS's UUID-backed extension path", async () => {
@@ -857,6 +870,16 @@ describe("XLSX workbook structure and cells", () => {
     }
   });
 
+  it("preserves content from workbooks with ignored presentation rules", async () => {
+    const bytes = await createWorkbookBytes({ mutate: (workbook) => {
+      getWorksheet(workbook, "profile").addConditionalFormatting({
+        ref: "B2:B4", rules: [{ type: "expression", formulae: ["TRUE"], style: { font: { bold: true } } }]
+      });
+    } });
+    const sheets = await parsePortfolioWorkbook(bytes);
+    expect(sheets.profile.some((row) => row.key === "full_name" && Boolean(row.value))).toBe(true);
+  });
+
   it("uses cached displayed formula text and rejects formulas without a cache", async () => {
     const displayedBio = "Rich  text stays together";
     const cachedBytes = await createWorkbookBytes({
@@ -898,6 +921,19 @@ describe("XLSX workbook structure and cells", () => {
       /formula .* is missing a cached value/
     );
     expect(await fileDoesNotExist(failure.outputFile)).toBe(true);
+  });
+
+  it("does not expose remote cell contents in validation errors", async () => {
+    const secret = "private-payload-value";
+    const bytes = await createWorkbookBytes({ mutate: (workbook) => {
+      const sheet = getWorksheet(workbook, "skills");
+      sheet.getCell(2, findColumn(sheet, "featured")).value = secret;
+    } });
+    const { outputFile } = await createTemporaryPaths();
+    const error = await generateFromWorkbook(bytes, { outputFile }).catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toBe("Invalid boolean in remote workbook content");
+    expect((error as Error).message).not.toContain(secret);
   });
 
   it("normalizes line endings and trailing blank rows/columns while preserving internal whitespace", async () => {

@@ -84,7 +84,7 @@ Client validation, disabled controls, consent state, and a successful widget ani
 
 The Next.js application exports static HTML, JavaScript, CSS, images, and public generated content. Core pages do not require a runtime Next.js server, database, user authentication, or runtime spreadsheet request. Every file emitted under `out/` is public.
 
-The build downloads one anonymous HTTPS XLSX source, validates it, and turns it into public generated content. Treat that workbook as untrusted public input. The generator applies a 5 MiB compressed-download limit, archive entry and streamed decoded-byte limits before ExcelJS parses it, then worksheet, row, field, and URL checks before static rendering. Spreadsheet text renders as ordinary React text. Do not add raw HTML or `dangerouslySetInnerHTML` for content-source text.
+The build downloads one anonymous HTTPS XLSX source, validates it, and turns it into public generated content. Treat that workbook as untrusted public input. The generator applies a 5 MiB compressed-download limit, archive entry and streamed decoded-byte limits, then namespace-aware XML and worksheet expansion limits before ExcelJS materializes it. Workbook parsing runs in a fixed child with no inherited credential environment variables, a 512 MiB V8 heap, a 15-second deadline, bounded pipes and redacted errors. This is not an operating-system filesystem or network sandbox, and the heap cap is not a total process-memory limit. Worksheet, row, field, and URL checks follow before static rendering. Spreadsheet text renders as ordinary React text. Do not add raw HTML or `dangerouslySetInnerHTML` for content-source text.
 
 ### Build and deployment boundary
 
