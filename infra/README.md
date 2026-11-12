@@ -49,4 +49,6 @@ Use only private absolute paths with the explicit review interface:
 node infra/saved-plan.mjs --state <state> --terraform <pinned-terraform> --saved-plan <private-plan> --plan-json <private-rendered-json> --approval <private-approval> --inventory <private-inventory> --opa <pinned-opa> [--collector-seal <private-seal>]
 ```
 
+For `github-governance`, admission requires plan variables `github_owner` and `repository` to equal `nicolasgioanni` and `Smart-Porfolio`, inventory repository ID `1285636508`, and plan and inventory ruleset ID `24763569`. Names are case-sensitive with no whitespace normalization; IDs accept canonical decimal strings or equivalent safe JSON integers. The inventory remains private and digest-bound.
+
 The guard is a consistency check. It cannot prove live provider, HCP workspace, state, entitlement, or account posture, and it never authorizes an import or apply. See [the adoption sequence](ADOPTION.md) and [the documentation guide](../docs/infrastructure/TERRAFORM_OWNERSHIP.md).
