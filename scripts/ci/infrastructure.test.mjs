@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -17,6 +17,20 @@ describe("credential-free infrastructure acceptance", () => {
       await expect(discoverTerraformRoots(root)).rejects.toThrow("mock suite");
       await writeFile(path.join(module, "tests/control.tftest.hcl"), "");
       expect(await discoverTerraformRoots(root)).toEqual(["infra/modules/new-control"]);
+    } finally { await rm(root, { recursive: true, force: true }); }
+  });
+
+  it("rejects invalid tracked rules before running any infrastructure command", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "portfolio-ruleset-"));
+    try {
+      await mkdir(path.join(root, ".github/rulesets"), { recursive: true });
+      const source = JSON.parse(await readFile(path.join(process.cwd(), ".github/rulesets/protect-permanent-branches.json"), "utf8"));
+      source.rules = source.rules.filter((rule) => rule.type !== "deletion");
+      await writeFile(path.join(root, ".github/rulesets/protect-permanent-branches.json"), JSON.stringify(source));
+      const run = vi.fn();
+      await expect(verifyOfflineInfrastructure({ root, terraform: "/tools/terraform", opa: "/tools/opa", run,
+        discover: async () => ["infra/states/fixture"] })).rejects.toThrow("bounded source contract");
+      expect(run).not.toHaveBeenCalled();
     } finally { await rm(root, { recursive: true, force: true }); }
   });
 
