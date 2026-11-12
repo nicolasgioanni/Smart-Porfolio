@@ -88,7 +88,7 @@ function ProjectAttributionLine({ attribution }: { attribution: ProjectAttributi
       {" "}{attribution.prefix}
       <SmartLink className="project-card__attribution-link" href={attribution.link.url}>
         <span data-label={attribution.link.label}>{attribution.link.label}</span>
-        <LinkIcon className="project-card__attribution-link-icon" />
+        <LinkIcon className="project-card__attribution-link-icon" kind="arrow-northeast-filled" />
       </SmartLink>
       {attribution.suffix}
     </span>

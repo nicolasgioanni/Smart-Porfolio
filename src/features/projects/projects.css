@@ -263,7 +263,11 @@
   align-items: center;
   color: inherit;
   font-weight: var(--font-weight-regular);
-  text-decoration-line: none;
+  text-decoration: none;
+}
+
+.project-card__attribution-link > span {
+  text-decoration-line: underline;
   text-decoration-color: currentColor;
   text-decoration-thickness: 0.08em;
   text-underline-offset: 0.18em;
@@ -282,7 +286,6 @@
 .project-card__attribution-link:focus-visible {
   color: var(--color-accent-strong);
   font-weight: var(--font-weight-bold);
-  text-decoration-line: underline;
 }
 
 .project-card__attribution-link-icon {
