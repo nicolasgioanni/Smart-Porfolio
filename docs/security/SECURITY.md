@@ -283,3 +283,5 @@ Before broadening the runtime surface:
 6. Define repository-enforced and external rate-limit controls separately.
 7. Add unit, integration, deployment-smoke, and controlled live checks appropriate to the risk.
 8. Update [Contact System](CONTACT_SYSTEM.md), [Deployment](../operations/DEPLOYMENT.md), and [Security Checklist](SECURITY_CHECKLIST.md) where applicable.
+
+Manual external readback and private evidence handling are described in [Runtime posture](../operations/RUNTIME_POSTURE.md). Runtime responses, checked-in configuration, and independently inspected provider controls are distinct evidence.

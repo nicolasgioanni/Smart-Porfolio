@@ -64,7 +64,8 @@
     "release:verify": "node scripts/release.mjs verify",
     "infrastructure:check": "node infra/validate-ownership.mjs",
     "test:infrastructure": "node --test infra/tests/saved-plan.test.mjs",
-    "test:infrastructure:policy": "node --test infra/tests/check-plan.test.mjs infra/tests/mock-plan-export.test.mjs"
+    "test:infrastructure:policy": "node --test infra/tests/check-plan.test.mjs infra/tests/mock-plan-export.test.mjs",
+    "posture:check": "node scripts/posture/check.mjs"
   },
   "dependencies": {
     "csv-parse": "^7.0.2",
