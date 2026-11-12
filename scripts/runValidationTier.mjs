@@ -33,6 +33,7 @@ export const priorityTestTargets = [
   "scripts/runVerification.test.mjs",
   "scripts/runValidationTier.test.mjs",
   "scripts/checkDeployedContent.test.mjs",
+  "scripts/privatePreviewCheck.test.mjs",
   "scripts/checkDependencyAudit.test.mjs",
   "scripts/release/runtimeConfig.test.mjs",
   "scripts/candidateAdmissionWorkflow.test.mjs",

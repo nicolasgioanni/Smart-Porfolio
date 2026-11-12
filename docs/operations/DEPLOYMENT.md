@@ -128,6 +128,12 @@ The tracked `database_id` values identify the reviewed live resources. Do not re
 
 Do not reuse or copy the current live IDs for a different account, and do not commit a shared ID for both environments. `preview_database_id: contact-rate-limit-local` is a local-emulation identifier, not a remote database. The deploy job rejects missing, all-zero, or shared remote IDs, then applies tracked migrations to the selected database before uploading Pages.
 
+## Private-preview checker is not activated
+
+`scripts/privatePreviewCheck.mjs` prepares credential-isolated, fail-closed Access inventory and private smoke checks. It is not connected to the current sealed deployment workflow and does not establish that the preview is private. Current preview deployment behavior is unchanged.
+
+Its preflight deliberately ends with `activation_blocked` and `entitlement_mapping_unreviewed`: the provider entitlement schema does not identify the Access feature keys and allocation semantics required to prove coverage. A separately reviewed provider observation and sealed-deployment integration are required before activation. That integration must preserve freshness, artifact and upload identity checks, use restricted runner-temporary evidence, and perform the private preflight before any preview migration or upload. Do not substitute public smoke checks for proof of private Access protection.
+
 ## Set up or restore a deployment
 
 The tracked workflow uses Cloudflare Pages Direct Upload. The current Cloudflare dashboard state is external and unverified by the repository. Choose the path that matches the target before changing provider settings.

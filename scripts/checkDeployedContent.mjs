@@ -18,6 +18,37 @@ const staticHeaderNames = new Map([
   ["x-frame-options", "X-Frame-Options"]
 ]);
 
+export function assertCanonicalHomepageHtml(rootHtml) {
+  if (typeof rootHtml !== "string") throw new Error("Deployment root did not return HTML");
+  const canonicalTag = (rootHtml.match(/<link\b[^>]*>/gi) ?? []).find((tag) =>
+    /\brel\s*=\s*(["'])canonical\1/i.test(tag)
+  );
+  const canonicalHref = canonicalTag?.match(/\bhref\s*=\s*(["'])([^"']+)\1/i)?.[2];
+  assert.ok(canonicalHref, "Deployment root did not declare a canonical link");
+
+  let deployedCanonical;
+  try {
+    deployedCanonical = new URL(canonicalHref);
+  } catch {
+    throw new Error("Deployment root canonical link is not an absolute URL");
+  }
+  assert.equal(deployedCanonical.origin, canonicalHomepageUrl.origin, "Deployment root canonical origin is incorrect");
+  assert.equal(deployedCanonical.pathname, canonicalHomepageUrl.pathname, "Deployment root canonical path is incorrect");
+  assert.equal(deployedCanonical.search, "", "Deployment root canonical must not contain a query string");
+  assert.equal(deployedCanonical.hash, "", "Deployment root canonical must not contain a fragment");
+}
+
+export function assertExactDeploymentText(actual, expected, mediaTypePattern, endpoint) {
+  assert.match(actual.contentType ?? "", mediaTypePattern, `${endpoint} returned an unexpected content type`);
+  assert.equal(actual.body, expected, `${endpoint} does not match the verified upload`);
+}
+
+export function assertMethodNotAllowedResponse(status, contentType, body, endpoint) {
+  assert.equal(status, 405, `/${endpoint} did not reject a GET request with HTTP 405`);
+  assert.match(contentType ?? "", /^application\/json\b/i, `/${endpoint} did not return JSON`);
+  assert.deepEqual(body, { ok: false, error: "method_not_allowed" }, `/${endpoint} did not return the expected method rejection`);
+}
+
 export function resolvePagesDeploymentUrl(pagesDomain, branch) {
   if (typeof pagesDomain !== "string" || !pagesDomainPattern.test(pagesDomain)) {
     throw new Error("Cloudflare Pages domain must be a lowercase pages.dev hostname without a scheme or path");
@@ -237,22 +268,7 @@ export function decideDeployment(candidateValue, deployedValue) {
 async function smokeAttempt(baseUrl, artifactDirectory, expectedContentHash, expectedCommitSha, cacheBust) {
   const rootResponse = await fetchNoCache(endpointUrl(baseUrl, "/", cacheBust), { rejectRedirect: true });
   const rootHtml = await assertRootResponse(rootResponse, artifactDirectory);
-  const canonicalTag = (rootHtml.match(/<link\b[^>]*>/gi) ?? []).find((tag) =>
-    /\brel\s*=\s*(["'])canonical\1/i.test(tag)
-  );
-  const canonicalHref = canonicalTag?.match(/\bhref\s*=\s*(["'])([^"']+)\1/i)?.[2];
-  assert.ok(canonicalHref, "Deployment root did not declare a canonical link");
-
-  let deployedCanonical;
-  try {
-    deployedCanonical = new URL(canonicalHref);
-  } catch {
-    throw new Error("Deployment root canonical link is not an absolute URL");
-  }
-  assert.equal(deployedCanonical.origin, canonicalHomepageUrl.origin, "Deployment root canonical origin is incorrect");
-  assert.equal(deployedCanonical.pathname, canonicalHomepageUrl.pathname, "Deployment root canonical path is incorrect");
-  assert.equal(deployedCanonical.search, "", "Deployment root canonical must not contain a query string");
-  assert.equal(deployedCanonical.hash, "", "Deployment root canonical must not contain a fragment");
+  assertCanonicalHomepageHtml(rootHtml);
 
   const versionResponse = await fetchNoCache(endpointUrl(baseUrl, "content-version.json", cacheBust), { rejectRedirect: true });
   assertNoCacheMetadataHeaders(versionResponse, "content-version.json");
@@ -269,27 +285,16 @@ async function smokeAttempt(baseUrl, artifactDirectory, expectedContentHash, exp
   assert.deepEqual(deployedManifest, localManifest, "Deployed artifact manifest does not match the verified upload");
 
   const robotsResponse = await fetchNoCache(endpointUrl(baseUrl, "robots.txt", cacheBust), { rejectRedirect: true });
-  assert.match(
-    robotsResponse.headers.get("content-type") ?? "",
-    /^text\/plain\b/i,
-    "/robots.txt did not return plain text"
-  );
-  assert.equal(
-    await robotsResponse.text(),
-    await readFile(path.join(path.resolve(artifactDirectory), "robots.txt"), "utf8"),
-    "Deployed robots.txt does not match the verified upload"
+  assertExactDeploymentText(
+    { contentType: robotsResponse.headers.get("content-type"), body: await robotsResponse.text() },
+    await readFile(path.join(path.resolve(artifactDirectory), "robots.txt"), "utf8"), /^text\/plain\b/i, "/robots.txt"
   );
 
   const sitemapResponse = await fetchNoCache(endpointUrl(baseUrl, "sitemap.xml", cacheBust), { rejectRedirect: true });
-  assert.match(
-    sitemapResponse.headers.get("content-type") ?? "",
-    /^(?:application|text)\/(?:xml|[a-z0-9!#$&^_.+-]+\+xml)(?:\s*;|$)/i,
-    "/sitemap.xml did not return XML"
-  );
-  assert.equal(
-    await sitemapResponse.text(),
+  assertExactDeploymentText(
+    { contentType: sitemapResponse.headers.get("content-type"), body: await sitemapResponse.text() },
     await readFile(path.join(path.resolve(artifactDirectory), "sitemap.xml"), "utf8"),
-    "Deployed sitemap.xml does not match the verified upload"
+    /^(?:application|text)\/(?:xml|[a-z0-9!#$&^_.+-]+\+xml)(?:\s*;|$)/i, "/sitemap.xml"
   );
 
   for (const endpoint of ["api/contact/verify", "api/contact"]) {
@@ -298,18 +303,8 @@ async function smokeAttempt(baseUrl, artifactDirectory, expectedContentHash, exp
       redirect: "manual",
       signal: AbortSignal.timeout(20_000)
     });
-    assert.equal(apiResponse.status, 405, `/${endpoint} did not reject a GET request with HTTP 405`);
-    assert.match(
-      apiResponse.headers.get("content-type") ?? "",
-      /^application\/json\b/i,
-      `/${endpoint} did not return JSON`
-    );
     assertFunctionHeaders(apiResponse, endpoint);
-    assert.deepEqual(
-      await apiResponse.json(),
-      { ok: false, error: "method_not_allowed" },
-      `/${endpoint} did not return the expected method rejection`
-    );
+    assertMethodNotAllowedResponse(apiResponse.status, apiResponse.headers.get("content-type"), await apiResponse.json(), endpoint);
   }
 }
 
