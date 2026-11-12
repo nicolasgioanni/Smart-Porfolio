@@ -310,7 +310,7 @@ describe("CI runner boundaries", () => {
     await expect(verifyAcceptedInputs({ environment, projectRoot: fixture.root })).resolves.toMatchObject({ snapshot });
 
     await writeFile(path.join(fixture.root, "package.json"), "mutated by validation");
-    await expect(writeValidationEvidence({ environment, projectRoot: fixture.root, validator: "quality" })).rejects.toThrow(/worktree/);
+    await expect(writeValidationEvidence({ environment, projectRoot: fixture.root, validator: "quality" })).rejects.toThrow(/application receipt.*worktree/);
     await expect(readFile(path.join(fixture.runnerTemp, "portfolio-ci", "receipt", "receipt.json"))).rejects.toMatchObject({ code: "ENOENT" });
     await git(fixture.root, "checkout", "--", "package.json");
     await writeFile(path.join(fixture.root, generatedContentPath), Buffer.concat([accepted, Buffer.from(" ")]));
@@ -343,8 +343,9 @@ describe("CI runner boundaries", () => {
     await rm(path.join(fixture.root, "new\nfile"));
     await git(fixture.root, "update-index", "--assume-unchanged", "package.json");
     expect(check).toThrow(/index flag/);
-    expect(() => assertSourceIdentity(fixture.root, "invalid")).toThrow();
-    expect(() => assertSourceIdentity(path.join(fixture.root, "missing"), fixture.sha)).toThrow(/Unable to inspect/);
+    expect(() => assertSourceIdentity(fixture.root, "invalid", { stage: "fixture checkpoint" })).toThrow(/Accepted source revision is invalid.*fixture checkpoint/);
+    expect(() => assertSourceIdentity(path.join(fixture.root, "missing"), fixture.sha, { stage: "fixture checkpoint" })).toThrow(/Unable to inspect.*fixture checkpoint/);
+    expect(() => assertSourceIdentity(fixture.root, "a".repeat(40), { stage: "fixture checkpoint" })).toThrow(/Checkout\/run identity differs.*fixture checkpoint/);
   });
 
   it("allows only generated content changes during content phases", async () => {
@@ -375,7 +376,7 @@ describe("CI runner boundaries", () => {
       discover: async () => browserDiscovery() })).rejects.toThrow(/content preparation/);
     await expect(readFile(path.join(fixture.runnerTemp, "portfolio-ci", "snapshot", "snapshot.json"))).rejects.toMatchObject({ code: "ENOENT" });
     const sourceEnvironment = environmentFor(input, fixture, { job: "infrastructure" });
-    await expect(writeSourceEvidence({ environment: sourceEnvironment, projectRoot: fixture.root })).rejects.toThrow(/source admission/);
+    await expect(writeSourceEvidence({ environment: sourceEnvironment, projectRoot: fixture.root })).rejects.toThrow(/source receipt/);
     await expect(readFile(path.join(fixture.runnerTemp, "portfolio-ci", "receipt.json"))).rejects.toMatchObject({ code: "ENOENT" });
   });
 
