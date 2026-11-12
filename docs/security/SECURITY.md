@@ -116,7 +116,7 @@ Both handlers:
 
 - accept only `POST` and return `405` with `Allow: POST` for other methods;
 - require the base media type `application/json`, while accepting media-type parameters;
-- require an exact configured `Origin` and do not implement wildcard CORS;
+- require an exact configured `Origin` equal to the request URL origin and do not implement wildcard CORS;
 - limit the streamed body to 16,384 bytes before JSON parsing completes;
 - require strict UTF-8 and valid JSON;
 - reject invalid configuration instead of falling back to permissive values;
@@ -254,7 +254,7 @@ Repository configuration can prove the intended non-secret values, but not the p
 
 ## Deployment security
 
-Every production artifact must contain the exact `_routes.json` and `_headers` files. Deployment smoke testing sends unauthenticated `GET` requests to both Function paths and requires `405` JSON responses. This establishes that both routes are deployed and reject the wrong method.
+Every production artifact must contain the exact `_routes.json` and `_headers` files. Deployment smoke testing sends unauthenticated `GET` requests to both Function paths and requires `405` JSON responses. On identity-only hosts it also requires `403` for empty POSTs with both the host’s own Origin and a spoofed canonical Origin. This establishes that both routes are deployed and reject the wrong method and those unauthorized POSTs.
 
 The smoke test does not establish successful POST handling, exact-origin behavior, live Turnstile validation, ticket cookie acceptance, D1 migration state, DNS behavior, WAF state, Resend delivery, sender-domain verification, recipient correctness, or mailbox receipt. Those items require controlled deployed checks. See [Deployment](../operations/DEPLOYMENT.md) for the activation sequence.
 

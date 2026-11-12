@@ -45,10 +45,18 @@ function sameCompatibility(left, right) {
     left.compatibilityFlags.every((flag, index) => flag === right.compatibilityFlags[index]);
 }
 
-function validateRuntimeVariables(value, label) {
+const reviewedContactHosts = {
+  production: { CONTACT_ALLOWED_ORIGINS: "https://nicolasmgioanni.dev", TURNSTILE_ALLOWED_HOSTNAMES: "nicolasmgioanni.dev" },
+  preview: { CONTACT_ALLOWED_ORIGINS: "https://develop.smart-portfolio-bds.pages.dev", TURNSTILE_ALLOWED_HOSTNAMES: "develop.smart-portfolio-bds.pages.dev" }
+};
+
+function validateRuntimeVariables(value, label, target) {
   exactObject(value, publicRuntimeVariables, [], label);
   for (const name of publicRuntimeVariables) {
     if (typeof value[name] !== "string" || !value[name].trim()) fail(`${label} contains an invalid public variable`);
+  }
+  for (const [name, expected] of Object.entries(reviewedContactHosts[target])) {
+    if (value[name] !== expected) fail(`${label} has an unreviewed contact host`);
   }
 }
 
@@ -91,11 +99,11 @@ export function validateRuntimeConfig(config, { target, toolchain } = {}) {
     fail("does not identify the reviewed Pages project and output directory");
   }
   const rootCompatibility = compatibility(config, "root", undefined);
-  validateRuntimeVariables(config.vars, "production runtime variables");
+  validateRuntimeVariables(config.vars, "production runtime variables", "production");
   const productionBinding = selectOneBinding(config.d1_databases, "production");
   exactObject(config.env, ["preview"], [], "environment configuration");
   const preview = exactObject(config.env.preview, ["d1_databases", "vars"], ["compatibility_date", "compatibility_flags"], "preview configuration");
-  validateRuntimeVariables(preview.vars, "preview runtime variables");
+  validateRuntimeVariables(preview.vars, "preview runtime variables", "preview");
   const previewBinding = selectOneBinding(preview.d1_databases, "preview");
   const previewCompatibility = compatibility(preview, "preview", rootCompatibility);
   if (!sameCompatibility(rootCompatibility, previewCompatibility)) fail("preview compatibility differs from the compiled runtime");

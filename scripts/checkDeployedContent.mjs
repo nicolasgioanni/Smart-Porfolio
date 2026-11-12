@@ -122,6 +122,57 @@ export function assertFunctionHeaders(response, endpoint) {
   assert.equal(response.headers.get("x-frame-options"), "DENY", `/${endpoint} must reject framing`);
 }
 
+// One deadline covers both response headers and the bounded JSON body.
+export async function checkFunctionResponse(url, endpoint, { method = "GET", origin, signal = AbortSignal.timeout(20_000), fetchImplementation = fetch } = {}) {
+  let abort;
+  const expired = new Promise((_, reject) => {
+    abort = () => reject(new Error(`/${endpoint} response timed out`));
+    signal.addEventListener("abort", abort, { once: true });
+    if (signal.aborted) abort();
+  });
+  let response;
+  let reader;
+  let completed = false;
+  try {
+    const pending = Promise.resolve().then(() => fetchImplementation(url, {
+      method, headers: { "Cache-Control": "no-cache", Pragma: "no-cache", ...(origin ? { Origin: origin, "Content-Type": "application/json" } : {}) },
+      ...(origin ? { body: "{}" } : {}), redirect: "manual", signal
+    }));
+    // If headers arrive after the deadline, discard the late response as well.
+    void pending.then((late) => { if (signal.aborted) void late.body?.cancel().catch(() => {}); }, () => {});
+    response = await Promise.race([pending, expired]);
+    const expectedStatus = method === "GET" ? 405 : 403;
+    assert.equal(response.status, expectedStatus, `/${endpoint} returned an unexpected status`);
+    assert.match(response.headers.get("content-type") ?? "", /^application\/json\b/i, `/${endpoint} did not return JSON`);
+    assertFunctionHeaders(response, endpoint);
+    const declaredLength = response.headers.get("content-length");
+    if (declaredLength !== null && (!/^(?:0|[1-9][0-9]*)$/.test(declaredLength) || Number(declaredLength) > 16 * 1024)) {
+      throw new Error(`/${endpoint} response exceeds its budget or has an invalid length`);
+    }
+    if (!response.body) throw new Error(`/${endpoint} response has no body`);
+    reader = response.body.getReader();
+    const chunks = [];
+    let size = 0;
+    for (;;) {
+      const item = await Promise.race([reader.read(), expired]);
+      if (!item || typeof item.done !== "boolean") throw new Error(`/${endpoint} response is malformed`);
+      if (item.done) break;
+      if (Object.prototype.toString.call(item.value) !== "[object Uint8Array]") throw new Error(`/${endpoint} response is malformed`);
+      size += item.value.byteLength;
+      if (size > 16 * 1024) throw new Error(`/${endpoint} response exceeds its budget`);
+      chunks.push(Buffer.from(item.value));
+    }
+    const value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(Buffer.concat(chunks)));
+    assert.deepEqual(value, { ok: false, error: method === "GET" ? "method_not_allowed" : "request_rejected" });
+    completed = true;
+  } finally {
+    signal.removeEventListener("abort", abort);
+    if (!completed) {
+      try { void (reader ? reader.cancel() : response?.body?.cancel())?.catch(() => {}); } catch { /* Best-effort cleanup. */ }
+    }
+  }
+}
+
 export async function assertRootResponse(response, artifactDirectory) {
   if (!response.headers.get("content-type")?.includes("text/html")) {
     throw new Error("Deployment root did not return HTML");
@@ -293,23 +344,15 @@ async function smokeAttempt(baseUrl, artifactDirectory, expectedContentHash, exp
   );
 
   for (const endpoint of ["api/contact/verify", "api/contact"]) {
-    const apiResponse = await fetch(endpointUrl(baseUrl, endpoint, cacheBust), {
-      headers: { "Cache-Control": "no-cache", Pragma: "no-cache" },
-      redirect: "manual",
-      signal: AbortSignal.timeout(20_000)
-    });
-    assert.equal(apiResponse.status, 405, `/${endpoint} did not reject a GET request with HTTP 405`);
-    assert.match(
-      apiResponse.headers.get("content-type") ?? "",
-      /^application\/json\b/i,
-      `/${endpoint} did not return JSON`
-    );
-    assertFunctionHeaders(apiResponse, endpoint);
-    assert.deepEqual(
-      await apiResponse.json(),
-      { ok: false, error: "method_not_allowed" },
-      `/${endpoint} did not return the expected method rejection`
-    );
+    await checkFunctionResponse(endpointUrl(baseUrl, endpoint, cacheBust), endpoint);
+    // Unique deployment hosts and the assigned production alias establish artifact
+    // identity, but are not authorized to issue contact tickets or send mail.
+    const origin = normalizeBaseUrl(baseUrl).origin;
+    if (origin !== "https://nicolasmgioanni.dev" && origin !== "https://develop.smart-portfolio-bds.pages.dev") {
+      for (const claimedOrigin of [origin, "https://nicolasmgioanni.dev"]) {
+        await checkFunctionResponse(endpointUrl(baseUrl, endpoint, cacheBust), endpoint, { method: "POST", origin: claimedOrigin });
+      }
+    }
   }
 }
 

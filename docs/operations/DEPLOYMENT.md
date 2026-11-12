@@ -308,6 +308,8 @@ Each successful attempt proves:
 6. `GET /api/contact/verify` returns HTTP `405`, an `application/json` content type, `{ "ok": false, "error": "method_not_allowed" }`, `Cache-Control: no-store`, `Referrer-Policy: no-referrer`, and `X-Content-Type-Options: nosniff`.
 7. `GET /api/contact` returns the same exact method-rejection and restrictive-header contract.
 
+On identity-only hosts (the unique deployment host and production assigned alias), both Function paths also reject empty POSTs with HTTP `403` and `request_rejected` for the host’s own Origin and a spoofed canonical Origin. The stable preview alias remains authorized for contact POSTs.
+
 The automated smoke test does not request every static route, test the custom domain, submit a valid Turnstile token, inspect D1 rows, exercise DNS validation, send email, exercise WAF rules, or prove end-to-end contact delivery. Those checks remain part of release and operations verification.
 
 ## Routing and response headers
