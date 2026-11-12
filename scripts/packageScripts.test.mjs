@@ -53,13 +53,13 @@ describe("package and CI deployment automation", () => {
     expect(packageJson.scripts["test:priority"]).toBe(
       "node scripts/runValidationTier.mjs priority"
     );
-    expect(packageJson.dependencies.next).toBe("^16.4.0");
-    expect(packageJson.devDependencies["@next/eslint-plugin-next"]).toBe("^16.4.0");
-    expect(packageJson.devDependencies.wrangler).toBe("4.148.0");
+    expect(packageJson.dependencies.next).toBe("^16.4.6");
+    expect(packageJson.devDependencies["@next/eslint-plugin-next"]).toBe("^16.4.6");
+    expect(packageJson.devDependencies.wrangler).toBe("4.160.1");
     expect(packageJson.devDependencies.miniflare).toBe("5.20261006.0-alpha");
     expect(packageJson.devDependencies.yaml).toBe("2.9.1");
     expect(packageJson.devDependencies["js-yaml"]).toBeUndefined();
-    expect(packageJson.devDependencies.vitest).toBe("4.1.11");
+    expect(packageJson.devDependencies.vitest).toBe("4.1.12");
     expect(packageJson.devDependencies["@playwright/test"]).toMatch(/^\^1\./);
     expect(packageJson.scripts["test:footer"]).toBe(
       "vitest run src/components/layout/InteractiveBlobFooter.test.tsx src/components/layout/footerStyles.test.ts"

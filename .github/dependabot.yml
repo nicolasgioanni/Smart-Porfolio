@@ -1,0 +1,32 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      next-framework:
+        patterns:
+          - next
+          - '@next/eslint-plugin-next'
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: terraform
+    directories:
+      - /infra/modules/edge-controls
+      - /infra/modules/pages-environments
+      - /infra/modules/preview-access
+      - /infra/states/cloudflare-audit
+      - /infra/states/cloudflare-preview
+      - /infra/states/cloudflare-production
+      - /infra/states/cloudflare-shared
+      - /infra/states/github-governance
+    schedule:
+      interval: weekly
+    groups:
+      terraform-providers:
+        group-by: dependency-name
+        patterns:
+          - "*"
