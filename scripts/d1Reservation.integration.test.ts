@@ -57,8 +57,8 @@ function quoteSqlValue(value: number | string): string {
   return `'${value.replaceAll("'", "''")}'`;
 }
 
-function bindReservationSql(values: [string, string, string, string, number, number, number]): string {
-  return CONTACT_RESERVATION_INSERT_SQL.replace(/\?([1-7])/g, (_match, parameterIndex: string) => {
+function bindReservationSql(values: [string, string, string, string, number, number, number, string]): string {
+  return CONTACT_RESERVATION_INSERT_SQL.replace(/\?([1-8])/g, (_match, parameterIndex: string) => {
     const value = values[Number(parameterIndex) - 1];
     if (value === undefined) throw new Error(`Missing SQL parameter ${parameterIndex}.`);
     return quoteSqlValue(value);
@@ -78,7 +78,7 @@ function localD1Arguments(command: string): string[] {
   ];
 }
 
-function runReservation(values: [string, string, string, string, number, number, number]): void {
+function runReservation(values: [string, string, string, string, number, number, number, string]): void {
   const result = executeD1(localD1Arguments(bindReservationSql(values)));
   expect(result).toHaveLength(1);
   expect(result[0]).toMatchObject({ success: true });
@@ -116,7 +116,8 @@ describe("local D1 contact reservation migration", () => {
       deliveryConfigHash,
       renderVersion,
       nowSeconds,
-      expiresAt
+      expiresAt,
+      "ip-hash"
     ]);
     runReservation([
       "11111111-1111-4111-8111-111111111111",
@@ -125,7 +126,8 @@ describe("local D1 contact reservation migration", () => {
       deliveryConfigHash,
       renderVersion,
       nowSeconds + 1,
-      expiresAt + 1
+      expiresAt + 1,
+      "ip-hash"
     ]);
     runReservation([
       "11111111-1111-4111-8111-111111111111",
@@ -134,7 +136,8 @@ describe("local D1 contact reservation migration", () => {
       "changed-delivery-config",
       renderVersion,
       nowSeconds + 1,
-      expiresAt + 1
+      expiresAt + 1,
+      "ip-hash"
     ]);
     runReservation([
       "22222222-2222-4222-8222-222222222222",
@@ -143,7 +146,8 @@ describe("local D1 contact reservation migration", () => {
       deliveryConfigHash,
       renderVersion,
       nowSeconds + 2,
-      expiresAt + 2
+      expiresAt + 2,
+      "ip-hash"
     ]);
     runReservation([
       "33333333-3333-4333-8333-333333333333",
@@ -152,7 +156,8 @@ describe("local D1 contact reservation migration", () => {
       deliveryConfigHash,
       renderVersion,
       nowSeconds + 3,
-      expiresAt + 3
+      expiresAt + 3,
+      "ip-hash"
     ]);
 
     expect(readReservations()).toEqual([

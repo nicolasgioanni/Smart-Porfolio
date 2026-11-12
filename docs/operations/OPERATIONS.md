@@ -161,6 +161,8 @@ Repeat against the custom domain when validating its routing. An end-to-end cont
 
 ### Verify contact delivery and quota
 
+Each isolated environment shares a 100-reservation rolling 24-hour budget alongside two per email per 24 hours and ten per canonical IP per hour. Shared exhaustion can throttle unrelated visitors. Apply the forward-only IP migration before deploying; legacy rows retain unknown IP and still count globally. Missing trusted IP or D1 evidence fails closed. Local tests do not prove live Cloudflare header provenance or database state.
+
 Use only an owned test mailbox and non-sensitive fixture text. In preview first, then production:
 
 1. Inspect Resend logs and the suppression list for earlier visitor-confirmation attempts before assuming the old template failed to generate a second message.
@@ -170,7 +172,7 @@ Use only an owned test mailbox and non-sensitive fixture text. In preview first,
 5. Inspect both HTML and plain-text messages. Confirm the visitor copy, correction instructions, absolute Privacy and Terms links, owner reply-to, and compact owner summary.
 6. Select <em>Send another message</em>, complete the new gate, then submit a second fresh request with the same normalized address. Confirm it receives a new submission UUID and Turnstile token and succeeds.
 7. Submit a third new message and confirm HTTP `429`, JSON error `rate_limited`, a valid `Retry-After` header, a red in-page limit notice, and no Resend request.
-8. Check D1 only through bounded aggregate or redacted queries. Confirm no raw email, name, phone, or message columns exist; do not copy hashes or UUIDs into tickets or logs.
+8. Check D1 only through bounded aggregate or redacted queries. Confirm no raw IP, email, name, phone, or message columns exist; do not copy hashes or UUIDs into tickets or logs.
 
 Resend API acceptance is not proof of mailbox delivery. Confirm receipt or provider delivery status, then check bounce and suppression state. Do not use an address belonging to another person to exercise the quota.
 
@@ -232,7 +234,7 @@ A Pages rollback does not revert D1 migrations. Before rolling back to older Fun
 
 ### Local recovery-drill evidence
 
-`scripts/quality/recoveryDrill.test.mjs` uses only temporary directories, a credential-free child environment, and `wrangler d1 --local`. It applies the checked-in migrations through `0003_contact_delivery_rendering.sql`, exports a fixture reservation, rebuilds a fresh local database, and verifies that the pseudonymous reservation fields restore unchanged. It also verifies that a tampered v2 sealed envelope is rejected and can be replaced only by its previously verified local fixture; the sealed fixture contains no audit collector input.
+`scripts/quality/recoveryDrill.test.mjs` uses only temporary directories, a credential-free child environment, and `wrangler d1 --local`. It applies the checked-in migrations through `0004_contact_ip_quota.sql`, exports a fixture reservation, rebuilds a fresh local database, and verifies that the pseudonymous reservation fields restore unchanged. It also verifies that a tampered v2 sealed envelope is rejected and can be replaced only by its previously verified local fixture; the sealed fixture contains no audit collector input.
 
 This is a repository-level drill, not a Cloudflare D1 backup, retention, export, import, or restore procedure. It does not establish a durable release archive or authorize production database recovery. Any provider recovery remains a separately reviewed operation against verified provider state.
 
@@ -262,7 +264,7 @@ When rotating a contact or Cloudflare credential:
 
 Changes to `NEXT_PUBLIC_TURNSTILE_SITE_KEY` or its preview counterpart require a new static build. Changes to server-only Pages secrets do not alter the static artifact, but still require runtime verification.
 
-Rotating `TURNSTILE_SECRET_KEY` also changes the verification-ticket signing key and the domain-separated address and payload HMAC keys. Outstanding tickets become invalid, and reservations made with prior derived keys will not match new submissions even though they remain until expiry cleanup. Schedule the rotation with abuse monitoring and accept that the address quota may temporarily allow new slots during the overlap.
+Rotating `TURNSTILE_SECRET_KEY` also changes the verification-ticket signing key and the domain-separated address, IP, payload, and delivery-configuration HMAC keys. Outstanding tickets become invalid, and reservations made with prior derived keys will not match new submissions even though they remain until expiry cleanup. Schedule the rotation with abuse monitoring and accept that the email and IP quotas may temporarily allow new slots during the overlap; existing rows still count against the environment-wide cap.
 
 ## Operational limits
 

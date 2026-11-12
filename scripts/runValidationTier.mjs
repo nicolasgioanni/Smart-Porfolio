@@ -27,6 +27,7 @@ export const priorityTestTargets = [
   "scripts/validateDocumentation.test.mjs",
   "scripts/permanentBranchRuleset.test.mjs",
   "scripts/contactTransport.integration.test.ts",
+  "scripts/contactQuota.workers.integration.test.ts",
   "scripts/updateContactTlds.test.mjs",
   "scripts/packageScripts.test.mjs",
   "scripts/localAutomation.test.mjs",

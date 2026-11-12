@@ -2,9 +2,12 @@ export const CONTACT_ACTION = "portfolio_contact";
 export const MAX_REQUEST_BYTES = 16_384;
 export const CONTACT_RATE_LIMIT_WINDOW_SECONDS = 24 * 60 * 60;
 export const CONTACT_RATE_LIMIT_MAX_SUBMISSIONS = 2;
+export const CONTACT_IP_LIMIT_WINDOW_SECONDS = 60 * 60;
+export const CONTACT_IP_LIMIT_MAX_SUBMISSIONS = 10;
+export const CONTACT_GLOBAL_LIMIT_MAX_SUBMISSIONS = 100;
 export const CONTACT_EMAIL_RENDER_VERSION = 1;
-export const CONTACT_RESERVATION_INSERT_SQL = `INSERT INTO contact_rate_reservations (submission_id, email_hash, payload_hash, delivery_config_hash, render_version, reserved_at, expires_at)
-  SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?7
+export const CONTACT_RESERVATION_INSERT_SQL = `INSERT INTO contact_rate_reservations (submission_id, email_hash, payload_hash, delivery_config_hash, render_version, reserved_at, expires_at, ip_hash)
+  SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8
   WHERE NOT EXISTS (
     SELECT 1 FROM contact_rate_reservations
     WHERE submission_id = ?1
@@ -19,6 +22,11 @@ export const CONTACT_RESERVATION_INSERT_SQL = `INSERT INTO contact_rate_reservat
       SELECT COUNT(*) FROM contact_rate_reservations
       WHERE email_hash = ?2 AND expires_at > ?6
     ) < ${CONTACT_RATE_LIMIT_MAX_SUBMISSIONS}
+    AND (SELECT COUNT(*) FROM contact_rate_reservations
+      WHERE ip_hash = ?8 AND reserved_at > ?6 - ${CONTACT_IP_LIMIT_WINDOW_SECONDS}
+        AND expires_at > ?6) < ${CONTACT_IP_LIMIT_MAX_SUBMISSIONS}
+    AND (SELECT COUNT(*) FROM contact_rate_reservations
+      WHERE expires_at > ?6) < ${CONTACT_GLOBAL_LIMIT_MAX_SUBMISSIONS}
   )
   ON CONFLICT(submission_id) DO NOTHING`;
 

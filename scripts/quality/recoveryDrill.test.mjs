@@ -54,7 +54,7 @@ function rows(configPath, cwd, home) {
     configPath,
     cwd,
     home,
-    "SELECT submission_id, email_hash, payload_hash, delivery_config_hash, render_version, reserved_at, expires_at FROM contact_rate_reservations ORDER BY submission_id"
+    "SELECT submission_id, email_hash, payload_hash, delivery_config_hash, render_version, reserved_at, expires_at, ip_hash FROM contact_rate_reservations ORDER BY submission_id"
   );
   expect(result).toHaveLength(1);
   expect(result[0]).toMatchObject({ success: true });
@@ -159,7 +159,7 @@ afterEach(async () => {
 });
 
 describe("local recovery drills", () => {
-  it("exports and restores a 0003-migrated local D1 reservation without changing its identity", async () => {
+  it("exports and restores a 0004-migrated local D1 reservation without changing its identity", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "smart-portfolio-d1-recovery-"));
     temporaryDirectories.push(root);
     const before = path.join(root, "before");
@@ -193,7 +193,7 @@ describe("local recovery drills", () => {
       beforeConfig,
       before,
       home,
-      "INSERT INTO contact_rate_reservations (submission_id, email_hash, payload_hash, delivery_config_hash, render_version, reserved_at, expires_at) VALUES ('11111111-1111-4111-8111-111111111111', 'email-hash', 'payload-hash', 'delivery-hash', 1, 1800000000, 1800086400)"
+      "INSERT INTO contact_rate_reservations (submission_id, email_hash, payload_hash, delivery_config_hash, render_version, reserved_at, expires_at, ip_hash) VALUES ('11111111-1111-4111-8111-111111111111', 'email-hash', 'payload-hash', 'delivery-hash', 1, 1800000000, 1800086400, 'ip-hash')"
     );
     const expected = rows(beforeConfig, before, home);
 
@@ -210,7 +210,8 @@ describe("local recovery drills", () => {
       "expires_at",
       "payload_hash",
       "delivery_config_hash",
-      "render_version"
+      "render_version",
+      "ip_hash"
     ]);
 
     runLocalWrangler(before, home, [
@@ -229,6 +230,7 @@ describe("local recovery drills", () => {
     const exported = await readFile(backup, "utf8");
     expect(exported).toContain("contact_rate_reservations");
     expect(exported).toContain("delivery-hash");
+    expect(exported).toContain("ip-hash");
 
     runLocalWrangler(after, home, ["migrations", "apply", d1Binding, "--local", "--config", afterConfig]);
     runLocalWrangler(after, home, ["execute", d1Binding, "--local", "--config", afterConfig, "--file", backup]);
