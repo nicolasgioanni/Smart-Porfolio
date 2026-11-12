@@ -1,10 +1,11 @@
-export type ProjectDiagramNode = { detail?: string; label: string; x: number; y: number };
+export type ProjectDiagramNode = { label: string; role: string; slot: 0 | 1 | 2 | 3 | 4 | 5 };
+export type ProjectDiagramEdge = { bidirectional?: boolean; from: ProjectDiagramNode["slot"]; to: ProjectDiagramNode["slot"] };
 export type ProjectAttribution = {
   link: { label: string; url: string };
   prefix: string;
   suffix: string;
 };
-export type ProjectDiagram = { description: string; nodes: readonly ProjectDiagramNode[]; title: string };
+export type ProjectDiagram = { description: string; edges: readonly ProjectDiagramEdge[]; nodes: readonly ProjectDiagramNode[]; title: string };
 export type ProjectPreviewMobileAsset = { height: number; src: string; width: number };
 export type ProjectPreview =
   | { alt: string; fit: "contain" | "cover"; height: number; kind: "screenshot"; mobile?: ProjectPreviewMobileAsset; src: string; width: number }
@@ -25,14 +26,17 @@ export const projectVisualRegistry = {
       width: 1280
     },
     diagram: {
-      description: "A label image moves through AI extraction and rule comparison before a reviewer sees the result.",
+      description: "The reviewer workspace sends artwork and expected fields to the FastAPI verification API. The API prepares the image, OpenAI extracts visible fields, and deterministic rules compare those fields with the expected values. The workspace presents the results for human review and export.",
+      edges: [{ from: 0, to: 1 }, { from: 1, to: 3 }, { from: 3, to: 2 }, { from: 2, to: 4 }, { from: 4, to: 5 }],
       nodes: [
-        { detail: "photo", label: "Label image", x: 18, y: 136 },
-        { detail: "fields", label: "AI extraction", x: 162, y: 136 },
-        { detail: "rules", label: "Rule comparison", x: 306, y: 136 },
-        { detail: "review", label: "Reviewer results", x: 450, y: 136 }
+        { label: "Workspace", role: "React UI", slot: 0 },
+        { label: "Verify API", role: "FastAPI", slot: 1 },
+        { label: "Image prep", role: "Validation", slot: 3 },
+        { label: "Extraction", role: "OpenAI", slot: 2 },
+        { label: "Rule checks", role: "Comparison", slot: 4 },
+        { label: "Export", role: "React UI", slot: 5 }
       ],
-      title: "Label image to reviewer results"
+      title: "Compliance Label Assistant architecture"
     }
   },
   notepal: {
@@ -52,14 +56,17 @@ export const projectVisualRegistry = {
       width: 1272
     },
     diagram: {
-      description: "Study materials are processed into structured notes, then support quizzes and context-aware chat.",
+      description: "The student uses the study workspace, which calls Next.js server routes. The server reads and writes study data in Firestore, uses OpenAI for generation and embeddings, and queries Pinecone for document-scoped retrieval. A separate media-processing prototype is also present in the repository.",
+      edges: [{ from: 0, to: 1 }, { bidirectional: true, from: 1, to: 3 }, { bidirectional: true, from: 3, to: 2 }, { bidirectional: true, from: 3, to: 5 }, { bidirectional: true, from: 3, to: 4 }],
       nodes: [
-        { detail: "files", label: "Study material", x: 18, y: 136 },
-        { detail: "media", label: "Content processing", x: 162, y: 136 },
-        { detail: "notebook", label: "Structured notes", x: 306, y: 136 },
-        { detail: "practice", label: "Quizzes + chat", x: 450, y: 136 }
+        { label: "Student", role: "Browser", slot: 0 },
+        { label: "Workspace", role: "Next.js UI", slot: 1 },
+        { label: "Firestore", role: "Study data", slot: 2 },
+        { label: "API routes", role: "Next.js", slot: 3 },
+        { label: "Pinecone", role: "Retrieval", slot: 4 },
+        { label: "OpenAI", role: "Generation", slot: 5 }
       ],
-      title: "Study material to quizzes and chat"
+      title: "NotePal architecture"
     }
   },
   "tergion-technologies": {
@@ -74,14 +81,17 @@ export const projectVisualRegistry = {
       width: 1280
     },
     diagram: {
-      description: "An inquiry is validated, synchronized to CRM records, and followed by a confirmation email.",
+      description: "The Next.js website sends inquiries to a lead API running on Cloudflare. The API verifies Turnstile tokens, uses Upstash Redis for rate limiting and duplicate reservation, sends leads to GoHighLevel, and sends confirmation email through a configured provider.",
+      edges: [{ from: 1, to: 3 }, { from: 3, to: 2 }, { bidirectional: true, from: 3, to: 5 }, { from: 3, to: 4 }, { from: 3, to: 0 }],
       nodes: [
-        { detail: "inquiry", label: "Inquiry", x: 18, y: 136 },
-        { detail: "checks", label: "Validated submission", x: 162, y: 136 },
-        { detail: "record", label: "CRM sync", x: 306, y: 136 },
-        { detail: "email", label: "Confirmation", x: 450, y: 136 }
+        { label: "Email", role: "Delivery", slot: 0 },
+        { label: "Website", role: "Next.js", slot: 1 },
+        { label: "Turnstile", role: "Verification", slot: 2 },
+        { label: "Lead API", role: "Cloudflare", slot: 3 },
+        { label: "CRM", role: "GoHighLevel", slot: 4 },
+        { label: "Redis", role: "Upstash", slot: 5 }
       ],
-      title: "Inquiry to confirmation"
+      title: "Tergion Technologies architecture"
     }
   },
   leetnotes: {
@@ -96,14 +106,17 @@ export const projectVisualRegistry = {
       width: 896
     },
     diagram: {
-      description: "Spreadsheet notes are normalized, converted to notes and solutions, then synchronized to GitHub.",
+      description: "GitHub Actions runs the Python sync CLI on a schedule. The CLI downloads Google Sheets CSV data, resolves problem IDs through LeetCode GraphQL, and generates Markdown notes, indexes, and solution files. Actions commits the generated outputs to the repository.",
+      edges: [{ from: 0, to: 3 }, { from: 1, to: 3 }, { bidirectional: true, from: 3, to: 2 }, { from: 3, to: 4 }, { from: 3, to: 5 }],
       nodes: [
-        { detail: "rows", label: "Sheets", x: 18, y: 136 },
-        { detail: "clean", label: "Normalize", x: 162, y: 136 },
-        { detail: "files", label: "Notes + solutions", x: 306, y: 136 },
-        { detail: "schedule", label: "GitHub updates", x: 450, y: 136 }
+        { label: "Actions", role: "GitHub", slot: 0 },
+        { label: "Sheets", role: "Google", slot: 1 },
+        { label: "LeetCode", role: "GraphQL", slot: 2 },
+        { label: "Sync CLI", role: "Python", slot: 3 },
+        { label: "Notes", role: "Markdown", slot: 4 },
+        { label: "Solutions", role: "Files", slot: 5 }
       ],
-      title: "Sheets to scheduled GitHub updates"
+      title: "LeetNotes architecture"
     }
   },
   clair: {
@@ -117,14 +130,16 @@ export const projectVisualRegistry = {
       width: 793
     },
     diagram: {
-      description: "A chosen folder uses a reusable preset and file-extension rules to create organized folders.",
+      description: "The Qt desktop interface loads and saves JSON configuration and starts the Python organizer. The organizer scans a selected folder, applies the configured extension categories, and moves files into category folders.",
+      edges: [{ bidirectional: true, from: 1, to: 0 }, { from: 1, to: 3 }, { from: 0, to: 3 }, { from: 2, to: 3 }, { from: 3, to: 5 }],
       nodes: [
-        { detail: "choose", label: "Choose folder", x: 18, y: 136 },
-        { detail: "preset", label: "Apply preset", x: 162, y: 136 },
-        { detail: "rules", label: "Sort by extension", x: 306, y: 136 },
-        { detail: "folders", label: "Organized folders", x: 450, y: 136 }
+        { label: "Presets", role: "JSON", slot: 0 },
+        { label: "Desktop", role: "Qt UI", slot: 1 },
+        { label: "Input", role: "Folder", slot: 2 },
+        { label: "Organizer", role: "Python", slot: 3 },
+        { label: "Output", role: "Folders", slot: 5 }
       ],
-      title: "Folder selection to organized folders"
+      title: "Clair architecture"
     }
   }
 } as const satisfies Record<string, ProjectVisual>;

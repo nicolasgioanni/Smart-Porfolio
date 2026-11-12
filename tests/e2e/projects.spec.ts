@@ -203,7 +203,7 @@ async function expectPaintedPreviewFace(page: Page, card: Locator) {
 }
 
 async function expectDiagramLabelsContained(card: Locator) {
-  const labels = card.locator(".project-diagram__label");
+  const labels = card.locator(".project-diagram__label, .project-diagram__role");
   await expect(labels).not.toHaveCount(0);
   await expect
     .poll(() =>
@@ -213,10 +213,23 @@ async function expectDiagramLabelsContained(card: Locator) {
           if (!node) return false;
           const labelBox = label.getBoundingClientRect();
           const nodeBox = node.getBoundingClientRect();
+          const figure = node.closest<HTMLElement>(".project-diagram");
+          if (!figure) return false;
+          const figureBox = figure.getBoundingClientRect();
+          const first = node.firstElementChild?.getBoundingClientRect();
+          const last = node.lastElementChild?.getBoundingClientRect();
+          if (!first || !last) return false;
           return (
+            nodeBox.left >= figureBox.left - 1 &&
+            nodeBox.right <= figureBox.right + 1 &&
+            nodeBox.top >= figureBox.top - 1 &&
+            nodeBox.bottom <= figureBox.bottom + 1 &&
+            first.top >= nodeBox.top - 1 &&
+            last.bottom <= nodeBox.bottom + 1 &&
             labelBox.width > 0 &&
             labelBox.height > 0 &&
             label.scrollWidth <= label.clientWidth + 1 &&
+            label.scrollHeight <= label.clientHeight + 1 &&
             labelBox.left >= nodeBox.left - 1 &&
             labelBox.right <= nodeBox.right + 1 &&
             labelBox.top >= nodeBox.top - 1 &&
@@ -456,7 +469,7 @@ test.describe("Projects showcase", () => {
       await expect(switcher.getByRole("tablist")).toHaveCount(0);
       await expect(switcher.locator('[role="tabpanel"]')).toHaveCount(0);
       await expect(getToggle(card)).toHaveAccessibleName(
-        `Show how ${project.title} works`,
+        `Show architecture for ${project.title}`,
       );
       await expect(
         getToggle(card).locator(".project-visual-switcher__toggle-label"),
@@ -466,7 +479,7 @@ test.describe("Projects showcase", () => {
       ).toHaveText("Preview");
       await expect(
         getToggle(card).locator('.project-visual-switcher__toggle-label[data-view="workflow"]'),
-      ).toHaveText("How it works");
+      ).toHaveText("Architecture");
       await expect(switcher.locator(".project-visual-switcher__hint")).toHaveCount(0);
       await expect(switcher.getByText(/Open (live site|source|download)/i)).toHaveCount(0);
       await expectCenteredToggle(card);
@@ -586,7 +599,7 @@ test.describe("Projects showcase", () => {
     await settleLayout(page);
     for (const card of await getProjectCards(page).all()) {
       await expect(getTrack(card)).toHaveAttribute("data-view", "preview");
-      await expect(getToggle(card)).toHaveAccessibleName(/show how .* works/i);
+      await expect(getToggle(card)).toHaveAccessibleName(/show architecture for /i);
     }
   });
 

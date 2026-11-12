@@ -37,7 +37,7 @@ export function ProjectDiagramLink({ action, diagram, id, projectId }: ProjectDi
   const content = <ProjectDiagram diagram={diagram} id={id} projectId={projectId} />;
 
   return action ? (
-    <SmartLink aria-label={`${getProjectDestinationHint(action)} project workflow`} className="project-visual-switcher__media-link" href={action.link.url}>
+    <SmartLink aria-describedby={`${id}-diagram-description`} aria-label={`${getProjectDestinationHint(action)} — ${diagram.title}`} className="project-visual-switcher__media-link" href={action.link.url}>
       {content}
     </SmartLink>
   ) : content;

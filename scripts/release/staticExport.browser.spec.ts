@@ -5,6 +5,10 @@ import { expect, test } from "@playwright/test";
 import { installTurnstileMock } from "../../tests/e2e/browserTest";
 import { selectThemeWithChooser } from "../../tests/e2e/themePreference";
 import { inlineScriptSources } from "./csp.mjs";
+import { readGeneratedPortfolioContent } from "../../tests/e2e/generatedContent";
+import { selectProjectDetailContent } from "../../src/features/projects/content/selectProjectDetailContent";
+import { getProjectDiagramAction } from "../../src/features/projects/selectors/projectActions";
+import { getProjectVisual } from "../../src/features/projects/selectors/projectVisualRegistry";
 
 const publicRoutes = ["/", "/experience", "/projects", "/recommendations", "/research", "/resume", "/contact", "/privacy", "/terms", "/security", "/contact-terms"] as const;
 
@@ -44,6 +48,44 @@ test("serves every published static route without JavaScript", async ({ browser 
       expect(response?.ok()).toBe(true);
       await expect(page.locator("main")).toHaveCount(1);
       expect(await page.title()).toContain("Nicolas Gioanni");
+    }
+  } finally { await context.close(); }
+});
+
+test("exposes project architecture disclosures without JavaScript", async ({ browser }) => {
+  const projects = selectProjectDetailContent(readGeneratedPortfolioContent());
+  const knownProjects = projects.filter((project) => getProjectVisual(project.id));
+  const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 320, height: 844 } });
+  const page = await context.newPage();
+  try {
+    await page.goto("/projects");
+    await expect(page.getByRole("heading", { level: 1, name: "Projects" })).toBeVisible();
+    await expect(page.locator(".project-visual-static__details")).toHaveCount(knownProjects.length);
+    for (const project of knownProjects) {
+      const visual = getProjectVisual(project.id)!;
+      const disclosure = page.locator(".project-visual-static__details").filter({ has: page.locator(`.project-diagram--${project.id}`) });
+      const diagram = disclosure.locator(".project-diagram");
+      await disclosure.locator("summary").click();
+      await expect(disclosure).toHaveAttribute("open", "");
+      await expect(diagram).toBeVisible();
+      for (const node of visual.diagram.nodes) {
+        const item = diagram.locator(`.project-diagram__node--${node.slot}`);
+        await expect(item.locator(".project-diagram__label")).toHaveText(node.label);
+        await expect(item.locator(".project-diagram__role")).toHaveText(node.role);
+        await expect(item).toBeVisible();
+        expect(await item.evaluate((element) => {
+          const box = element.getBoundingClientRect();
+          return Array.from(element.children).every((child) => {
+            const text = child as HTMLElement;
+            const bounds = text.getBoundingClientRect();
+            return bounds.top >= box.top - 1 && bounds.bottom <= box.bottom + 1 &&
+              bounds.left >= box.left - 1 && bounds.right <= box.right + 1 &&
+              text.scrollWidth <= text.clientWidth + 1;
+          });
+        }), `${project.id} ${node.label} is contained`).toBe(true);
+      }
+      const source = getProjectDiagramAction(project.links);
+      if (source) await expect(disclosure.locator("a.project-visual-switcher__media-link")).toHaveAttribute("href", source.link.url);
     }
   } finally { await context.close(); }
 });
