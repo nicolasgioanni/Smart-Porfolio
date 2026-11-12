@@ -18,8 +18,9 @@ describe("Project showcase style contracts", () => {
     expect(projectStyles).toMatch(/\.project-visual-switcher__media:hover\s*\{\s*transform:\s*translateY\(-3px\)/s);
     expect(projectStyles).toMatch(/\.project-visual-static \.project-visual-switcher__media-link:focus-visible::after\s*\{[^}]*inset:\s*2px[^}]*box-shadow:/s);
     expect(projectStyles).toMatch(/\.project-card__footer-divider\s*\{[^}]*height:\s*1px[^}]*margin-inline:\s*var\(--space-2\)[^}]*background:\s*var\(--color-line-strong\)/s);
-    expect(projectStyles).toMatch(/\.project-card__attribution-link\s*\{[^}]*display:\s*inline-flex[^}]*text-decoration-thickness:\s*0\.08em[^}]*text-underline-offset:\s*0\.18em/s);
-    expect(projectStyles).toMatch(/\.project-card__attribution-link:hover,[\s\S]*?\.project-card__attribution-link:focus-visible\s*\{[^}]*color:\s*var\(--color-accent-strong\)[^}]*text-decoration-line:\s*underline/s);
+    expect(projectStyles).toMatch(/\.project-card__attribution-link\s*\{[^}]*display:\s*inline-flex[^}]*text-decoration:\s*none/s);
+    expect(projectStyles).toMatch(/\.project-card__attribution-link > span\s*\{[^}]*text-decoration-line:\s*underline[^}]*text-decoration-thickness:\s*0\.08em[^}]*text-underline-offset:\s*0\.18em/s);
+    expect(projectStyles).toMatch(/\.project-card__attribution-link:hover,[\s\S]*?\.project-card__attribution-link:focus-visible\s*\{[^}]*color:\s*var\(--color-accent-strong\)/s);
     expect(projectStyles).toMatch(/@media \(prefers-reduced-motion: reduce\)[\s\S]*?transition-duration:\s*0ms/s);
     expect(projectStyles).toMatch(/\.project-visual-static__details[\s\S]*?\.project-diagram[\s\S]*?aspect-ratio:\s*16\s*\/\s*10/s);
   });
