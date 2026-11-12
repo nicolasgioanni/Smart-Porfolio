@@ -77,7 +77,7 @@ Use this checklist with [Contact System](CONTACT_SYSTEM.md), [Security](SECURITY
 - Reserve no more than two slots per normalized-address HMAC during a rolling 24-hour window before provider delivery.
 - Send the visitor confirmation first with `Idempotency-Key: portfolio-contact/visitor/<submissionId>`; only after acceptance send the owner notification with the corresponding `/owner/` key.
 - Send the owner notification to the private configured recipient with only the validated visitor email as `reply_to`.
-- Send the visitor confirmation to the validated visitor email with the fixed public reply-to.
+- Send the fixed-copy visitor confirmation to the validated visitor email with the fixed public reply-to; do not reflect submitted fields in its subject or bodies.
 - Keep the sender and subject formats server-controlled, reject header controls in names and addresses, escape user-controlled HTML, and include plain-text alternatives.
 - Treat provider timeout, network failure, and non-success status as generic `502 delivery_failed` without returning or logging provider details.
 
