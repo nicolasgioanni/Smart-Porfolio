@@ -44,7 +44,7 @@ export async function onRequest(context: PagesContext<ContactEnv>): Promise<Resp
     if (domainValidation.kind === "invalid") return jsonResponse(422, { ok: false, error: "invalid_email" });
     if (domainValidation.kind === "unavailable") return jsonResponse(503, { ok: false, error: "email_validation_unavailable" });
 
-    const reservation = await reserveContactSubmission(parsed.payload, env, Date.now(), operationDeadline);
+    const reservation = await reserveContactSubmission(parsed.payload, env, request.headers.get("CF-Connecting-IP") ?? undefined, Date.now(), operationDeadline);
     if (reservation.kind === "unavailable") return jsonResponse(503, { ok: false, error: "service_unavailable" });
     if (reservation.kind === "mismatch") return jsonResponse(400, { ok: false, error: "invalid_request" });
     if (reservation.kind === "retry-unavailable") return jsonResponse(502, { ok: false, error: "delivery_failed" });

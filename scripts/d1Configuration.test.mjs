@@ -53,6 +53,8 @@ describe("contact D1 configuration", () => {
       "utf8"
     );
 
+    const ipMigration = await readFile(path.join(projectRoot, "migrations", "0004_contact_ip_quota.sql"), "utf8");
+
     expect(initialMigration).toMatch(/CREATE TABLE IF NOT EXISTS contact_rate_reservations/);
     expect(initialMigration).toMatch(/submission_id TEXT PRIMARY KEY NOT NULL/);
     expect(initialMigration).toMatch(/email_hash TEXT NOT NULL/);
@@ -64,7 +66,9 @@ describe("contact D1 configuration", () => {
     expect(fingerprintMigration).toMatch(/ADD COLUMN payload_hash TEXT/);
     expect(renderingMigration).toMatch(/ADD COLUMN delivery_config_hash TEXT/);
     expect(renderingMigration).toMatch(/ADD COLUMN render_version INTEGER/);
-    expect(`${initialMigration}\n${fingerprintMigration}\n${renderingMigration}`).not.toMatch(
+    expect(ipMigration).toMatch(/ADD COLUMN ip_hash TEXT/);
+    expect(ipMigration).toMatch(/ON contact_rate_reservations \(ip_hash, reserved_at\)/);
+    expect(`${initialMigration}\n${fingerprintMigration}\n${renderingMigration}\n${ipMigration}`).not.toMatch(
       /first_name|last_name|phone|message|recipient/i
     );
   });
