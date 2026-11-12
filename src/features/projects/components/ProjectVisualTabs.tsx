@@ -56,18 +56,18 @@ export function ProjectVisualTabs({ diagramAction, previewAction, projectId, pro
         </div>
       </div>
       <div className="project-visual-switcher__controls">
-        <span className="visually-hidden" id={`${projectId}-${identifier}-view-status`}>Showing {showingWorkflow ? "how it works" : "preview"}</span>
+        <span className="visually-hidden" id={`${projectId}-${identifier}-view-status`}>Showing {showingWorkflow ? "architecture" : "preview"}</span>
         <button
           aria-controls={showingWorkflow ? previewPanelId : workflowPanelId}
           aria-describedby={`${projectId}-${identifier}-view-status`}
-          aria-label={showingWorkflow ? `Show preview for ${projectTitle}` : `Show how ${projectTitle} works`}
+          aria-label={showingWorkflow ? `Show preview for ${projectTitle}` : `Show architecture for ${projectTitle}`}
           className="project-visual-switcher__toggle hover-base-1"
           onClick={() => selectView(showingWorkflow ? "preview" : "workflow")}
           onKeyDown={onKeyDown}
           ref={buttonRef}
           type="button"
         >
-          <span aria-hidden="true" className="project-visual-switcher__toggle-label" data-view="workflow">How it works</span>
+          <span aria-hidden="true" className="project-visual-switcher__toggle-label" data-view="workflow">Architecture</span>
           <span aria-hidden="true" className="project-visual-switcher__toggle-label" data-view="preview">Preview</span>
         </button>
       </div>

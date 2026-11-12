@@ -103,7 +103,7 @@ Static export does not mean the site contains no JavaScript. Focused client comp
 - Home role rotation;
 - scroll reveal where enabled and IntersectionObserver is available, with readable server output before enhancement;
 - skills dialogs through the shared modal layer;
-- independent Project Concept/How it works tabs;
+- independent Project Preview/Architecture switchers;
 - recommendation measurement and expansion;
 - contact verification and submission.
 

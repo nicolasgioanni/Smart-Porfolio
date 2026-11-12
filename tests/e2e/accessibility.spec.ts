@@ -73,6 +73,19 @@ test.describe("public-route accessibility", () => {
     }
   });
 
+  test("keeps the open project architecture diagrams accessible", async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await gotoSettled(page, "/projects");
+    const switchers = page.locator(".project-visual-switcher");
+    for (const switcher of await switchers.all()) {
+      await switcher.getByRole("button", { name: /^Show architecture for / }).click();
+      await expect(switcher.locator('.project-visual-switcher__panel--workflow')).toHaveAttribute("aria-hidden", "false");
+    }
+    await expectNoAxeViolations(page, "open project architecture diagrams");
+    await testInfo.attach("project-architecture-desktop", { body: await page.screenshot({ fullPage: true }), contentType: "image/png" });
+  });
+
   test("keeps the theme chooser keyboard reachable and accessible", async ({ page }) => {
     await gotoSettled(page, "/");
     const trigger = page.getByRole("button", { name: /choose color theme/i });
