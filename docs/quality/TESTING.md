@@ -71,12 +71,12 @@ Run:
 npm run docs:check
 ```
 
-`scripts/validateDocumentation.mjs` reads `README.md`, every Markdown file under `docs/`, the optional root `AGENTS.md`, and every Markdown file under `.agents/`. It checks:
+`scripts/validateDocumentation.mjs` reads `README.md`, every Markdown file under `docs/`, the optional root `AGENTS.md`, every Markdown file under `.agents/`, and `infra/README.md` plus `infra/ADOPTION.md` when present. It checks:
 
-- Exactly one H1 per document.
+- Exactly one H1 per document except root `AGENTS.md`.
 - Balanced fenced code blocks.
 - Resolution and exact capitalization of relative Markdown, image, reference, HTML `href`, and HTML `src` links.
-- Rejection of relative links that escape the repository.
+- Rejection of relative links that escape the repository, root-relative asset traversal, and symbolic-link targets or components.
 - Rejection of links to local environment files or generated output directories.
 - Rejection of absolute Windows user paths.
 - Localhost URL use only in the approved local-development documents.

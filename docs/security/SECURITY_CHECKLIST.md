@@ -105,11 +105,11 @@ Use this checklist with [Contact System](CONTACT_SYSTEM.md), [Security](SECURITY
 
 ## Static headers and Function headers
 
-- Confirm `out/_headers` exists and matches the reviewed `public/_headers` policy.
+- Confirm the sealed `out/_headers` contains the release-generated route-specific CSP hashes and reviewed common header and cache rules; see [Security](SECURITY.md#response-headers-and-browser-policy).
 - Keep the static CSP limited to reviewed origins and the Turnstile allowances needed in `script-src`, `connect-src`, and `frame-src`.
 - Confirm static responses receive CSP, Permissions Policy, referrer policy, HSTS, content-type-sniffing, and framing protections.
 - Remember that Pages `_headers` rules do not apply to Function-generated responses.
-- Confirm both handlers set `Cache-Control: no-store, max-age=0`, JSON content type, `Referrer-Policy: no-referrer`, and `X-Content-Type-Options: nosniff` themselves.
+- Confirm both handlers set `Cache-Control: no-store, max-age=0`, JSON content type, `Referrer-Policy: no-referrer`, and `X-Content-Type-Options: nosniff` themselves, alongside restrictive CSP, Permissions Policy, HSTS, and frame denial.
 
 ## Content, rendering, and URL safety
 

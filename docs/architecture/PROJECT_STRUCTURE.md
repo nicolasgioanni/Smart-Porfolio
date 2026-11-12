@@ -7,9 +7,11 @@ Smart Portfolio separates static application code, build-time content, isolated 
 ```text
 Smart-Porfolio/
 |-- .agents/
-|   `-- skills/portfolio-skeleton-regression/SKILL.md
+|   |-- knowledge/SYSTEM_DECISIONS.md
+|   `-- skills/                  # six focused specialists
 |-- .github/
-|   `-- workflows/ci.yml
+|   |-- rulesets/
+|   `-- workflows/
 |-- docs/
 |-- functions/
 |   |-- _shared/
@@ -30,9 +32,11 @@ Smart-Porfolio/
 |   `-- api/
 |       |-- contact.ts
 |       `-- contact/verify.ts
+|-- infra/                       # inactive Terraform ownership preparation
 |-- migrations/
 |   |-- 0001_contact_rate_reservations.sql
-|   `-- 0002_contact_payload_fingerprint.sql
+|   |-- 0002_contact_payload_fingerprint.sql
+|   `-- 0003_contact_delivery_rendering.sql
 |-- public/
 |   |-- _headers
 |   |-- _routes.json
@@ -42,6 +46,9 @@ Smart-Porfolio/
 |-- scripts/
 |   |-- fetchPortfolioContent.ts
 |   |-- lib/
+|   |-- ci/                      # candidate, snapshot, receipt, and gate contracts
+|   |-- release/                 # packaging, CSP, runtime, and integrity
+|   |-- security/                # independent security scans and evidence
 |   |-- artifactIntegrity.mjs
 |   |-- checkDeployedContent.mjs
 |   |-- nextBuildAdapter.mjs
@@ -63,6 +70,8 @@ Smart-Porfolio/
 |-- next.config.mjs
 |-- package.json
 |-- playwright.config.ts
+|-- playwright.ci.config.ts
+|-- playwright.release.config.ts
 |-- vitest.config.ts
 `-- wrangler.jsonc
 ```
@@ -72,22 +81,24 @@ Smart-Porfolio/
 | Location | Responsibility |
 | --- | --- |
 | `.github/workflows/ci.yml` | Candidate selection, content generation, verification, artifact transfer, Cloudflare Direct Upload, smoke tests, and schedule heartbeat. |
-| `.agents/skills/portfolio-skeleton-regression/` | Repository-scoped guidance for deterministic skeleton alignment, visual, and transition regression work. |
+| `.agents/` | Six repository specialists and compact system decisions; select the relevant skill in the [agent workflow](../development/AGENT_WORKFLOW.md#select-the-smallest-relevant-guidance). |
+| `.github/rulesets/` | Tracked permanent-branch ruleset intent; live GitHub state requires separate verification. |
+| `infra/` | Inactive Terraform ownership preparation, mock plans, and saved-plan review; see [infrastructure ownership](../../infra/README.md). |
 | `docs/` | Guides, references, checklists, and README assets. |
 | `functions/` | Cloudflare Pages Functions for contact verification and delivery. `functions/_shared/contact.ts` is the stable public facade; focused modules under `functions/_shared/contact/` own configuration, request parsing, provider verification, domain checks, D1 reservations, signed tickets, and delivery. These are not Next.js route handlers. |
 | `migrations/` | Append-only Cloudflare D1 schema changes applied before the corresponding Pages deployment. |
 | `public/` | Public images, favicons, Pages security headers, and the exact Function route allowlist copied into the static export. |
-| `scripts/` | Content ingestion, local automation, deployment manifests, artifact integrity, deployment smoke checks, and script-level tests. |
+| `scripts/` | Content ingestion and local automation; `ci/`, `release/`, and `security/` own the corresponding evidence, artifact, and scan contracts. |
 | `tests/e2e/` | Playwright Chromium regressions for deterministic skeleton alignment, inert visual fixtures, and transitions; responsive navigation; recommendation overlays; Projects visual views; Experience and Research detail behavior; and footer first-render, route, restoration, and scroll behavior. |
 | `src/` | Next.js routes, React components, typed content, selectors, validation, theme helpers, and CSS. |
 | `next.config.mjs` | Static export and unoptimized image configuration. |
 | `package.json` | Supported Node.js range, dependencies, and executable project commands. |
-| `playwright.config.ts` | Chromium skeleton, navigation, recommendation, Experience, Research, and footer regression configuration plus the local Next.js web server. |
+| `playwright*.config.ts` | Local browser projects, CI partitioning, and sealed static-export browser verification. |
 | `wrangler.jsonc` | Pages output directory plus reviewed production and preview runtime variables and isolated D1 bindings. Encrypted secrets are configured outside the repository. |
 
 ## Documented application routes
 
-Every route under `src/app/` is compatible with the Next.js static export. Client components hydrate only the interactions used by a page or by the shared shell. The table is non-exhaustive.
+Every route under `src/app/` is compatible with the Next.js static export. Client components hydrate only the interactions used by a page or by the shared shell. The table enumerates the visitor routes.
 
 | Route | Source | Role | Primary navigation |
 | --- | --- | --- | --- |

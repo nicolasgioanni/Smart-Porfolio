@@ -4,7 +4,7 @@
 
 - Start with the scoped map in [`.agents/README.md`](.agents/README.md). Read [system decisions](.agents/knowledge/SYSTEM_DECISIONS.md) for compact durable context, then only the linked product documentation needed for the task.
 - Use the architecture skill for module, route, and documentation ownership; content pipeline for source data and assets; interface contracts for components, themes, motion, dialogs, and accessibility; validation for tests and CI; release security for endpoints and deployment.
-- Use Sol or Astra for coordination, review, decomposition, and evidence synthesis. Use GPT-5.6 Terra at High or Extra High for implementation.
+- Use GPT-6.1 Sol for coordination, review, decomposition, and evidence synthesis. Use GPT-6.1 Terra at High or Extra High for implementation.
 - The current task's explicit authorization overrides generic procedural guidance. It does not relax the permanent-branch invariant.
 
 ## Shared invariants
