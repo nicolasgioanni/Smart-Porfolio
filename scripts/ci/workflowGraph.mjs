@@ -40,6 +40,22 @@ function builtOutputScanProblems(job) {
   return [];
 }
 
+function codeqlReportProblems(job) {
+  const steps = job?.steps;
+  const analyze = stepIndex(steps, (step) => step?.id === "analyze" &&
+    step.uses?.startsWith("github/codeql-action/analyze@") && step.with?.upload === "never" &&
+    step.with?.output === "${{ runner.temp }}/smart-portfolio-codeql-sarif");
+  const validate = stepIndex(steps, (step) => step?.env?.SARIF_OUTPUT === "${{ steps.analyze.outputs.sarif-output }}" &&
+    typeof step.run === "string" && step.run.includes('node scripts/security/checkSarif.mjs "${sarif_files[0]}"'));
+  const upload = stepIndex(steps, (step) => step?.uses?.startsWith("github/codeql-action/upload-sarif@") &&
+    step.with?.sarif_file === "${{ steps.analyze.outputs.sarif-output }}");
+  const receipt = stepIndex(steps, (step) => step?.run === "node scripts/ci/run.mjs source-receipt");
+  if ([analyze, validate, upload, receipt].some((index) => index < 0) || !(analyze < validate && validate < upload && upload < receipt)) {
+    return ["CodeQL must write SARIF outside the checkout, validate it before upload, and then record source evidence."];
+  }
+  return [];
+}
+
 function deployEligibilityProblems(value) {
   if (typeof value !== "string") return ["Deployment must have an explicit eligibility expression."];
   const expression = value.trim().match(/^\$\{\{\s*([\s\S]*?)\s*\}\}$/)?.[1];
@@ -73,7 +89,7 @@ export function workflowEvents(value) {
 }
 
 // Consume parsed YAML. This enforces responsibilities and graph edges. Only
-// the sealed-output scan has an ordering contract; other setup remains free.
+// the sealed-output scan and CodeQL report have ordering contracts; other setup remains free.
 export function validateWorkflowGraph(workflow) {
   const problems = [];
   if (workflow?.name !== "CI") problems.push("Preserve the CI workflow identity.");
@@ -97,6 +113,7 @@ export function validateWorkflowGraph(workflow) {
     }
   }
   problems.push(...builtOutputScanProblems(jobs["build-and-package"]));
+  problems.push(...codeqlReportProblems(jobs.codeql));
   if (!needs(jobs.deploy).includes("verify")) problems.push("Deployment must depend on verify.");
   problems.push(...deployEligibilityProblems(jobs.deploy?.if));
   if (jobs.deploy?.concurrency?.["cancel-in-progress"] !== false) problems.push("An active deployment must never be interrupted by concurrency.");

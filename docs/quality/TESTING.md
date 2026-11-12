@@ -226,7 +226,7 @@ Pull requests targeting `main` or `develop`:
 1. Generate validated template content without workbook or Cloudflare credentials.
 2. Run documentation integrity, lint, typecheck, and the bounded dependency audit; run the complete Vitest suite.
 3. Discover browser identities and run two assigned Chromium functional shards, the Linux visual suite, Firefox critical, WebKit critical, and WebKit mobile Research/Projects coverage.
-4. Build once from the accepted template snapshot, seal the candidate with configuration, migrations, manifest, and SBOM, scan that exact sealed directory with the pinned Gitleaks binary before artifact upload, then validate the exact static export and compiled runtime.
+4. Build once from the accepted template snapshot, seal the candidate with configuration, migrations, manifest, and SBOM, scan that exact sealed directory with the pinned Gitleaks binary before artifact upload, then validate the exact static export and compiled runtime. The sealed Pages check verifies visible route content and footer links without JavaScript, native Projects disclosures and Research media, and, after hydration, a theme change, client navigation, and absence of CSP errors.
 5. Run actionlint, Git-history/workflow scans, CodeQL security-extended analysis, and dependency review; `verify` accepts their exact receipts together with the application receipts.
 6. Stop before deployment, signing, migration, or provider access.
 
@@ -237,6 +237,8 @@ Pull requests targeting `main` or `develop`:
 Scheduled and non-forced manual runs prepare the strict snapshot and compare a validated deployed identity before application work. A proven unchanged candidate or obsolete branch revision skips application jobs, packaging, and deployment, but source-security jobs and their receipts remain required. A forced manual run selects a full plan after preparation.
 
 ### Acceptance, diagnostics, and deployment boundary
+
+Source-integrity checkpoints compare HEAD, index, and working tree independently and reject nonignored untracked inputs; only snapshot-verified generated JSON is allowed during content preparation and restoration. They detect persistent changes at checkpoints, not transient subprocess modifications. A mismatch requires a clean candidate and a full affected rerun.
 
 `verify` reads current-run result states and immutable original-producer evidence. It refuses stale, missing, expired, substituted, ambiguous, or rerun-mismatched inputs; it does not substitute a previous green job or regenerated snapshot. Browser failure diagnostics are separate from acceptance evidence and do not authorize a release.
 

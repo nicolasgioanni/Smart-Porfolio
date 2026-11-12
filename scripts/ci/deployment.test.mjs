@@ -12,8 +12,13 @@ import { collectPublicBuildInputs, publicBuildInputDigest } from "../release/pub
 import { packageSealedRelease } from "../release/sealedRelease.mjs";
 import { assertDeploymentAcceptance, executeDeployment, pagesDeploymentArguments, parseDeploymentOutput, validateDeploymentConfig } from "./deployment.mjs";
 import { artifactName } from "./githubEvidence.mjs";
+import { buildCandidate, validateExport } from "./releaseStages.mjs";
 import { createPlan, recordDigest, repository, sealedReleaseValidators, securityJobs, workflowPath } from "./plan.mjs";
 import { createSnapshot, generatedContentPath } from "./snapshot.mjs";
+
+const boundaries = vi.hoisted(() => ({ runCommand: vi.fn(), download: vi.fn(), extract: vi.fn() }));
+vi.mock("../lib/localAutomation.mjs", async (original) => ({ ...await original(), runCommand: boundaries.runCommand }));
+vi.mock("./artifactTransport.mjs", async (original) => ({ ...await original(), downloadArtifact: boundaries.download, extractArtifact: boundaries.extract }));
 
 const execute = promisify(execFile);
 const projectRoot = path.resolve(import.meta.dirname, "../..");
@@ -148,6 +153,7 @@ async function deploymentFixture({ mutateConfig } = {}) {
   await symlink(path.join(projectRoot, "node_modules"), path.join(root, "node_modules"), "dir");
   const accepted = generatedBytes("accepted");
   await writeFile(path.join(root, generatedContentPath), accepted);
+  await writeFile(path.join(root, ".gitignore"), "out/\n");
   await git(root, "init", "-q");
   await git(root, "config", "user.name", "CI fixture");
   await git(root, "config", "user.email", "ci-fixture@example.invalid");
@@ -202,7 +208,14 @@ async function deploymentFixture({ mutateConfig } = {}) {
   };
   await Promise.all([
     writeFile(path.join(out, "index.html"), "<main>fixture</main>"),
-    writeFile(path.join(out, "_worker.js"), "export default { fetch() { return new Response('fixture'); } };"),
+    writeFile(path.join(out, "_worker.js"), `export default { async fetch(request, env) {
+      const url = new URL(request.url);
+      if (url.pathname.startsWith('/api/')) {
+        if (request.method !== 'POST') return Response.json({ ok: false, error: 'method_not_allowed' }, { status: 405, headers: { Allow: 'POST' } });
+        return Response.json({ ok: true });
+      }
+      return env.ASSETS.fetch(request);
+    } };`),
     writeFile(path.join(out, "_routes.json"), '{"version":1,"include":["/api/contact","/api/contact/verify"],"exclude":[]}\n'),
     writeFile(path.join(out, "content-version.json"), `${JSON.stringify({
       schemaVersion: 2, commitSha: input.sourceSha, contentHash, generatedAt: "2026-10-12T00:00:00.000Z",
@@ -299,6 +312,49 @@ function providerCommand(calls) {
   });
 }
 
+describe("release orchestration failure boundaries", () => {
+  it("rejects a build that changes tracked source before producing a package or receipts", async () => {
+    const fixture = await deploymentFixture();
+    await rm(path.join(fixture.evidenceRoot, "release"), { recursive: true });
+    const environment = { ...fixture.environment, GITHUB_JOB: "build-and-package" };
+    boundaries.runCommand.mockReset().mockImplementation(async (_command, args) => {
+      expect(args).toEqual(["run", "build:generated"]);
+      await mkdir(path.join(fixture.root, "out"));
+      await writeFile(path.join(fixture.root, "out", "content-version.json"), JSON.stringify({
+        schemaVersion: 2, commitSha: fixture.input.sourceSha, contentHash,
+        generatedAt: "2026-10-12T00:00:00.000Z", deployedAt: "2026-10-12T00:00:01.000Z",
+        target: "production", publicBuildInputDigest: fixture.snapshot.publicBuildInputDigest,
+        producer: { kind: "github-actions", runId: String(fixture.input.runId), runNumber: fixture.input.runNumber, attempt: 2 }
+      }));
+      await writeFile(path.join(fixture.root, "package.json"), "changed by build");
+    });
+    await expect(buildCandidate({ environment, projectRoot: fixture.root })).rejects.toThrow(/build completion.*package.json/);
+    expect(boundaries.runCommand).toHaveBeenCalledOnce();
+    await expect(readFile(path.join(fixture.evidenceRoot, "release", "release-integrity.json"))).rejects.toMatchObject({ code: "ENOENT" });
+    for (const name of ["receipt", "built-output-scan"]) {
+      await expect(readFile(path.join(fixture.evidenceRoot, name, "receipt.json"))).rejects.toMatchObject({ code: "ENOENT" });
+    }
+  });
+
+  it("does not return or write export evidence when the runtime command fails", async () => {
+    const fixture = await deploymentFixture();
+    const environment = { ...fixture.environment, GITHUB_JOB: "export-check" };
+    const oldReceipt = path.join(fixture.evidenceRoot, "receipt", "receipt.json");
+    await mkdir(path.dirname(oldReceipt));
+    await writeFile(oldReceipt, "old evidence");
+    boundaries.runCommand.mockReset().mockImplementation(async (command, args) => {
+      expect(command).toBe("npm");
+      expect(args).toEqual(["run", "test:e2e:release-static"]);
+      throw new Error("fixture browser failure");
+    });
+    boundaries.download.mockResolvedValue(Buffer.from("fixture"));
+    boundaries.extract.mockResolvedValue(undefined);
+    await expect(validateExport({ environment, projectRoot: fixture.root })).rejects.toThrow("fixture browser failure");
+    expect(boundaries.runCommand).toHaveBeenCalledOnce();
+    expect(await readFile(oldReceipt, "utf8")).toBe("old evidence");
+  });
+});
+
 describe("deployment admission and provider evidence", () => {
   it("binds deploy acceptance to a deployable target, plan, and original release reference", () => {
     const input = candidate("a".repeat(40));
@@ -376,6 +432,25 @@ describe("sealed deployment execution", () => {
     });
     expect(smoke.mock.calls.map(([url]) => url)).toEqual([deploymentUrl, "https://smart-portfolio-bds.pages.dev"]);
     expect(observe.mock.calls[2][1]).toMatchObject({ exactDeployment: deploymentUrl });
+  });
+
+  it("blocks migration or upload when the checkout changes at either boundary", async () => {
+    for (const mutateAfterMigration of [false, true]) {
+      const fixture = await deploymentFixture();
+      const calls = [];
+      const executeCommand = vi.fn(async (...args) => {
+        calls.push(args);
+        if (mutateAfterMigration) await writeFile(path.join(fixture.root, "package.json"), "changed");
+        return { stdout: "" };
+      });
+      const preflight = vi.fn(async () => {
+        if (!mutateAfterMigration) await writeFile(path.join(fixture.root, "package.json"), "changed");
+      });
+      await expect(executeDeployment({ environment: fixture.environment, projectRoot: fixture.root,
+        observe: vi.fn().mockResolvedValue(null), branchTip: vi.fn().mockResolvedValue(fixture.input.sourceSha),
+        executeCommand, verifyProvenance: vi.fn(), preflight, smoke: vi.fn() })).rejects.toThrow(/worktree/);
+      expect(calls).toHaveLength(mutateAfterMigration ? 1 : 0);
+    }
   });
 
   it("does not upload if the migration command fails", async () => {

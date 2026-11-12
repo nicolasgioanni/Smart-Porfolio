@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { assertSourceIdentity } from "./sourceIdentity.mjs";
 import { createHash } from "node:crypto";
 import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -22,10 +22,10 @@ export function currentProducer(job, environment = process.env) {
     attempt: number("GITHUB_RUN_ATTEMPT"), job }, job);
 }
 
-export function checkedCandidate(environment = process.env, projectRoot = process.cwd()) {
+export function checkedCandidate(environment = process.env, projectRoot = process.cwd(), { allowGenerated = false, stage = allowGenerated ? "application verification" : "source admission" } = {}) {
   const candidate = parseCandidate(jsonEnvironment("CI_CANDIDATE", environment));
-  const sha = execFileSync("git", ["rev-parse", "HEAD"], { cwd: projectRoot, encoding: "utf8", maxBuffer: 1024 }).trim();
-  if (sha !== candidate.sourceSha || environment.GITHUB_SHA !== candidate.eventSha ||
+  assertSourceIdentity(projectRoot, candidate.sourceSha, { allowGenerated, stage });
+  if (environment.GITHUB_SHA !== candidate.eventSha ||
       environment.GITHUB_REPOSITORY !== candidate.repository || environment.GITHUB_RUN_ID !== String(candidate.runId) ||
       environment.GITHUB_RUN_NUMBER !== String(candidate.runNumber)) throw new Error("Checkout/run identity differs from the accepted candidate.");
   return candidate;
