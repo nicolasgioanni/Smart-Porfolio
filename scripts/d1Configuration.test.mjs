@@ -1,6 +1,8 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { validateWorkflowYaml } from "./ci/workflowYaml.mjs";
+import { validateDeploymentConfig } from "./ci/deployment.mjs";
 
 const projectRoot = path.resolve(import.meta.dirname, "..");
 const placeholderId = "00000000-0000-0000-0000-000000000000";
@@ -37,13 +39,17 @@ describe("contact D1 configuration", () => {
     expect(production.database_id).not.toBe(preview.database_id);
   });
 
-  it("tracks the pseudonymous reservation schema, payload fingerprint, and cleanup indexes", async () => {
+  it("tracks the pseudonymous reservation schema, retry identity, and cleanup indexes", async () => {
     const initialMigration = await readFile(
       path.join(projectRoot, "migrations", "0001_contact_rate_reservations.sql"),
       "utf8"
     );
     const fingerprintMigration = await readFile(
       path.join(projectRoot, "migrations", "0002_contact_payload_fingerprint.sql"),
+      "utf8"
+    );
+    const renderingMigration = await readFile(
+      path.join(projectRoot, "migrations", "0003_contact_delivery_rendering.sql"),
       "utf8"
     );
 
@@ -56,7 +62,9 @@ describe("contact D1 configuration", () => {
     expect(initialMigration).toMatch(/ON contact_rate_reservations \(expires_at\)/);
     expect(fingerprintMigration).toMatch(/ALTER TABLE contact_rate_reservations/);
     expect(fingerprintMigration).toMatch(/ADD COLUMN payload_hash TEXT/);
-    expect(`${initialMigration}\n${fingerprintMigration}`).not.toMatch(
+    expect(renderingMigration).toMatch(/ADD COLUMN delivery_config_hash TEXT/);
+    expect(renderingMigration).toMatch(/ADD COLUMN render_version INTEGER/);
+    expect(`${initialMigration}\n${fingerprintMigration}\n${renderingMigration}`).not.toMatch(
       /first_name|last_name|phone|message|recipient/i
     );
   });
@@ -75,24 +83,13 @@ describe("contact D1 configuration", () => {
     expect(gitignore).toMatch(/^\.wrangler$/m);
   });
 
-  it("migrates the selected database before uploading the Pages deployment", async () => {
-    const workflow = await readFile(path.join(projectRoot, ".github", "workflows", "ci.yml"), "utf8");
-    const migrationStep = workflow.indexOf("Validate the environment-specific D1 binding and apply migrations");
-    const privatePreflight = workflow.indexOf("Preflight private preview Access state before mutation");
-    const productionDeployStep = workflow.indexOf("Deploy the verified production export and Pages Function with pinned Wrangler");
-    const previewDeployStep = workflow.indexOf("Deploy the private preview export with pinned Wrangler");
-
-    expect(migrationStep).toBeGreaterThan(-1);
-    expect(privatePreflight).toBeGreaterThan(-1);
-    expect(privatePreflight).toBeLessThan(migrationStep);
-    expect(productionDeployStep).toBeGreaterThan(migrationStep);
-    expect(previewDeployStep).toBeGreaterThan(migrationStep);
-    expect(workflow).toContain(
-      "wrangler d1 migrations apply smart-portfolio-contact-rate-limit-preview --env preview --remote"
-    );
-    expect(workflow).toContain(
-      "wrangler d1 migrations apply smart-portfolio-contact-rate-limit-production --remote"
-    );
-    expect(workflow).toContain("still has the non-deployable placeholder database ID");
+  it("selects the reviewed isolated binding inside the serialized deployment operation", async () => {
+    const config = await readWranglerConfig();
+    expect(validateDeploymentConfig(config, "production").database_name).toBe("smart-portfolio-contact-rate-limit-production");
+    expect(validateDeploymentConfig(config, "preview").database_name).toBe("smart-portfolio-contact-rate-limit-preview");
+    const workflow = validateWorkflowYaml(await readFile(path.join(projectRoot, ".github", "workflows", "ci.yml"), "utf8"));
+    expect(workflow.jobs.deploy.needs).toContain("verify");
+    expect(workflow.jobs.deploy.concurrency["cancel-in-progress"]).toBe(false);
+    expect(workflow.jobs.deploy.steps.filter((step) => step.run === "node scripts/ci/run.mjs deploy")).toHaveLength(1);
   });
 });

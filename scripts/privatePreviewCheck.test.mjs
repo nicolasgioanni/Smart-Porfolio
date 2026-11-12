@@ -2,6 +2,7 @@ import { lstat, mkdtemp, mkdir, readFile, rm, symlink, writeFile } from "node:fs
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { pagesDeploymentArguments } from "./ci/deployment.mjs";
 import { createArtifactManifest } from "./artifactIntegrity.mjs";
 import {
   assertAnonymousDenied,
@@ -28,6 +29,18 @@ const pagesDomain = "smart-portfolio-bds.pages.dev";
 const hashHost = `abcd1234.${pagesDomain}`;
 const developHost = `develop.${pagesDomain}`;
 const customHost = "preview.example.test";
+const versionV2 = { schemaVersion: 2, contentHash, commitSha: candidateSha,
+  generatedAt: "2026-10-09T00:00:00.000Z", deployedAt: "2026-10-09T00:01:00.000Z",
+  target: "preview", publicBuildInputDigest: "d".repeat(64),
+  producer: { kind: "github-actions", runId: "101", runNumber: 50, attempt: 1 } };
+const staticHeaders = { "content-type": "text/html", "content-security-policy": "default-src 'self'",
+  "permissions-policy": "camera=()", "referrer-policy": "strict-origin-when-cross-origin",
+  "strict-transport-security": "max-age=31536000", "x-content-type-options": "nosniff", "x-frame-options": "DENY" };
+const metadataHeaders = { "cache-control": "no-store", pragma: "no-cache" };
+const functionHeaders = { "cache-control": "no-store", "referrer-policy": "no-referrer", "x-content-type-options": "nosniff",
+  "content-security-policy": "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+  "permissions-policy": "camera=(), geolocation=(), microphone=(), payment=(), usb=()",
+  "strict-transport-security": "max-age=31536000", "x-frame-options": "DENY" };
 let temporaryRoot;
 let uploadSequence = 0;
 
@@ -60,7 +73,7 @@ function pageInfo(page = 1, totalPages = 1, totalCount = 1) {
   return { page, per_page: 50, total_pages: totalPages, total_count: totalCount };
 }
 
-function deployment(id = "deployment123") {
+function deployment(id = "abcd1234-89ab-4cde-8fab-0123456789ab") {
   return {
     id,
     short_id: "abcd1234",
@@ -111,14 +124,9 @@ async function artifactDirectory() {
   await writeFile(path.join(directory, "sitemap.xml"), "<?xml version=\"1.0\"?><urlset/>");
   await writeFile(
     path.join(directory, "content-version.json"),
-    JSON.stringify({
-      schemaVersion: 1,
-      contentHash,
-      commitSha: candidateSha,
-      generatedAt: "2026-10-09T00:00:00.000Z",
-      deployedAt: "2026-10-09T00:01:00.000Z"
-    })
+    JSON.stringify(versionV2)
   );
+  await writeFile(path.join(directory, "_headers"), `/*\n${Object.entries(staticHeaders).filter(([key]) => key !== "content-type").map(([key, value]) => `  ${key}: ${value}`).join("\n")}\n`);
   await createArtifactManifest(directory);
   return directory;
 }
@@ -169,28 +177,30 @@ function standardPreflightFetch({
   };
 }
 
+function wranglerFixture() {
+  const timestamp = "2026-10-09T00:00:00.000Z";
+  const deployment_id = "abcd1234-89ab-4cde-8fab-0123456789ab";
+  const common = { version: 1, pages_project: "smart-portfolio", deployment_id, url: `https://${hashHost}`, timestamp };
+  return [
+    { type: "wrangler-session", version: 1, wrangler_version: "4.148.0", command_line_args: pagesDeploymentArguments({ target: "preview", sourceSha: candidateSha }), log_file_path: "/tmp/wrangler.log", timestamp },
+    { type: "pages-deploy", ...common },
+    { type: "pages-deploy-detailed", ...common, alias: `https://${developHost}`, environment: "preview", production_branch: "main", deployment_trigger: { metadata: { commit_hash: candidateSha } } }
+  ].map((record) => JSON.stringify(record)).join("\n");
+}
+
 async function successfulUploadFixture(config, directory, overrides = {}) {
   const manifest = JSON.parse(await readFile(path.join(directory, "artifact-integrity.json"), "utf8"));
   const html = await readFile(path.join(directory, "index.html"), "utf8");
   const robots = await readFile(path.join(directory, "robots.txt"), "utf8");
   const sitemap = await readFile(path.join(directory, "sitemap.xml"), "utf8");
   const wranglerOutputPath = path.join(temporaryRoot, `wrangler-${uploadSequence += 1}.jsonl`);
-  await writeFile(wranglerOutputPath, [
-    JSON.stringify({ type: "pages-deploy", version: 1, pages_project: "smart-portfolio", deployment_id: "deployment123", url: `https://${hashHost}` }),
-    JSON.stringify({ type: "pages-deploy-detailed", version: 1, pages_project: "smart-portfolio", deployment_id: "deployment123", url: `https://${hashHost}`, alias: `https://${developHost}`, environment: "preview", deployment_trigger: { metadata: { commit_hash: candidateSha } } })
-  ].join("\n"));
-  const version = {
-    schemaVersion: 1,
-    contentHash,
-    commitSha: candidateSha,
-    generatedAt: "2026-10-09T00:00:00.000Z",
-    deployedAt: "2026-10-09T00:01:00.000Z"
-  };
+  await writeFile(wranglerOutputPath, wranglerFixture());
+  const version = versionV2;
   const fetchMock = vi.fn(async (url, options) => {
     const target = new URL(String(url));
     if (target.hostname === "api.cloudflare.com") {
       if (target.searchParams.get("page") === "2") return cloudflare([], { page: 2 });
-      if (target.pathname.endsWith("/deployments/deployment123")) return cloudflare(overrides.deployment ?? deployment());
+      if (target.pathname.endsWith("/deployments/abcd1234-89ab-4cde-8fab-0123456789ab")) return cloudflare(overrides.deployment ?? deployment());
       if (target.pathname.endsWith("/pages/projects/smart-portfolio")) return cloudflare({ name: "smart-portfolio", production_branch: "main", subdomain: pagesDomain, source: null });
       if (target.pathname.endsWith("/deployments")) return cloudflare([overrides.deployment ?? deployment()], pageInfo());
       if (target.pathname.endsWith("/access/apps")) return cloudflare([accessApplication()], pageInfo());
@@ -209,13 +219,13 @@ async function successfulUploadFixture(config, directory, overrides = {}) {
       }
       return new Response("", { status: 401 });
     }
-    if (target.pathname === "/content-version.json") return Response.json(overrides.versionByHost?.[target.hostname] ?? overrides.version ?? version);
-    if (target.pathname === "/artifact-integrity.json") return Response.json(overrides.manifest ?? manifest);
-    if (target.pathname === "/") return new Response(overrides.html ?? html, { status: 200, headers: { "content-type": "text/html" } });
+    if (target.pathname === "/content-version.json") return Response.json(overrides.versionByHost?.[target.hostname] ?? overrides.version ?? version, { headers: overrides.versionHeaders ?? metadataHeaders });
+    if (target.pathname === "/artifact-integrity.json") return Response.json(overrides.manifest ?? manifest, { headers: overrides.manifestHeaders ?? metadataHeaders });
+    if (target.pathname === "/") return new Response(overrides.html ?? html, { status: 200, headers: overrides.rootHeaders ?? staticHeaders });
     if (target.pathname === "/robots.txt") return new Response(overrides.robots ?? robots, { status: 200, headers: { "content-type": "text/plain" } });
     if (target.pathname === "/sitemap.xml") return new Response(overrides.sitemap ?? sitemap, { status: 200, headers: { "content-type": "application/xml" } });
     if (["/api/contact/verify", "/api/contact"].includes(target.pathname)) {
-      return Response.json(overrides.contactBody ?? { ok: false, error: "method_not_allowed" }, { status: overrides.contactStatus ?? 405 });
+      return Response.json(overrides.contactBody ?? { ok: false, error: "method_not_allowed" }, { status: overrides.contactStatus ?? 405, headers: overrides.contactHeaders ?? functionHeaders });
     }
     return new Response("missing", { status: 404 });
   });
@@ -223,40 +233,24 @@ async function successfulUploadFixture(config, directory, overrides = {}) {
 }
 
 describe("private preview checker parsers", () => {
-  it("accepts only Wrangler 4.131 detailed output bound to the exact candidate", async () => {
-    const config = await configuration();
-    const source = [
-      JSON.stringify({
-        type: "pages-deploy",
-        version: 1,
-        pages_project: "smart-portfolio",
-        deployment_id: "deployment123",
-        url: `https://${hashHost}`
-      }),
-      JSON.stringify({
-        type: "pages-deploy-detailed",
-        version: 1,
-        pages_project: "smart-portfolio",
-        deployment_id: "deployment123",
-        url: `https://${hashHost}`,
-        alias: `https://${developHost}`,
-        environment: "preview",
-        production_branch: "main",
-        deployment_trigger: { metadata: { commit_hash: candidateSha } }
-      })
-    ].join("\n");
+  it("keeps the prepared checker outside the active deployment entrypoint", async () => {
+    const workflow = await readFile(path.resolve(".github/workflows/ci.yml"), "utf8");
+    const deployment = await readFile(path.resolve("scripts/ci/deployment.mjs"), "utf8");
+    expect(workflow).not.toContain("privatePreviewCheck");
+    expect(deployment).not.toContain("privatePreviewCheck");
+    expect(workflow).toContain("node scripts/ci/run.mjs deploy");
+  });
 
+  it("validates pinned Wrangler session and exact upload identity", async () => {
+    const config = await configuration();
+    const source = wranglerFixture();
     expect(parseWranglerPagesDeployOutput(source, config, candidateSha)).toMatchObject({
-      id: "deployment123",
-      hostname: hashHost,
-      commitHash: candidateSha
+      id: "abcd1234-89ab-4cde-8fab-0123456789ab", hostname: hashHost, commitHash: candidateSha
     });
-    expect(() => parseWranglerPagesDeployOutput(`${source}\n${source}`, config, candidateSha)).toThrow(
-      "private_preview_ambiguous_wrangler_output"
-    );
-    expect(() => parseWranglerPagesDeployOutput(source.replace(candidateSha, "c".repeat(40)), config, candidateSha)).toThrow(
-      "private_preview_deployment_identity_mismatch"
-    );
+    for (const bad of [source.replace("4.148.0", "4.147.0"), source.replace("--no-bundle", "--bundle"),
+      source.replace("abcd1234-89ab-4cde-8fab-0123456789ab", "wrong-id"), `${source}\n${source}`]) {
+      expect(() => parseWranglerPagesDeployOutput(bad, config, candidateSha)).toThrow("private_preview_invalid_wrangler_output");
+    }
   });
 
   it("rejects incomplete pagination and unreviewed entitlement shapes", () => {
@@ -357,7 +351,7 @@ describe("private preview checker parsers", () => {
 
   it("rejects a post-upload record whose exact ID, SHA, branch, stage, or short ID changed", async () => {
     const config = await configuration();
-    const expected = { expectedDeploymentId: "deployment123", expectedCommitSha: candidateSha, expectedBranch: "develop" };
+    const expected = { expectedDeploymentId: "abcd1234-89ab-4cde-8fab-0123456789ab", expectedCommitSha: candidateSha, expectedBranch: "develop" };
     const variations = [
       { record: { ...deployment("other123") }, code: "private_preview_deployment_identity_mismatch" },
       { record: { ...deployment(), deployment_trigger: { metadata: { branch: "develop", commit_hash: "c".repeat(40) } } }, code: "private_preview_deployment_commit_mismatch" },
@@ -846,50 +840,7 @@ describe("private preview preflight", () => {
   it("verifies one exact uploaded deployment and every current private host", async () => {
     const config = await configuration();
     const directory = await artifactDirectory();
-    const manifest = JSON.parse(await readFile(path.join(directory, "artifact-integrity.json"), "utf8"));
-    const html = await readFile(path.join(directory, "index.html"), "utf8");
-    const robots = await readFile(path.join(directory, "robots.txt"), "utf8");
-    const sitemap = await readFile(path.join(directory, "sitemap.xml"), "utf8");
-    const wranglerOutputPath = path.join(temporaryRoot, "wrangler.jsonl");
-    await writeFile(wranglerOutputPath, [
-      JSON.stringify({ type: "pages-deploy", version: 1, pages_project: "smart-portfolio", deployment_id: "deployment123", url: `https://${hashHost}` }),
-      JSON.stringify({ type: "pages-deploy-detailed", version: 1, pages_project: "smart-portfolio", deployment_id: "deployment123", url: `https://${hashHost}`, alias: `https://${developHost}`, environment: "preview", deployment_trigger: { metadata: { commit_hash: candidateSha } } })
-    ].join("\n"));
-    const version = {
-      schemaVersion: 1,
-      contentHash,
-      commitSha: candidateSha,
-      generatedAt: "2026-10-09T00:00:00.000Z",
-      deployedAt: "2026-10-09T00:01:00.000Z"
-    };
-    const fetchMock = vi.fn(async (url, options) => {
-      const target = new URL(String(url));
-      if (target.hostname === "api.cloudflare.com") {
-        if (target.searchParams.get("page") === "2") return cloudflare([], { page: 2 });
-        if (target.pathname.endsWith("/deployments/deployment123")) return cloudflare(deployment());
-        if (target.pathname.endsWith("/pages/projects/smart-portfolio")) return cloudflare({ name: "smart-portfolio", production_branch: "main", subdomain: pagesDomain, source: null });
-        if (target.pathname.endsWith("/deployments")) return cloudflare([deployment()], pageInfo());
-        if (target.pathname.endsWith("/access/apps")) return cloudflare([accessApplication()], pageInfo());
-        if (target.pathname.endsWith("/policies")) return cloudflare([exactServicePolicy()], pageInfo());
-        if (target.pathname.endsWith("/access/organizations")) return cloudflare({ strict_service_token_auth: true, auth_domain: "team.cloudflareaccess.com" });
-        if (target.pathname.endsWith("/dns_records")) return cloudflare([{ type: "CNAME", name: customHost, content: developHost, proxied: true }], pageInfo());
-        if (target.pathname.endsWith(`/domains/${customHost}`)) return cloudflare({ name: customHost, status: "active", validation_data: { status: "active" }, verification_data: { status: "active" } });
-        if (target.pathname.endsWith("/entitlements")) return cloudflare([]);
-      }
-      if ([pagesDomain, "nicolasmgioanni.dev", "www.nicolasmgioanni.dev"].includes(target.hostname)) {
-        return new Response("<!doctype html>", { status: 200, headers: { "content-type": "text/html" } });
-      }
-      if (!options.headers["CF-Access-Client-Id"]) return new Response("", { status: 401 });
-      if (target.pathname === "/content-version.json") return Response.json(version);
-      if (target.pathname === "/artifact-integrity.json") return Response.json(manifest);
-      if (target.pathname === "/") return new Response(html, { status: 200, headers: { "content-type": "text/html" } });
-      if (target.pathname === "/robots.txt") return new Response(robots, { status: 200, headers: { "content-type": "text/plain" } });
-      if (target.pathname === "/sitemap.xml") return new Response(sitemap, { status: 200, headers: { "content-type": "application/xml" } });
-      if (["/api/contact/verify", "/api/contact"].includes(target.pathname)) {
-        return Response.json({ ok: false, error: "method_not_allowed" }, { status: 405 });
-      }
-      return new Response("missing", { status: 404 });
-    });
+    const { fetchMock, wranglerOutputPath } = await successfulUploadFixture(config, directory);
     const transports = createPrivatePreviewTransports({ configuration: config, fetchImpl: fetchMock });
     await expect(verifyPrivatePreviewUpload({
       artifactDirectory: directory,
@@ -905,19 +856,56 @@ describe("private preview preflight", () => {
     expect(serviceHosts).toEqual(new Set([hashHost, developHost, customHost]));
   });
 
+  it("rejects legacy, production, and local artifact identities before provider requests", async () => {
+    const config = await configuration();
+    const directory = await artifactDirectory();
+    const invalid = [
+      { schemaVersion: 1, contentHash, commitSha: candidateSha, generatedAt: versionV2.generatedAt, deployedAt: versionV2.deployedAt },
+      { ...versionV2, target: "production" },
+      { ...versionV2, target: "local", producer: { kind: "local", runId: "local", runNumber: null, attempt: null } }
+    ];
+    const fetchMock = vi.fn();
+    const transports = createPrivatePreviewTransports({ configuration: config, fetchImpl: fetchMock });
+    for (const version of invalid) {
+      await writeFile(path.join(directory, "content-version.json"), JSON.stringify(version));
+      await createArtifactManifest(directory);
+      await expect(runPrivatePreviewPreflight({ artifactDirectory: directory, expectedContentHash: contentHash,
+        expectedCommitSha: candidateSha, configuration: config, transports }))
+        .rejects.toThrow("private_preview_local_artifact_identity_mismatch");
+    }
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("binds v2 preview producer identity on every authenticated host", async () => {
+    const config = await configuration();
+    const directory = await artifactDirectory();
+    const version = { schemaVersion: 2, contentHash, commitSha: candidateSha,
+      generatedAt: "2026-10-09T00:00:00.000Z", deployedAt: "2026-10-09T00:01:00.000Z",
+      target: "preview", publicBuildInputDigest: "d".repeat(64),
+      producer: { kind: "github-actions", runId: "101", runNumber: 50, attempt: 1 } };
+    await writeFile(path.join(directory, "content-version.json"), JSON.stringify(version));
+    await createArtifactManifest(directory);
+    const differentProducer = { ...version, producer: { ...version.producer, attempt: 2 } };
+    const { fetchMock, wranglerOutputPath } = await successfulUploadFixture(config, directory, {
+      versionByHost: { [hashHost]: differentProducer }
+    });
+    const transports = createPrivatePreviewTransports({ configuration: config, fetchImpl: fetchMock });
+    await expect(verifyPrivatePreviewUpload({ artifactDirectory: directory, expectedContentHash: contentHash,
+      expectedCommitSha: candidateSha, wranglerOutputPath, configuration: config, transports }))
+      .rejects.toThrow("private_preview_candidate_identity_mismatch");
+  });
+
   it("rejects mutated post-upload content contracts and refreshed provider posture", async () => {
     const config = await configuration();
     const directory = await artifactDirectory();
-    const expectedVersion = {
-      schemaVersion: 1,
-      contentHash,
-      commitSha: candidateSha,
-      generatedAt: "2026-10-09T00:00:00.000Z",
-      deployedAt: "2026-10-09T00:01:00.000Z"
-    };
+    const expectedVersion = versionV2;
     const cases = [
       { options: { versionByHost: { [hashHost]: { ...expectedVersion, commitSha: "c".repeat(40) } } }, code: "private_preview_candidate_identity_mismatch" },
       { options: { versionByHost: { [hashHost]: { ...expectedVersion, contentHash: "d".repeat(64) } } }, code: "private_preview_candidate_identity_mismatch" },
+      { options: { versionHeaders: {} }, code: "private_preview_candidate_headers_mismatch" },
+      { options: { manifestHeaders: {} }, code: "private_preview_candidate_headers_mismatch" },
+      { options: { rootHeaders: { ...staticHeaders, "x-frame-options": "SAMEORIGIN" } }, code: "private_preview_candidate_headers_mismatch" },
+      { options: { contactHeaders: {} }, code: "private_preview_candidate_headers_mismatch" },
       { options: { manifest: { unexpected: true } }, code: "private_preview_candidate_manifest_mismatch" },
       { options: { html: "changed root" }, code: "private_preview_candidate_static_content_mismatch" },
       { options: { robots: "changed robots" }, code: "private_preview_candidate_static_content_mismatch" },

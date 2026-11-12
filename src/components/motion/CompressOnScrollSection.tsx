@@ -11,14 +11,14 @@ type CompressOnScrollSectionProps = {
 };
 
 export function CompressOnScrollSection({ as: Component = "section", children, className, enabled = true }: CompressOnScrollSectionProps) {
-  const { ref, visible } = useIntersectionMotion<HTMLElement>({ enabled, rootMargin: "-8% 0px -18% 0px", threshold: 0.1 });
+  const { ref, ready, visible } = useIntersectionMotion<HTMLElement>({ enabled, rootMargin: "-8% 0px -18% 0px", threshold: 0.1 });
 
   if (!enabled) {
     return <Component className={className}>{children}</Component>;
   }
 
   return (
-    <Component className={["motion-compress", visible ? "is-visible" : "", className].filter(Boolean).join(" ")} ref={ref}>
+    <Component className={["motion-compress", ready ? "motion-ready" : "", visible ? "is-visible" : "", className].filter(Boolean).join(" ")} ref={ref}>
       {children}
     </Component>
   );

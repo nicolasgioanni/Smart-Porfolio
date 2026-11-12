@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, truncateSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, symlinkSync, truncateSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { deflateSync } from "node:zlib";
@@ -371,6 +371,27 @@ describe("PNG metadata handling", () => {
 
       expect(result.status).toBe(1);
       expect(result.stderr).toMatch(new RegExp(`${pngParserLimits.maxInputBytes / (1024 * 1024)} MiB limit`, "i"));
+      expect(existsSync(outputPath)).toBe(false);
+    } finally {
+      rmSync(temporaryDirectory, { force: true, recursive: true });
+    }
+  });
+
+  it("refuses a symlinked PNG input before reading or creating an output", () => {
+    const temporaryDirectory = mkdtempSync(path.join(tmpdir(), "png-metadata-test-"));
+    const sourcePath = path.join(temporaryDirectory, "source.png");
+    const inputPath = path.join(temporaryDirectory, "input.png");
+    const outputPath = path.join(temporaryDirectory, "sanitized.png");
+
+    try {
+      writeFileSync(sourcePath, validSyntheticPng());
+      symlinkSync(sourcePath, inputPath);
+      const result = spawnSync(process.execPath, [stripPngMetadataScript, inputPath, outputPath], {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"]
+      });
+
+      expect(result.status).toBe(1);
       expect(existsSync(outputPath)).toBe(false);
     } finally {
       rmSync(temporaryDirectory, { force: true, recursive: true });

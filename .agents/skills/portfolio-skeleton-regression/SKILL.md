@@ -23,7 +23,9 @@ Keep that fixture inert: no application scripts, development portal, or mutation
 
 Research visual snapshots receive controlled canonical local-template detail items only through `tests/e2e/renderRouteSkeleton.tsx`. Keep that injection isolated to the visual renderer. Normal loading boundaries and component or alignment coverage must resolve generated-workbook data so their resource geometry follows validated content.
 
-Projects and affected Home profiles must derive card/action counts from selected generated records and the shared project action resolver, supporting both the old workbook and the five-row migration. Only the isolated screenshot renderer may use controlled local-template project records. Preserve the gallery's `980/981px` column boundary and media footprint when updating its loader.
+Research has two distinct media footprints. CytoCV reserves an abstract/divider/video stack; AML and Guide Donor Scheduler reserve one full-height, vertically centered abstract group above `920px` and intrinsic natural height at or below it. Keep resolved and skeleton alignment helpers shape-aware, retain the `32rem` media cap and `16px` padding, and never restore explainer-scene, label, legend, or playback-control placeholders.
+
+Projects and affected Home profiles must derive card/action counts from selected generated records and the shared project action resolver, supporting both the old workbook and the five-row migration. The Projects loader mirrors the resolved card’s three shared desktop rows: a normal-flow title/badge and summary header including any inline attribution, top-aligned media plus a centered padded 44px control, then an inset divider and source-first actions. Only the isolated screenshot renderer may use controlled local-template project records. Preserve the gallery's `980/981px` column boundary and the `16:10`/`4:3` media footprint when updating its loader.
 
 ## Review Linux baselines
 
@@ -33,7 +35,7 @@ If route coverage or the viewport matrix changes intentionally, update the visua
 
 ## Keep CI and transition semantics accurate
 
-The full release tier of the stable `verify` job runs on Ubuntu 24.04, installs Chromium once, and runs `npm run test:e2e:full`. Its complete browser selection must retain all three `npm run test:e2e:skeletons` parts: direct resolved-versus-loader alignment, held-navigation transition semantics, and the Linux visual matrix. The pull-request priority command runs alignment and transitions without visual snapshots; the Ubuntu priority job adds the Linux visual comparison as its separate step. Preserve the failure-only diagnostics artifact as separate from the deployable static artifact.
+A full CI plan derives exact browser identities, runs nonvisual Chromium coverage across two Ubuntu 24.04 functional shards, and runs the Linux visual selection in its own Ubuntu job; narrow critical Firefox and WebKit coverage remains separate. The complete selection must retain all three `npm run test:e2e:skeletons` parts: direct resolved-versus-loader alignment, held-navigation transition semantics, and the Linux visual matrix. Receipts must account for every assigned test before the aggregate can accept it. Preserve the failure-only diagnostics artifact as separate from the deployable static artifact. See [CI input and evidence contracts](../../../docs/quality/CI_CONTRACTS.md) for the authoritative workflow and receipt graph.
 
 The transition suite suppresses viewport prefetch and holds the first non-prefetch RSC request. With synchronous route rendering, holding that response preserves the source body rather than mounting a streamable fallback. Static export does not provide loading streaming; do not change this into a fallback-visibility claim.
 

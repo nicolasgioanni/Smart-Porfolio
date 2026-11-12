@@ -115,7 +115,7 @@ Home displays organization, title, date range with an inclusive month duration, 
 
 The Experience route displays every row as its own logo-led card with title, organization, date range with an inclusive month duration, location directly below it, type, current-role state, and every safe authored resource through `GlassIconLink` in a labelled resource group. Closed durations are deterministic; malformed or reversed monthly ranges omit duration. It does not render the Home grouping or the internal `featured` flag.
 
-Known role IDs use the curated plain-language and technical narratives in `src/lib/content/experienceNarratives.ts`. Each view supplies a summary plus role-specific evidence chapters; technical tools are attached to the chapter where they were used instead of appearing as one undifferentiated stack. The page-level selector changes every card together. Unknown IDs fall back to the row's Home/detail summaries, bullets, and skills. Rows with no published detail and no resources render identity metadata and `Details not yet available.`; a link-only row renders only its safe resources instead of that placeholder.
+Known role IDs use the curated plain-language and technical narratives in `src/features/experience/content/experienceNarratives.ts`. Each view supplies a summary plus role-specific evidence chapters; technical tools are attached to the chapter where they were used instead of appearing as one undifferentiated stack. The page-level selector changes every card together. Unknown IDs fall back to the row's Home/detail summaries, bullets, and skills. Rows with no published detail and no resources render identity metadata and `Details not yet available.`; a link-only row renders only its safe resources instead of that placeholder.
 
 ## Education
 
@@ -142,7 +142,7 @@ Published links keep their authored labels and order. A pending label that match
 
 Research graphical-abstract fields are validated and rendered inputs. The path and alternative text are paired, and the optional video depends on that abstract as its poster. A narrated video must resolve to reviewed local captions and a readable transcript through the registered media record; it does not add any remote provider or tracker. Existing `links` and `pending_links` continue to own live-site, source, DOI, manuscript, and later publication destinations.
 
-At `720px` and below, Home Research and Project cards use the short presentation sentences in `src/lib/content/homeMobileSummaries.ts`. Unknown IDs use the first sentence of the selected authored summary. Desktop copy and the workbook schema remain unchanged.
+At `720px` and below, Home Research and Project cards use the short presentation sentences in `src/features/home/content/homeMobileSummaries.ts`. Unknown IDs use the first sentence of the selected authored summary. Desktop copy and the workbook schema remain unchanged.
 
 ## Projects
 
@@ -152,7 +152,7 @@ A Home skill with complete summary and details opens its evidence dialog. A skil
 
 The Projects route displays a title, one detail-summary sentence with Home fallback, a local visual frame, and the same ordered Source code and Live demo actions as Home. Missing actions are omitted. Problem, solution, impact, subtitle, and full stack remain compatible source fields but are not displayed in the concise gallery. `featured` affects sorting without appearing as a chip; the reviewed five-row import sets it false on every row and uses explicit detail ordering.
 
-Known project IDs receive independent Concept and How it works tabs. For those IDs, the typed local registry owns the reviewed Concept illustration path, meaningful alt text, intrinsic dimensions, and code-rendered workflow. The workbook `image` field remains the authored fallback for unknown IDs. Unknown IDs keep authored image and text fallbacks without an invented diagram. The current import features Compliance Label Assistant, NotePal, and Tergion on Home while preserving its three-item compact layout. See [Project showcase](PROJECT_SHOWCASE.md) for the exact import file, source evidence, editorial limits, and artwork prompts.
+Known project IDs receive independent Preview and How it works views. For those IDs, the typed local registry owns the reviewed screenshot or native-preview definition, meaningful alt text, intrinsic dimensions, status badge, and code-rendered workflow. The workbook `image` field remains the authored fallback for unknown IDs. Unknown IDs keep authored image and text fallbacks without an invented diagram. The current import features Compliance Label Assistant, NotePal, and Tergion on Home while preserving its three-item compact layout. See [Project showcase](PROJECT_SHOWCASE.md) for the exact import file, source evidence, editorial limits, and preview provenance.
 
 ## Skills
 
@@ -168,7 +168,7 @@ The Home section and navigation item appear only when `enable_recommendations` i
 
 Home candidates use `show_on_home`, then featured, then all. They sort by featured, `home_order`, `recommendation_date` descending, then recommender name or ID. A positive `max_home_recommendation_items` sets the limit. A missing, zero, or negative value falls back to three.
 
-Home and detail cards both display the unchanged `full_quote`, recommender name, title, organization, recommendation date, relationship, and optional inline full-quote link. `linkedin_url` is the recommender-profile destination exposed as `View profile`; `source_url` is the published-recommendation destination exposed through the provenance link and `View recommendation`. The provenance link reads `Verified` on Home and `Verified on LinkedIn` on the detail route. Home actions remain text-only, while detail actions may pair their visible labels with a decorative LinkedIn icon. Quote expansion and line clamping affect presentation only.
+Home and detail cards both display the unchanged `full_quote`, recommender name, title, organization, recommendation date, relationship, and optional inline full-quote link. `linkedin_url` is the recommender-profile destination exposed as `View profile`; a distinct `source_url` is the published-recommendation destination exposed through the provenance link and `View recommendation`. The five checked-in recommendation IDs (`billy-gardner-mcintyre`, `brent-lagesse`, `annuska-zolyomi`, `anoop-prasad`, and `minh-nhat-huynh`) fall back to Nicolas's LinkedIn recommendations page if their source is absent or repeats their profile URL. Future IDs do not inherit that fallback and require a distinct source to expose verification. The provenance link reads `Verified` on Home and `Verified on LinkedIn` on the detail route. Home actions remain text-only, while detail actions may pair their visible labels with a decorative LinkedIn icon. Quote expansion and line clamping affect presentation only.
 
 `home_quote`, `context`, and recommendation `skills` are normalized but have no current UI consumer.
 
@@ -213,11 +213,11 @@ These accepted fields should not be treated as display controls:
 
 | Concern | Source |
 | --- | --- |
-| Home selection | `src/lib/content/selectHomeContent.ts` and `src/lib/content/selectVisibleContent.ts` |
-| Detail and recommendation selection | `src/lib/content/selectDetailContent.ts` and `src/lib/content/selectRecommendationContent.ts` |
+| Home selection | `src/features/home/content/selectHomeContent.ts` and `src/lib/content/selectVisibleContent.ts` |
+| Detail and recommendation selection | feature-owned `content/select*DetailContent.ts` modules and `src/features/recommendations/content/selectRecommendationContent.ts` |
 | Shared ordering | `src/lib/content/sortPortfolioContent.ts` |
-| Profile overview fallbacks | `src/lib/content/profileOverview.ts` |
-| Home composition | `src/components/portfolio/home/HomeOverview.tsx` |
+| Profile overview fallbacks | `src/features/home/content/profileOverview.ts` |
+| Home composition | `src/features/home/components/HomeOverview.tsx` |
 | Header link selection and navigation | `src/components/layout/BlobHeader.tsx`, `src/components/navigation/navigationItems.ts` |
 | Footer resources | `src/components/layout/BlobFooter.tsx` |
 | Collection renderers | `src/components/portfolio/` |

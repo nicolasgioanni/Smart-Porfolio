@@ -6,13 +6,19 @@ import "@/styles/layout.css";
 import "@/styles/glass.css";
 import "@/styles/dialog.css";
 import "@/styles/navigation.css";
-import "@/styles/portfolio.css";
+import "@/styles/content.css";
+import "@/features/home/portfolio.css";
+import "@/features/skills/skills.css";
+import "@/features/recommendations/recommendations.css";
+import "@/features/resume/resume.css";
+import "@/features/legal/legal.css";
+import "@/features/projects/projects.css";
 import "@/styles/detail.css";
-import "@/styles/experience.css";
-import "@/styles/research.css";
+import "@/features/experience/experience.css";
+import "@/features/research/research.css";
 import "@/styles/motion.css";
 import "@/styles/skeletons.css";
-import "@/styles/contact.css";
+import "@/features/contact/contact.css";
 import "@/styles/interactions.css";
 import "@/styles/utilities.css";
 import { SiteShell } from "@/components/layout/SiteShell";
@@ -49,7 +55,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang={SITE_LANGUAGE} data-scroll-behavior="smooth" data-theme={initialTheme} suppressHydrationWarning>
       <head>
-        <ThemePreferenceScript initialTheme={initialTheme} />
+        <ThemePreferenceScript />
       </head>
       <body className={`${spaceGrotesk.className} ${spaceGrotesk.variable}`}>
         <SiteShell content={content} initialTheme={initialTheme}>

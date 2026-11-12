@@ -1,3 +1,4 @@
+import { parseDeploymentOutput } from "./ci/deployment.mjs";
 import { createHash } from "node:crypto";
 import { constants as fsConstants } from "node:fs";
 import { execFile as execFileCallback } from "node:child_process";
@@ -9,7 +10,11 @@ import { artifactManifestFileName, verifyArtifactManifest } from "./artifactInte
 import {
   assertCanonicalHomepageHtml,
   assertExactDeploymentText,
-  assertMethodNotAllowedResponse
+  assertMethodNotAllowedResponse,
+  assertStaticHeaders,
+  assertNoCacheMetadataHeaders,
+  assertFunctionHeaders,
+  sameDeploymentIdentity
 } from "./checkDeployedContent.mjs";
 import { parseContentVersion, readContentVersion } from "./writeContentVersion.mjs";
 
@@ -704,38 +709,14 @@ export function parsePagesProject(value, configuration) {
 export function parseWranglerPagesDeployOutput(source, configuration, expectedCommitSha) {
   if (typeof source !== "string" || !source.trim()) fail("private_preview_missing_wrangler_output");
   if (!commitShaPattern.test(expectedCommitSha)) fail("private_preview_invalid_candidate_sha");
-  const records = [];
-  for (const line of source.split(/\r?\n/)) {
-    if (!line.trim()) continue;
-    let record;
-    try {
-      record = JSON.parse(line);
-    } catch {
-      fail("private_preview_invalid_wrangler_output");
-    }
-    if (!isRecord(record)) fail("private_preview_invalid_wrangler_output");
-    if (record.type === "pages-deploy" || record.type === "pages-deploy-detailed") records.push(record);
+  let output;
+  try {
+    parseDeploymentOutput(source, { target: "preview", sourceSha: expectedCommitSha });
+    output = source.trim().split("\n").map((line) => JSON.parse(line)).find((record) => record.type === "pages-deploy-detailed");
+  } catch {
+    fail("private_preview_invalid_wrangler_output");
   }
-  const compact = records.filter((record) => record.type === "pages-deploy");
-  const detailed = records.filter((record) => record.type === "pages-deploy-detailed");
-  if (compact.length !== 1 || detailed.length !== 1) fail("private_preview_ambiguous_wrangler_output");
-  const output = detailed[0];
-  if (output.version !== 1 || compact[0].version !== 1) fail("private_preview_invalid_wrangler_output");
-  if (
-    compact[0].pages_project !== output.pages_project ||
-    compact[0].deployment_id !== output.deployment_id ||
-    compact[0].url !== output.url
-  ) {
-    fail("private_preview_ambiguous_wrangler_output");
-  }
-  if (
-    output.pages_project !== configuration.pagesProject ||
-    output.environment !== "preview" ||
-    (output.production_branch !== undefined && output.production_branch !== "main") ||
-    output.deployment_trigger?.metadata?.commit_hash !== expectedCommitSha
-  ) {
-    fail("private_preview_deployment_identity_mismatch");
-  }
+  if (output.pages_project !== configuration.pagesProject) fail("private_preview_deployment_identity_mismatch");
   const deployed = parsePreviewPagesUrl(output.url, "private_preview_invalid_pages_deployment_url");
   const alias = output.alias === undefined || output.alias === null
     ? undefined
@@ -1410,7 +1391,8 @@ async function verifyLocalArtifact(artifactDirectory, expectedContentHash, expec
   if (!commitShaPattern.test(expectedCommitSha)) fail("private_preview_invalid_candidate_sha");
   await verifyArtifactManifest(artifactDirectory, expectedCommitSha);
   const version = await readContentVersion(path.join(artifactDirectory, "content-version.json"));
-  if (version.contentHash !== expectedContentHash || version.commitSha !== expectedCommitSha) {
+  if (version.schemaVersion !== 2 || version.target !== "preview" || version.producer?.kind !== "github-actions" ||
+      version.contentHash !== expectedContentHash || version.commitSha !== expectedCommitSha) {
     fail("private_preview_local_artifact_identity_mismatch");
   }
   const [manifestSource, indexHtml, robotsText, sitemapText] = await Promise.all([
@@ -1420,6 +1402,8 @@ async function verifyLocalArtifact(artifactDirectory, expectedContentHash, expec
     readFile(path.join(artifactDirectory, "sitemap.xml"), "utf8")
   ]);
   return {
+    version,
+    artifactDirectory,
     manifest: JSON.parse(manifestSource),
     indexHtmlHash: hashBytes(indexHtml),
     robotsText,
@@ -1450,27 +1434,27 @@ export async function runPrivatePreviewPreflight({
 }
 
 async function assertExactCandidateHost(transports, hostname, localArtifact, expectedContentHash, expectedCommitSha) {
-  const version = parseContentVersion(
-    await responseJson(
-      transports,
-      await transports.serviceRequest(hostUrl(hostname, "/content-version.json")),
-      "private_preview_invalid_candidate_identity"
-    )
-  );
-  if (version.contentHash !== expectedContentHash || version.commitSha !== expectedCommitSha) {
+  const versionResponse = await transports.serviceRequest(hostUrl(hostname, "/content-version.json"));
+  requireDeploymentInvariant(() => assertNoCacheMetadataHeaders(versionResponse, "content-version.json"), "private_preview_candidate_headers_mismatch");
+  const version = parseContentVersion(await responseJson(transports, versionResponse, "private_preview_invalid_candidate_identity"));
+  if (version.contentHash !== expectedContentHash || version.commitSha !== expectedCommitSha ||
+      !sameDeploymentIdentity(version, localArtifact.version)) {
     fail("private_preview_candidate_identity_mismatch");
   }
-  const manifest = await responseJson(
-    transports,
-    await transports.serviceRequest(hostUrl(hostname, `/${artifactManifestFileName}`)),
-    "private_preview_invalid_candidate_manifest"
-  );
+  const manifestResponse = await transports.serviceRequest(hostUrl(hostname, `/${artifactManifestFileName}`));
+  requireDeploymentInvariant(() => assertNoCacheMetadataHeaders(manifestResponse, artifactManifestFileName), "private_preview_candidate_headers_mismatch");
+  const manifest = await responseJson(transports, manifestResponse, "private_preview_invalid_candidate_manifest");
   if (JSON.stringify(manifest) !== JSON.stringify(localArtifact.manifest)) {
     fail("private_preview_candidate_manifest_mismatch");
   }
   const root = await transports.serviceRequest(hostUrl(hostname));
   if (!root.ok || !/text\/html\b/i.test(root.headers.get("content-type") ?? "")) {
     failResponse(root, "private_preview_candidate_static_content_missing");
+  }
+  try {
+    await assertStaticHeaders(root, localArtifact.artifactDirectory);
+  } catch {
+    fail("private_preview_candidate_headers_mismatch");
   }
   const rootBytes = await transports.readBody(root);
   if (hashBytes(rootBytes) !== localArtifact.indexHtmlHash) fail("private_preview_candidate_static_content_mismatch");
@@ -1493,6 +1477,7 @@ async function assertExactCandidateHost(transports, hostname, localArtifact, exp
   for (const endpoint of ["/api/contact/verify", "/api/contact"]) {
     const response = await transports.serviceRequest(hostUrl(hostname, endpoint));
     if (response.status !== 405) failResponse(response, "private_preview_service_auth_failed");
+    requireDeploymentInvariant(() => assertFunctionHeaders(response, endpoint.slice(1)), "private_preview_candidate_headers_mismatch");
     const body = await responseJson(transports, response, "private_preview_service_auth_failed", 405);
     requireDeploymentInvariant(
       () => assertMethodNotAllowedResponse(response.status, response.headers.get("content-type"), body, endpoint.slice(1)),

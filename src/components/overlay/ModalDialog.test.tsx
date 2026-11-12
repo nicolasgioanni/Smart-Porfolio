@@ -468,15 +468,16 @@ describe("ModalDialog", () => {
     Object.defineProperty(document, "fullscreenElement", { configurable: true, value: null });
   });
 
-  it("keeps in-place media inline and semantically neutral until its native dialog opens", () => {
+  it("keeps in-place media inline and named until its native dialog opens", () => {
     vi.useFakeTimers();
     render(<InPlaceDialogHarness />);
 
     const nativeDialog = screen.getByTestId("in-place-dialog");
     const inlineControl = nativeDialog.querySelector<HTMLButtonElement>("button")!;
 
-    expect(nativeDialog).toHaveAttribute("role", "presentation");
-    expect(nativeDialog).not.toHaveAttribute("aria-label");
+    expect(nativeDialog).not.toHaveAttribute("role");
+    expect(nativeDialog).toHaveAttribute("aria-label", "In-place media");
+    expect(nativeDialog).not.toHaveAttribute("aria-modal");
     expect(nativeDialog).not.toHaveAttribute("tabindex");
     expect(nativeDialog).not.toHaveAttribute("aria-hidden");
     expect(inlineControl).toHaveTextContent("Inline player control");
@@ -491,6 +492,7 @@ describe("ModalDialog", () => {
     expect(openDialog).toBe(nativeDialog);
     expect(within(openDialog).getByRole("button", { name: "Inline player control" })).toBe(inlineControl);
     expect(openDialog).toHaveAttribute("open");
+    expect(openDialog).toHaveAttribute("aria-modal", "true");
     expect(closeButton).toHaveFocus();
     expect(document.body.style.overflow).toBe("hidden");
 
@@ -500,8 +502,9 @@ describe("ModalDialog", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(nativeDialog.querySelector("button")).toBe(inlineControl);
     expect(nativeDialog).not.toHaveAttribute("open");
-    expect(nativeDialog).toHaveAttribute("role", "presentation");
-    expect(nativeDialog).not.toHaveAttribute("aria-label");
+    expect(nativeDialog).not.toHaveAttribute("role");
+    expect(nativeDialog).toHaveAttribute("aria-label", "In-place media");
+    expect(nativeDialog).not.toHaveAttribute("aria-modal");
     expect(document.body.style.overflow).toBe("");
     expect(screen.getByRole("button", { name: "Open in-place media" })).toHaveFocus();
   });
@@ -538,7 +541,9 @@ describe("ModalDialog", () => {
     const nativeDialog = screen.getByTestId("in-place-dialog");
     expect(onOpenError).toHaveBeenCalledTimes(1);
     expect(nativeDialog).not.toHaveAttribute("open");
-    expect(nativeDialog).toHaveAttribute("role", "presentation");
+    expect(nativeDialog).not.toHaveAttribute("role");
+    expect(nativeDialog).toHaveAttribute("aria-label", "In-place media");
+    expect(nativeDialog).not.toHaveAttribute("aria-modal");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(document.body.style.overflow).toBe("");
   });

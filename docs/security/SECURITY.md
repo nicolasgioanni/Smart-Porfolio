@@ -23,12 +23,12 @@ Documentation is not evidence that an external control is active. Treat the impl
 | Contact public contract | `functions/_shared/contact.ts` |
 | Contact request validation, tickets, provider calls, and Function headers | `functions/_shared/contact/` |
 | Contact endpoint order and responses | `functions/api/contact/verify.ts`, `functions/api/contact.ts` |
-| Browser request and retry behavior | `src/components/contact/ContactForm.tsx` |
-| Turnstile widget configuration | `src/components/contact/TurnstileWidget.tsx` |
+| Browser request and retry behavior | `src/features/contact/components/ContactForm.tsx` |
+| Turnstile widget configuration | `src/features/contact/components/TurnstileWidget.tsx` |
 | Production and preview non-secret Function values | `wrangler.jsonc` |
 | Contact-rate reservation schema | `migrations/` |
 | Build-time public values and deployment flow | `.github/workflows/ci.yml` |
-| Research media paths and PNG sanitation | `src/lib/content/validatePortfolioContent.ts`, `src/lib/content/researchGraphicalAbstracts.ts`, `scripts/lib/pngMetadata.mjs` |
+| Research media paths and PNG sanitation | `src/lib/content/validatePortfolioContent.ts`, `src/features/research/content/researchGraphicalAbstracts.ts`, `scripts/lib/pngMetadata.mjs` |
 | Contact behavior reference | `docs/security/CONTACT_SYSTEM.md` |
 
 ## CSV parsing boundary
@@ -46,9 +46,21 @@ Contributed PNG sanitation is a local publication tool, but its inputs remain un
 
 `package-lock.json` is the reviewed dependency graph, and CI installs it with `npm ci`. Run both `npm audit` and `npm audit --omit=dev` after a dependency change: the first covers the full quality-gate graph, while the second covers the deployed runtime graph.
 
+`npm run audit:check` blocks every advisory unless its exact GHSA identifier has a current, reviewed exception in [`security/audit-exceptions.json`](../../security/audit-exceptions.json). The sole current exception, `GHSA-vfj7-8cjw-p6xm`, affects the development-only ESLint glob path through `braces`; it is absent from the deployed static artifact and Pages Functions. At this dependency set, npm offers only a semver-major downgrade of `@next/eslint-plugin-next` to `14.2.35`, which is incompatible with the tested Next 16.4 pair. The exception names its owner, expiry, exposure, and removal condition. It does not permit production, static-build, or unlisted findings.
+
 ExcelJS remains exactly `4.4.0` because no newer release is available. Its only override is the nested `exceljs > uuid` `11.1.1` remediation; do not broaden that override to unrelated UUID consumers. `npm ls exceljs uuid` and the locked audit establish that the remediation resolves to `11.1.1`.
 
 GHSA-w5hq-g745-h8pq concerns caller-buffer behavior in UUID v3, v5, and v6. The package-contract test establishes the required resolved version. The real XLSX data-bar test calls ExcelJS's UUID v4 extension path, verifies the generated identifier is serialized into worksheet XML, and verifies that ExcelJS restores the identical identifier on read. That test proves ExcelJS compatibility and serialization for the override; it does not by itself exercise or prove the advisory's v3/v5/v6 caller-buffer remediation. Re-evaluate and remove the narrow override when upgrading ExcelJS.
+
+## CI security admission and scanners
+
+The CI workflow admits an event before checking out code or reading protected content inputs. It accepts only the exact `nicolasgioanni/Smart-Porfolio` repository, a `ci.yml` workflow reference bound to the triggering event ref, and an exact workflow SHA for trusted branch, scheduled, and manual revisions. Pushes must target `main` or `develop`; pull requests must target one of those branches; scheduled and manual runs must use `ci.yml` from `refs/heads/main`. Scheduled and manual candidates are pinned to the triggering `github.sha`, then a credential-free freshness check rejects protected inputs for a revision that is no longer the branch head.
+
+`resolve-candidate` and `prepare-content` produce one immutable candidate and accepted snapshot. Full plans restore the snapshot for quality, complete unit/integration, browser, sealed-package, and export/runtime checks. `security-tools`, `security-scans`, `codeql`, and `infrastructure` run without workbook or Cloudflare credentials even when source content is unchanged; `dependency-review` is a pull-request-only source check. `verify` requires the exact independent source and application receipts before it can authorize deployment.
+
+`security-tools` installs the checksum-verified pinned `actionlint` binary and uses its repository workflow discovery so new tracked workflows are included. `security-scans` installs pinned Gitleaks and Zizmor binaries, scans reachable Git history and workflow semantics, and keeps scanner reports in private runner temporary files. This source job also runs the existing dependency audit on unchanged scheduled candidates, so new advisories and expired exceptions remain blocking without rerunning application checks. For a full plan, `build-and-package` separately installs the same pinned Gitleaks binary and scans the exact sealed release directory after packaging and before its release artifact can upload; malformed, missing, failed, or nonempty reports prevent its distinct built-output receipt. `verify` requires that receipt to bind the clean scan to the sealed artifact record. `codeql` runs JavaScript/TypeScript `security-extended` analysis in `build-mode: none`; a local SARIF gate rejects malformed output, empty analyzed-rule sets across the driver and identified query-pack extensions, scanner errors, and every finding before a passing report can be uploaded. Pull requests also run the pinned dependency-review action and reject newly introduced high-severity dependency vulnerabilities. These hosted controls are repository-enforced workflow behavior; a local review does not prove a hosted run passed.
+
+The independent `infrastructure` source job runs checksum-pinned Terraform and OPA against every module and state root with backends disabled and mocked provider inputs. Its receipt is required by `verify`, including unchanged schedules. These source checks do not activate infrastructure or establish live posture; no environment setting or provider mutation is activated by this path. See [Terraform ownership preparation](../infrastructure/TERRAFORM_OWNERSHIP.md).
 
 ## Threat model
 
@@ -79,14 +91,6 @@ The build downloads one anonymous HTTPS XLSX source, validates it, and turns it 
 Build-time inputs and deploy credentials belong in GitHub Actions configuration, not browser code. `PORTFOLIO_WORKBOOK_URL` is an anonymous read-only source URL stored as an Actions secret for runner-log masking. The Pages direct-upload credential is also an Actions secret. Neither value is a Cloudflare Function binding.
 
 Generated JSON is a build input. The exported artifact and its integrity metadata are deployment outputs, not private storage. Review all build inputs as public-safe before publication.
-
-### Private preview deployment boundary
-
-The preview-only checker under `scripts/privatePreviewCheck.mjs` separates provider inventory, anonymous denial, and Access service-token requests. Provider API credentials never accompany a Pages request; the Access client pair never accompanies a provider request or redirect; and the existing public deployment checker receives neither. Service credentials are limited to the two established preview hosts before mutation and to the exact API-verified hash host after upload. All three transports use fixed HTTPS destinations, manual redirect handling, bounded whole-operation reads, and nonblocking cancellation on a failed or stalled body. They accept only read-only GET requests and do not forward caller headers. Private API evidence is written through no-follow private files in a fresh operation directory outside every Git worktree; Wrangler and D1 command output stays in separate mode-restricted runner-temporary files. None is an artifact or public log payload.
-
-The checker is deliberately fail-closed. It drains bounded V4 array pagination, covers account and custom-zone Access scope, requires a root `*.smart-portfolio-bds.pages.dev` policy for a future hash before mutation, audits more-specific Pages applications and public path overrides, requires strict service-token authentication and an exact service-token `non_identity` policy, validates proxied custom-preview DNS, denies anonymous access to every advertised historical alias, and proves exact post-upload artifact identity. Historical records are not required to have succeeded, because their advertised hosts still need protection. The account entitlement response is collected as private evidence but cannot satisfy activation because the provider has not supplied a reviewed Access feature-key mapping. It therefore blocks preview D1 mutation and upload with `entitlement_mapping_unreviewed`. This is a repository behavior, not proof that an existing preview is private.
-
-Do not add preview credentials to browser code, `wrangler.jsonc`, public GitHub variables, `checkDeployedContent.mjs`, or an unreviewed redirect flow. The configured custom preview host also does not authorize Contact or Turnstile interaction; that requires a separate reviewed hostname/origin change and controlled test.
 
 ### Contact boundary
 

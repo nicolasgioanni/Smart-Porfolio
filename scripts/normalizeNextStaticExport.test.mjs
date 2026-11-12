@@ -100,7 +100,7 @@ describe("Next.js static export segment normalization", () => {
     await expect(normalizeNextStaticExportSegments(linkedExport)).rejects.toThrow(/cannot be a symbolic link/);
   });
 
-  it("rejects candidate roots outside Next 16.3.4's single encoded-segment grammar", async () => {
+  it("rejects candidate roots outside Next 16's single encoded-segment grammar", async () => {
     const exportDirectory = await createExportDirectory();
     const malformedDirectory = path.join(exportDirectory, "terms", "__next.terms.extra");
     await mkdir(malformedDirectory, { recursive: true });

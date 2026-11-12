@@ -32,16 +32,15 @@ type Viewport = {
 
 type ProjectFootprint = {
   actions: number;
-  tabs: number;
+  badge: number;
+  controls: number;
+  divider: number;
+  headerAttribution: number;
   visual: number;
 };
 
 type ResearchFootprint = {
   abstracts: number;
-  explainerControls: number;
-  explainerKeys: number;
-  explainerSceneLabels: number;
-  explainerSceneSurfaces: number;
   formalTitle: boolean;
   mediaDividers: number;
   mediaRows: number;
@@ -49,11 +48,13 @@ type ResearchFootprint = {
   mediaStacks: number;
   overviewRows: number;
   resources: number;
+  singleMedia: number;
   videoPlayers: number;
 };
 
-type ResearchMediaGeometry = {
+type ResearchMediaStackGeometry = {
   divider: { height: number; left: number; right: number };
+  kind: "stack";
   rows: Array<{
     alignContent: string;
     height: number;
@@ -65,6 +66,29 @@ type ResearchMediaGeometry = {
     width: number;
   }>;
 };
+
+type ResearchSingleMediaGeometry = {
+  kind: "single";
+  medium: {
+    bottom: number;
+    height: number;
+    left: number;
+    right: number;
+    top: number;
+    width: number;
+  };
+  wrapper: {
+    alignContent: string;
+    height: number;
+    paddingBottom: string;
+    paddingLeft: string;
+    paddingRight: string;
+    paddingTop: string;
+    width: number;
+  };
+};
+
+type ResearchMediaGeometry = ResearchMediaStackGeometry | ResearchSingleMediaGeometry;
 
 const primaryViewports: readonly Viewport[] = [
   { height: 844, name: "compact-phone", width: 320 },
@@ -275,45 +299,82 @@ async function getResearchMediaGeometry(
       ? ".research-skeleton__media-divider"
       : ".research-project__media-divider";
     const mediumSelector = isSkeleton
-      ? ":scope > .research-skeleton__abstract, :scope > .research-skeleton__video, :scope > .research-skeleton__explainer"
-      : ":scope > .research-abstract, :scope > .research-video, :scope > .research-explainer";
+      ? ":scope > .research-skeleton__abstract, :scope > .research-skeleton__video"
+      : ":scope > .research-abstract, :scope > .research-video";
     const stack = cardElement.querySelector<HTMLElement>(stackSelector);
-    if (!stack) return undefined;
-    const rows = Array.from(
-      stack.querySelectorAll<HTMLElement>(`:scope > ${rowSelector}`),
-    );
-    const divider = stack.querySelector<HTMLElement>(
-      `:scope > ${dividerSelector}`,
-    );
-    if (rows.length !== 2 || !divider)
-      throw new Error(
-        "Research media stack is missing its two rows or divider.",
+    if (stack) {
+      const rows = Array.from(
+        stack.querySelectorAll<HTMLElement>(`:scope > ${rowSelector}`),
       );
+      const divider = stack.querySelector<HTMLElement>(
+        `:scope > ${dividerSelector}`,
+      );
+      if (rows.length !== 2 || !divider)
+        throw new Error(
+          "Research video stack is missing its two rows or divider.",
+        );
 
-    const stackBox = stack.getBoundingClientRect();
-    const dividerBox = divider.getBoundingClientRect();
+      const stackBox = stack.getBoundingClientRect();
+      const dividerBox = divider.getBoundingClientRect();
+      return {
+        divider: {
+          height: dividerBox.height,
+          left: dividerBox.left - stackBox.left,
+          right: stackBox.right - dividerBox.right,
+        },
+        kind: "stack",
+        rows: rows.map((row) => {
+          const rowBox = row.getBoundingClientRect();
+          const medium = row.querySelector<HTMLElement>(mediumSelector);
+          const mediumBox = medium?.getBoundingClientRect();
+          const style = getComputedStyle(row);
+          return {
+            alignContent: style.alignContent,
+            height: rowBox.height,
+            mediumLeft: mediumBox ? mediumBox.left - rowBox.left : undefined,
+            mediumRight: mediumBox ? rowBox.right - mediumBox.right : undefined,
+            mediumWidth: mediumBox?.width,
+            paddingLeft: style.paddingLeft,
+            paddingRight: style.paddingRight,
+            width: rowBox.width,
+          };
+        }),
+      };
+    }
+
+    const singleSelector = isSkeleton
+      ? ".research-skeleton__single-media"
+      : ".research-project__single-media";
+    const singleMediumSelector = isSkeleton
+      ? ":scope > .research-skeleton__abstract"
+      : ":scope > .research-abstract";
+    const single = cardElement.querySelector<HTMLElement>(singleSelector);
+    if (!single) return undefined;
+    const medium = single.querySelector<HTMLElement>(singleMediumSelector);
+    if (!medium) throw new Error("Research single-media wrapper is missing its graphical abstract.");
+
+    const wrapperBox = single.getBoundingClientRect();
+    const mediumBox = medium.getBoundingClientRect();
+    const style = getComputedStyle(single);
     return {
-      divider: {
-        height: dividerBox.height,
-        left: dividerBox.left - stackBox.left,
-        right: stackBox.right - dividerBox.right,
+      kind: "single",
+      medium: {
+        bottom: wrapperBox.bottom - mediumBox.bottom,
+        height: mediumBox.height,
+        left: mediumBox.left - wrapperBox.left,
+        right: wrapperBox.right - mediumBox.right,
+        top: mediumBox.top - wrapperBox.top,
+        width: mediumBox.width,
       },
-      rows: rows.map((row) => {
-        const rowBox = row.getBoundingClientRect();
-        const medium = row.querySelector<HTMLElement>(mediumSelector);
-        const mediumBox = medium?.getBoundingClientRect();
-        const style = getComputedStyle(row);
-        return {
-          alignContent: style.alignContent,
-          height: rowBox.height,
-          mediumLeft: mediumBox ? mediumBox.left - rowBox.left : undefined,
-          mediumRight: mediumBox ? rowBox.right - mediumBox.right : undefined,
-          mediumWidth: mediumBox?.width,
-          paddingLeft: style.paddingLeft,
-          paddingRight: style.paddingRight,
-          width: rowBox.width,
-        };
-      }),
+      wrapper: {
+        alignContent: style.alignContent,
+        height: wrapperBox.height,
+        paddingBottom: style.paddingBottom,
+        paddingLeft: style.paddingLeft,
+        paddingRight: style.paddingRight,
+        paddingTop: style.paddingTop,
+        width: wrapperBox.width,
+      },
     };
   }, skeleton);
 }
@@ -494,14 +555,29 @@ test("matches the Home hero's 720, 860, and 980 responsive boundaries", async ({
   }
 });
 
-test("matches real Project and Research detail footprints at compact, phone, tablet, and desktop widths", async ({ page }) => {
-  for (const viewport of [primaryViewports[0]!, primaryViewports[1]!, primaryViewports[3]!, primaryViewports.at(-1)!]) {
+test("matches real Project and Research detail footprints at compact, visual, column-boundary, and desktop widths", async ({ page }) => {
+  const projectResponsiveViewports: readonly Viewport[] = [
+    primaryViewports[0]!,
+    primaryViewports[1]!,
+    { height: 900, name: "visual-boundary-720", width: 720 },
+    { height: 900, name: "visual-boundary-721", width: 721 },
+    primaryViewports[3]!,
+    { height: 900, name: "column-boundary-981", width: 981 },
+    primaryViewports.at(-1)!
+  ];
+
+  for (const viewport of projectResponsiveViewports) {
     await preparePage(page, viewport, siteRoutes.projects);
     const resolvedProjectFootprints = await page.locator(".project-card--showcase").evaluateAll((cards): ProjectFootprint[] =>
       cards.map((card) => ({
         actions: card.querySelectorAll(".project-card__actions > a").length,
-        tabs: card.querySelectorAll(".project-visual-tabs__tab").length,
-        visual: card.querySelectorAll(".project-visual-tabs, .project-card__image").length
+        badge: card.querySelectorAll(".project-card__badge").length,
+        controls: card.querySelectorAll(".project-visual-switcher__toggle").length,
+        divider: card.querySelectorAll(".project-card__footer-divider").length,
+        headerAttribution: card.querySelectorAll(
+          ".project-card__showcase-header .content-card__summary > .project-card__attribution",
+        ).length,
+        visual: card.querySelectorAll(".project-visual-switcher, .project-card__image").length
       }))
     );
     const { fixturePage: projectFixturePage, skeleton: projectSkeleton } = await mountStaticRouteSkeleton(
@@ -514,14 +590,53 @@ test("matches real Project and Research detail footprints at compact, phone, tab
       await expect(projectCards).toHaveCount(resolvedProjectFootprints.length);
       for (const [index, footprint] of resolvedProjectFootprints.entries()) {
         const card = projectCards.nth(index);
-        await expect(card.locator(".detail-card-skeleton__project-tabs > .skeleton-block")).toHaveCount(footprint.tabs);
+        await expect(card.locator(".detail-card-skeleton__project-header > .skeleton-block")).toHaveCount(1 + footprint.badge);
+        await expect(card.locator(".detail-card-skeleton__project-controls > .skeleton-block")).toHaveCount(footprint.controls);
         await expect(card.locator(".detail-card-skeleton__project-visual")).toHaveCount(footprint.visual);
         await expect(card.locator(".detail-card-skeleton__actions > .skeleton-block")).toHaveCount(footprint.actions);
+        await expect(card.locator(".detail-card-skeleton__project-divider")).toHaveCount(footprint.divider);
+        await expect(
+          card.locator(
+            ".detail-card-skeleton__project-summary > .detail-card-skeleton__project-attribution",
+          ),
+        ).toHaveCount(footprint.headerAttribution);
+        if (footprint.visual > 0 && footprint.controls > 0) {
+          const geometry = await card.evaluate((element) => {
+            const visual = element.querySelector<HTMLElement>(".detail-card-skeleton__project-visual");
+            const controls = element.querySelector<HTMLElement>(".detail-card-skeleton__project-controls");
+            const divider = element.querySelector<HTMLElement>(".detail-card-skeleton__project-divider");
+            const actions = element.querySelector<HTMLElement>(".detail-card-skeleton__actions");
+            if (!visual || !controls || !actions) throw new Error("Project skeleton is missing its visual, control, or actions row.");
+            const visualBox = visual.getBoundingClientRect();
+            const controlsBox = controls.getBoundingClientRect();
+            const dividerBox = divider?.getBoundingClientRect();
+            const actionsBox = actions.getBoundingClientRect();
+            return {
+              actionsAfterControls: actionsBox.top >= controlsBox.bottom - 1,
+              actionsAfterDivider: !dividerBox || actionsBox.top >= dividerBox.bottom - 1,
+              controlsAfterVisual: controlsBox.top >= visualBox.bottom - 1,
+              dividerAfterControls: !dividerBox || dividerBox.top >= controlsBox.bottom - 1,
+              ratio: visualBox.width / visualBox.height
+            };
+          });
+          expect(geometry.controlsAfterVisual, `Projects skeleton control should follow visual at ${viewport.name}`).toBe(true);
+          expect(geometry.actionsAfterControls, `Projects skeleton actions should follow control at ${viewport.name}`).toBe(true);
+          expect(geometry.dividerAfterControls, `Projects skeleton divider should follow control at ${viewport.name}`).toBe(true);
+          expect(geometry.actionsAfterDivider, `Projects skeleton actions should follow divider at ${viewport.name}`).toBe(true);
+          const expectedRatio = viewport.width <= 720 ? 4 / 3 : 16 / 10;
+          expect(Math.abs(geometry.ratio - expectedRatio), `Projects skeleton visual ratio at ${viewport.name}`).toBeLessThan(0.02);
+        }
       }
       await assertViewportHasNoOverflow(projectFixturePage, `Projects skeleton does not overflow at ${viewport.name}`);
     } finally {
       await projectFixturePage.close();
     }
+
+    // Project media has its own 720px frame boundary and 980px column
+    // boundary. Research has no contract at those extra widths, so retain its
+    // established compact/tablet/desktop matrix rather than expanding this
+    // shared, expensive fixture test.
+    if (![320, 390, 980, 1280].includes(viewport.width)) continue;
 
     await preparePage(page, viewport, siteRoutes.research);
     const resolvedResearchFootprints = await page
@@ -529,17 +644,6 @@ test("matches real Project and Research detail footprints at compact, phone, tab
       .evaluateAll((cards): ResearchFootprint[] =>
         cards.map((card) => ({
           abstracts: card.querySelectorAll(".research-abstract").length,
-          explainerControls: card.querySelectorAll("[data-research-explainer]")
-            .length,
-          explainerKeys: card.querySelectorAll(
-            ".research-explainer__legend",
-          ).length,
-          explainerSceneLabels: card.querySelectorAll(
-            ".research-explainer__scene-labels",
-          ).length,
-          explainerSceneSurfaces: card.querySelectorAll(
-            ".research-explainer__scene",
-          ).length,
           formalTitle: Boolean(
             card.querySelector(".research-project__formal-title"),
           ),
@@ -553,6 +657,8 @@ test("matches real Project and Research detail footprints at compact, phone, tab
           overviewRows: card.querySelectorAll(".detail-list > .detail-section")
             .length,
           resources: card.querySelectorAll(".research-project__resource")
+            .length,
+          singleMedia: card.querySelectorAll(".research-project__single-media")
             .length,
           videoPlayers: card.querySelectorAll(
             '[data-testid="research-video-player"]',
@@ -591,17 +697,8 @@ test("matches real Project and Research detail footprints at compact, phone, tab
           card.locator(".research-skeleton__abstract-frame"),
         ).toHaveCount(footprint.abstracts);
         await expect(
-          card.locator(".research-skeleton__explainer-scene-surface"),
-        ).toHaveCount(footprint.explainerSceneSurfaces);
-        await expect(
-          card.locator(".research-skeleton__explainer-scene-labels"),
-        ).toHaveCount(footprint.explainerSceneLabels);
-        await expect(
-          card.locator(".research-skeleton__explainer-key"),
-        ).toHaveCount(footprint.explainerKeys);
-        await expect(
-          card.locator(".research-project-skeleton__media-control"),
-        ).toHaveCount(footprint.explainerControls);
+          card.locator(".research-skeleton__single-media"),
+        ).toHaveCount(footprint.singleMedia);
         await expect(
           card.locator(".research-skeleton__video-viewport"),
         ).toHaveCount(footprint.videoPlayers);
@@ -617,6 +714,32 @@ test("matches real Project and Research detail footprints at compact, phone, tab
         ]);
         expect(skeletonMedia === undefined).toBe(resolvedMedia === undefined);
         if (resolvedMedia && skeletonMedia) {
+          expect(skeletonMedia.kind).toBe(resolvedMedia.kind);
+          if (resolvedMedia.kind === "single" && skeletonMedia.kind === "single") {
+            for (const media of [resolvedMedia, skeletonMedia]) {
+              expect(media.wrapper.paddingTop).toBe("16px");
+              expect(media.wrapper.paddingRight).toBe("16px");
+              expect(media.wrapper.paddingBottom).toBe("16px");
+              expect(media.wrapper.paddingLeft).toBe("16px");
+              expect(Math.abs(media.medium.left - media.medium.right)).toBeLessThanOrEqual(1);
+              expect(media.medium.width).toBeLessThanOrEqual(512);
+              if (viewport.width > 920) {
+                expect(media.wrapper.alignContent).toBe("center");
+                expect(Math.abs(media.medium.top - media.medium.bottom)).toBeLessThanOrEqual(1);
+              } else {
+                expect(media.wrapper.alignContent).toBe("start");
+                expect(media.medium.top).toBeCloseTo(16, 0);
+                expect(media.medium.bottom).toBeCloseTo(16, 0);
+                expect(media.wrapper.height).toBeCloseTo(media.medium.height + 32, 0);
+              }
+            }
+            expect(Math.abs(resolvedMedia.wrapper.width - skeletonMedia.wrapper.width)).toBeLessThanOrEqual(lineBoxTolerance);
+            expect(Math.abs(resolvedMedia.medium.width - skeletonMedia.medium.width)).toBeLessThanOrEqual(lineBoxTolerance);
+            continue;
+          }
+          if (resolvedMedia.kind !== "stack" || skeletonMedia.kind !== "stack") {
+            throw new Error("Resolved and skeleton Research media shapes do not match.");
+          }
           const expectedDividerInset = viewport.width > 920 ? 24 : 16;
           expect(resolvedMedia.divider.height).toBeCloseTo(1, 0);
           expect(skeletonMedia.divider.height).toBeCloseTo(1, 0);

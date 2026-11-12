@@ -13,9 +13,6 @@ async function main() {
     await runCommand("node", [path.join("scripts", "setup-local.mjs")], { cwd: projectRoot });
   }
 
-  logSection("Regenerating portfolio content");
-  await runCommand("npm", ["run", "generate:content"], { cwd: projectRoot });
-
   logSection("Running local quality gate");
   await runCommand("npm", ["run", "verify"], { cwd: projectRoot });
 
