@@ -128,6 +128,22 @@ The tracked `database_id` values identify the reviewed live resources. Do not re
 
 Do not reuse or copy the current live IDs for a different account, and do not commit a shared ID for both environments. `preview_database_id: contact-rate-limit-local` is a local-emulation identifier, not a remote database. The deploy job rejects missing, all-zero, or shared remote IDs, then applies tracked migrations to the selected database before uploading Pages.
 
+## Optional private preview activation
+
+The reviewed preview remains public: the 2026-11-11 read-only observation found public, stale preview content. The preparation in this repository has not adopted Terraform, configured Access, created a GitHub environment, or deployed a new release. Activation and reconciliation require separate authorization. Preserve the existing Pages Direct Upload, Functions, D1, Turnstile, and Resend stack.
+
+`PREVIEW_ACCESS_ENABLED` is a repository Actions variable: unset or `false` retains the current flow; exactly `true` opts in, and every other value fails. For an active preview, the credential-free preparation stage selects full verification rather than attempting the public no-op comparison. A trusted preflight checks an already existing GitHub `preview` environment before selecting it; it must expose a custom branch policy with exactly `develop`. It refuses missing, invisible, broad, or malformed evidence. The deployment job rechecks the environment and the Access configuration, denies anonymous requests, authenticates with the adopted service token, and verifies exact release identity at both the unique hash host and `develop` alias. Missing metadata or credentials fail closed. Production and source pull-request checks receive no Access credentials. Service credentials are sent only to those exact reviewed HTTPS origins and redirects are never followed.
+
+For a separately authorized activation, first independently reconcile provider ownership, entitlement, current Pages and DNS settings, both Access applications and all effective overlapping destinations, exact human identities and identity provider, and the adopted service token. Follow [Terraform adoption](../../infra/ADOPTION.md); no local source or mock proves live posture. Create and verify the GitHub `preview` environment independently, with only the exact `develop` branch policy and any separately approved protection rules. The API preflight requires Actions read visibility; it cannot prove settings the API does not expose, including administrator bypass where absent from the response. Inspect those controls independently and prevent changes between inspection and deployment. The preflight checks existing settings before selecting the environment, but it cannot make the provider's settings and job creation atomic.
+
+Place the Access client ID and secret only in that protected environment as `PREVIEW_ACCESS_CLIENT_ID` and `PREVIEW_ACCESS_CLIENT_SECRET`; do not put secrets in Terraform, source, logs, artifacts, or Wrangler configuration. Provide `PREVIEW_ACCESS_CONFIG` as a compact canonical JSON repository variable with exactly the keys and types shown below, replacing every illustrative value with independently approved values. The service token ID is its Cloudflare UUID, not its client ID or secret. The deployment API token additionally needs read access to Access applications, policies, and service tokens; its existing Pages and migration permissions remain separate.
+
+```json
+{"emails":["owner@example.com"],"groups":[],"hostname":"preview.example.com","humanAppId":"11111111-1111-1111-1111-111111111111","idpId":"22222222-2222-2222-2222-222222222222","pagesAppId":"33333333-3333-3333-3333-333333333333","serviceTokenId":"44444444-4444-4444-4444-444444444444"}
+```
+
+After independently verifying the controls, credentials, and service-token association, set the opt-in variable and authorize a fresh deployment separately. Verify anonymous denial and authenticated identity on the branch alias and new hash host, then reconcile any old accessible deployment or custom hostname independently. Failures after upload may leave a deployment serving; investigate without assuming rollback. Disabling the switch does not remove Access or establish public reachability.
+
 ## Set up or restore a deployment
 
 The tracked workflow uses Cloudflare Pages Direct Upload. The current Cloudflare dashboard state is external and unverified by the repository. Choose the path that matches the target before changing provider settings.

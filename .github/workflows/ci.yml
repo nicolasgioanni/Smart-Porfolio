@@ -111,6 +111,7 @@ jobs:
       NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY }}
       CLOUDFLARE_PAGES_PROJECT_NAME: ${{ vars.CLOUDFLARE_PAGES_PROJECT_NAME }}
       CLOUDFLARE_PAGES_DOMAIN: ${{ vars.CLOUDFLARE_PAGES_DOMAIN }}
+      PREVIEW_ACCESS_ENABLED: ${{ vars.PREVIEW_ACCESS_ENABLED }}
     steps:
       - name: Check out the exact candidate without credentials
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
@@ -839,15 +840,51 @@ jobs:
           CI_CANDIDATE: ${{ needs['resolve-candidate'].outputs.candidate }}
           CI_ACCEPTANCE: ${{ steps.gate.outputs.acceptance }}
           GH_TOKEN: ${{ github.token }}
+  preview-environment:
+    name: Validate optional preview environment
+    needs:
+      - resolve-candidate
+      - prepare-content
+      - verify
+    if: >-
+      ${{ !cancelled() && github.event_name != 'pull_request' && needs.verify.result == 'success' && needs.verify.outputs.deploy == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      environment: ${{ steps.check.outputs.environment }}
+      enabled: ${{ steps.check.outputs.enabled }}
+    steps:
+      - name: Check out the exact candidate without credentials
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: ${{ needs['resolve-candidate'].outputs.candidate_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Set up the pinned Node runtime
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22.23.3
+      - name: Verify existing preview environment before selecting it
+        id: check
+        run: node scripts/ci/previewEnvironment.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREVIEW_ACCESS_ENABLED: ${{ vars.PREVIEW_ACCESS_ENABLED }}
+          CI_DEPLOY_TARGET: ${{ needs['prepare-content'].outputs.target }}
   deploy:
+    environment: ${{ needs['preview-environment'].outputs.environment }}
     name: deploy-${{ needs['prepare-content'].outputs.target }}
     needs:
       - resolve-candidate
       - prepare-content
       - build-and-package
       - verify
+      - preview-environment
     if: >-
-      ${{ !cancelled() && github.event_name != 'pull_request' && needs.verify.result == 'success' && needs.verify.outputs.deploy == 'true' }}
+      ${{ !cancelled() && github.event_name != 'pull_request' && needs.verify.result == 'success' && needs.verify.outputs.deploy == 'true' && needs['preview-environment'].result == 'success' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -866,6 +903,7 @@ jobs:
       CI_SNAPSHOT_REFERENCE: ${{ needs['prepare-content'].outputs.snapshot_reference }}
       CLOUDFLARE_PAGES_PROJECT_NAME: ${{ vars.CLOUDFLARE_PAGES_PROJECT_NAME }}
       CLOUDFLARE_PAGES_DOMAIN: ${{ vars.CLOUDFLARE_PAGES_DOMAIN }}
+      PREVIEW_ACCESS_ENABLED: ${{ needs['preview-environment'].outputs.enabled }}
       CI_RELEASE_REFERENCE: ${{ needs['build-and-package'].outputs.release_reference }}
       CI_ACCEPTANCE: ${{ needs.verify.outputs.acceptance }}
     steps:
@@ -902,6 +940,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PREVIEW_ACCESS_CONFIG: ${{ vars.PREVIEW_ACCESS_CONFIG }}
+          PREVIEW_ACCESS_CLIENT_ID: ${{ needs['preview-environment'].outputs.enabled == 'true' && secrets.PREVIEW_ACCESS_CLIENT_ID || '' }}
+          PREVIEW_ACCESS_CLIENT_SECRET: ${{ needs['preview-environment'].outputs.enabled == 'true' && secrets.PREVIEW_ACCESS_CLIENT_SECRET || '' }}
   heartbeat:
     name: develop-schedule-heartbeat
     if: github.event_name == 'schedule'

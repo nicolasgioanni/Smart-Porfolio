@@ -1,3 +1,4 @@
+import { previewHeaders } from "./ci/previewAccess.mjs";
 import assert from "node:assert/strict";
 import { appendFile, readFile } from "node:fs/promises";
 import path from "node:path";
@@ -47,9 +48,9 @@ function endpointUrl(baseUrl, endpoint, cacheBust) {
   return url;
 }
 
-async function fetchNoCache(url, { allowNotFound = false, rejectRedirect = false } = {}) {
+async function fetchNoCache(url, { allowNotFound = false, rejectRedirect = false, headers = {} } = {}) {
   const response = await fetch(url, {
-    headers: { "Cache-Control": "no-cache", Pragma: "no-cache" },
+    headers: { "Cache-Control": "no-cache", Pragma: "no-cache", ...headers },
     redirect: rejectRedirect ? "manual" : "follow",
     signal: AbortSignal.timeout(20_000)
   });
@@ -234,8 +235,8 @@ export function decideDeployment(candidateValue, deployedValue) {
   return { action: "full-verification", reason: "candidate-generation-is-newer" };
 }
 
-async function smokeAttempt(baseUrl, artifactDirectory, expectedContentHash, expectedCommitSha, cacheBust) {
-  const rootResponse = await fetchNoCache(endpointUrl(baseUrl, "/", cacheBust), { rejectRedirect: true });
+async function smokeAttempt(baseUrl, artifactDirectory, expectedContentHash, expectedCommitSha, cacheBust, headers) {
+  const rootResponse = await fetchNoCache(endpointUrl(baseUrl, "/", cacheBust), { rejectRedirect: true, headers });
   const rootHtml = await assertRootResponse(rootResponse, artifactDirectory);
   const canonicalTag = (rootHtml.match(/<link\b[^>]*>/gi) ?? []).find((tag) =>
     /\brel\s*=\s*(["'])canonical\1/i.test(tag)
@@ -254,13 +255,13 @@ async function smokeAttempt(baseUrl, artifactDirectory, expectedContentHash, exp
   assert.equal(deployedCanonical.search, "", "Deployment root canonical must not contain a query string");
   assert.equal(deployedCanonical.hash, "", "Deployment root canonical must not contain a fragment");
 
-  const versionResponse = await fetchNoCache(endpointUrl(baseUrl, "content-version.json", cacheBust), { rejectRedirect: true });
+  const versionResponse = await fetchNoCache(endpointUrl(baseUrl, "content-version.json", cacheBust), { rejectRedirect: true, headers });
   assertNoCacheMetadataHeaders(versionResponse, "content-version.json");
   const deployedVersion = parseContentVersion(await versionResponse.json());
   assert.equal(deployedVersion.contentHash, expectedContentHash, "Deployed content hash is stale");
   assert.equal(deployedVersion.commitSha, expectedCommitSha, "Deployed commit SHA is stale");
 
-  const manifestResponse = await fetchNoCache(endpointUrl(baseUrl, artifactManifestFileName, cacheBust), { rejectRedirect: true });
+  const manifestResponse = await fetchNoCache(endpointUrl(baseUrl, artifactManifestFileName, cacheBust), { rejectRedirect: true, headers });
   assertNoCacheMetadataHeaders(manifestResponse, artifactManifestFileName);
   const deployedManifest = await manifestResponse.json();
   const localManifest = JSON.parse(
@@ -268,7 +269,7 @@ async function smokeAttempt(baseUrl, artifactDirectory, expectedContentHash, exp
   );
   assert.deepEqual(deployedManifest, localManifest, "Deployed artifact manifest does not match the verified upload");
 
-  const robotsResponse = await fetchNoCache(endpointUrl(baseUrl, "robots.txt", cacheBust), { rejectRedirect: true });
+  const robotsResponse = await fetchNoCache(endpointUrl(baseUrl, "robots.txt", cacheBust), { rejectRedirect: true, headers });
   assert.match(
     robotsResponse.headers.get("content-type") ?? "",
     /^text\/plain\b/i,
@@ -280,7 +281,7 @@ async function smokeAttempt(baseUrl, artifactDirectory, expectedContentHash, exp
     "Deployed robots.txt does not match the verified upload"
   );
 
-  const sitemapResponse = await fetchNoCache(endpointUrl(baseUrl, "sitemap.xml", cacheBust), { rejectRedirect: true });
+  const sitemapResponse = await fetchNoCache(endpointUrl(baseUrl, "sitemap.xml", cacheBust), { rejectRedirect: true, headers });
   assert.match(
     sitemapResponse.headers.get("content-type") ?? "",
     /^(?:application|text)\/(?:xml|[a-z0-9!#$&^_.+-]+\+xml)(?:\s*;|$)/i,
@@ -294,7 +295,7 @@ async function smokeAttempt(baseUrl, artifactDirectory, expectedContentHash, exp
 
   for (const endpoint of ["api/contact/verify", "api/contact"]) {
     const apiResponse = await fetch(endpointUrl(baseUrl, endpoint, cacheBust), {
-      headers: { "Cache-Control": "no-cache", Pragma: "no-cache" },
+      headers: { "Cache-Control": "no-cache", Pragma: "no-cache", ...headers },
       redirect: "manual",
       signal: AbortSignal.timeout(20_000)
     });
@@ -313,7 +314,8 @@ async function smokeAttempt(baseUrl, artifactDirectory, expectedContentHash, exp
   }
 }
 
-export async function smokeDeployment(baseUrl, artifactDirectory, expectedContentHash, expectedCommitSha) {
+export async function smokeDeployment(baseUrl, artifactDirectory, expectedContentHash, expectedCommitSha, options = {}) {
+  const headers = options.privatePreview ? previewHeaders(normalizeBaseUrl(baseUrl).origin, options.environment) : {};
   if (!contentHashPattern.test(expectedContentHash)) throw new Error("Expected content hash is invalid");
   if (!gitShaPattern.test(expectedCommitSha)) throw new Error("Expected commit SHA is invalid");
 
@@ -325,7 +327,8 @@ export async function smokeDeployment(baseUrl, artifactDirectory, expectedConten
         artifactDirectory,
         expectedContentHash,
         expectedCommitSha,
-        `${expectedCommitSha}-${Date.now()}-${attempt}`
+        `${expectedCommitSha}-${Date.now()}-${attempt}`,
+        headers
       );
       console.log(`Deployment smoke checks passed for ${normalizeBaseUrl(baseUrl).origin}.`);
       return;

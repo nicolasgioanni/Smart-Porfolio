@@ -1,3 +1,4 @@
+import { privatePreviewEnabled } from "./previewAccess.mjs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { spawn } from "node:child_process";
@@ -39,8 +40,10 @@ export async function prepareCandidate({ environment = process.env, projectRoot 
   const inputs = await collectPublicBuildInputs({ projectRoot, target, sourceCommit: candidate.sourceSha, environment });
   const snapshot = createSnapshot({ bytes, candidate, producer,
     lockfileDigest: await digestFile(path.join(projectRoot, "package-lock.json")), publicBuildInputDigest: publicBuildInputDigest(inputs) });
-  const comparison = candidate.event === "schedule" || (candidate.event === "workflow_dispatch" && !candidate.force)
-    ? compareSnapshotDeployment(candidate, snapshot, await observe(target, { environment })) : null;
+  const canCompare = candidate.event === "schedule" || (candidate.event === "workflow_dispatch" && !candidate.force);
+  const comparison = canCompare ? (target === "preview" && privatePreviewEnabled(environment)
+    ? { schemaVersion: 1, equivalent: false, identityDigest: null }
+    : compareSnapshotDeployment(candidate, snapshot, await observe(target, { environment }))) : null;
   const plan = createPlan(candidate, { snapshotDigest: recordDigest(snapshot), comparison });
   const root = await evidenceDirectory(environment), snapshotPath = path.join(root, "snapshot");
   await mkdir(snapshotPath, { mode: 0o700 });

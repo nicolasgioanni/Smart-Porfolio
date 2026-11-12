@@ -1,3 +1,5 @@
+import { verifyPreviewEnvironment } from "./previewEnvironment.mjs";
+import { privatePreviewEnabled, previewAccessConfig, verifyPreviewAccess, verifyPreviewDenial } from "./previewAccess.mjs";
 import { execFile } from "node:child_process";
 import { readFile, writeFile } from "node:fs/promises";
 import { promisify } from "node:util";
@@ -15,7 +17,7 @@ import {
   reviewedPagesProductionBranch,
   reviewedPagesProjectName
 } from "./deployedIdentity.mjs";
-import { verifyCloudflarePagesProject } from "./cloudflarePagesPreflight.mjs";
+import { findCurrentPreviewDeployment, verifyCloudflarePagesProject } from "./cloudflarePagesPreflight.mjs";
 import { decideDeployment, sameDeploymentIdentity, smokeDeployment } from "../checkDeployedContent.mjs";
 import { readContentVersion } from "../writeContentVersion.mjs";
 import { verifySealedRelease } from "../release/sealedRelease.mjs";
@@ -106,7 +108,7 @@ export async function verifyReleaseProvenance({ archive, plan, environment, exec
       "--source-digest", plan.candidate.sourceSha, "--source-ref", plan.candidate.ref,
       "--cert-oidc-issuer", "https://token.actions.githubusercontent.com", "--deny-self-hosted-runners", "--format", "json",
       ...(predicate ? ["--predicate-type", predicate] : [])];
-    const result = await executeCommand("gh", args, { env: { ...environment, CLOUDFLARE_API_TOKEN: undefined, CLOUDFLARE_ACCOUNT_ID: undefined } });
+    const result = await executeCommand("gh", args, { env: { ...environment, CLOUDFLARE_API_TOKEN: undefined, CLOUDFLARE_ACCOUNT_ID: undefined, PREVIEW_ACCESS_CLIENT_ID: undefined, PREVIEW_ACCESS_CLIENT_SECRET: undefined } });
     const verified = JSON.parse(result.stdout);
     verifyTrustedAttestation(verified, { repository: plan.candidate.repository, sourceRef: plan.candidate.ref, sourceSha: plan.candidate.sourceSha });
   }
@@ -118,7 +120,7 @@ export async function verifyReleaseProvenance({ archive, plan, environment, exec
 export async function executeDeployment({ environment = process.env, projectRoot = process.cwd(),
   observe = readDeployedIdentity, branchTip = readBranchTip, executeCommand = command,
   verifyProvenance = verifyReleaseProvenance, preflight = verifyCloudflarePagesProject,
-  smoke = smokeDeployment } = {}) {
+  smoke = smokeDeployment, accessPreflight = verifyPreviewAccess, accessDenial = verifyPreviewDenial, environmentPreflight = verifyPreviewEnvironment, currentPreviewDeployment = findCurrentPreviewDeployment } = {}) {
   currentProducer("deploy", environment);
   const { root, plan, snapshot } = await verifyAcceptedInputs({ environment, projectRoot });
   const reference = jsonEnvironment("CI_RELEASE_REFERENCE", environment), acceptance = jsonEnvironment("CI_ACCEPTANCE", environment);
@@ -132,6 +134,8 @@ export async function executeDeployment({ environment = process.env, projectRoot
   assertReleaseProducer(manifest, reference, plan);
   const candidate = await readContentVersion(path.join(out, "content-version.json"));
   const origin = approvedPagesOrigin(plan.target, environment), branch = plan.target === "production" ? "main" : "develop";
+  const privatePreview = privatePreviewEnabled(environment) && plan.target === "preview";
+  if (privatePreview) previewAccessConfig(environment);
   const sealedConfig = JSON.parse(await readFile(path.join(directory, "wrangler.jsonc"), "utf8"));
   const runtime = validateRuntimeConfig(sealedConfig, { target: plan.target, toolchain: manifest.candidate.toolchain });
   const binding = runtime.target.binding;
@@ -140,6 +144,11 @@ export async function executeDeployment({ environment = process.env, projectRoot
   if (await digestFile(archive) !== reference.digest) throw new Error("Accepted release archive changed before provenance verification.");
   await preflight({ accountId: environment.CLOUDFLARE_ACCOUNT_ID, apiToken: environment.CLOUDFLARE_API_TOKEN });
   await verifyProvenance({ archive, plan, environment, executeCommand });
+  if (privatePreview) {
+    await environmentPreflight({ environment });
+    await accessPreflight({ environment });
+    await accessDenial(origin, { environment });
+  }
   const checkFresh = async () => {
     if (await branchTip(branch, { token: environment.GH_TOKEN }) !== plan.candidate.sourceSha) throw new Error("Protected branch advanced. Refusing stale deployment.");
     const deployed = await observe(plan.target, { environment });
@@ -147,10 +156,17 @@ export async function executeDeployment({ environment = process.env, projectRoot
     if (decision.action === "fail-closed") throw new Error(`Deployment ordering rejected candidate: ${decision.reason}.`);
     return decision;
   };
+  const verifyExistingHash = async () => {
+    const deployment = await currentPreviewDeployment({ accountId: environment.CLOUDFLARE_ACCOUNT_ID, apiToken: environment.CLOUDFLARE_API_TOKEN, sourceSha: plan.candidate.sourceSha });
+    await accessDenial(deployment, { environment });
+    await smoke(deployment, out, snapshot.contentHash, plan.candidate.sourceSha, { privatePreview, environment });
+    if (!sameDeploymentIdentity(candidate, await observe(plan.target, { environment, exactDeployment: deployment }))) throw new Error("Existing preview deployment has a different producer identity.");
+  };
   const first = await checkFresh();
+  if (first.action === "smoke-only" && privatePreview) await verifyExistingHash();
   if (first.action !== "smoke-only") {
     const wrangler = path.join(projectRoot, "node_modules/wrangler/bin/wrangler.js");
-    const providerEnvironment = { ...environment, GH_TOKEN: undefined, WRANGLER_LOG_SANITIZE: "true",
+    const providerEnvironment = { ...environment, GH_TOKEN: undefined, PREVIEW_ACCESS_CLIENT_ID: undefined, PREVIEW_ACCESS_CLIENT_SECRET: undefined, WRANGLER_LOG_SANITIZE: "true",
       // Wrangler otherwise creates .wrangler/cache below cwd when no ancestor
       // node_modules exists, which would mutate the accepted sealed release.
       WRANGLER_CACHE_DIR: path.join(root, "wrangler-cache"),
@@ -159,17 +175,19 @@ export async function executeDeployment({ environment = process.env, projectRoot
       ...(plan.target === "preview" ? ["--env", "preview"] : []), "--remote"], { cwd: directory, env: providerEnvironment });
     await verifySealedRelease(directory, expected);
     const second = await checkFresh();
+    if (second.action === "smoke-only" && privatePreview) await verifyExistingHash();
     if (second.action !== "smoke-only") {
       const output = path.join(root, "wrangler-deployment.jsonl");
       await executeCommand(process.execPath, [wrangler, ...pagesDeploymentArguments({ target: plan.target, sourceSha: plan.candidate.sourceSha })],
       { cwd: directory, env: { ...providerEnvironment, WRANGLER_OUTPUT_FILE_PATH: output } });
       const deployment = parseDeploymentOutput(await readFile(output, "utf8"), { target: plan.target, sourceSha: plan.candidate.sourceSha });
       await verifySealedRelease(directory, expected);
-      await smoke(deployment, out, snapshot.contentHash, plan.candidate.sourceSha, environment.GITHUB_RUN_ID);
+      if (privatePreview) await accessDenial(deployment, { environment });
+      await smoke(deployment, out, snapshot.contentHash, plan.candidate.sourceSha, { privatePreview, environment });
       if (!sameDeploymentIdentity(candidate, await observe(plan.target, { environment, exactDeployment: deployment }))) throw new Error("Exact uploaded deployment has a different producer identity.");
     }
   }
-  await smoke(origin, out, snapshot.contentHash, plan.candidate.sourceSha, environment.GITHUB_RUN_ID);
+  await smoke(origin, out, snapshot.contentHash, plan.candidate.sourceSha, { privatePreview, environment });
   const after = await observe(plan.target, { environment });
   if (!sameDeploymentIdentity(candidate, after)) throw new Error("Post-deployment identity differs from the exact accepted generation. Inspect recovery guidance; no automatic rollback was attempted.");
   return { deployed: "true", target: plan.target };
