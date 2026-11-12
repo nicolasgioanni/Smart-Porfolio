@@ -46,7 +46,9 @@ Contributed PNG sanitation is a local publication tool, but its inputs remain un
 
 `package-lock.json` is the reviewed dependency graph, and CI installs it with `npm ci`. Run both `npm audit` and `npm audit --omit=dev` after a dependency change: the first covers the full quality-gate graph, while the second covers the deployed runtime graph.
 
-`npm run audit:check` blocks every advisory unless its exact GHSA identifier has a current, reviewed exception in [`security/audit-exceptions.json`](../../security/audit-exceptions.json). The sole current exception, `GHSA-vfj7-8cjw-p6xm`, affects the development-only ESLint glob path through `braces`; it is absent from the deployed static artifact and Pages Functions. At this dependency set, npm offers only a semver-major downgrade of `@next/eslint-plugin-next` to `14.2.35`, which is incompatible with the tested Next 16.4 pair. The exception names its owner, expiry, exposure, and removal condition. It does not permit production, static-build, or unlisted findings.
+`npm run audit:check` blocks every advisory unless its exact GHSA identifier has a current, reviewed exception in [`security/audit-exceptions.json`](../../security/audit-exceptions.json). There are currently no exceptions. The previous `braces` advisory GHSA-vfj7-8cjw-p6xm was withdrawn and its exception was removed. Dependabot proposes weekly npm, GitHub Actions, and Terraform updates for review; it does not enable automatic merging.
+
+The scoped `@typescript-eslint/typescript-estree > minimatch` override moves its glob matcher to the patched 11.x release while the upstream dependency still requests 10.x. The scoped `miniflare > undici` override addresses the affected 7.x transport versions. Reassess these overrides when their parent packages adopt patched dependencies; lint, type checking, tests, and the locked audit cover the current graph.
 
 ExcelJS remains exactly `4.4.0` because no newer release is available. Its only override is the nested `exceljs > uuid` `11.1.1` remediation; do not broaden that override to unrelated UUID consumers. `npm ls exceljs uuid` and the locked audit establish that the remediation resolves to `11.1.1`.
 

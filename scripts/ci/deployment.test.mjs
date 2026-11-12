@@ -81,13 +81,14 @@ function receiptDigests() {
   ].map((name) => [name, "a".repeat(64)]));
 }
 
+// Mirrors writeOutput and the Pages deploy records in Wrangler 4.160.1; provider values are fixtures.
 function deploymentOutput({ target = "production", sourceSha, mutate = (records) => records } = {}) {
   const timestamp = "2026-10-12T00:00:00.000Z";
   const records = [
     {
       type: "wrangler-session",
       version: 1,
-      wrangler_version: "4.148.0",
+      wrangler_version: "4.160.1",
       command_line_args: pagesDeploymentArguments({ target, sourceSha }),
       log_file_path: "/tmp/wrangler.log",
       timestamp
@@ -107,6 +108,7 @@ function deploymentOutput({ target = "production", sourceSha, mutate = (records)
       deployment_id: deploymentId,
       url: deploymentUrl,
       timestamp,
+      alias: "https://develop.smart-portfolio-bds.pages.dev",
       environment: target,
       production_branch: "main",
       deployment_trigger: { metadata: { commit_hash: sourceSha } }
@@ -194,7 +196,7 @@ async function deploymentFixture({ mutateConfig } = {}) {
     toolchain: {
       node: process.version,
       next: "16.4.0",
-      wrangler: "4.148.0",
+      wrangler: "4.160.1",
       compatibilityDate: "2026-08-27",
       compatibilityFlags: [],
       lockfileHash: digest(await readFile(path.join(root, "package-lock.json")))
@@ -315,9 +317,11 @@ describe("deployment admission and provider evidence", () => {
     expect(() => assertDeploymentAcceptance(prPlan, acceptance, reference)).toThrow("ineligible");
   });
 
-  it("accepts only the pinned Wrangler 4.148.0 three-record JSONL result", () => {
+  it("accepts only the pinned Wrangler 4.160.1 three-record JSONL result", () => {
     const sourceSha = "a".repeat(40);
     expect(parseDeploymentOutput(deploymentOutput({ sourceSha }), { target: "production", sourceSha })).toBe(deploymentUrl);
+    const withoutAlias = deploymentOutput({ sourceSha, mutate: (records) => records.map((record) => { const copy = { ...record }; delete copy.alias; return copy; }) });
+    expect(parseDeploymentOutput(withoutAlias, { target: "production", sourceSha })).toBe(deploymentUrl);
     for (const mutate of [
       (records) => [...records, { type: "notice" }],
       (records) => [{ ...records[0], wrangler_version: "4.148.1" }, ...records.slice(1)],
