@@ -49,6 +49,7 @@ async function createOwnershipFixture(mutateManifest = () => {}) {
     ".agents/knowledge/SYSTEM_DECISIONS.md": "# System decisions\n",
     "docs/development/AGENT_MAP.md": "# Agent map\n",
     "docs/quality/CI_CONTRACTS.md": "# CI contracts\n",
+    "docs/development/AGENT_WORKFLOW.md": "# Workflow\n\n## Start a repository task\n",
   };
   const documentAnchors = new Map();
   const addFile = (relativePath, contents = "") => {
@@ -103,7 +104,7 @@ async function createGitOwnershipFixture(mutateManifest = () => {}) {
   const root = await createOwnershipFixture(mutateManifest);
   await writeFile(
     path.join(root, ".gitignore"),
-    await readFile(path.join(projectRoot, ".gitignore"), "utf8"),
+    (await readFile(path.join(projectRoot, ".gitignore"), "utf8")) + "\n*.log\nignored-private.md\n",
     "utf8",
   );
   await execFileAsync("git", ["init", "--quiet"], { cwd: root });
@@ -605,6 +606,14 @@ describe("documentation validation", () => {
     }
   });
 
+  it("requires each feature to be covered by its assigned owner even when a broad owner covers it", async () => {
+    await expectOwnershipError((manifest) => {
+      const owner = manifest.owners.find((entry) => entry.id === "portfolio-projects");
+      owner.pathPatterns = owner.pathPatterns.filter((pattern) => pattern !== "src/features/projects/**");
+      manifest.owners.find((entry) => entry.id === "quality-tests").pathPatterns.push("src/features/projects/**");
+    }, "feature group is not covered by its owner: src/features/projects/");
+  });
+
   it("requires a narrow exception for the checked-in environment template", async () => {
     await expectOwnershipError((manifest) => {
       manifest.codePathExceptions = manifest.codePathExceptions.filter(
@@ -626,6 +635,7 @@ describe("documentation validation", () => {
         writeFile(path.join(root, ".env"), "TOKEN=private-env-sentinel\n", "utf8"),
         writeFile(path.join(root, ".dev.vars"), "SECRET=private-vars-sentinel\n", "utf8"),
         writeFile(path.join(root, "local-generated.log"), "private-log-sentinel\n", "utf8"),
+        writeFile(path.join(root, "docs/ignored-private.md"), "# Private\n\nTODO private-markdown-sentinel\n", "utf8"),
         writeFile(path.join(root, "unowned.config.mjs"), "export default {};\n", "utf8"),
         writeFile(path.join(root, ".npmrc"), "registry=https://registry.npmjs.org/\n", "utf8"),
       ]);
@@ -647,6 +657,24 @@ describe("documentation validation", () => {
       expect(diagnostics).not.toContain("private-env-sentinel");
       expect(diagnostics).not.toContain("private-vars-sentinel");
       expect(diagnostics).not.toContain("private-log-sentinel");
+      expect(diagnostics).not.toContain("ignored-private.md");
+      expect(diagnostics).not.toContain("private-markdown-sentinel");
+      expect(result.checkedFiles).not.toContain("docs/ignored-private.md");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not read an ignored Markdown target to resolve a fragment", async () => {
+    const root = await createGitOwnershipFixture();
+    try {
+      await writeFile(path.join(root, "docs/ignored-private.md"), "# private-secret-heading\n", "utf8");
+      await writeFile(path.join(root, "docs/README.md"), "# Documentation\n\n[Private](ignored-private.md#private-secret-heading)\n", "utf8");
+      const result = await validateDocumentation({ projectRoot: root });
+      expect(result.errors).toEqual(expect.arrayContaining([
+        expect.stringContaining("Markdown target is outside the repository inventory"),
+      ]));
+      expect(result.checkedFiles).not.toContain("docs/ignored-private.md");
     } finally {
       await rm(root, { recursive: true, force: true });
     }

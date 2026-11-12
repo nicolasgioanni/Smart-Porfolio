@@ -124,46 +124,6 @@ async function inspectRepositoryPath(projectRoot, targetPath) {
   return { exists: false, exactCase: false };
 }
 
-async function listMarkdownFiles(directory, projectRoot, unsafePaths) {
-  const files = [];
-  const inspection = await inspectRepositoryPath(projectRoot, directory);
-  if (inspection.unsafe) {
-    unsafePaths.add(diagnosticRelativePath(projectRoot, directory));
-    return files;
-  }
-  if (!inspection.exists || !inspection.exactCase || !inspection.stats?.isDirectory()) {
-    return files;
-  }
-  const entries = await readdir(directory, { withFileTypes: true });
-  entries.sort((left, right) => left.name.localeCompare(right.name));
-
-  for (const entry of entries) {
-    const absolutePath = path.join(directory, entry.name);
-    if (entry.isDirectory()) {
-      files.push(...(await listMarkdownFiles(absolutePath, projectRoot, unsafePaths)));
-    } else if (entry.isFile() && entry.name.toLowerCase().endsWith(".md")) {
-      files.push(absolutePath);
-    } else if (entry.isSymbolicLink()) {
-      unsafePaths.add(diagnosticRelativePath(projectRoot, absolutePath));
-    }
-  }
-
-  return files;
-}
-
-async function listOptionalMarkdownFiles(directory, projectRoot, unsafePaths) {
-  const inspection = await inspectRepositoryPath(projectRoot, directory);
-  if (inspection.unsafe) {
-    unsafePaths.add(diagnosticRelativePath(projectRoot, directory));
-    return [];
-  }
-  if (!inspection.exists || !inspection.exactCase || !inspection.stats?.isDirectory()) {
-    return [];
-  }
-
-  return listMarkdownFiles(directory, projectRoot, unsafePaths);
-}
-
 async function listRepositoryFiles(directory, projectRoot) {
   const gitPaths = await listGitRepositoryFiles(projectRoot);
   if (gitPaths) return inspectRepositoryEntries(gitPaths, projectRoot);
@@ -1163,6 +1123,10 @@ async function validateOwnershipManifest({
           );
           continue;
         }
+        if (!repositoryFiles.includes(parsedReference.filePath)) {
+          pushManifestError(errors, "owner " + owner.id + " documentation is outside the repository inventory: " + reference);
+          continue;
+        }
         let anchors = headingAnchorsByPath.get(absoluteDocumentationPath);
         if (!anchors) {
           let source = documentSource(parsedReference.filePath);
@@ -1331,36 +1295,19 @@ async function validateOwnershipManifest({
     }
   }
 
-  const portfolioOwners = manifest.owners.filter(
-    (owner) => typeof owner?.id === "string" && owner.id.startsWith("portfolio-"),
-  );
-  const portfolioRoot = path.join(projectRoot, "src/components/portfolio");
-  try {
-    const featureDirectories = await readdir(portfolioRoot, {
-      withFileTypes: true,
-    });
-    for (const directory of featureDirectories.filter((entry) => entry.isDirectory())) {
-      const prefix = "src/components/portfolio/" + directory.name + "/";
-      const files = repositoryFiles.filter((filePath) => filePath.startsWith(prefix));
-      if (
-        files.length > 0 &&
-        !files.every((filePath) =>
-          portfolioOwners.some(
-            (owner) =>
-              Array.isArray(owner.entrypoints) &&
-              Array.isArray(owner.pathPatterns) &&
-              ownerCoversPath(owner, filePath),
-          ),
-        )
-      ) {
-        pushManifestError(
-          errors,
-          "portfolio feature group is not covered: " + directory.name,
-        );
-      }
+  const featureOwners = {
+    home: "portfolio-home-profile", experience: "portfolio-evidence",
+    research: "portfolio-evidence", projects: "portfolio-projects",
+    recommendations: "portfolio-supporting-features", resume: "portfolio-supporting-features",
+    skills: "portfolio-supporting-features", contact: "contact-browser", legal: "routes-metadata",
+  };
+  const featureFiles = repositoryFiles.filter((filePath) => filePath.startsWith("src/features/"));
+  for (const filePath of featureFiles) {
+    const feature = filePath.split("/")[2];
+    const owner = ownerById.get(featureOwners[feature]);
+    if (!owner || !ownerCoversPath(owner, filePath)) {
+      pushManifestError(errors, "feature group is not covered by its owner: " + filePath);
     }
-  } catch {
-    pushManifestError(errors, "src/components/portfolio must exist");
   }
 
   if (!Array.isArray(manifest.codePathExceptions)) {
@@ -1421,7 +1368,6 @@ export async function validateDocumentation({
   const docsDirectory = path.join(resolvedProjectRoot, "docs");
   const readmePath = path.join(resolvedProjectRoot, "README.md");
   const agentGuidancePath = path.join(resolvedProjectRoot, "AGENTS.md");
-  const agentDirectory = path.join(resolvedProjectRoot, ".agents");
   const unsafeDocumentPaths = new Set();
   const docsInspection = await inspectRepositoryPath(
     resolvedProjectRoot,
@@ -1464,44 +1410,24 @@ export async function validateDocumentation({
     );
   }
 
-  const documentationFiles = docsInspection.unsafe
-    ? []
-    : await listMarkdownFiles(
-        docsDirectory,
-        resolvedProjectRoot,
-        unsafeDocumentPaths,
-      );
-  const infrastructureMarkdownFiles = (
-    await Promise.all(
-      ["infrastructure", "infra"].map((directory) =>
-        listOptionalMarkdownFiles(
-          path.join(resolvedProjectRoot, directory),
-          resolvedProjectRoot,
-          unsafeDocumentPaths,
-        ),
-      ),
-    )
-  ).flat();
-  const agentMarkdownFiles = await listOptionalMarkdownFiles(
-    agentDirectory,
-    resolvedProjectRoot,
-    unsafeDocumentPaths,
-  );
-  const markdownFiles = [...new Set([
-    ...(readmeInspection.exists &&
-    readmeInspection.exactCase &&
-    readmeInspection.stats?.isFile()
-      ? [readmePath]
-      : []),
-    ...documentationFiles,
-    ...(agentGuidanceInspection.exists &&
-    agentGuidanceInspection.exactCase &&
-    agentGuidanceInspection.stats?.isFile()
-      ? [agentGuidancePath]
-      : []),
-    ...agentMarkdownFiles,
-    ...infrastructureMarkdownFiles,
-  ])];
+  const inventory = await listRepositoryFiles(resolvedProjectRoot, resolvedProjectRoot);
+  const markdownFiles = [];
+  for (const relativePath of inventory.files) {
+    if (!/^(?:docs|\.agents|infrastructure|infra)(?:\/|$)/.test(relativePath) &&
+        relativePath !== "README.md" && relativePath !== "AGENTS.md") continue;
+    const absolutePath = path.join(resolvedProjectRoot, relativePath);
+    const inspection = await inspectRepositoryPath(resolvedProjectRoot, absolutePath);
+    if (inspection.unsafe) {
+      unsafeDocumentPaths.add(relativePath);
+    } else if (relativePath.toLowerCase().endsWith(".md") && inspection.exists && inspection.stats?.isFile()) {
+      markdownFiles.push(absolutePath);
+    }
+  }
+  markdownFiles.sort((left, right) => {
+    if (left === readmePath) return -1;
+    if (right === readmePath) return 1;
+    return left.localeCompare(right);
+  });
   const documents = await Promise.all(
     markdownFiles.map(async (filePath) => ({
       filePath,
@@ -1530,6 +1456,11 @@ export async function validateDocumentation({
     if (!fragment || path.extname(filePath).toLowerCase() !== ".md") return;
 
     const resolvedFilePath = path.resolve(filePath);
+    const inventoryPath = toPosix(path.relative(resolvedProjectRoot, resolvedFilePath));
+    if (!inventory.files.includes(inventoryPath)) {
+      errors.push(`${relativePath}:${line}: Markdown target is outside the repository inventory: ${target}`);
+      return;
+    }
     let anchors = headingAnchorsByPath.get(resolvedFilePath);
     if (!anchors) {
       try {
