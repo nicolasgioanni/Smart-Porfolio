@@ -122,7 +122,7 @@ test("serves every published static route without JavaScript", async ({ browser 
         await expect(main.getByText(header.description, { exact: true }).filter({ visible: true })).toBeVisible();
       } else {
         await expect(main.getByRole("heading", { level: 1, name: /^Hi, I’m/ })).toBeVisible();
-        await expect(main.getByRole("heading", { name: "Education", exact: true })).toBeVisible();
+        await expect(main.locator(".home-overview-grid .home-section__header").getByRole("heading", { name: "Education", exact: true })).toBeVisible();
         const education = selectHomeContent(content).education;
         const educationCards = main.locator(".home-education-item:visible");
         await expect(educationCards).toHaveCount(education.length);
