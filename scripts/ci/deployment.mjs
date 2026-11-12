@@ -155,12 +155,14 @@ export async function executeDeployment({ environment = process.env, projectRoot
       // node_modules exists, which would mutate the accepted sealed release.
       WRANGLER_CACHE_DIR: path.join(root, "wrangler-cache"),
       CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV: "false", WRANGLER_SEND_METRICS: "false" };
+    await verifyAcceptedInputs({ environment, projectRoot, stage: "migration admission" });
     await executeCommand(process.execPath, [wrangler, "d1", "migrations", "apply", binding.database_name,
       ...(plan.target === "preview" ? ["--env", "preview"] : []), "--remote"], { cwd: directory, env: providerEnvironment });
     await verifySealedRelease(directory, expected);
     const second = await checkFresh();
     if (second.action !== "smoke-only") {
       const output = path.join(root, "wrangler-deployment.jsonl");
+      await verifyAcceptedInputs({ environment, projectRoot, stage: "upload admission" });
       await executeCommand(process.execPath, [wrangler, ...pagesDeploymentArguments({ target: plan.target, sourceSha: plan.candidate.sourceSha })],
       { cwd: directory, env: { ...providerEnvironment, WRANGLER_OUTPUT_FILE_PATH: output } });
       const deployment = parseDeploymentOutput(await readFile(output, "utf8"), { target: plan.target, sourceSha: plan.candidate.sourceSha });

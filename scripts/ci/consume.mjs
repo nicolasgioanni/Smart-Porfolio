@@ -8,8 +8,8 @@ import { checkedCandidate, currentPlan, currentProducer, digestFile, evidenceDir
 import { collectPublicBuildInputs, publicBuildInputDigest } from "../release/publicBuildInputs.mjs";
 import { createSourceReceipt, createValidationReceipt } from "./validationEvidence.mjs";
 
-function matchingPlan(environment, projectRoot) {
-  const plan = currentPlan(environment), candidate = checkedCandidate(environment, projectRoot);
+function matchingPlan(environment, projectRoot, allowGenerated = false, stage) {
+  const plan = currentPlan(environment), candidate = checkedCandidate(environment, projectRoot, { allowGenerated, ...(stage ? { stage } : {}) });
   if (recordDigest(plan.candidate) !== recordDigest(candidate) || plan.mode !== "full") throw new Error("Application work requires the exact full-verification plan.");
   return plan;
 }
@@ -34,8 +34,8 @@ export async function restoreAcceptedInputs({ environment = process.env, project
   return { evidence_root: root };
 }
 
-export async function verifyAcceptedInputs({ environment = process.env, projectRoot = process.cwd() } = {}) {
-  const plan = matchingPlan(environment, projectRoot);
+export async function verifyAcceptedInputs({ environment = process.env, projectRoot = process.cwd(), stage } = {}) {
+  const plan = matchingPlan(environment, projectRoot, true, stage);
   const root = path.join(environment.RUNNER_TEMP, "portfolio-ci");
   const consumer = JSON.parse(await readFile(path.join(root, "consumer.json"), "utf8"));
   if (consumer.schemaVersion !== 1 || recordDigest(parsePlan(consumer.plan)) !== recordDigest(plan) ||

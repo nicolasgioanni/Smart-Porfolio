@@ -20,6 +20,12 @@ Every candidate records its workflow revision, source revision, triggering revis
 
 Only an obsolete permanent-branch revision or a validated unchanged deployment comparison produces a no-op. A no-op does not authorize deployment. Scheduled and ordinary manual comparisons require validated deployed-identity evidence; a missing comparison is an error. Forced manual execution bypasses only that comparison. Independent source-security checks and receipts remain required for every plan.
 
+## Source integrity checkpoints
+
+`scripts/ci/sourceIdentity.mjs` checks the candidate's HEAD, index, and working tree separately and rejects nonignored untracked inputs. Initial and source-only checks permit no source changes. During content preparation and snapshot restoration, only the generated content JSON working-tree bytes may differ; staging, file type, and mode changes are rejected. Consumers verify those bytes against the accepted snapshot. Checks run after preparation and discovery, before receipts and build outputs, and before deployment mutations. A mismatch fails the evidence or pre-mutation boundary; restore a clean candidate and rerun all affected work rather than reusing its evidence.
+
+These checks observe persistent changes at checkpoints; they do not continuously isolate subprocesses or prove that no temporary modification occurred between checks. The local release CLI retains its existing behavior.
+
 ## Content snapshot and artifact identity
 
 `scripts/ci/snapshot.mjs` binds the accepted generated JSON bytes to the semantic content hash, candidate, target, dependency lock digest, public build-input digest and original producer. The content artifact contains exactly the generated public JSON and its snapshot record. Extra files, symlinks, invalid UTF-8, malformed records and mismatched bytes fail before restoration.
@@ -45,6 +51,8 @@ Evidence files use the shared descriptor-bound regular-file reader: size checks 
 For a consumer rerun, GitHub may relabel copied job rows with the later attempt. The gate reads the one complete same-run job collection and at most 20 trusted attempt-start records beginning at the candidate producer attempt, then maps each required logical job by its exact name, status/conclusion, start/end timestamps, and ordered provider step numbers. A retained copy may reuse its unique physical origin; a later physical execution is authoritative. A completed, skipped provider step may carry an absent or null timestamp pair, which remains part of the exact copy fingerprint; every executed step needs a valid ordered time range. A failure, cancellation, or unexpected skip blocks acceptance as that job's current result. A missing new receipt or producer artifact, ambiguous copy chain, malformed timestamp, or history beyond the bound requires a full affected rerun. Optional aggregate, deployment, heartbeat, and intentionally skipped rows are outside this admission set.
 
 `githubEvidence.mjs` admits only bounded, read-only GitHub Actions API responses for this repository and rejects redirects. It verifies the run's event, workflow path, run-head revision and attempt, then reads every page of job/artifact evidence. Matrix evidence uses an exact immutable name containing the original producer run, attempt, role and validator; the unique match becomes an artifact-ID reference. It never uses wildcard selection or a latest-successful fallback. Consumer-only reruns keep the original producer reference; a newer producer execution with missing evidence requires a full affected rerun.
+
+The sealed Pages export check exercises visible route content and footer links with JavaScript disabled, including native Projects disclosures and Research media. With JavaScript enabled it verifies an actual theme change and client navigation, and detects content-security-policy errors. It tests the restored sealed export, not a deployed site.
 
 ## Sealed deployment admission
 

@@ -7,6 +7,7 @@ import { artifactName } from "./githubEvidence.mjs";
 import { checkedCandidate, currentProducer, digestFile, evidenceDirectory, writeRecord } from "./context.mjs";
 import { collectPublicBuildInputs, publicBuildInputDigest } from "../release/publicBuildInputs.mjs";
 import { discoverCompleteBrowserCoverage } from "./browserDiscovery.mjs";
+import { assertSourceIdentity } from "./sourceIdentity.mjs";
 import { approvedPagesOrigin, compareSnapshotDeployment, readDeployedIdentity } from "./deployedIdentity.mjs";
 
 export function generateContent(projectRoot, environment) {
@@ -33,6 +34,7 @@ export async function prepareCandidate({ environment = process.env, projectRoot 
   }
   await generate(projectRoot, { ...environment, PORTFOLIO_REQUIRE_REMOTE_CONTENT: String(!isPr),
     PORTFOLIO_WORKBOOK_URL: isPr ? "" : environment.PORTFOLIO_WORKBOOK_URL });
+  assertSourceIdentity(projectRoot, candidate.sourceSha, { allowGenerated: true, stage: "content preparation" });
   const bytes = await readFile(path.join(projectRoot, generatedContentPath));
   const { validateGeneratedSource } = await import("../release/lifecycle.mjs");
   validateGeneratedSource(JSON.parse(bytes.toString("utf8")), target);
@@ -42,6 +44,14 @@ export async function prepareCandidate({ environment = process.env, projectRoot 
   const comparison = candidate.event === "schedule" || (candidate.event === "workflow_dispatch" && !candidate.force)
     ? compareSnapshotDeployment(candidate, snapshot, await observe(target, { environment })) : null;
   const plan = createPlan(candidate, { snapshotDigest: recordDigest(snapshot), comparison });
+  assertSourceIdentity(projectRoot, candidate.sourceSha, { allowGenerated: true, stage: "content preparation" });
+  if (!(await readFile(path.join(projectRoot, generatedContentPath))).equals(bytes)) throw new Error("Generated content changed during preparation.");
+  let discovery = null;
+  if (plan.mode === "full") {
+    discovery = await discover({ projectRoot });
+    assertSourceIdentity(projectRoot, candidate.sourceSha, { allowGenerated: true, stage: "browser discovery" });
+    if (!(await readFile(path.join(projectRoot, generatedContentPath))).equals(bytes)) throw new Error("Generated content changed during discovery.");
+  }
   const root = await evidenceDirectory(environment), snapshotPath = path.join(root, "snapshot");
   await mkdir(snapshotPath, { mode: 0o700 });
   await writeFile(path.join(snapshotPath, "portfolio.generated.json"), bytes, { flag: "wx", mode: 0o600 });
@@ -49,8 +59,7 @@ export async function prepareCandidate({ environment = process.env, projectRoot 
   const outputs = { plan: JSON.stringify(plan), mode: plan.mode, target,
     snapshot_name: artifactName({ role: "snapshot", validator: "content", producer }), snapshot_path: snapshotPath,
     snapshot_digest: recordDigest(snapshot), discovery_name: "", discovery_path: "", discovery_digest: "" };
-  if (plan.mode === "full") {
-    const discovery = await discover({ projectRoot });
+  if (discovery) {
     const discoveryPath = path.join(root, "discovery");
     await mkdir(discoveryPath, { mode: 0o700 });
     await writeRecord(discoveryPath, "discovery.json", discovery);
