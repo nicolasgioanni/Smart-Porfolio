@@ -54,6 +54,7 @@ describe("CI graph responsibilities", () => {
   it("keeps source security and maintenance independent and build/export ordered", () => {
     for (const change of [
       (value) => value.jobs.codeql.needs.push("quality"),
+      (value) => { value.jobs["history-secrets"].if = "false"; },
       (value) => { value.jobs.heartbeat.needs = "verify"; },
       (value) => { value.jobs["export-check"].needs = ["resolve-candidate", "prepare-content"]; },
       (value) => { value.jobs["build-and-package"].needs.push("unit-integration"); }

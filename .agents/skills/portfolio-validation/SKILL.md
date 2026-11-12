@@ -20,3 +20,5 @@ Browser tests also run against strict live-workbook builds. Derive expected auth
 For skeleton geometry, transition semantics, visual baselines, or the browser skeleton gate, read [Skeleton regression](../portfolio-skeleton-regression/SKILL.md) before changing anything. Its Linux-only visual baseline and three-part aggregate contract are mandatory.
 
 When feature files move, update local priority directories, required-file discovery, and the CI browser assignment discovery with the new owners; run the resolved import-graph contract and preserve existing browser selection. For route fallbacks, validate every exported route with JavaScript disabled and confirm native Research media, Home education, Projects disclosures, and footer links remain usable.
+
+For changes to independent security lanes, verify each lane's fail-closed results and exact producer receipts, including unchanged and obsolete plans. Follow [Scanner governance](../../../docs/security/SCANNER_GOVERNANCE.md) for report privacy and exception ownership.

@@ -8,7 +8,8 @@ const audit = { auditReportVersion: 2, metadata: { vulnerabilities: counters }, 
 
 describe("dependency audit gate", () => {
   it("permits only the current exact development-only exception", () => {
-    validateAuditExceptions([exception], lock);
+    validateAuditExceptions([exception], lock, new Date("2026-10-07"));
+    expect(() => validateAuditExceptions([exception], lock, new Date("2026-12-01"))).toThrow("expired");
     expect(unresolvedAuditAdvisories(audit, [exception], new Date("2026-10-07"))).toEqual([]);
     expect(unresolvedAuditAdvisories(audit, [exception], new Date("2026-12-01"))).toHaveLength(2);
   });
