@@ -2,6 +2,7 @@ import { allowBrowserConsoleMessage, captureBrowserConsole, expectNoBrowserConso
 import { expect, test, type Locator, type Page } from "./browserTest";
 import { settleLayout } from "./settleLayout";
 import { reloadWithStoredTheme } from "./themePreference";
+import { expectSettingsActiveViewFit, expectSettingsFocusGutter } from "./videoSettings";
 
 const cytocvProject = 'article.research-project[id="cytocv-miller-lab"]';
 
@@ -17,6 +18,18 @@ test.afterEach(async ({ page }) => {
 
 function inlinePlayer(page: Page) {
   return page.locator(cytocvProject).getByTestId("research-video-player");
+}
+
+async function settleDialogFrame(dialog: Locator) {
+  await dialog.evaluate(async (frame) => {
+    await Promise.all(frame.getAnimations().map((animation) => animation.finished.catch(() => undefined)));
+  });
+}
+
+async function expectNoDocumentHorizontalOverflow(page: Page) {
+  await expect.poll(() => page.evaluate(
+    () => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1
+  )).toBe(true);
 }
 
 function videoFor(player: Locator) {
@@ -88,6 +101,145 @@ async function expectNoCaptionMotion(player: Locator) {
     )
     .toEqual({ duration: "0s", property: "none" });
 }
+
+test("@mobile-video fits the active settings view through phone widths and short landscape", async ({ page }) => {
+  test.slow();
+  await page.goto("/research");
+  await settleLayout(page);
+
+  const player = inlinePlayer(page);
+  const settings = player.getByTestId("video-settings");
+  const speedRow = settings.getByRole("button", { name: /^Playback speed:/ });
+  const back = settings.getByRole("button", { name: "Back to video settings" });
+
+  for (const viewport of [
+    { height: 844, width: 320 },
+    { height: 844, width: 390 },
+    { height: 844, width: 420 },
+    { height: 844, width: 421 },
+    { height: 844, width: 440 },
+    { height: 390, width: 844 }
+  ]) {
+    await page.setViewportSize(viewport);
+    await wakeTouchControls(player);
+    await player.getByRole("button", { name: "Open video settings" }).click();
+    await expect(settings).toHaveAttribute("data-view", "root");
+    await expectSettingsActiveViewFit(player);
+    await expectSettingsFocusGutter(speedRow);
+    await speedRow.press("Enter");
+    await expect(settings).toHaveAttribute("data-view", "speeds");
+    await expect(back).toBeVisible();
+    await expectSettingsActiveViewFit(player);
+    await expectSettingsFocusGutter(back);
+    await back.click();
+    await expect(settings).toHaveAttribute("data-view", "root");
+    await expect(speedRow).toBeVisible();
+    await expect(speedRow).toBeFocused();
+    await expectSettingsActiveViewFit(player);
+    await expectSettingsFocusGutter(speedRow);
+    await page.keyboard.press("Escape");
+    await expect(settings).toHaveAttribute("data-open", "false");
+    await expectNoDocumentHorizontalOverflow(page);
+  }
+
+  await page.setViewportSize({ height: 844, width: 390 });
+  await wakeTouchControls(player);
+  await player.getByRole("button", { name: "Open video settings" }).click();
+  await settings.getByRole("button", { name: "Open enlarged player" }).click();
+  const popup = page.getByRole("dialog", { exact: true, name: "CytoCV supplementary workflow video" });
+  const popupPlayer = popup.getByTestId("research-video-player");
+  const popupSettings = popupPlayer.getByTestId("video-settings");
+  const popupSpeed = popupSettings.getByRole("button", { name: /^Playback speed:/ });
+  const popupBack = popupSettings.getByRole("button", { name: "Back to video settings" });
+  await expect(popup).toBeVisible();
+  await settleDialogFrame(popup);
+  await wakeTouchControls(popupPlayer);
+  await popupPlayer.getByRole("button", { name: "Open video settings" }).click();
+  await expectSettingsActiveViewFit(popupPlayer);
+  await expectNoDocumentHorizontalOverflow(page);
+  await expectSettingsFocusGutter(popupSpeed);
+  await popupSpeed.press("Enter");
+  await expectSettingsActiveViewFit(popupPlayer);
+  await expectNoDocumentHorizontalOverflow(page);
+  await expectSettingsFocusGutter(popupBack);
+  await popupBack.click();
+  await expect(popupSpeed).toBeVisible();
+  await expect(popupSpeed).toBeFocused();
+  await expectSettingsActiveViewFit(popupPlayer);
+  await expectSettingsFocusGutter(popupSpeed);
+
+  await rejectContainerFullscreen(popupPlayer);
+  await popupPlayer.getByRole("button", { name: "Enter fullscreen" }).click();
+  const fullscreen = page.getByRole("dialog", { exact: true, name: "CytoCV supplementary workflow video enlarged fullscreen" });
+  await expect(fullscreen).toBeVisible();
+  await wakeTouchControls(popupPlayer);
+  await popupPlayer.getByRole("button", { name: "Open video settings" }).click();
+  await expect(popupSettings).toHaveAttribute("data-view", "root");
+  await expectSettingsActiveViewFit(popupPlayer);
+  await expectNoDocumentHorizontalOverflow(page);
+  await expectSettingsFocusGutter(popupSpeed);
+  await popupSpeed.press("Enter");
+  await expectSettingsActiveViewFit(popupPlayer);
+  await expectNoDocumentHorizontalOverflow(page);
+  await expectSettingsFocusGutter(popupBack);
+  await popupBack.click();
+  await expect(popupSpeed).toBeVisible();
+  await expect(popupSpeed).toBeFocused();
+  await expectSettingsActiveViewFit(popupPlayer);
+  await expectSettingsFocusGutter(popupSpeed);
+  await page.keyboard.press("Escape");
+  await expect(popupSettings).toHaveAttribute("data-open", "false");
+  await page.keyboard.press("Escape");
+  await expect(fullscreen).not.toBeVisible();
+  await expect(popup).toBeVisible();
+});
+
+test("@mobile-video keeps a genuinely constrained coarse-pointer popup speed menu keyboard reachable", async ({ browser }) => {
+  test.slow();
+  const context = await browser.newContext({ hasTouch: true, isMobile: true, viewport: { height: 240, width: 320 } });
+  const page = await context.newPage();
+
+  try {
+    captureBrowserConsole(page);
+    allowBrowserConsoleMessage(page, /Button failed to load, iconName = (invalid|pip|airplay)-placard/);
+    await page.goto("/research");
+    await settleLayout(page);
+    const inline = inlinePlayer(page);
+    await wakeTouchControls(inline);
+    await inline.getByRole("button", { name: "Open video settings" }).tap();
+    const inlineSettings = inline.getByTestId("video-settings");
+    await inlineSettings.evaluate((element) => element.scrollTo({ top: element.scrollHeight }));
+    await inlineSettings.getByRole("button", { name: "Open enlarged player" }).click();
+    const popup = page.getByRole("dialog", { exact: true, name: "CytoCV supplementary workflow video" });
+    const player = popup.getByTestId("research-video-player");
+    const settings = player.getByTestId("video-settings");
+    const speedRow = settings.getByRole("button", { name: /^Playback speed:/ });
+    await expect(popup).toBeVisible();
+    await settleDialogFrame(popup);
+    await wakeTouchControls(player);
+    await player.getByRole("button", { name: "Open video settings" }).tap();
+    await expectSettingsFocusGutter(speedRow);
+    await speedRow.press("Enter");
+    await expect(settings).toHaveAttribute("data-view", "speeds");
+    await expectSettingsActiveViewFit(player);
+    await expectNoDocumentHorizontalOverflow(page);
+    const speedOverflow = await settings.evaluate((element) => ({ clientHeight: element.clientHeight, scrollHeight: element.scrollHeight }));
+    expect(speedOverflow.scrollHeight).toBeGreaterThan(speedOverflow.clientHeight);
+    await settings.evaluate((element) => element.scrollTo({ top: element.scrollHeight }));
+    await expect.poll(() => settings.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+    const back = settings.getByRole("button", { name: "Back to video settings" });
+    await back.focus();
+    await expect(back).toBeFocused();
+    await expectSettingsFocusGutter(back);
+    const speedRange = settings.getByRole("slider", { name: "Playback speed" });
+    await speedRange.focus();
+    await expect(speedRange).toBeFocused();
+    await expectSettingsFocusGutter(speedRange);
+  } finally {
+    expectNoBrowserConsoleIssues(page);
+    await context.close();
+  }
+});
 
 test("@mobile-video animates CytoCV popup captions through a nested native fullscreen fallback", async ({ page }) => {
   test.slow();

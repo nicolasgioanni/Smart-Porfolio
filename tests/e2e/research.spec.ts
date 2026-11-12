@@ -26,6 +26,7 @@ import {
 import { expectDetailOutlineMotion, expectReducedMotionDetailOutline } from "./detailOutline";
 import { settleLayout, settlePageEntryMotion } from "./settleLayout";
 import { reloadWithStoredTheme } from "./themePreference";
+import { expectSettingsActiveViewFit, expectSettingsFocusGutter } from "./videoSettings";
 
 
 test.beforeEach(async ({ page }) => {
@@ -1755,7 +1756,9 @@ test.describe("Research showcase", () => {
     await expect(settings).toHaveAttribute("data-open", "true");
     const rootSettingsBox = await settings.boundingBox();
     expect(rootSettingsBox).not.toBeNull();
-    await speedRow.click();
+    await expectSettingsActiveViewFit(player);
+    await expectSettingsFocusGutter(speedRow);
+    await speedRow.press("Enter");
     await expect(settings).toHaveAttribute("data-view", "speeds");
     await expect(settings.getByRole("button", { name: "Back to video settings" })).toBeVisible();
     const speedRange = settings.getByRole("slider", { name: "Playback speed" });
@@ -1769,7 +1772,8 @@ test.describe("Research showcase", () => {
     const speedSettingsBox = await settings.boundingBox();
     expect(speedSettingsBox).not.toBeNull();
     expect(speedSettingsBox!.width).toBeCloseTo(rootSettingsBox!.width, 3);
-    expect(speedSettingsBox!.height).toBeCloseTo(rootSettingsBox!.height, 3);
+    await expectSettingsActiveViewFit(player);
+    await expectSettingsFocusGutter(speedRange);
     await speedRange.press("Home");
     await expect(speedRange).toHaveAttribute("aria-valuetext", "0.5x");
     await expect.poll(() => video.evaluate((element) => (element as HTMLVideoElement).playbackRate)).toBe(0.5);
@@ -1783,6 +1787,8 @@ test.describe("Research showcase", () => {
     await expect(settings).toHaveAttribute("data-view", "root");
     await expect(speedRow).toHaveAccessibleName("Playback speed: 2x");
     await expect(speedRow).toBeFocused();
+    await expectSettingsActiveViewFit(player);
+    await expectSettingsFocusGutter(speedRow);
     await page.keyboard.press("Escape");
     await expect(settings).toHaveAttribute("data-open", "false");
 

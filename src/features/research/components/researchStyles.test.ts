@@ -181,17 +181,22 @@ describe("research showcase styles", () => {
 
     expect(videoRule).toMatch(/container:\s*research-video-preview \/ inline-size/);
     expect(researchStyles).toMatch(/\.research-video-player\s*\{[\s\S]*?container-type:\s*inline-size/);
+    expect(researchStyles).toMatch(/\.research-video-player\[data-enhanced="true"\]\s*\{[^}]*overflow:\s*clip/);
     expect(researchStyles).not.toMatch(/research-video-player__top-bar/);
     expect(researchStyles).not.toMatch(/research-video-player__center-control\s*\{[^}]*top:\s*28%/);
     expect(researchStyles).toMatch(/\.research-video-player__settings button\s*\{[^}]*min-height:\s*32px/);
     expect(researchStyles).toMatch(/\.research-video-player\.research-media-dialog__video .research-video-player__bottom-bar,[\s\S]*?width:\s*clamp\(min\(352px, calc\(100% - 32px\)\), 33\.333%, calc\(100% - 32px\)\)/);
+    expect(researchStyles).toMatch(/\.research-video-player\.research-media-dialog__video .research-video-player__settings,[\s\S]*?right:\s*clamp\([\s\S]*?12px,[\s\S]*?calc\(\(100% - clamp\(min\(352px, calc\(100% - 32px\)\), 33\.333%, calc\(100% - 32px\)\)\) \/ 2\),[\s\S]*?max\(12px, calc\(100% - 9rem - 12px\)\)/);
     expect(researchStyles).toMatch(/@container \(max-width: 24rem\)[\s\S]*?research-video-player\[data-volume-open="true"\][\s\S]*?flex-wrap:\s*wrap/);
-    expect(researchStyles).toMatch(/\.research-video-player__settings\s*\{[^}]*grid-template-areas:\s*"view"[^}]*transition:\s*opacity 180ms ease, transform 180ms ease, visibility 0s linear 180ms/);
+    expect(researchStyles).toMatch(/\.research-video-player__settings\s*\{[^}]*overflow-x:\s*clip[^}]*overflow-y:\s*auto[^}]*transition:\s*opacity 180ms ease, transform 180ms ease, visibility 0s linear 180ms/);
+    expect(researchStyles).toMatch(/\.research-video-player__settings-viewport\s*\{[^}]*--research-video-settings-focus-gutter:\s*5px[^}]*position:\s*relative[^}]*grid-template-areas:\s*"view"[^}]*padding:\s*var\(--research-video-settings-focus-gutter\)[^}]*box-sizing:\s*border-box[^}]*overflow:\s*clip/);
     expect(researchStyles).toMatch(/\.research-video-player__settings-root,[\s\S]*?grid-area:\s*view[^}]*transition:\s*opacity 180ms ease, transform 180ms ease, visibility 0s linear 180ms/);
+    expect(researchStyles).toMatch(/settings-root\[data-open="false"\],[\s\S]*?position:\s*absolute[^}]*inset:\s*0/);
+    expect(researchStyles).toMatch(/settings-root\[data-open="true"\],[\s\S]*?position:\s*relative/);
     expect(researchStyles).toMatch(/\.research-video-player__settings-root\[data-open="false"\]\s*\{[^}]*transform:\s*translateX\(-6px\)/);
     expect(researchStyles).toMatch(/\.research-video-player__settings-speeds\[data-open="false"\]\s*\{[^}]*transform:\s*translateX\(6px\)/);
     expect(researchStyles).toMatch(/\.research-video-player__settings \.research-video-player__settings-back\s*\{[^}]*justify-self:\s*start[^}]*width:\s*32px/);
-    expect(researchStyles).toMatch(/\.research-video-player__speed-range\s*\{[^}]*width:\s*100%/);
+    expect(researchStyles).toMatch(/\.research-video-player__speed-range\s*\{[^}]*width:\s*100%[^}]*max-width:\s*100%[^}]*min-width:\s*0/);
     expect(researchStyles).toMatch(/@container research-video-preview \(max-width: 30rem\)[\s\S]*?\.research-video__viewport\[data-enhanced="true"\]:not\(:fullscreen\):not\(:-webkit-full-screen\)\s*\{[^}]*min-block-size:\s*320px/);
     expect(researchStyles).not.toMatch(/@media \(max-width: 420px\)[\s\S]*?\.research-video__viewport\s*\{[^}]*min-block-size/);
     expect(researchStyles).not.toMatch(/\.research-video-player__settings-root\[data-open="false"\],[\s\S]*?display:\s*none/);

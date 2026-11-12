@@ -495,6 +495,10 @@
   z-index: 0;
 }
 
+.research-video-player[data-enhanced="true"] {
+  overflow: clip;
+}
+
 .research-video-player__bottom-bar,
 .research-video-player__center-control,
 .research-video-player__captions,
@@ -787,13 +791,13 @@ button.research-video-player__center-control::before {
   right: 12px;
   bottom: calc(12px + 4rem);
   z-index: 4;
-  display: grid;
-  grid-template-areas: "view";
+  display: block;
   align-items: start;
   width: min(9rem, calc(100% - 24px));
   max-block-size: calc(100% - 5.25rem);
   padding: 4px;
-  overflow: auto;
+  overflow-x: clip;
+  overflow-y: auto;
   border: 1px solid var(--research-video-glass-border);
   border-radius: 10px;
   color: var(--research-video-glass-ink);
@@ -805,6 +809,17 @@ button.research-video-player__center-control::before {
   transform: translateY(6px);
   transition: opacity 180ms ease, transform 180ms ease, visibility 0s linear 180ms;
   visibility: hidden;
+}
+
+.research-video-player__settings-viewport {
+  --research-video-settings-focus-gutter: 5px;
+  position: relative;
+  display: grid;
+  grid-template-areas: "view";
+  min-width: 0;
+  padding: var(--research-video-settings-focus-gutter);
+  box-sizing: border-box;
+  overflow: clip;
 }
 
 .research-video-player__settings[data-open="true"] {
@@ -819,8 +834,9 @@ button.research-video-player__center-control::before {
 .research-video-player__settings-speeds {
   display: grid;
   grid-area: view;
-  gap: 2px;
+  width: 100%;
   min-width: 0;
+  gap: 2px;
   color: var(--research-video-glass-ink);
   font-family: var(--font-sans);
   font-size: var(--font-size-caption);
@@ -829,6 +845,17 @@ button.research-video-player__center-control::before {
   pointer-events: none;
   transition: opacity 180ms ease, transform 180ms ease, visibility 0s linear 180ms;
   visibility: hidden;
+}
+
+.research-video-player__settings-root[data-open="false"],
+.research-video-player__settings-speeds[data-open="false"] {
+  position: absolute;
+  inset: 0;
+}
+
+.research-video-player__settings-root[data-open="true"],
+.research-video-player__settings-speeds[data-open="true"] {
+  position: relative;
 }
 
 .research-video-player__settings-root[data-open="false"],
@@ -914,7 +941,11 @@ button.research-video-player__center-control::before {
 }
 
 .research-video-player__speed-range {
+  display: block;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   margin: 0;
   accent-color: var(--color-primary-button-surface);
 }
@@ -1067,7 +1098,12 @@ button.research-video-player__center-control::before {
 .research-video-player.research-media-dialog__video .research-video-player__settings,
 .research-video-player:fullscreen .research-video-player__settings,
 .research-video-player:-webkit-full-screen .research-video-player__settings {
-  right: calc((100% - clamp(min(352px, calc(100% - 32px)), 33.333%, calc(100% - 32px))) / 2);
+  /* 9rem is the widest settings menu; the adaptive 6rem variant only narrows it. */
+  right: clamp(
+    12px,
+    calc((100% - clamp(min(352px, calc(100% - 32px)), 33.333%, calc(100% - 32px))) / 2),
+    max(12px, calc(100% - 9rem - 12px))
+  );
 }
 
 /* The player is deliberately the only translucent treatment in Research.
