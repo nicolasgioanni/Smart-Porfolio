@@ -1,16 +1,7 @@
 # Repository agent system
 
-This directory contains portable guidance for work in this repository. Start with [AGENTS.md](../AGENTS.md) for shared constraints, then select only the skill that matches the change.
+Read [AGENTS.md](../AGENTS.md), then [system decisions](knowledge/SYSTEM_DECISIONS.md). Run `npm run agents:route` for an index, or route with `--domain theme`, `--path src/lib/theme/themeTransition.ts`, or `--task "theme transition"` after `npm run agents:route --`. Add `--json` for structured output. The read-only command distinguishes primary owners and consumers and reports ambiguity.
 
-| Work | Skill |
-| --- | --- |
-| System boundaries, modules, routes, or documentation ownership | [Architecture](skills/portfolio-architecture/SKILL.md) |
-| Workbook input, generated content, or public assets | [Content pipeline](skills/portfolio-content-pipeline/SKILL.md) |
-| Components, themes, motion, dialogs, or accessibility | [Interface contracts](skills/portfolio-interface-contracts/SKILL.md) |
-| Tests, regressions, or quality evidence | [Validation](skills/portfolio-validation/SKILL.md) |
-| Endpoints, deployment, configuration, or release checks | [Release security](skills/portfolio-release-security/SKILL.md) |
-| Route skeletons, visual baselines, or held navigation | [Skeleton regression](skills/portfolio-skeleton-regression/SKILL.md) |
+Without Node, open [cards](cards/) as `.agents/cards/<domain>.md`. Domains: home, experience, research, projects, recommendations, skills, legal, resume, contact-ui, routes-seo, content, contact-functions, migrations, theme, shared-ui, motion, skeletons, tests, tooling, ci, release, infrastructure, documentation.
 
-The compact, durable project facts live in [system decisions](knowledge/SYSTEM_DECISIONS.md). Read a linked product document when the current task needs its details; do not load unrelated guidance by default.
-
-For a fresh clone, follow the ordered [agent workflow](../docs/development/AGENT_WORKFLOW.md) after reading this map. It leads from a focused worktree through local setup, skill selection, validation, and the authorized pull-request handoff; [local development](../docs/development/LOCAL_DEVELOPMENT.md) owns the dependency and server commands.
+Open one card, its relevant specialist, and linked product section; expand when contracts cross. [Agent workflow](../docs/development/AGENT_WORKFLOW.md) documents the schema, workflow, and budgets. Run `npm run docs:check` for documentation and registry checks.
