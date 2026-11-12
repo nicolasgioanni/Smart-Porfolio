@@ -1,8 +1,9 @@
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { validateDocumentation } from "./validateDocumentation.mjs";
+import { indexableSiteRoutePaths, siteRoutePaths } from "../src/lib/routing/siteRoutes.ts";
 
 async function createFixture(files) {
   const root = await mkdtemp(path.join(os.tmpdir(), "portfolio-docs-test-"));
@@ -17,6 +18,37 @@ async function createFixture(files) {
 }
 
 describe("documentation validation", () => {
+  it("keeps the documented route inventory and indexing list aligned with the registry", async () => {
+    const rootReadme = await readFile(path.resolve("README.md"), "utf8");
+    const structure = await readFile(path.resolve("docs/architecture/PROJECT_STRUCTURE.md"), "utf8");
+    const search = await readFile(path.resolve("docs/operations/SEARCH_INDEXING.md"), "utf8");
+    const routeRows = (source, heading) => {
+      const section = source.split(`## ${heading}\n`)[1]?.split("\n## ")[0] ?? "";
+      return [...section.matchAll(/^\| `([^`]+)` \|/gm)].map((match) => match[1]);
+    };
+    const ordered = (routes) => [...routes].sort();
+    const indexingSection = search.split("## Route policy")[1].split("## Generated search files")[0];
+    const indexedRoutes = [...indexingSection.matchAll(/^\d+\. `([^`]+)`$/gm)].map((match) => match[1]);
+    expect(ordered(routeRows(rootReadme, "Documented route map"))).toEqual(ordered(siteRoutePaths));
+    expect(ordered(routeRows(structure, "Documented application routes"))).toEqual(ordered(siteRoutePaths));
+    const staleReadme = rootReadme.replace("\n## Technology and project role", "\n| `/retired` | Stale route | Removed |\n\n## Technology and project role");
+    expect(ordered(routeRows(staleReadme, "Documented route map"))).not.toEqual(ordered(siteRoutePaths));
+    expect(indexedRoutes).toEqual(indexableSiteRoutePaths);
+    for (const phrase of ["absolute canonical URLs", "URLs", "discovered URLs"]) {
+      expect(search).toContain(`${indexableSiteRoutePaths.length} ${phrase}`);
+    }
+  });
+
+  it("indexes each maintained guide and validates infrastructure and agent guidance", async () => {
+    const result = await validateDocumentation();
+    const index = await readFile(path.resolve("docs/README.md"), "utf8");
+    const guides = result.checkedFiles.filter((file) => file.startsWith("docs/") && file !== "docs/README.md" && !file.startsWith("docs/quality/evidence/"));
+    expect(guides.length).toBeGreaterThan(0);
+    for (const guide of guides) expect(index).toContain(`(${guide.slice("docs/".length)})`);
+    expect(result.checkedFiles).toEqual(expect.arrayContaining(["infra/README.md", "infra/ADOPTION.md", "AGENTS.md", ".agents/README.md"]));
+    expect(result.errors).toEqual([]);
+  });
+
   it("accepts a linked documentation set with balanced structure", async () => {
     const root = await createFixture({
       "README.md":
@@ -190,6 +222,61 @@ describe("documentation validation", () => {
           expect.stringContaining("docs/GUIDE.md#guide"),
         ]),
       );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("includes maintained infrastructure guides and checks their bodies", async () => {
+    const root = await createFixture({
+      "README.md": "# Project\n",
+      "docs/README.md": "# Docs\n",
+      "infra/README.md": "# Infrastructure\n\n[Adoption](ADOPTION.md#sequence)\n",
+      "infra/ADOPTION.md": "# Adoption\n\n## Sequence\n\n[Missing](missing.md)\n\nhttps://docs.google.com/spreadsheets/private\n",
+    });
+    try {
+      const result = await validateDocumentation({ projectRoot: root });
+      expect(result.checkedFiles).toEqual(expect.arrayContaining(["infra/README.md", "infra/ADOPTION.md"]));
+      expect(result.errors).toEqual(expect.arrayContaining([
+        expect.stringContaining("infra/ADOPTION.md: contains a private-workbook URL pattern"),
+        expect.stringContaining("relative link target does not exist: missing.md"),
+      ]));
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects escapes and symbolic links in relative and public asset targets", async () => {
+    const root = await createFixture({
+      "README.md": "# Project\n\n[Escape](../outside.md)\n\n[Encoded](/%2e%2e/outside)\n\n[Linked](alias/guide.md)\n\n![Linked asset](/images/link.png)\n",
+      "docs/README.md": "# Docs\n",
+      "real/guide.md": "# Guide\n",
+      "public/images/image.png": "fixture",
+    });
+    try {
+      await symlink(path.join(root, "real"), path.join(root, "alias"), "dir");
+      await symlink(path.join(root, "public/images/image.png"), path.join(root, "public/images/link.png"));
+      const result = await validateDocumentation({ projectRoot: root });
+      expect(result.errors).toEqual(expect.arrayContaining([
+        expect.stringContaining("relative link escapes the repository"),
+        expect.stringContaining("root-relative asset link escapes public/"),
+        expect.stringContaining("relative link target contains a symbolic link"),
+        expect.stringContaining("root-relative asset target contains a symbolic link"),
+      ]));
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it.each(["description: []", "description: |", "description: first\ndescription: second", "description: # comment"])("rejects malformed skill field %s", async (field) => {
+    const root = await createFixture({
+      "README.md": "# Project\n",
+      "docs/README.md": "# Docs\n",
+      ".agents/skills/example/SKILL.md": `---\nname: example\n${field}\n---\n\n# Example\n`,
+    });
+    try {
+      const result = await validateDocumentation({ projectRoot: root });
+      expect(result.errors).toEqual(expect.arrayContaining([expect.stringContaining("skill frontmatter requires a description")]));
     } finally {
       await rm(root, { recursive: true, force: true });
     }

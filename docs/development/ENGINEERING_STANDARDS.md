@@ -22,7 +22,7 @@ Keep components focused around one rendering job. Reuse surface primitives, cont
 
 Use semantic tokens from `src/styles/tokens.css`. Preserve readable solid tiers, visible focus, responsive reflow, and reduced-motion behavior in Light, My mode, and Dark. Light must keep off-white, light-gray, and blue-gray separation; Dark must keep charcoal and slate separation. Keep System as preference logic that resolves to Light or Dark; never introduce `data-theme="system"` or a fourth token palette.
 
-Avoid heavy visual dependencies, backdrop blur, CSS gradients, glow shadows, decorative overlays, CSS mask fades, decorative animation systems, and low-contrast text. Use accents for meaningful controls or states and retain focus and validation rings.
+Avoid heavy visual dependencies, CSS gradients, glow shadows, decorative overlays, CSS mask fades, decorative animation systems, and low-contrast text. Backdrop blur and translucency are reserved for Research video controls, with an opaque fallback. Use accents for meaningful controls or states and retain focus and validation rings.
 
 ## Security
 

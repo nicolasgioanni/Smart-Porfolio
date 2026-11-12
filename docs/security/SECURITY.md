@@ -19,7 +19,7 @@ Documentation is not evidence that an external control is active. Treat the impl
 | Concern | Source |
 | --- | --- |
 | Function route boundary | `public/_routes.json` |
-| Static response headers | `public/_headers` |
+| Static response headers | `public/_headers` and release-time `scripts/release/csp.mjs` |
 | Contact public contract | `functions/_shared/contact.ts` |
 | Contact request validation, tickets, provider calls, and Function headers | `functions/_shared/contact/` |
 | Contact endpoint order and responses | `functions/api/contact/verify.ts`, `functions/api/contact.ts` |
@@ -126,7 +126,7 @@ Both handlers:
 
 `POST /api/contact` allows only its documented fields, rejects unknown keys and unsafe values, requires both acknowledgments to be boolean `true`, limits the message to 500 characters, and validates the names, email, optional phone, timing fields, and submission UUID. The hidden honeypot and minimum-completion check are evaluated during payload parsing, before ticket validation. A non-empty honeypot or completion under 1,200 milliseconds returns a silent generic success without calling DNS, D1, or Resend. This order avoids making the low-cost bot signals an oracle. The browser records the form-start time when the verified form opens, so time at the gate does not satisfy the completion threshold. Normal provider delivery cannot begin until the signed ticket and its submission binding, the mail-domain route, and a D1 quota reservation have been validated.
 
-The application code applies a 15-second request-body read deadline, but does not implement a whole-request timeout or client fetch timeout. A 16 KiB inbound-body rejection or read deadline starts cancellation without waiting for cleanup to settle. Its bounded outbound work covers Siteverify, mail-domain DNS queries, and each Resend request. Fixed provider requests reject redirects; the 5-second Siteverify and 3-second DNS deadlines include their capped JSON-body reads (16 KiB and 64 KiB respectively). Platform limits still apply.
+The application applies a 15-second request-body read deadline and operation deadlines of 25 seconds for verification and 40 seconds for delivery. The browser aborts verification after 30 seconds and delivery after 45 seconds. Deadlines bound application waiting and admission of further work; cancellation does not prove a remote side effect did not occur. A 16 KiB inbound-body rejection or read deadline starts cancellation without waiting for cleanup to settle. Its bounded outbound work covers Siteverify, mail-domain DNS queries, and each Resend request. Fixed provider requests reject redirects; the 5-second Siteverify and 3-second DNS deadlines include their capped JSON-body reads (16 KiB and 64 KiB respectively). Platform limits still apply.
 
 ## Shared provider transport and registered email endings
 
@@ -210,7 +210,7 @@ Cloudflare documents custom JSON rate-limit block responses as a Pro-plan-or-hig
 
 ## Response headers and browser policy
 
-`public/_headers` adds the following protections to static Pages responses:
+`public/_headers` supplies the base static Pages header rules. Release packaging replaces the exported `_headers` with common rules and route-specific CSP policies generated from the exported HTML by `scripts/release/csp.mjs`; the sealed artifact is the authority for deployed headers. These rules provide:
 
 - a Content Security Policy with `default-src 'self'`, no objects, no framing, and same-origin form actions;
 - the minimum `challenges.cloudflare.com` script, frame, and connection allowances used by Turnstile;
@@ -219,9 +219,9 @@ Cloudflare documents custom JSON rate-limit block responses as a Pro-plan-or-hig
 - one-year HSTS;
 - content-type sniffing protection and `X-Frame-Options: DENY`.
 
-The exported application currently needs inline script and style allowances. Do not broaden third-party origins without review. Prefer nonce or hash based policies if a future delivery architecture can provide per-response CSP values.
+The release CSP hashes exported inline scripts rather than allowing arbitrary inline scripts; inline styles remain permitted. Do not broaden third-party origins without review.
 
-Cloudflare Pages does not apply `_headers` rules to Function-generated responses. Both contact handlers therefore set their own `Cache-Control: no-store, max-age=0`, JSON content type, `Referrer-Policy: no-referrer`, and `X-Content-Type-Options: nosniff`. They do not currently add the static CSP, Permissions Policy, HSTS, or framing headers.
+Cloudflare Pages does not apply `_headers` rules to Function-generated responses. Both contact handlers therefore set their own `Cache-Control: no-store, max-age=0`, JSON content type, `Referrer-Policy: no-referrer`, and `X-Content-Type-Options: nosniff`. They also set a restrictive JSON CSP, Permissions Policy, HSTS, and framing denial.
 
 ## URL and rendering rules
 
@@ -254,7 +254,7 @@ Repository configuration can prove the intended non-secret values, but not the p
 
 ## Deployment security
 
-Every production artifact must contain the exact `_routes.json` and `_headers` files. Deployment smoke testing sends unauthenticated `GET` requests to both Function paths and requires `405` JSON responses. This establishes that both routes are deployed and reject the wrong method.
+Every production artifact must contain the exact `_routes.json` and the release-generated `_headers` files admitted by the sealed artifact checks. Deployment smoke testing sends unauthenticated `GET` requests to both Function paths and requires `405` JSON responses. This establishes that both routes are deployed and reject the wrong method.
 
 The smoke test does not establish successful POST handling, exact-origin behavior, live Turnstile validation, ticket cookie acceptance, D1 migration state, DNS behavior, WAF state, Resend delivery, sender-domain verification, recipient correctness, or mailbox receipt. Those items require controlled deployed checks. See [Deployment](../operations/DEPLOYMENT.md) for the activation sequence.
 

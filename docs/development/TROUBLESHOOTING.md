@@ -170,9 +170,9 @@ Use the full suite after the focused failure passes:
 npm run test
 ```
 
-Tests use jsdom and mocks. A behavior that passes unit tests can still fail in Wrangler, a browser, or an external provider, so reproduce at the narrowest real boundary when necessary.
+Component tests use jsdom and mocks; selected integration tests also run local Workers and D1 fixtures. A behavior that passes local tests can still fail in a deployed runtime, a browser, or an external provider, so reproduce at the narrowest real boundary when necessary.
 
-### Footer tests fail only in the focused CI step
+### Focused footer tests differ from the full suite
 
 Run:
 
@@ -180,7 +180,7 @@ Run:
 npm run test:footer
 ```
 
-The focused step and full suite execute the same footer files. A difference usually indicates timing, cleanup, shared global state, or an incomplete concurrent change rather than different test code.
+The local focused command and full suite execute the same footer files. A difference usually indicates timing, cleanup, shared global state, or an incomplete concurrent change rather than different test code.
 
 ## Build and static export
 

@@ -17,7 +17,8 @@ This documentation explains how Smart Portfolio is authored, built, tested, depl
 | Portfolio owner or developer setting up a local copy | [Local development](development/LOCAL_DEVELOPMENT.md) | [Agent workflow](development/AGENT_WORKFLOW.md) for repository changes, or [local content editing](content/LOCAL_CONTENT_EDITING.md) for content updates |
 | Agent or automated contributor | [Agent workflow](development/AGENT_WORKFLOW.md) | [Local development](development/LOCAL_DEVELOPMENT.md), the selected repository skill, and [testing](quality/TESTING.md) |
 | Design contributor | [Design system](design/DESIGN_SYSTEM.md) | [Accessibility](design/ACCESSIBILITY.md), [animation guidelines](design/ANIMATION_GUIDELINES.md), and [skeleton loading guidelines](design/SKELETON_LOADING_GUIDELINES.md) |
-| Deployment operator restoring this service or adapting a fork | [Deployment](operations/DEPLOYMENT.md) | [Operations](operations/OPERATIONS.md), [testing](quality/TESTING.md), and [troubleshooting](development/TROUBLESHOOTING.md) |
+| Deployment operator restoring this service or adapting a fork | [Deployment](operations/DEPLOYMENT.md) | [Search indexing](operations/SEARCH_INDEXING.md) | Canonical identity, route classification, search files, and operator checks. |
+| [Operations](operations/OPERATIONS.md), [testing](quality/TESTING.md), and [troubleshooting](development/TROUBLESHOOTING.md) |
 | Security reviewer | [Security](security/SECURITY.md) | [Contact system](security/CONTACT_SYSTEM.md), [architecture](architecture/ARCHITECTURE.md), and [security checklist](security/SECURITY_CHECKLIST.md) |
 
 ## Dependency and setup contract
@@ -64,6 +65,7 @@ This is an npm repository: `package.json`, `package-lock.json`, and `.nvmrc` are
 | --- | --- |
 | [Local development](development/LOCAL_DEVELOPMENT.md) | Supported Node.js version, setup commands, development servers, local content, and Pages Function testing. |
 | [Agent workflow](development/AGENT_WORKFLOW.md) | Portable repository-local guidance, focused skills, durable decisions, and model routing. |
+| [CI input and evidence contracts](quality/CI_CONTRACTS.md) | Candidate, snapshot, receipt, rerun, browser partition, and deployment admission contracts. |
 | [Testing](quality/TESTING.md) | Test layers, focused commands, Playwright navigation, recommendation, and footer coverage, the full quality gate, CI behavior, and test-extension guidance. |
 | [Engineering standards](development/ENGINEERING_STANDARDS.md) | Concise architecture, component, styling, test, and dependency rules. |
 | [Quality checklist](quality/QUALITY_CHECKLIST.md) | General pre-merge verification checklist. |
@@ -76,6 +78,7 @@ This is an npm repository: `package.json`, `package-lock.json`, and `.nvmrc` are
 | Document | Purpose |
 | --- | --- |
 | [Deployment](operations/DEPLOYMENT.md) | GitHub and Cloudflare setup, environment separation, release governance, and first deployment. |
+| [Search indexing](operations/SEARCH_INDEXING.md) | Canonical identity, route classification, search files, and operator checks. |
 | [Operations](operations/OPERATIONS.md) | Event behavior, candidate selection, exact-artifact deployment, manifests, smoke tests, retries, and rollback considerations. |
 | [Terraform ownership preparation](infrastructure/TERRAFORM_OWNERSHIP.md) | Inactive Terraform source boundary, saved-plan review, and adoption prerequisites. |
 | [Troubleshooting](development/TROUBLESHOOTING.md) | Symptoms, likely causes, diagnostics, safe corrections, and actions to avoid. |
@@ -107,7 +110,7 @@ Use the narrowest authoritative implementation source when documentation and cod
 | Home selection and section order | `src/features/home/content/selectHomeContent.ts` and `src/features/home/components/HomeOverview.tsx` |
 | Themes, layout, motion, and styling | `src/components/`, `src/lib/theme/`, and `src/styles/` |
 | Contact request boundary | `functions/api/`, `functions/_shared/contact.ts`, and `src/features/contact/` |
-| Function routing and static headers | `public/_routes.json` and `public/_headers` |
+| Function routing and static headers | `public/_routes.json`, `public/_headers`, and release-time `scripts/release/csp.mjs` |
 | Cloudflare configuration | `wrangler.jsonc` |
 | Verification and deployment behavior | `.github/workflows/ci.yml` and `scripts/` |
 | License | `LICENSE` |
