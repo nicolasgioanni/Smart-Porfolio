@@ -89,7 +89,7 @@ npm run docs:check
 - Known `npm run` commands in checked Markdown, unless a narrow document-and-reason manifest exception registers an illustrative command.
 - Tracked `infrastructure/` or `infra/` paths need an owning card with documentation and checks.
 
-The portable [agent map](../development/AGENT_MAP.md) explains routing and cards; the manifest is the machine-readable ownership source. Minimal unit fixtures must explicitly set `requireOwnershipMap: false`. The validator inventories Git-tracked and nonignored files when Git is available, with a privacy-safe fixture fallback; ignored local environment files are never read for ownership coverage, while the checked-in `.env.example` template has an explicit exception. It does not check external-link availability. Its fixture tests live in `scripts/validateDocumentation.test.mjs`.
+The portable [agent map](../development/AGENT_MAP.md) explains routing and cards; the manifest is the machine-readable ownership source. Minimal unit fixtures must explicitly set `requireOwnershipMap: false`. The validator inventories Git-tracked and nonignored files when Git is available, and fails closed if Git inventory fails; a privacy-safe fallback is reserved for non-Git fixtures. Ignored local environment files are never read for ownership coverage, while the checked-in `.env.example` template has an explicit exception. It does not check external-link availability. Its fixture tests live in `scripts/validateDocumentation.test.mjs`.
 
 ## Content pipeline coverage
 

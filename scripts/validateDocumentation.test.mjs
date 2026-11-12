@@ -665,6 +665,19 @@ describe("documentation validation", () => {
     }
   });
 
+  it("fails closed when Git inventory fails without reading ignored Markdown", async () => {
+    const root = await createGitOwnershipFixture();
+    try {
+      await writeFile(path.join(root, "docs/ignored-private.md"), "# private-markdown-sentinel\n\nTODO\n", "utf8");
+      await writeFile(path.join(root, ".git/config"), "[invalid private-config-sentinel\n", "utf8");
+      await expect(validateDocumentation({ projectRoot: root })).rejects.toThrow(
+        /^Unable to determine repository inventory\.$/,
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("does not read an ignored Markdown target to resolve a fragment", async () => {
     const root = await createGitOwnershipFixture();
     try {

@@ -124,23 +124,35 @@ async function inspectRepositoryPath(projectRoot, targetPath) {
   return { exists: false, exactCase: false };
 }
 
-async function listRepositoryFiles(directory, projectRoot) {
-  const gitPaths = await listGitRepositoryFiles(projectRoot);
-  if (gitPaths) return inspectRepositoryEntries(gitPaths, projectRoot);
-
-  return listFixtureRepositoryFiles(directory, projectRoot);
+async function hasGitBoundary(projectRoot) {
+  let directory = path.resolve(projectRoot);
+  for (;;) {
+    try {
+      await lstat(path.join(directory, ".git"));
+      return true;
+    } catch (error) {
+      if (error.code !== "ENOENT") throw new Error("Unable to determine repository inventory.");
+    }
+    const parent = path.dirname(directory);
+    if (parent === directory) return false;
+    directory = parent;
+  }
 }
 
-async function listGitRepositoryFiles(projectRoot) {
+async function listRepositoryFiles(directory, projectRoot) {
+  if (!(await hasGitBoundary(projectRoot))) {
+    return listFixtureRepositoryFiles(directory, projectRoot);
+  }
+
   try {
     const { stdout } = await execFileAsync(
       "git",
       ["ls-files", "--cached", "--others", "--exclude-standard", "-z"],
       { cwd: projectRoot, maxBuffer: 10 * 1024 * 1024 },
     );
-    return stdout.split("\0").filter(Boolean).sort();
+    return inspectRepositoryEntries(stdout.split("\0").filter(Boolean).sort(), projectRoot);
   } catch {
-    return undefined;
+    throw new Error("Unable to determine repository inventory.");
   }
 }
 
