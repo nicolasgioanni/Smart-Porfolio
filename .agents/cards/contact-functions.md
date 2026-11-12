@@ -1,6 +1,6 @@
 # contact-functions
 
-Contact endpoint handlers and shared server modules. Trace request validation, verification, reservation and delivery; retain server-side enforcement.
+Contact endpoints, shared browser/server validation, and server security modules. Trace request validation, verification, reservation and delivery; retain server-side enforcement and the offline TLD snapshot.
 
 Start at `functions/api/contact.ts` and inspect `functions/api/contact.test.ts`. Read the [portfolio-release-security](../skills/portfolio-release-security/SKILL.md) and [authority](../../docs/security/CONTACT_SYSTEM.md#endpoint-contract) for this contract. Run `npm run test:contact-functions` as applicable.
 

@@ -421,19 +421,25 @@
     {
       "id": "contact-functions",
       "card": ".agents/cards/contact-functions.md",
-      "responsibility": "Contact endpoint handlers and shared server modules",
+      "responsibility": "Contact endpoints, shared validation, and server security modules",
       "ownerPatterns": [
-        "functions/**"
+        "functions/**",
+        "scripts/contactTransport.integration.test.ts",
+        "scripts/updateContactTlds.mjs",
+        "scripts/updateContactTlds.test.mjs",
+        "src/lib/contact/**"
       ],
       "ownerExclusions": [],
       "consumers": [
         "contact-ui"
       ],
       "entrypoints": [
-        "functions/api/contact.ts"
+        "functions/api/contact.ts",
+        "src/lib/contact/validation.ts"
       ],
       "tests": [
-        "functions/api/contact.test.ts"
+        "functions/api/contact.test.ts",
+        "scripts/contactTransport.integration.test.ts"
       ],
       "specialists": [
         "portfolio-release-security"
@@ -460,7 +466,9 @@
       "card": ".agents/cards/migrations.md",
       "responsibility": "Contact D1 migration history",
       "ownerPatterns": [
-        "migrations/**"
+        "migrations/**",
+        "scripts/d1Configuration.test.mjs",
+        "scripts/d1Reservation.integration.test.ts"
       ],
       "ownerExclusions": [],
       "consumers": [
@@ -471,7 +479,8 @@
         "migrations/0001_contact_rate_reservations.sql"
       ],
       "tests": [
-        "scripts/d1Reservation.integration.test.ts"
+        "scripts/d1Reservation.integration.test.ts",
+        "scripts/d1Configuration.test.mjs"
       ],
       "specialists": [
         "portfolio-release-security"
@@ -531,7 +540,7 @@
     {
       "id": "shared-ui",
       "card": ".agents/cards/shared-ui.md",
-      "responsibility": "Neutral shared components, shell, styles and contact validation",
+      "responsibility": "Neutral shared components, shell, and styles",
       "ownerPatterns": [
         "public/favicon.ico",
         "public/favicon/**",
@@ -542,7 +551,6 @@
         "src/components/overlay/**",
         "src/components/portfolio/**",
         "src/components/responsive/**",
-        "src/lib/contact/**",
         "src/styles/base.css",
         "src/styles/content.css",
         "src/styles/detail.css",
@@ -749,24 +757,17 @@
         ".nvmrc",
         "LICENSE",
         "eslint.config.mjs",
-        "next.config.mjs",
         "package-lock.json",
         "package.json",
         "scripts/checkDependencyAudit.mjs",
         "scripts/checkDependencyAudit.test.mjs",
         "scripts/clean-local.mjs",
         "scripts/clean-local.ps1",
-        "scripts/contactTransport.integration.test.ts",
-        "scripts/d1Configuration.test.mjs",
-        "scripts/d1Reservation.integration.test.ts",
         "scripts/envConfiguration.test.mjs",
         "scripts/lib/localAutomation.mjs",
         "scripts/lib/readRegularFile.mjs",
         "scripts/lib/readRegularFile.test.mjs",
         "scripts/localAutomation.test.mjs",
-        "scripts/nextBuildAdapter.mjs",
-        "scripts/normalizeNextStaticExport.mjs",
-        "scripts/normalizeNextStaticExport.test.mjs",
         "scripts/packageScripts.test.mjs",
         "scripts/runValidationTier.mjs",
         "scripts/runValidationTier.test.mjs",
@@ -776,8 +777,6 @@
         "scripts/setup-local.ps1",
         "scripts/start-dev.mjs",
         "scripts/start-dev.ps1",
-        "scripts/updateContactTlds.mjs",
-        "scripts/updateContactTlds.test.mjs",
         "scripts/verify-local.mjs",
         "scripts/verify-local.ps1",
         "tsconfig.json"
@@ -852,11 +851,15 @@
       "card": ".agents/cards/release.md",
       "responsibility": "Release artifacts, deployment and security checks",
       "ownerPatterns": [
+        "next.config.mjs",
         "public/_headers",
         "public/_routes.json",
         "scripts/artifactIntegrity.mjs",
         "scripts/checkDeployedContent.mjs",
         "scripts/checkDeployedContent.test.mjs",
+        "scripts/nextBuildAdapter.mjs",
+        "scripts/normalizeNextStaticExport.mjs",
+        "scripts/normalizeNextStaticExport.test.mjs",
         "scripts/release.mjs",
         "scripts/release/**",
         "scripts/security/**",
@@ -867,10 +870,13 @@
       "ownerExclusions": [],
       "consumers": [],
       "entrypoints": [
-        "scripts/release.mjs"
+        "scripts/release.mjs",
+        "next.config.mjs",
+        "scripts/normalizeNextStaticExport.mjs"
       ],
       "tests": [
-        "scripts/release/sealedRelease.test.mjs"
+        "scripts/release/sealedRelease.test.mjs",
+        "scripts/normalizeNextStaticExport.test.mjs"
       ],
       "specialists": [
         "portfolio-release-security"

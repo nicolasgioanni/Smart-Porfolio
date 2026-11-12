@@ -22,6 +22,21 @@ describe("agent navigation", () => {
   ])("routes %s to %s", (task, id) => {
     expect(route(map, { task }).map(r => r.card.id)).toEqual([id]);
   });
+  it.each([
+    ["src/lib/contact/validation.ts", "contact-functions"],
+    ["src/lib/contact/ianaTlds.ts", "contact-functions"],
+    ["scripts/contactTransport.integration.test.ts", "contact-functions"],
+    ["scripts/updateContactTlds.mjs", "contact-functions"],
+    ["scripts/updateContactTlds.test.mjs", "contact-functions"],
+    ["scripts/d1Configuration.test.mjs", "migrations"],
+    ["scripts/d1Reservation.integration.test.ts", "migrations"],
+    ["next.config.mjs", "release"],
+    ["scripts/nextBuildAdapter.mjs", "release"],
+    ["scripts/normalizeNextStaticExport.mjs", "release"],
+    ["scripts/normalizeNextStaticExport.test.mjs", "release"],
+  ])("routes %s to its %s primary owner", (file, id) => {
+    expect(route(map, { file }).map(result => result.card.id)).toEqual([id]);
+  });
   it("distinguishes a primary owner, consumers, and excluded generated content", () => {
     expect(ownerFor(map, "src/lib/theme/themeTransition.ts").owners.map(c => c.id)).toEqual(["theme"]);
     expect(map.cards.find(c => c.id === "theme").consumers).toContain("shared-ui");

@@ -10,7 +10,7 @@ Preserve static rendering and progressive enhancement: browser code adds interac
 
 ## Worktree and publication policy
 
-Use an isolated fixed-baseline worktree only when authorized. An explicit current-worktree or local-only instruction forbids fetches, worktrees, imports, rebases, branch recreation, pushes, and remote mutation; record a supplied baseline privately. Never delete, rename, force-update, or recreate local or remote `main` or `develop`, weaken protections, or include either branch in cleanup. Perform remote, publication, merge, deployment, or live-infrastructure actions only when authorized by the current task; local-only remains in force until changed. GPT-6.1 Sol coordinates and reviews; GPT-6.1 Terra at High or Extra High implements.
+One improvement per branch and worktree; stop at one PR without merge or auto-merge. Use an isolated fixed-baseline worktree only when authorized. An explicit current-worktree or local-only instruction forbids fetches, worktrees, imports, rebases, branch recreation, pushes, and remote mutation; record a supplied baseline privately. Never delete, rename, force-update, or recreate local or remote `main` or `develop`, weaken protections, or include either branch in cleanup. Perform remote, publication, merge, deployment, or live-infrastructure actions only when authorized by the current task; local-only remains in force until changed. GPT-6.1 Sol coordinates and reviews; GPT-6.1 Terra at High or Extra High implements.
 
 ## Evidence
 
