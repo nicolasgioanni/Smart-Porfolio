@@ -11,6 +11,7 @@ const execFileAsync = promisify(execFile);
 const rootDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sha256Pattern = /^[a-f0-9]{64}$/;
 const commitPattern = /^[a-f0-9]{40}$/;
+const githubIdentity = { owner: "nicolasgioanni", repository: "Smart-Porfolio", repositoryId: "1285636508", rulesetId: "24763569" };
 const accountIdPattern = /^[a-f0-9]{32}$/;
 const maxPrivateInputBytes = 25 * 1024 * 1024;
 const maxExecutableBytes = 256 * 1024 * 1024;
@@ -171,7 +172,7 @@ export async function lockDigest(projectRoot, state) {
 
 function governanceIsExact(values) {
   if (!values || typeof values !== "object" || Array.isArray(values)) return false;
-  const allowedValues = new Set(["id", "node_id", "repository", "name", "target", "enforcement", "bypass_actors", "conditions", "rules"]);
+  const allowedValues = new Set(["id", "node_id", "etag", "ruleset_id", "repository", "name", "target", "enforcement", "bypass_actors", "conditions", "rules"]);
   if (Object.keys(values).some((key) => !allowedValues.has(key))) return false;
   if (values.repository !== "Smart-Porfolio" || values.name !== "protect-permanent-branches" || values.target !== "branch" || values.enforcement !== "active") return false;
   if (!Array.isArray(values.bypass_actors) || values.bypass_actors.length !== 0) return false;
@@ -182,7 +183,9 @@ function governanceIsExact(values) {
   if (!refName || typeof refName !== "object" || Array.isArray(refName) || Object.keys(refName).length !== 2 || JSON.stringify(refName.include) !== JSON.stringify(["refs/heads/main", "refs/heads/develop"]) || !Array.isArray(refName.exclude) || refName.exclude.length !== 0) return false;
   if (!Array.isArray(values.rules) || values.rules.length !== 1) return false;
   const [rule] = values.rules;
-  return Boolean(rule) && typeof rule === "object" && !Array.isArray(rule) && Object.keys(rule).length === 2 && rule.deletion === true && rule.non_fast_forward === true;
+  const emptyRules = new Set(["branch_name_pattern", "commit_author_email_pattern", "commit_message_pattern", "committer_email_pattern", "copilot_code_review", "creation", "file_extension_restriction", "file_path_restriction", "max_file_path_length", "max_file_size", "merge_queue", "pull_request", "required_code_scanning", "required_deployments", "required_linear_history", "required_signatures", "required_status_checks", "tag_name_pattern", "update", "update_allows_fetch_and_merge"]);
+  return Boolean(rule) && typeof rule === "object" && !Array.isArray(rule) && rule.deletion === true && rule.non_fast_forward === true &&
+    Object.entries(rule).every(([key, value]) => key === "deletion" || key === "non_fast_forward" || (emptyRules.has(key) && (value === null || (Array.isArray(value) && value.length === 0))));
 }
 
 function planErrors(state, plan, errors) {
@@ -235,8 +238,23 @@ function inventoryErrors(state, inventory, plan, errors) {
   }
   if (state.startsWith("cloudflare-")) {
     if (typeof inventory.accountId !== "string" || !accountIdPattern.test(inventory.accountId) || plan.variables?.cloudflare_account_id?.value !== inventory.accountId) errors.push("private resource inventory does not bind the Cloudflare account");
-  } else if (inventory.repository !== "nicolasgioanni/Smart-Porfolio" || !physicalId(inventory.repositoryId)) {
-    errors.push("private resource inventory does not bind the GitHub repository");
+  } else {
+    // Names are case-sensitive and never trimmed; numeric IDs accept only their
+    // canonical decimal string or the equivalent safe integer from JSON.
+    if (inventory.repository !== `${githubIdentity.owner}/${githubIdentity.repository}` ||
+        !physicalId(inventory.repositoryId) || String(inventory.repositoryId) !== githubIdentity.repositoryId ||
+        plan.variables?.github_owner?.value !== githubIdentity.owner ||
+        plan.variables?.repository?.value !== githubIdentity.repository) {
+      errors.push("private resource inventory and plan variables do not bind the expected GitHub repository");
+    }
+    const rulesetId = plan.resource_changes?.find((change) => change?.address === spec.resources[0])?.change?.after?.ruleset_id;
+    if (rulesetId !== undefined && (!physicalId(rulesetId) || String(rulesetId) !== githubIdentity.rulesetId)) {
+      errors.push("saved plan does not bind the expected GitHub ruleset ID");
+    }
+    if (!physicalId(inventory.resources?.[spec.resources[0]]) ||
+        String(inventory.resources[spec.resources[0]]) !== githubIdentity.rulesetId) {
+      errors.push("private resource inventory does not bind the expected GitHub ruleset ID");
+    }
   }
   if (!onlyKeys(inventory.resources, spec.resources, "private resource inventory IDs", errors) || !Object.values(inventory.resources).every(physicalId)) {
     errors.push("private resource inventory IDs are invalid");

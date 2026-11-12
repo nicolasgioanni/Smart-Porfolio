@@ -18,13 +18,20 @@ const policyEvaluator = async ({ state, plan }) => ({ state, reviewedResourceCou
 function plan() {
   return {
     format_version: "1.2", terraform_version: "1.16.5", complete: true, errored: false, applyable: false,
+    variables: { github_owner: { value: "nicolasgioanni" }, repository: { value: "Smart-Porfolio" } },
     planned_values: { root_module: { resources: [] } },
     resource_changes: [{
       address: "github_repository_ruleset.permanent_branches", provider_name: "registry.terraform.io/integrations/github",
       change: {
         actions: ["no-op"], after_unknown: {}, after: {
-          id: "ruleset-private-id", repository: "Smart-Porfolio", name: "protect-permanent-branches", target: "branch", enforcement: "active", bypass_actors: [],
-          conditions: [{ ref_name: [{ include: ["refs/heads/main", "refs/heads/develop"], exclude: [] }] }], rules: [{ deletion: true, non_fast_forward: true }]
+          id: "24763569", ruleset_id: 24763569, node_id: "provider-node-id", etag: "provider-etag", repository: "Smart-Porfolio", name: "protect-permanent-branches", target: "branch", enforcement: "active", bypass_actors: [],
+          conditions: [{ ref_name: [{ include: ["refs/heads/main", "refs/heads/develop"], exclude: [] }] }], rules: [{
+            branch_name_pattern: [], commit_author_email_pattern: [], commit_message_pattern: [], committer_email_pattern: [],
+            copilot_code_review: [], creation: null, deletion: true, file_extension_restriction: [], file_path_restriction: [],
+            max_file_path_length: [], max_file_size: [], merge_queue: [], non_fast_forward: true, pull_request: [],
+            required_code_scanning: [], required_deployments: [], required_linear_history: null, required_signatures: null,
+            required_status_checks: [], tag_name_pattern: [], update: null, update_allows_fetch_and_merge: null
+          }]
         }
       }
     }]
@@ -36,8 +43,8 @@ function inventory() {
     schemaVersion: 1,
     state: "github-governance",
     repository: "nicolasgioanni/Smart-Porfolio",
-    repositoryId: "private-repository-id",
-    resources: { "github_repository_ruleset.permanent_branches": "ruleset-private-id" }
+    repositoryId: 1285636508,
+    resources: { "github_repository_ruleset.permanent_branches": "24763569" }
   };
 }
 
@@ -128,6 +135,8 @@ test("rejects destructive, import, replacement, unknown, stale, and expanded gov
     (value) => { value.resource_changes[0].change.after_unknown = { name: true }; },
     (value) => { value.resource_changes[0].change.after.conditions[0].ref_name[0].include = ["refs/heads/main"]; },
     (value) => { value.resource_changes[0].change.after.conditions.push({ repository_name: [{ include: ["*"], exclude: [] }] }); },
+    (value) => { value.resource_changes[0].change.after.rules[0].pull_request = [{ required_approving_review_count: 1 }]; },
+    (value) => { value.resource_changes[0].change.after.rules[0].new_provider_rule = true; },
     (value) => { value.resource_changes[0].change.after.rules.push({ deletion: false, non_fast_forward: false, pull_request: [{ required_approving_review_count: 1 }] }); },
     (value) => { value.resource_changes[0].change.after.bypass_actors.push({ actor_id: 1, actor_type: "RepositoryRole", bypass_mode: "always" }); }
   ]) {
@@ -176,6 +185,40 @@ test("rejects inventory identity mismatches and approvals that do not bind the i
   const staleInventoryDigest = await verify({ mutateApproval: (value) => { value.inventoryDigest = "0".repeat(64); } });
   assert.equal(staleInventoryDigest.ok, false);
   assert.match(staleInventoryDigest.errors.join("\n"), /inventory/);
+});
+
+test("requires exact GitHub owner, repository, repository ID and ruleset ID", async () => {
+  for (const mutatePlan of [
+    (value) => { value.variables.github_owner.value = "other"; },
+    (value) => { value.variables.github_owner.value = "Nicolasgioanni"; },
+    (value) => { value.variables.github_owner.value = " nicolasgioanni"; },
+    (value) => { value.variables.repository.value = "other"; },
+    (value) => { value.variables.repository.value = "smart-porfolio"; },
+    (value) => { delete value.variables.github_owner; },
+    (value) => { delete value.variables.repository; },
+    (value) => { delete value.variables; },
+    (value) => { value.resource_changes[0].change.after.id = "24763570"; },
+    (value) => { value.resource_changes[0].change.after.ruleset_id = 24763570; }
+  ]) {
+    const result = await verify({ mutatePlan });
+    assert.equal(result.ok, false);
+  }
+  for (const mutateInventory of [
+    (value) => { value.repositoryId = 1285636509; },
+    (value) => { value.repositoryId = "01285636508"; },
+    (value) => { delete value.repositoryId; },
+    (value) => { value.resources["github_repository_ruleset.permanent_branches"] = "24763570"; }
+  ]) {
+    const result = await verify({ mutateInventory });
+    assert.equal(result.ok, false);
+  }
+  // Matching one another is insufficient if both identify another ruleset.
+  const otherRuleset = await verify({
+    mutatePlan: (value) => { value.resource_changes[0].change.after.id = "24763570"; },
+    mutateInventory: (value) => { value.resources["github_repository_ruleset.permanent_branches"] = "24763570"; }
+  });
+  assert.equal(otherRuleset.ok, false);
+  assert.match(otherRuleset.errors.join("\n"), /expected GitHub ruleset ID/);
 });
 
 test("requires the private Cloudflare inventory to bind the concrete plan account and physical resource IDs", async () => {
