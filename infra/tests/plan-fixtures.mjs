@@ -18,7 +18,7 @@ export function auditCollectorSeal() {
     collectorBundlePath: auditCollectorBundlePath,
     collectorBundleSha256: auditCollectorBundleSha256,
     collectorConfigSha256: "c".repeat(64),
-    toolchainWrangler: "4.148.0"
+    toolchainWrangler: "4.160.1"
   };
 }
 

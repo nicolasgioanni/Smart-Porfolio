@@ -53,13 +53,17 @@ describe("package and CI deployment automation", () => {
     expect(packageJson.scripts["test:priority"]).toBe(
       "node scripts/runValidationTier.mjs priority"
     );
-    expect(packageJson.dependencies.next).toBe("^16.4.0");
-    expect(packageJson.devDependencies["@next/eslint-plugin-next"]).toBe("^16.4.0");
-    expect(packageJson.devDependencies.wrangler).toBe("4.148.0");
-    expect(packageJson.devDependencies.miniflare).toBe("5.20261006.0-alpha");
+    expect(packageJson.dependencies.next).toBe("^16.4.6");
+    expect(packageJson.devDependencies["@next/eslint-plugin-next"]).toBe("^16.4.6");
+    expect(packageJson.devDependencies["@testing-library/dom"]).toBe("10.4.1");
+    expect(packageJson.devDependencies.wrangler).toBe("4.160.1");
+    expect(packageJson.devDependencies.miniflare).toBe("5.20261110.1-beta");
     expect(packageJson.devDependencies.yaml).toBe("2.9.1");
     expect(packageJson.devDependencies["js-yaml"]).toBeUndefined();
-    expect(packageJson.devDependencies.vitest).toBe("4.1.11");
+    expect(packageJson.devDependencies["typescript-eslint"]).toBe("8.72.2");
+    expect(packageJson.devDependencies.vitest).toBe("4.1.12");
+    expect(packageJson.overrides.vite).toBe("8.2.4");
+    expect(packageJson.overrides["@typescript-eslint/typescript-estree"].minimatch).toBe("11.0.8");
     expect(packageJson.devDependencies["@playwright/test"]).toMatch(/^\^1\./);
     expect(packageJson.scripts["test:footer"]).toBe(
       "vitest run src/components/layout/InteractiveBlobFooter.test.tsx src/components/layout/footerStyles.test.ts"
