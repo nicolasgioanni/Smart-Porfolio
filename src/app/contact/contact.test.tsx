@@ -13,7 +13,7 @@ vi.mock("next/link", () => ({
 
 const turnstileHarness = vi.hoisted(() => ({ resets: 0, tokenIndex: 0 }));
 
-vi.mock("@/components/contact/TurnstileWidget", async () => {
+vi.mock("@/features/contact/components/TurnstileWidget", async () => {
   const React = await vi.importActual<typeof import("react")>("react");
   type MockStatus = "error" | "expired" | "loading" | "ready" | "unavailable";
   type MockProps = {
@@ -120,8 +120,8 @@ afterEach(() => {
 });
 
 type FetchMockOptions = {
-  contact?: (attempt: number) => Promise<Response> | Response;
-  verify?: (attempt: number) => Promise<Response> | Response;
+  contact?: (attempt: number, init?: RequestInit) => Promise<Response> | Response;
+  verify?: (attempt: number, init?: RequestInit) => Promise<Response> | Response;
 };
 
 function requestUrl(input: RequestInfo | URL): string {
@@ -131,15 +131,15 @@ function requestUrl(input: RequestInfo | URL): string {
 function installFetchMock(options: FetchMockOptions = {}) {
   let contactAttempt = 0;
   let verifyAttempt = 0;
-  const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+  const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = requestUrl(input);
     if (url === "/api/contact/verify") {
       verifyAttempt += 1;
-      return options.verify?.(verifyAttempt) ?? Response.json({ ok: true });
+      return options.verify?.(verifyAttempt, init) ?? Response.json({ ok: true });
     }
     if (url === "/api/contact") {
       contactAttempt += 1;
-      return options.contact?.(contactAttempt) ?? Response.json({ ok: true });
+      return options.contact?.(contactAttempt, init) ?? Response.json({ ok: true });
     }
     throw new Error(`Unexpected fetch request: ${url}`);
   });
@@ -515,6 +515,51 @@ describe("contact route", () => {
     expect(callsFor(fetchMock, "/api/contact/verify")).toHaveLength(1);
   });
 
+  it("aborts an in-flight verification request when the form unmounts", async () => {
+    const pendingVerification = deferred<Response>();
+    let requestSignal: AbortSignal | undefined;
+    const fetchMock = installFetchMock({
+      verify: (_attempt, init) => {
+        requestSignal = init?.signal ?? undefined;
+        return pendingVerification.promise;
+      }
+    });
+    const { unmount } = render(<ContactPage />);
+    const widget = await currentGateWidget();
+    fireEvent.click(within(widget).getByRole("button", { name: "Complete human verification" }));
+    await waitFor(() => expect(callsFor(fetchMock, "/api/contact/verify")).toHaveLength(1));
+
+    unmount();
+    expect(requestSignal?.aborted).toBe(true);
+    await act(async () => pendingVerification.resolve(Response.json({ ok: true })));
+  });
+
+  it("waits past the server delivery budget before locally recovering from a browser timeout", async () => {
+    let requestSignal: AbortSignal | undefined;
+    installFetchMock({
+      contact: (_attempt, init) =>
+        new Promise<Response>((_resolve, reject) => {
+          requestSignal = init?.signal ?? undefined;
+          requestSignal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")), {
+            once: true
+          });
+        })
+    });
+    render(<ContactPage />);
+    await reachReview({ message: "Wait for the normal delivery budget." });
+    acceptAcknowledgments();
+
+    vi.useFakeTimers();
+    fireEvent.click(screen.getByRole("button", { name: "Send request" }));
+    await act(async () => vi.advanceTimersByTimeAsync(44_999));
+    expect(requestSignal?.aborted).toBe(false);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+
+    await act(async () => vi.advanceTimersByTimeAsync(1));
+    expect(requestSignal?.aborted).toBe(true);
+    expect(screen.getByRole("alert")).toHaveTextContent(/could not confirm the delivery status/i);
+  });
+
   it("retries a failed delivery with the identical frozen payload and valid ticket", async () => {
     const fetchMock = installFetchMock({
       contact: (attempt) =>
@@ -527,7 +572,7 @@ describe("contact route", () => {
     const checkboxes = acceptAcknowledgments();
 
     fireEvent.click(screen.getByRole("button", { name: "Send request" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent(/could not be delivered.*verification remains complete/i);
+    expect(await screen.findByRole("alert")).toHaveTextContent(/could not confirm the delivery status.*verification remains complete/i);
     expect(screen.getByRole("button", { name: "Back" })).toBeDisabled();
     checkboxes.forEach((checkbox) => expect(checkbox).toBeDisabled());
 

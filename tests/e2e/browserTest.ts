@@ -15,12 +15,9 @@ type TurnstileWidget = {
   options: TurnstileOptions;
 };
 
-export async function installTurnstileMock(page: Page) {
-  await page.route("https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit", (route) =>
-    route.fulfill({ body: "", contentType: "application/javascript", status: 200 })
-  );
+export type TurnstileMockMode = "init" | "provider-script";
 
-  await page.addInitScript(() => {
+function installTurnstileMockInBrowser() {
     type TestWindow = Window & {
       contactChallengeTest?: (event: "error" | "expired" | "shrink") => void;
       turnstile?: {
@@ -72,7 +69,20 @@ export async function installTurnstileMock(page: Page) {
         widgets.delete(widgetId);
       }
     };
-  });
+}
+
+const providerScriptMock = `(${installTurnstileMockInBrowser.toString()})();`;
+
+export async function installTurnstileMock(page: Page, mode: TurnstileMockMode = "init") {
+  await page.route("https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit", (route) =>
+    route.fulfill({
+      body: mode === "provider-script" ? providerScriptMock : "",
+      contentType: "application/javascript",
+      status: 200
+    })
+  );
+
+  if (mode === "init") await page.addInitScript(installTurnstileMockInBrowser);
 }
 
 /** Provider-owned lifecycle events without changing React-owned page state. */
@@ -82,9 +92,10 @@ export async function triggerContactChallenge(page: Page, event: "error" | "expi
   }, event);
 }
 
-export const test = base.extend({
-  page: async ({ page }, runWithPage) => {
-    await installTurnstileMock(page);
+export const test = base.extend<{ turnstileMockMode: TurnstileMockMode }>({
+  turnstileMockMode: ["init", { option: true }],
+  page: async ({ page, turnstileMockMode }, runWithPage) => {
+    await installTurnstileMock(page, turnstileMockMode);
     await runWithPage(page);
   }
 });

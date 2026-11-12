@@ -1,21 +1,13 @@
-import { themeNames, type ThemeName } from "@/lib/theme/resolveThemeName";
-import { systemThemeMediaQuery, themeStorageKey } from "@/lib/theme/themePreference";
+// This complete, immutable first-paint program uses the server-rendered root
+// data-theme as its fallback. Do not interpolate values into it: it runs before
+// React can apply its normal content escaping guarantees.
+const themePreferenceScript =
+  "(function(){var d=document.documentElement;var t=d.dataset.theme;if([\"navy\",\"light\",\"dark\"].indexOf(t)===-1){t=\"navy\";}var s=null;try{var v=window.localStorage.getItem(\"portfolio-theme\");if(typeof v===\"string\"){s=v.trim().toLowerCase();}}catch(e){}if([\"navy\",\"light\",\"dark\"].indexOf(s)!==-1){t=s;}else{try{if(typeof window.matchMedia===\"function\"){t=window.matchMedia(\"(prefers-color-scheme: dark)\").matches?\"dark\":\"light\";}}catch(e){}}d.dataset.theme=t;}());";
 
-type ThemePreferenceScriptProps = {
-  initialTheme: ThemeName;
-};
-
-export function createThemePreferenceScript(initialTheme: ThemeName) {
-  const fallback = JSON.stringify(initialTheme);
-  const mediaQuery = JSON.stringify(systemThemeMediaQuery);
-  const storageKey = JSON.stringify(themeStorageKey);
-  const supportedThemes = JSON.stringify(themeNames);
-
-  return `(function(){var d=document.documentElement;var t=${fallback};var s=null;try{var v=window.localStorage.getItem(${storageKey});if(typeof v==="string"){s=v.trim().toLowerCase();}}catch(e){}if(${supportedThemes}.indexOf(s)!==-1){t=s;}else{try{if(typeof window.matchMedia==="function"){t=window.matchMedia(${mediaQuery}).matches?"dark":"light";}}catch(e){}}d.dataset.theme=t;}());`;
+export function createThemePreferenceScript() {
+  return themePreferenceScript;
 }
 
-export function ThemePreferenceScript({ initialTheme }: ThemePreferenceScriptProps) {
-  const script = createThemePreferenceScript(initialTheme);
-
-  return <script dangerouslySetInnerHTML={{ __html: script }} />;
+export function ThemePreferenceScript() {
+  return <script dangerouslySetInnerHTML={{ __html: themePreferenceScript }} />;
 }

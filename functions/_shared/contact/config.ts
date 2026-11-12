@@ -31,7 +31,8 @@ export function isAllowedOrigin(request: Request, configuredOrigins?: string): b
 
   const allowedOrigins = parseOrigins(configuredOrigins);
   if (allowedOrigins.length === 0) return false;
-  return allowedOrigins.includes(origin);
+  const targetOrigin = normalizeRequestTargetOrigin(request.url);
+  return Boolean(targetOrigin && allowedOrigins.includes(origin) && origin === targetOrigin);
 }
 
 export function parseHostnames(value?: string): string[] {
@@ -84,6 +85,17 @@ function normalizeOrigin(value: string): string | undefined {
     if (url.protocol !== "https:" && url.protocol !== "http:") return undefined;
     if (url.pathname !== "/" || url.search || url.hash || url.username || url.password) return undefined;
     if (!isValidHostname(url.hostname)) return undefined;
+    return url.origin;
+  } catch {
+    return undefined;
+  }
+}
+
+function normalizeRequestTargetOrigin(value: string): string | undefined {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return undefined;
+    if (!isValidHostname(url.hostname) || url.username || url.password) return undefined;
     return url.origin;
   } catch {
     return undefined;

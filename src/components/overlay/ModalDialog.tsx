@@ -20,6 +20,8 @@ type ModalDialogProps = ModalDialogAccessibleName & {
   dialogId: string;
   frameClassName?: string;
   initialFocusRef?: RefObject<HTMLElement | null>;
+  /** Names persistent inline media before its native dialog presentation opens. */
+  inPlaceAriaLabel?: string;
   onAfterClose?: () => void;
   onOpenError?: () => void;
   onRequestClose: () => void;
@@ -152,6 +154,7 @@ export function ModalDialog({
   dialogId,
   frameClassName,
   initialFocusRef,
+  inPlaceAriaLabel,
   onAfterClose,
   onOpenError,
   onRequestClose,
@@ -437,9 +440,9 @@ export function ModalDialog({
 
   return (
     <dialog
-      aria-describedby={isInactive ? undefined : ariaDescribedBy}
-      aria-label={isInactive ? undefined : ariaLabel}
-      aria-labelledby={isInactive ? undefined : ariaLabelledBy}
+      aria-describedby={ariaDescribedBy}
+      aria-label={isInactive ? (inPlaceAriaLabel ?? ariaLabel) : ariaLabel}
+      aria-labelledby={ariaLabelledBy}
       aria-hidden={isInactive || isAccessible ? undefined : "true"}
       aria-modal={isInactive ? undefined : "true"}
       className={["modal-dialog", "modal-dialog--in-place", rootClassName].filter(Boolean).join(" ")}
@@ -451,7 +454,7 @@ export function ModalDialog({
       onCancel={handleNativeCancel}
       onClick={handleBackdropClick}
       ref={setNativeDialogRoot}
-      role={isInactive ? "presentation" : "dialog"}
+      role={isInactive ? undefined : "dialog"}
       tabIndex={isInactive ? undefined : -1}
     >
       <div

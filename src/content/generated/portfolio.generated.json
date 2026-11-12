@@ -1,7 +1,7 @@
 {
   "metadata": {
-    "generatedAt": "2026-10-07T15:54:55.645Z",
-    "contentHash": "44255cf40136a71d02d14604a57c3c85355cc63ab5bee01752123f6d13c02866",
+    "generatedAt": "2026-10-09T18:01:53.393Z",
+    "contentHash": "9c962d161d863c3d81fc89d754070036fa8b5622c1caf267df525439a52f1780",
     "sourceMode": "templates",
     "sources": {
       "profile": "template",
@@ -499,6 +499,10 @@
         {
           "label": "Source code",
           "url": "https://github.com/nicolasgioanni/Clair"
+        },
+        {
+          "label": "Download",
+          "url": "https://github.com/nicolasgioanni/Clair/releases/latest"
         }
       ],
       "image": "/images/projects/clair-concept.webp",

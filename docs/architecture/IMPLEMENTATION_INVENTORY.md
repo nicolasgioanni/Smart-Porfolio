@@ -22,15 +22,16 @@ For example, `wrangler.jsonc` declares the intended Pages and D1 bindings, while
 | --- | --- | --- | --- |
 | Static export | `next.config.mjs`, `scripts/nextBuildAdapter.mjs`, `scripts/normalizeNextStaticExport.mjs` | Next static export, unoptimized images, and the guarded post-export normalization for generated segment-cache paths. | [Architecture](ARCHITECTURE.md), [Deployment](../operations/DEPLOYMENT.md) |
 | Routes and shell | `src/app/`, `src/app/layout.tsx`, `src/lib/routing/siteRoutes.ts`, `src/components/layout/` | Static pages, metadata entry points, route registry, shell, header, footer, and no-script route fallbacks. | [Project structure](PROJECT_STRUCTURE.md) |
-| Portfolio presentation | `src/components/portfolio/`, `src/components/overlay/`, `src/components/glass/`, `src/components/theme/`, `src/components/motion/` | Server-composed portfolio surfaces and narrowly scoped browser interaction. Shared modal and theme write contracts remain centralized. | [Design system](../design/DESIGN_SYSTEM.md), [Accessibility](../design/ACCESSIBILITY.md) |
+| Portfolio presentation | `src/features/`, `src/components/overlay/`, `src/components/glass/`, `src/components/theme/`, `src/components/motion/` | Server-composed portfolio surfaces and narrowly scoped browser interaction. Shared modal and theme write contracts remain centralized. | [Design system](../design/DESIGN_SYSTEM.md), [Accessibility](../design/ACCESSIBILITY.md) |
 | Content model | `src/content/types.ts`, `src/content/templates/`, `src/lib/content/`, `src/lib/csv/` | Typed public-content shapes, normalization, validation, selection, ordering, metadata, and presentation-safe resolvers. | [Content pipeline](../content/CONTENT_PIPELINE.md), [Content mapping](../content/CONTENT_MAPPING.md) |
 | Content generation | `scripts/fetchPortfolioContent.ts`, `scripts/lib/portfolioContentGeneration.ts`, `scripts/lib/workbookArchive.ts` | Local-template and strict-workbook modes, payload limits, schema checks, generated snapshot, and canonical content hash. | [Content pipeline](../content/CONTENT_PIPELINE.md) |
-| Local project visuals | `src/lib/projects/`, `src/components/portfolio/projects/`, `public/images/projects/` | Local visual metadata and accessible visual views for established workbook project records. The workbook still owns records and ordering. | [Project showcase](../content/PROJECT_SHOWCASE.md) |
-| Contact runtime | `functions/api/`, `functions/_shared/contact/`, `migrations/`, `src/components/contact/` | The two Pages Functions, browser flow, strict request handling, signed verification ticket, pseudonymous D1 reservation, and provider calls. | [Contact system](../security/CONTACT_SYSTEM.md) |
+| Local project visuals | `src/features/projects/`, `public/images/projects/` | Local visual metadata and accessible visual views for established workbook project records. The workbook still owns records and ordering. | [Project showcase](../content/PROJECT_SHOWCASE.md) |
+| Contact runtime | `functions/api/`, `functions/_shared/contact/`, `migrations/`, `src/features/contact/` | The two Pages Functions, browser flow, strict request handling, signed verification ticket, pseudonymous D1 reservation, and provider calls. | [Contact system](../security/CONTACT_SYSTEM.md) |
 | Runtime routing and headers | `public/_routes.json`, `public/_headers`, `wrangler.jsonc` | The exact Function allowlist, static response headers, Pages output directory, reviewed non-secret values, and D1 binding declarations. | [Security](../security/SECURITY.md), [Deployment](../operations/DEPLOYMENT.md) |
-| Verification and release | `.github/workflows/ci.yml`, `scripts/runValidationTier.mjs`, `scripts/artifactIntegrity.mjs`, `scripts/checkDeployedContent.mjs`, `scripts/writeContentVersion.mjs` | Candidate selection, test tiers, content and artifact metadata, artifact transfer checks, deployment commands, and bounded smoke checks. | [Testing](../quality/TESTING.md), [Operations](../operations/OPERATIONS.md) |
+| Infrastructure ownership | `infra/`, `docs/infrastructure/TERRAFORM_OWNERSHIP.md` | Declared ownership, validation, and policy for supported infrastructure; configuration and fixtures do not prove live posture. | [Terraform ownership](../infrastructure/TERRAFORM_OWNERSHIP.md) |
+| Verification and release | `.github/workflows/ci.yml`, `scripts/ci/`, `scripts/release/`, `scripts/artifactIntegrity.mjs` | Candidate and snapshot selection, source and application receipts, sealed static and compiled Functions runtime, artifact transfer checks, deployment commands, and bounded smoke checks. | [Testing](../quality/TESTING.md), [Operations](../operations/OPERATIONS.md) |
 
-There is no `src/features/` layer in this repository. Portfolio domains belong in `src/components/portfolio/`; content transformation and selection belong in `src/lib/content/`; reusable presentation primitives remain under `src/components/`; and route composition belongs in `src/app/`.
+Feature-owned domain UI, selectors, loaders, and styles live in `src/features/`; neutral content transformations belong in `src/lib/content/`; shared and compatibility components remain under `src/components/`; and route composition belongs in `src/app/`. See [Project structure](PROJECT_STRUCTURE.md) for the enforced import graph.
 
 ## End-to-end paths
 
@@ -42,7 +43,7 @@ flowchart LR
     Generate --> Validate[Normalization and validation]
     Validate --> Snapshot[src/content/generated/portfolio.generated.json]
     Snapshot --> Content[src/lib/content selectors and resolvers]
-    Content --> Routes[src/app and src/components/portfolio]
+    Content --> Routes[src/app and src/features]
     Routes --> Export[out static export]
 ```
 
@@ -63,7 +64,7 @@ sequenceDiagram
     Verify-->>Browser: host-only signed ticket
     Browser->>Deliver: validated form and same submission ID
     Deliver->>D1: reserve pseudonymous quota slot
-    Deliver->>Resend: visitor acceptance, then owner notification
+    Deliver->>Resend: visitor confirmation, then owner notification
     Deliver-->>Browser: success or documented retryable failure
 ```
 
@@ -98,12 +99,12 @@ This inventory is the directory map, not a second copy of every contract. Keep d
 
 | Area | Owner guides | Primary implementation evidence |
 | --- | --- | --- |
-| Architecture and placement | [Architecture](ARCHITECTURE.md), [Project structure](PROJECT_STRUCTURE.md) | `src/app/`, `src/components/`, `src/lib/`, configuration entry points |
+| Architecture and placement | [Architecture](ARCHITECTURE.md), [Project structure](PROJECT_STRUCTURE.md) | `src/app/`, `src/features/`, `src/components/`, `src/lib/`, configuration entry points |
 | Content source and presentation mapping | [Content pipeline](../content/CONTENT_PIPELINE.md), [Content sheet schema](../content/CONTENT_SHEET_SCHEMA.md), [Content mapping](../content/CONTENT_MAPPING.md), [Project showcase](../content/PROJECT_SHOWCASE.md), [Research media](../content/RESEARCH_MEDIA.md) | content types, templates, generator, selectors, visual/media resolvers |
 | Interface contracts | [Design system](../design/DESIGN_SYSTEM.md), [Accessibility](../design/ACCESSIBILITY.md), [Animation guidelines](../design/ANIMATION_GUIDELINES.md), [Skeleton loading guidelines](../design/SKELETON_LOADING_GUIDELINES.md) | components, semantic styles, and focused UI tests |
 | Local change and recovery procedures | [Local development](../development/LOCAL_DEVELOPMENT.md), [Maintenance](../development/MAINTENANCE.md), [Troubleshooting](../development/TROUBLESHOOTING.md), [Agent workflow](../development/AGENT_WORKFLOW.md) | package scripts, local automation, and repository guidance |
-| Quality and performance | [Testing](../quality/TESTING.md), [Performance budget](../quality/PERFORMANCE_BUDGET.md), [Quality checklist](../quality/QUALITY_CHECKLIST.md) | package scripts, test files, browser configuration, and workflow tiers |
-| Release and live operations | [Deployment](../operations/DEPLOYMENT.md), [Operations](../operations/OPERATIONS.md), [Search indexing](../operations/SEARCH_INDEXING.md) | CI workflow, release scripts, static metadata, and operator-managed services |
+| Quality and performance | [Testing](../quality/TESTING.md), [Performance budget](../quality/PERFORMANCE_BUDGET.md), [Quality checklist](../quality/QUALITY_CHECKLIST.md), [CI contracts](../quality/CI_CONTRACTS.md) | package scripts, test files, browser configuration, and CI workflow |
+| Release and live operations | [Deployment](../operations/DEPLOYMENT.md), [Operations](../operations/OPERATIONS.md), [Search indexing](../operations/SEARCH_INDEXING.md), [Terraform ownership](../infrastructure/TERRAFORM_OWNERSHIP.md) | CI workflow, release scripts, static metadata, and operator-managed services |
 | Security and personal-data handling | [Security](../security/SECURITY.md), [Contact system](../security/CONTACT_SYSTEM.md), [Security checklist](../security/SECURITY_CHECKLIST.md) | Function handlers, shared contact modules, headers, routes, migrations, and security tests |
 
 Run `npm run docs:check` after documentation changes. Then use the narrowest relevant test or validation command from [Testing](../quality/TESTING.md); a documentation-only change does not create browser evidence or prove an external provider's current state.

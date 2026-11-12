@@ -17,6 +17,7 @@ import {
   type ContactRateLimitResult
 } from "../_shared/contact";
 import { oversizedJsonResponse, stalledJsonResponse } from "../testSupport/streams";
+import { createDeadline } from "../_shared/contact/transport";
 import { onRequest } from "./contact";
 
 const privateRecipient = "private-owner@example.net";
@@ -31,6 +32,8 @@ interface ReservationRow {
   submission_id: string;
   email_hash: string;
   payload_hash: string | null;
+  delivery_config_hash: string | null;
+  render_version: number | null;
   reserved_at: number;
   expires_at: number;
 }
@@ -91,10 +94,12 @@ class FakeContactDatabase implements ContactRateLimitDatabase {
     }
 
     if (query.startsWith("INSERT INTO contact_rate_reservations")) {
-      const [id, emailHash, payloadHash, reservedAt, expiresAt] = statement.values as [
+      const [id, emailHash, payloadHash, deliveryConfigHash, renderVersion, reservedAt, expiresAt] = statement.values as [
         string,
         string,
         string,
+        string,
+        number,
         number,
         number
       ];
@@ -107,6 +112,8 @@ class FakeContactDatabase implements ContactRateLimitDatabase {
           submission_id: id,
           email_hash: emailHash,
           payload_hash: payloadHash,
+          delivery_config_hash: deliveryConfigHash,
+          render_version: renderVersion,
           reserved_at: reservedAt,
           expires_at: expiresAt
         });
@@ -158,6 +165,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
@@ -277,6 +285,39 @@ describe("contact payload validation", () => {
 });
 
 describe("Cloudflare contact function security boundary", () => {
+  it("stops after the forty-second delivery deadline when ticket verification stalls", async () => {
+    const cookie = await ticketCookie();
+    vi.useFakeTimers();
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const batch = vi.spyOn(rateLimitDatabase, "batch");
+    let resolveDerivation!: (key: CryptoKey) => void;
+    const deriveKey = vi.spyOn(crypto.subtle, "deriveKey").mockImplementation(
+      () => new Promise<CryptoKey>((resolve) => { resolveDerivation = resolve; })
+    );
+    const sign = vi.spyOn(crypto.subtle, "sign");
+
+    const responsePromise = invoke(requestFor(validPayload(), { cookie }));
+    for (let attempt = 0; attempt < 20 && !deriveKey.mock.calls.length; attempt += 1) {
+      await vi.advanceTimersByTimeAsync(0);
+    }
+    expect(deriveKey).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(40_000);
+
+    const response = await responsePromise;
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ ok: false, error: "service_unavailable" });
+    expect(response.headers.get("Set-Cookie")).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(batch).not.toHaveBeenCalled();
+
+    resolveDerivation({} as CryptoKey);
+    await Promise.resolve();
+    expect(sign).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(batch).not.toHaveBeenCalled();
+  });
+
   it.each(["person@gmail.con", "person@test.gomm"])("rejects unknown endings in %s before DNS, quota, or email providers", async (email) => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
@@ -295,7 +336,16 @@ describe("Cloudflare contact function security boundary", () => {
     expect(response.status).toBe(405);
     expect(response.headers.get("Allow")).toBe("POST");
     expect(response.headers.get("Cache-Control")).toContain("no-store");
+    expect(response.headers.get("Content-Security-Policy")).toBe(
+      "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+    );
+    expect(response.headers.get("Permissions-Policy")).toBe(
+      "camera=(), geolocation=(), microphone=(), payment=(), usb=()"
+    );
+    expect(response.headers.get("Referrer-Policy")).toBe("no-referrer");
+    expect(response.headers.get("Strict-Transport-Security")).toBe("max-age=31536000");
     expect(response.headers.get("X-Content-Type-Options")).toBe("nosniff");
+    expect(response.headers.get("X-Frame-Options")).toBe("DENY");
     expect(await response.json()).toEqual({ ok: false, error: "method_not_allowed" });
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -305,6 +355,28 @@ describe("Cloudflare contact function security boundary", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     expect((await invoke(requestFor(validPayload(), { origin: "https://attacker.example" }))).status).toBe(403);
+    expect(
+      (
+        await invoke(
+          new Request("https://attacker.example/api/contact", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Origin: "https://nicolasmgioanni.dev" },
+            body: JSON.stringify(validPayload())
+          })
+        )
+      ).status
+    ).toBe(403);
+    expect(
+      (
+        await invoke(
+          new Request("https://nicolasmgioanni.dev/api/contact", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(validPayload())
+          })
+        )
+      ).status
+    ).toBe(403);
     expect(
       (
         await invoke(
@@ -567,6 +639,50 @@ describe("email-domain validation", () => {
 });
 
 describe("pseudonymous rolling quota", () => {
+  it("fails closed when a D1 batch reaches its three-second deadline", async () => {
+    const cookie = await ticketCookie();
+    const startedAt = Date.now();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(startedAt));
+    const originalBatch = rateLimitDatabase.batch.bind(rateLimitDatabase);
+    let resolveBatch!: () => void;
+    const batch = vi.spyOn(rateLimitDatabase, "batch").mockImplementation((statements) => {
+      return new Promise((resolve, reject) => {
+        resolveBatch = () => {
+          void originalBatch(statements).then(resolve, reject);
+        };
+      });
+    });
+    const fetchMock = vi.fn().mockResolvedValueOnce(mxResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    const responsePromise = invoke(requestFor(validPayload(), { cookie }));
+    for (let attempt = 0; attempt < 20 && !batch.mock.calls.length; attempt += 1) {
+      await vi.advanceTimersByTimeAsync(0);
+    }
+    expect(batch).toHaveBeenCalledTimes(1);
+
+    vi.setSystemTime(new Date(startedAt + 3_000));
+    resolveBatch();
+    await vi.advanceTimersByTimeAsync(0);
+
+    const response = await responsePromise;
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ ok: false, error: "service_unavailable" });
+    expect(fetchMock.mock.calls.some(([url]) => url === "https://api.resend.com/emails")).toBe(false);
+  });
+
+  it("does not start a batch after a standalone reservation deadline expires", async () => {
+    vi.useFakeTimers();
+    const batch = vi.spyOn(rateLimitDatabase, "batch");
+    const deadline = createDeadline(1);
+    await vi.advanceTimersByTimeAsync(1);
+
+    await expect(reserveContactSubmission(validPayload(), env, Date.now(), deadline)).resolves.toEqual({ kind: "unavailable" });
+    expect(batch).not.toHaveBeenCalled();
+    deadline.clear();
+  });
+
   it("allows exactly two active IDs, normalizes email case/whitespace, and returns the earliest retry time", async () => {
     const now = Date.UTC(2026, 7, 30, 12, 0, 0);
     const first = await reserveContactSubmission(
@@ -585,7 +701,7 @@ describe("pseudonymous rolling quota", () => {
       now + 2_000
     );
 
-    expect(first).toEqual({ kind: "reserved", reservedAt: Math.floor(now / 1_000) });
+    expect(first).toEqual({ kind: "reserved", reservedAt: Math.floor(now / 1_000), renderVersion: 1 });
     expect(second.kind).toBe("reserved");
     expect(third).toEqual({
       kind: "rate-limited",
@@ -645,6 +761,20 @@ describe("pseudonymous rolling quota", () => {
     await expect(reserveContactSubmission(payload, env, now + 1_000)).resolves.toEqual({ kind: "mismatch" });
   });
 
+  it("fails closed for a retry when delivery configuration or renderer identity changed", async () => {
+    const payload = validPayload();
+    await expect(reserveContactSubmission(payload, env)).resolves.toMatchObject({ kind: "reserved" });
+
+    await expect(
+      reserveContactSubmission(payload, { ...env, CONTACT_REPLY_TO_EMAIL: "changed-reply@example.com" })
+    ).resolves.toEqual({ kind: "retry-unavailable" });
+
+    const row = rateLimitDatabase.rows.get(submissionId);
+    if (!row) throw new Error("Expected test reservation.");
+    row.render_version = null;
+    await expect(reserveContactSubmission(payload, env)).resolves.toEqual({ kind: "retry-unavailable" });
+  });
+
   it("removes expired reservations and permits a fresh rolling-window submission", async () => {
     const now = Date.UTC(2026, 7, 30, 12, 0, 0);
     await reserveContactSubmission(validPayload(), env, now);
@@ -676,6 +806,32 @@ describe("pseudonymous rolling quota", () => {
 });
 
 describe("sequential contact delivery", () => {
+  it("aborts a stalled Resend request at the bounded provider deadline", async () => {
+    const cookie = await ticketCookie();
+    vi.useFakeTimers();
+    let providerSignal: AbortSignal | undefined;
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(mxResponse())
+      .mockImplementationOnce((_url: string, init: RequestInit) => {
+        providerSignal = init.signal ?? undefined;
+        return new Promise<Response>(() => undefined);
+      });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const responsePromise = invoke(requestFor(validPayload(), { cookie }));
+    for (let attempt = 0; attempt < 20 && fetchMock.mock.calls.length < 2; attempt += 1) {
+      await vi.advanceTimersByTimeAsync(0);
+    }
+    expect(providerSignal?.aborted).toBe(false);
+    await vi.advanceTimersByTimeAsync(8_000);
+
+    const response = await responsePromise;
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({ ok: false, error: "delivery_failed" });
+    expect(providerSignal?.aborted).toBe(true);
+  });
+
   it("sends the visitor first, then the owner with stable distinct idempotency keys", async () => {
     const payload = validPayload({
       firstName: "Avery <script>",
@@ -897,7 +1053,7 @@ describe("contact email templates", () => {
       reply_to: "avery@example.com",
       subject: "New contact request from Avery <script> Nguyen & Co."
     });
-    expect(owner.html).toContain('href="mailto:avery@example.com"');
+    expect(owner.html).toContain('href="mailto:avery%40example.com"');
     expect(owner.html).not.toContain("Privacy Notice");
     expect(owner.html).not.toContain("Site Terms");
     expect(owner.text).not.toContain("Acknowledgments");

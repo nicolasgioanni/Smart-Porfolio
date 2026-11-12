@@ -1,18 +1,16 @@
 import type { ExperienceItem, GeneratedPortfolioContent, PortfolioLink, ProfileContent, ProjectItem } from "@/content/types";
 import { describe, expect, it } from "vitest";
-import { experienceSkeletonProfiles } from "@/components/loading/ExperiencePageSkeleton";
-import { getProjectSkeletonProfiles } from "@/components/loading/projectSkeletonProfiles";
-import { researchSkeletonProfiles } from "@/components/loading/ResearchPageSkeleton";
-import { getExperienceModeContent } from "@/lib/content/experienceNarratives";
-import { getResearchFormalTitle, getResearchModeContent, getResearchVisibleResources } from "@/lib/content/researchNarratives";
-import { getProfileIdentityItems } from "@/lib/content/profileOverview";
+import { experienceSkeletonProfiles } from "@/features/experience/loading/ExperiencePageSkeleton";
+import { getProjectSkeletonProfiles } from "@/features/projects/loading/projectSkeletonProfiles";
+import { researchSkeletonProfiles } from "@/features/research/loading/ResearchPageSkeleton";
+import { selectResearchDetailContent } from "@/features/research/content/selectResearchDetailContent";
+import { getExperienceModeContent } from "@/features/experience/content/experienceNarratives";
+import { getResearchFormalTitle, getResearchModeContent, getResearchVisibleResources } from "@/features/research/content/researchNarratives";
+import { getProfileIdentityItems } from "@/features/home/content/profileOverview";
 import { resolveRouteHeaderContent, routeHeaderContent } from "@/lib/content/routeHeaderContent";
 import { siteRoutePaths, siteRoutes } from "@/lib/routing/siteRoutes";
-import {
-  selectExperienceDetailContent,
-  selectProjectDetailContent,
-  selectResearchDetailContent
-} from "@/lib/content/selectDetailContent";
+import { selectExperienceDetailContent } from "@/features/experience/content/selectExperienceDetailContent";
+import { selectProjectDetailContent } from "@/features/projects/content/selectProjectDetailContent";
 import { researchSkeletonFixtures } from "../../../tests/fixtures/researchSkeletonContent";
 
 const projectContentFixture: ProjectItem[] = [
@@ -165,6 +163,7 @@ describe("skeleton source contracts", () => {
     expect(projectSkeletonProfiles.map((profile) => profile.id)).toEqual(projects.map((project) => project.id));
     expect(projectSkeletonProfiles.map((profile) => profile.actionWidths.length)).toEqual([2, 1, 1]);
     expect(projectSkeletonProfiles.map((profile) => profile.summaryWidths)).toEqual([[100, 86], [100, 72], [100, 86]]);
+    expect(projectSkeletonProfiles.map((profile) => profile.hasAttribution)).toEqual([true, false, false]);
     expect(projects.map((project) => project.links.length)).toEqual([2, 1, 1]);
   });
 
@@ -201,8 +200,7 @@ describe("skeleton source contracts", () => {
       "adversarial-machine-learning",
       "yeast-dna-target-selection"
     ]);
-    expect(researchSkeletonProfiles.map((profile) => profile.media)).toEqual(["video", "explainer", "explainer"]);
-    expect(researchSkeletonProfiles.map((profile) => profile.legend)).toEqual([false, false, true]);
+    expect(researchSkeletonProfiles.map((profile) => profile.media)).toEqual(["video", "abstract", "abstract"]);
     expect(researchSkeletonProfiles.map((profile) => profile.resourceWidths.length)).toEqual([4, 3, 1]);
     expect(researchSkeletonProfiles.every((profile) => profile.organizationLogo && profile.impact)).toBe(true);
 

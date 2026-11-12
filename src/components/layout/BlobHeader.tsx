@@ -1,7 +1,7 @@
 import type { GeneratedPortfolioContent } from "@/content/types";
 import { InteractiveBlobHeader } from "@/components/layout/InteractiveBlobHeader";
 import { createNavigationItems } from "@/components/navigation/navigationItems";
-import { selectHeaderLinks } from "@/lib/content/selectHomeContent";
+import { selectHeaderLinks } from "@/lib/content/selectHeaderLinks";
 import { SITE_PROFILE_IMAGE } from "@/lib/seo/siteConfig";
 import type { ThemeName } from "@/lib/theme/resolveThemeName";
 

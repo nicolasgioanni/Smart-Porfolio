@@ -8,7 +8,7 @@ import { canonicalHomeProjectSkeletonItems, canonicalProjectSkeletonItems } from
 // made available before it imports the app's automatic-runtime component graph.
 (globalThis as typeof globalThis & { React: typeof React }).React = React;
 
-const { RouteSkeleton } = await import("../../src/components/loading/RouteSkeleton");
+const { RouteSkeleton } = await import("../../src/app/RouteSkeleton");
 
 const markupByRoute = Object.fromEntries(
   siteRoutePaths.map((pathname) => [

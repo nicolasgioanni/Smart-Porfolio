@@ -52,18 +52,21 @@ When the command runs directly, it loads the ignored root `.env` file if present
 
 The remote path accepts exactly one complete workbook snapshot. It can make at most two independent requests so one transient source failure does not discard an otherwise valid deployment candidate:
 
-- The URL must use HTTPS and must not contain a username or password.
-- Fetch credentials are omitted, redirects are followed, and no authorization or cookie header is added.
-- The request advertises XLSX and generic binary responses through `Accept`.
-- Each attempt has a 15-second deadline covering response headers and the complete capped body.
+- The initial URL and every redirect target must use HTTPS, have no username, password, or non-default port, and name a DNS hostname rather than a local, private, reserved, or IP-literal destination.
+- Redirects are handled manually. A chain permits at most five redirects, requires a non-empty `Location`, rejects cycles, validates each resolved target before requesting it, and never accepts an HTTPS downgrade.
+- Each hop resolves all DNS answers under the same attempt deadline. The build-only Node HTTPS transport rejects the hop if any answer is not conservatively public, then pins one validated answer in its connection lookup. It retains the original hostname for the `Host` header, SNI, and normal TLS certificate validation, so the connection performs no later DNS lookup for that hop.
+- Fetch credentials are omitted, no authorization or cookie header is added, and the request advertises XLSX and generic binary responses through `Accept`.
+- Each attempt has a 15-second deadline covering DNS resolution, every redirect response, response headers, and the complete capped body.
 - A retryable failure waits one fixed second before one final attempt, for a maximum 31-second download window. Each attempt uses a fresh request and never combines bytes from different responses.
 - The maximum compressed response size is 5 MiB. A non-empty `Content-Length` must parse as a non-negative safe integer or generation fails. The declared size and the streamed or fallback body size are each enforced.
 - Deadlines, network or stream interruptions, HTTP 408, HTTP 429, and HTTP 5xx responses are retryable. Other HTTP 4xx responses and invalid length or size boundaries fail immediately.
-- Download failures use generic errors that do not include the configured URL. A timed-out stream is cancelled and partial bytes are discarded.
+- Download failures use generic errors that do not include the configured URL. Rejected response and stream bodies, including late responses, are cancelled on a best-effort, non-blocking basis, and partial bytes are discarded.
 
 Payload validation rejects a `text/html` response type, common HTML or login content at the start of the body, and data without a ZIP signature. Before ExcelJS receives any workbook bytes, JSZip reads the ZIP central directory and streams every non-directory resolved archive entry to measure decoded output. The archive permits at most 128 resolved entries, 16 MiB decoded per entry, and 32 MiB decoded across all entries; the measurement does not trust ZIP-advertised uncompressed sizes. ExcelJS must then parse the bounded bytes as a valid, non-empty XLSX workbook. The response MIME type is not an allowlist by itself. A non-HTML MIME type can proceed only when the ZIP and XLSX checks also succeed.
 
-The workbook is intentionally anonymous public input. Secret storage in GitHub Actions is used for runner-log redaction, not authentication.
+The workbook is intentionally anonymous public input. Secret storage in GitHub Actions is used for runner-log redaction, not authentication. Public-address validation and DNS pinning constrain where the configured workbook client connects; they do not establish that an arbitrary public hostname is an approved content publisher. A reviewed hostname allowlist remains a separate source-governance decision if the provider set becomes stable.
+
+The address filter is a conservative defensive policy. It rejects IPv4 special-use, private, loopback, link-local, documentation, multicast, and reserved ranges. For IPv6, it admits only `2000::/3` after excluding IANA special-purpose blocks within that range, including `2001::/23`, `2001:db8::/32`, `2002::/16`, and `3fff::/20`; mapped, translated, unique-local, site-local, link-local, and reserved-family addresses are outside that allowance.
 
 ## Workbook structure checks
 
@@ -105,7 +108,7 @@ Row conversion uses displayed cell text:
 
 The `profile` and `site_settings` workbook tabs accept only their explicit key allowlists and reject duplicate keys.
 
-Local CSV templates use the same exact headers and row normalization. The local parser does not apply the workbook-only unknown-key and duplicate-key checks for `profile` and `site_settings`, so authors should still treat the remote allowlists as the contract. Collection IDs are validated in both modes.
+Local CSV templates use the same exact headers, row normalization, key allowlists, and duplicate-key checks as the workbook path. `profile.timezone` and its legacy `time_zone` alias resolve to the same canonical field, so they cannot appear together. Collection IDs are validated in both modes.
 
 ## Normalization and validation
 
@@ -115,6 +118,8 @@ Generation applies four layers:
 2. Normalize keys, booleans, numbers, lists, links, optional values, and supported date settings.
 3. Validate required fields, unique IDs, references, grouped fields, URLs, and content invariants.
 4. Import and validate the generated JSON again through `getPortfolioContent()` during the static build.
+
+The parser boundary is an adapter seam: a checked-in CSV set or one validated workbook can produce the same `RawPortfolioSheets` input, but only this build-time adapter may read either source. New authoring sources must implement the same bounded, exact-header, canonical-key validation before normalization; they must not add a browser fetch, a runtime CMS client, or a second generated-content format.
 
 Important normalization rules include:
 
@@ -205,17 +210,14 @@ The package scripts deliberately separate generation from candidate consumption:
 - `npm run build` runs `prebuild`, regenerates content, creates the static export, and writes `out/content-version.json`.
 - `npm run build:generated` consumes the existing generated JSON without another workbook download, then writes `out/content-version.json`.
 
-Pull requests generate from local templates without remote credentials. Current `main` and `develop` pushes, scheduled checks, and manual deployment candidates use strict remote mode. The verify job accepts one complete workbook snapshot through the bounded download policy, tests and builds that snapshot, creates an integrity manifest, and uploads the exact `out/` artifact. The deploy job downloads and verifies the artifact without rebuilding or fetching content again.
+Pull requests generate from local templates without remote credentials. Current `main` and `develop` pushes, scheduled checks, and manual deployment candidates use strict remote mode. CI accepts one complete workbook snapshot through the bounded download policy, restores it for parallel consumers, and produces one sealed candidate. A lightweight `verify` aggregate accepts the exact required receipts and producer artifacts before deployment restores that exact artifact without rebuilding or fetching content again. See [CI input and evidence contracts](../quality/CI_CONTRACTS.md) for the authoritative job and receipt graph.
 
-`out/content-version.json` contains only:
+`out/content-version.json` has two valid forms:
 
-- schema version;
-- content hash;
-- exact candidate commit SHA;
-- generated timestamp;
-- deployment timestamp.
+- Ordinary local callers without `RELEASE_TARGET` write schema-v1 metadata: content hash, exact candidate commit SHA, generation timestamp, and deployment timestamp.
+- A full CI candidate writes schema-v2 metadata: target, content hash, exact candidate commit SHA, generation and deployment timestamps, target-specific public-build-input digest, and a GitHub Actions producer (`kind`, `runId`, `runNumber`, and `attempt`).
 
-Scheduled and non-forced manual checks compare both the candidate content hash and exact commit SHA with the active production manifest. Equality on both fields is a successful no-op before lint, tests, build, artifact upload, and deployment. If either field differs, the complete verified deployment path runs. A failure before Wrangler Direct Upload does not change the active target. Once Wrangler returns successfully, a later smoke failure can mean the new deployment is already active; the workflow does not roll it back automatically.
+Scheduled and non-forced manual preparation can recognize an equivalent active v2 identity only when target, producer kind, candidate commit SHA, content hash, and public-build-input digest match. This validated no-op omits heavy application work and cannot authorize deployment; independent source-security jobs and the aggregate gate still run. For a fully verified deployment candidate, the deployment lock permits smoke-only execution when its exact identity is already active, rejects older or conflicting generations, and admits a newer generation for deployment. Legacy identity requires full validation; malformed or ambiguous identity fails closed. A failure before Pages upload leaves the previous Pages deployment active, but any completed D1 migration remains applied. After upload, a smoke failure can leave the new deployment serving; the workflow performs no automatic rollback.
 
 See [Deployment](../operations/DEPLOYMENT.md) for branch, artifact, Cloudflare, and rollback behavior.
 
@@ -231,7 +233,7 @@ See [Deployment](../operations/DEPLOYMENT.md) for branch, artifact, Cloudflare, 
 | Field normalization | `src/lib/content/normalizePortfolioContent.ts` |
 | Content validation and URL policy | `src/lib/content/validatePortfolioContent.ts` |
 | Runtime generated-content import | `src/lib/content/getPortfolioContent.ts` |
-| Home and detail selectors | `src/lib/content/selectHomeContent.ts` |
+| Home and detail selectors | `src/features/home/content/selectHomeContent.ts` |
 | Ordering | `src/lib/content/sortPortfolioContent.ts` |
 | Content generation tests | `scripts/portfolioContentGeneration.test.ts` |
 | Mapping and selector tests | `src/lib/content/content.test.ts` |

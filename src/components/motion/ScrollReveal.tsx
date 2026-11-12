@@ -12,7 +12,7 @@ type ScrollRevealProps = {
 };
 
 export function ScrollReveal({ as: Component = "div", children, className, delay = "none", enabled = true }: ScrollRevealProps) {
-  const { ref, visible } = useIntersectionMotion<HTMLElement>({ enabled });
+  const { ref, ready, visible } = useIntersectionMotion<HTMLElement>({ enabled });
 
   if (!enabled) {
     return <Component className={className}>{children}</Component>;
@@ -20,7 +20,7 @@ export function ScrollReveal({ as: Component = "div", children, className, delay
 
   return (
     <Component
-      className={["motion-reveal", `motion-reveal--delay-${delay}`, visible ? "is-visible" : "", className]
+      className={["motion-reveal", `motion-reveal--delay-${delay}`, ready ? "motion-ready" : "", visible ? "is-visible" : "", className]
         .filter(Boolean)
         .join(" ")}
       ref={ref}

@@ -2,6 +2,7 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { validateWorkflowYaml } from "./ci/workflowYaml.mjs";
 import { createArtifactManifest, verifyArtifactManifest } from "./artifactIntegrity.mjs";
 import { resolvePagesDeploymentUrl } from "./checkDeployedContent.mjs";
 import {
@@ -9,6 +10,7 @@ import {
   priorityTestTargets,
   requiredPriorityFiles
 } from "./runValidationTier.mjs";
+import { sealedRuntimeConfigContracts } from "./release/runtimeConfig.mjs";
 import { readContentVersion, writeContentVersion } from "./writeContentVersion.mjs";
 
 const projectRoot = path.resolve(import.meta.dirname, "..");
@@ -36,17 +38,27 @@ describe("package and CI deployment automation", () => {
     expect(packageJson.scripts["build:generated"]).toBe(
       "next build && node scripts/writeContentVersion.mjs"
     );
+    expect(packageJson.scripts["release:build"]).toBe("node scripts/release.mjs build");
+    expect(packageJson.scripts["release:compile"]).toBe("node scripts/release.mjs compile");
+    expect(packageJson.scripts["release:package"]).toBe("node scripts/release.mjs package");
+    expect(packageJson.scripts["release:runtime"]).toBe("node scripts/release.mjs runtime");
+    expect(packageJson.scripts["test:e2e:release-static"]).toContain("playwright.release.config.ts");
     expect(nextConfigSource).toMatch(/adapterPath:\s*fileURLToPath\(new URL\("\.\/scripts\/nextBuildAdapter\.mjs"/);
     expect(nextConfigSource).toMatch(/output:\s*"export"/);
     expect(packageJson.scripts["dev:pages"]).toContain("npx --no-install wrangler");
     expect(packageJson.scripts["docs:check"]).toBe("node scripts/validateDocumentation.mjs");
-    expect(packageJson.scripts.verify).toBe(
-      "npm run docs:check && npm run lint && npm run typecheck && npm run test && npm run build"
-    );
+    expect(packageJson.scripts["audit:check"]).toBe("node scripts/checkDependencyAudit.mjs");
+    expect(packageJson.scripts["generate:content"]).toBe("node scripts/generateContent.mjs");
+    expect(packageJson.scripts.verify).toBe("node scripts/runVerification.mjs verify");
     expect(packageJson.scripts["test:priority"]).toBe(
       "node scripts/runValidationTier.mjs priority"
     );
-    expect(packageJson.devDependencies.wrangler).toBe("4.131.0");
+    expect(packageJson.dependencies.next).toBe("^16.4.0");
+    expect(packageJson.devDependencies["@next/eslint-plugin-next"]).toBe("^16.4.0");
+    expect(packageJson.devDependencies.wrangler).toBe("4.148.0");
+    expect(packageJson.devDependencies.miniflare).toBe("5.20261006.0-alpha");
+    expect(packageJson.devDependencies.yaml).toBe("2.9.1");
+    expect(packageJson.devDependencies["js-yaml"]).toBeUndefined();
     expect(packageJson.devDependencies.vitest).toBe("4.1.11");
     expect(packageJson.devDependencies["@playwright/test"]).toMatch(/^\^1\./);
     expect(packageJson.scripts["test:footer"]).toBe(
@@ -56,7 +68,7 @@ describe("package and CI deployment automation", () => {
       "vitest run src/components/navigation/MobileNavigation.test.tsx src/components/navigation/navigation.test.tsx src/components/navigation/navigationStyles.test.ts src/components/responsive/useMediaQuery.test.tsx src/components/theme/ThemeSwitcher.test.tsx"
     );
     expect(packageJson.scripts["test:skeletons"]).toBe(
-      "vitest run src/components/loading/skeleton.test.tsx src/components/loading/skeletonStyles.test.ts src/components/loading/skeletonContentContract.test.ts src/components/loading/ResearchPageSkeleton.test.tsx scripts/renderRouteSkeleton.test.mjs src/components/motion/pageEntryStyles.test.ts"
+      "vitest run src/components/loading/skeleton.test.tsx src/components/loading/skeletonStyles.test.ts src/components/loading/skeletonContentContract.test.ts src/features/research/loading/ResearchPageSkeleton.test.tsx scripts/renderRouteSkeleton.test.mjs src/components/motion/pageEntryStyles.test.ts"
     );
     expect(packageJson.scripts["test:e2e:navigation"]).toBe(
       "playwright test navigation.spec.ts --project=chromium"
@@ -73,6 +85,15 @@ describe("package and CI deployment automation", () => {
     expect(packageJson.scripts["test:skeleton-guidance"]).toBe(
       "vitest run scripts/skeletonGuidance.test.mjs"
     );
+    expect(packageJson.scripts["test:quality:properties"]).toBe(
+      "vitest run scripts/quality/contactBoundary.property.test.ts"
+    );
+    expect(packageJson.scripts["test:quality:mutations"]).toBe(
+      "vitest run scripts/quality/contactGuardMutation.test.mjs"
+    );
+    expect(packageJson.scripts["test:quality:payload"]).toBe(
+      "node scripts/quality/payloadBudget.mjs --out out --next .next"
+    );
     expect(packageJson.scripts["test:e2e:footer"]).toBe(
       "playwright test footer.spec.ts --project=chromium"
     );
@@ -88,42 +109,64 @@ describe("package and CI deployment automation", () => {
     expect(packageJson.scripts["test:e2e:research:webkit"]).toBe(
       "playwright test research.spec.ts research-mobile-video.spec.ts --project=webkit-mobile --grep @mobile-video"
     );
+    expect(packageJson.scripts["test:e2e:projects:webkit"]).toBe(
+      "playwright test projects.spec.ts --project=webkit-mobile --grep @mobile-projects"
+    );
     expect(packageJson.scripts["test:e2e:contact"]).toBe(
       "playwright test contact.spec.ts --project=chromium"
     );
+    expect(packageJson.scripts["test:e2e:accessibility"]).toBe(
+      "playwright test accessibility.spec.ts --project=chromium"
+    );
+    expect(packageJson.scripts["test:e2e:critical:firefox"]).toBe(
+      "playwright test critical-quality.spec.ts --project=firefox-critical"
+    );
+    expect(packageJson.scripts["test:e2e:critical:webkit"]).toBe(
+      "playwright test critical-quality.spec.ts --project=webkit-critical"
+    );
     expect(packageJson.scripts["test:e2e:priority"]).toBe(
-      "playwright test skeleton-alignment.spec.ts skeletons.transition.spec.ts navigation.spec.ts footer.spec.ts contact.spec.ts recommendations.spec.ts experience.spec.ts projects.spec.ts research.spec.ts research-mobile-video.spec.ts --project=chromium"
+      "playwright test skeleton-alignment.spec.ts skeletons.transition.spec.ts navigation.spec.ts progressiveEnhancement.spec.ts footer.spec.ts contact.spec.ts recommendations.spec.ts experience.spec.ts projects.spec.ts research.spec.ts research-mobile-video.spec.ts --project=chromium"
     );
     expect(packageJson.scripts["test:e2e:full"]).toBe(
       "playwright test --project=chromium"
     );
-    expect(packageJson.scripts["verify:priority"]).toBe(
-      "npm run docs:check && npm run lint && npm run typecheck && npm run test:priority && npm run test:e2e:priority && npm run build"
-    );
-    expect(packageJson.scripts["verify:full"]).toBe(
-      "npm run docs:check && npm run lint && npm run typecheck && npm run test && npm run test:e2e:full && npm run build"
-    );
+    expect(packageJson.scripts["verify:priority"]).toBe("node scripts/runVerification.mjs priority");
+    expect(packageJson.scripts["verify:full"]).toBe("node scripts/runVerification.mjs full");
   });
 
   it("keeps priority coverage on trust boundaries and lets the full browser suite discover every specification", async () => {
     const packageJson = JSON.parse(await readFile(path.join(projectRoot, "package.json"), "utf8"));
     expect(packageJson.scripts["test:priority"]).toBe("node scripts/runValidationTier.mjs priority");
     expect(priorityTestTargets).toContain("functions");
+    expect(priorityTestTargets).toContain("scripts/permanentBranchRuleset.test.mjs");
     expect(priorityTestDirectories).toEqual([
+      "scripts/ci",
+      "scripts/security",
       "src/components/overlay",
-      "src/components/portfolio/experience",
-      "src/components/portfolio/projects",
-      "src/components/portfolio/recommendations",
-      "src/components/portfolio/research",
+      "src/features/home",
+      "src/features/contact",
+      "src/features/legal",
+      "src/features/skills",
+      "src/features/experience",
+      "src/features/projects",
+      "src/features/recommendations",
       "src/components/portfolio/shared",
       "src/components/theme",
-      "src/lib/projects",
+      "src/features/research",
       "src/lib/theme"
     ]);
     expect(requiredPriorityFiles).toEqual(
       expect.arrayContaining([
         "functions/api/contact.test.ts",
         "functions/api/contact/verify.test.ts",
+        "scripts/checkDependencyAudit.test.mjs",
+        "scripts/candidateAdmissionWorkflow.test.mjs",
+        "scripts/security/checkSarif.test.mjs",
+        "scripts/ci/gate.test.mjs",
+        "scripts/ci/effectiveExecution.test.mjs",
+        "scripts/heartbeatWorkflow.test.mjs",
+        "scripts/security/installPinnedTool.test.mjs",
+        "scripts/security/securityScans.test.mjs",
         "scripts/portfolioContentGeneration.test.ts",
         "src/lib/content/content.test.ts",
         "src/lib/content/security.test.ts",
@@ -132,11 +175,11 @@ describe("package and CI deployment automation", () => {
         "src/styles/themePalette.test.ts",
         "src/components/portfolio/shared/DetailDisclosureList.test.tsx",
         "src/components/portfolio/shared/detailDisclosureStyles.test.ts",
-        "src/components/portfolio/experience/ExperienceShowcase.test.tsx",
-        "src/components/portfolio/projects/ProjectSkillShowcase.test.tsx",
-        "src/components/portfolio/projects/ProjectShowcase.test.tsx",
-        "src/components/portfolio/recommendations/RecommendationsList.test.tsx",
-        "src/components/portfolio/research/ResearchShowcase.test.tsx",
+        "src/features/experience/components/ExperienceShowcase.test.tsx",
+        "src/features/projects/components/ProjectSkillShowcase.test.tsx",
+        "src/features/projects/components/ProjectShowcase.test.tsx",
+        "src/features/recommendations/components/RecommendationsList.test.tsx",
+        "src/features/research/components/ResearchShowcase.test.tsx",
         "src/components/overlay/ModalDialog.test.tsx"
       ])
     );
@@ -144,335 +187,91 @@ describe("package and CI deployment automation", () => {
     expect(packageJson.scripts["test:e2e:full"]).toBe("playwright test --project=chromium");
   });
 
-  it("keeps a stable verify job across branch, daily, and forced-manual triggers", async () => {
-    const workflow = await readFile(workflowPath, "utf8");
-
-    expect(workflow).toMatch(/push:\s+branches: \[main, develop\]/);
-    expect(workflow).toMatch(/pull_request:\s+branches: \[main, develop\]/);
-    expect(workflow).toContain('- cron: "17 13 * * *"');
-    expect(workflow).toMatch(
-      /workflow_dispatch:\s+inputs:\s+force_deploy:[\s\S]*?type: boolean\s+default: true/
-    );
-    expect(workflow).toMatch(/jobs:\s+verify:\s+name: verify/);
-    expect(workflow.match(/node-version: 22/g)).toHaveLength(2);
-    expect([...workflow.matchAll(/^\s+uses: ([^\n]+)$/gm)].map(([, action]) => action.trim())).toEqual([
-      "actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0",
-      "actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0",
-      "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
-      "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1",
-      "actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0",
-      "actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0",
-      "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1",
-      "actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0"
-    ]);
-    expect(workflow).toContain(
-      "ref: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'main' || github.sha }}"
-    );
-    expect(workflow).toContain("pages_domain: ${{ steps.pages.outputs.pages_domain }}");
-    expect(workflow).toContain("pages_project_name: ${{ steps.pages.outputs.pages_project_name }}");
-    expect(workflow).not.toContain("pull_request_target:");
-    expect(workflow).not.toContain("always()");
-    expect(workflow).not.toContain("continue-on-error");
-    expect(workflow).not.toMatch(/^\s+(?:deployment|deployment_status|workflow_run|repository_dispatch):/m);
-    expect(workflow).not.toContain("--no-verify");
-    expect(workflow).not.toMatch(/SKIP_(?:TESTS|BUILD|VERIFY|DEPLOY)/);
+  it("enforces the real parallel graph while preserving event and required-check identities", async () => {
+    const workflow = validateWorkflowYaml(await readFile(workflowPath, "utf8"));
+    expect(workflow.on.push.branches).toEqual(["main", "develop"]);
+    expect(workflow.on.pull_request.branches).toEqual(["main", "develop"]);
+    expect(workflow.on.schedule).toEqual([{ cron: "17 13 * * *" }]);
+    expect(workflow.on.workflow_dispatch.inputs.force_deploy).toMatchObject({ type: "boolean", default: true });
+    expect(workflow.jobs.verify.steps.some((step) => step.run === "node scripts/ci/run.mjs verify")).toBe(true);
+    expect(workflow.jobs.verify.steps.some((step) => /npm ci|vitest|playwright test/.test(step.run ?? ""))).toBe(false);
+    expect(workflow.jobs["unit-integration"].steps.some((step) => step.run === "npm test")).toBe(true);
+    expect(workflow.jobs.quality.steps.map((step) => step.run ?? "").join("\n")).toMatch(/docs:check[\s\S]*lint[\s\S]*typecheck/);
+    const metrics = workflow.jobs.verify.steps.find((step) => step.run === "node scripts/ci/metrics.mjs");
+    expect(metrics.if).toBe("always()");
+    expect(metrics["continue-on-error"]).toBe(true);
+    expect(workflow.jobs.verify.outputs.accepted).toBe("${{ steps.gate.outputs.accepted }}");
+    expect(workflow.jobs.verify.steps.find((step) => step.id === "gate")["continue-on-error"]).toBeUndefined();
+    const audit = workflow.jobs["security-scans"].steps.filter((step) => step.run === "npm run audit:check");
+    expect(audit).toHaveLength(1);
+    expect(audit[0].if).toBeUndefined();
+    expect(audit[0]["continue-on-error"]).toBeUndefined();
+    expect(workflow.jobs["security-scans"].if).toBeUndefined();
+    expect(workflow.jobs.quality.steps.some((step) => (step.run ?? "").includes("audit:check"))).toBe(false);
+    const toolRuns = workflow.jobs["security-tools"].steps.map((step) => step.run ?? "").join("\n");
+    expect(toolRuns).toContain("-shellcheck ''");
+    expect(toolRuns).toContain("-pyflakes ''");
+    expect(toolRuns).not.toMatch(/\.github\/workflows\/[^\s]+\.ya?ml/);
   });
 
-  it("runs priority template verification for pull requests without deployment credentials", async () => {
-    const workflow = await readFile(workflowPath, "utf8");
-    const verifyJob = section(workflow, "  verify:", "\n  deploy:");
-    const pullRequestGeneration = section(
-      verifyJob,
-      "- name: Generate validated local template content for pull requests",
-      "- name: Validate the immutable Cloudflare Pages target"
-    );
-    const pullRequestBuild = section(
-      verifyJob,
-      "- name: Build the pull-request snapshot without remote credentials",
-      "- name: Build the exact production snapshot"
-    );
-
-    expect(verifyJob).toContain("Generate validated local template content for pull requests");
-    expect(verifyJob).toContain("if: github.event_name == 'pull_request'");
-    expect(verifyJob).toContain('PORTFOLIO_REQUIRE_REMOTE_CONTENT: "false"');
-    expect(pullRequestGeneration).toContain('PORTFOLIO_WORKBOOK_URL: ""');
-    expect(verifyJob).toContain("run: npm run lint");
-    expect(verifyJob).toContain("run: npm run typecheck");
-    expect(verifyJob).toContain("run: npm run test:priority");
-    expect(verifyJob).toContain("run: npx --no-install playwright install --with-deps chromium");
-    expect(verifyJob).toContain("run: npm run test:e2e:priority");
-    expect(verifyJob).toContain("run: npm run test:e2e:skeletons:visual");
-    expect(verifyJob).not.toContain("run: npm run test:footer");
-    expect(verifyJob).not.toContain("run: npm run test:navigation");
-    expect(verifyJob).toMatch(
-      /- name: Priority unit and contract tests\s+if: steps\.decision\.outputs\.verification_tier == 'priority'\s+run: npm run test:priority/
-    );
-    expect(verifyJob).toMatch(
-      /- name: Priority browser regression suite\s+if: steps\.decision\.outputs\.verification_tier == 'priority'\s+run: npm run test:e2e:priority/
-    );
-    expect(verifyJob).toMatch(
-      /- name: Linux skeleton visual regression\s+if: steps\.decision\.outputs\.verification_tier == 'priority'\s+run: npm run test:e2e:skeletons:visual/
-    );
-    expect(pullRequestBuild).toContain("run: npm run build:generated");
-    expect(pullRequestGeneration).not.toContain("secrets.");
-    expect(pullRequestBuild).not.toContain("NEXT_PUBLIC_TURNSTILE");
-    expect(pullRequestBuild).not.toContain("secrets.");
-    expect(verifyJob).not.toContain("CLOUDFLARE_API_TOKEN");
-    expect(verifyJob).not.toContain("CLOUDFLARE_ACCOUNT_ID");
-  });
-
-  it("generates one strict workbook snapshot for latest main and develop candidates", async () => {
-    const workflow = await readFile(workflowPath, "utf8");
-    const verifyJob = section(workflow, "  verify:", "\n  deploy:");
-    const workbookStep = section(
-      verifyJob,
-      "- name: Fetch and generate the strict public workbook snapshot",
-      "- name: Read the validated workbook content hash"
-    );
-
-    expect(verifyJob).toContain("Fetch and generate the strict public workbook snapshot");
-    expect(workbookStep).toContain(
-      "if: github.event_name != 'pull_request' && steps.candidate.outputs.is_latest == 'true'"
-    );
-    expect(workbookStep).toContain(
-      "PORTFOLIO_WORKBOOK_URL: ${{ secrets.PORTFOLIO_WORKBOOK_URL }}"
-    );
-    expect(verifyJob).not.toContain("PORTFOLIO_WORKBOOK_URL: ${{ vars.PORTFOLIO_WORKBOOK_URL }}");
-    expect(verifyJob).toContain('PORTFOLIO_REQUIRE_REMOTE_CONTENT: "true"');
-    expect(verifyJob).not.toContain("PORTFOLIO_GOOGLE_SHEET_URL");
-    expect(verifyJob).not.toMatch(/PORTFOLIO_[A-Z_]+_CSV_URL/);
-    expect(verifyJob).toContain("Validate the immutable Cloudflare Pages target");
-    expect(verifyJob).toContain(
-      '[[ "$CLOUDFLARE_PAGES_PROJECT_NAME" != "smart-portfolio" ]]'
-    );
-    expect(verifyJob).toContain(
-      '[[ "$CLOUDFLARE_PAGES_DOMAIN" != "smart-portfolio-bds.pages.dev" ]]'
-    );
-    expect(verifyJob.indexOf("Validate the immutable Cloudflare Pages target")).toBeLessThan(
-      verifyJob.indexOf("Fetch and generate the strict public workbook snapshot")
-    );
-    expect(verifyJob).not.toContain("Mask the anonymous workbook URL");
-    expect(verifyJob).not.toContain("::add-mask::");
-    expect(verifyJob.indexOf("run: npm run generate:content")).toBeLessThan(
-      verifyJob.indexOf("run: npm run lint")
-    );
-    expect(verifyJob).toContain("git fetch --no-tags origin");
-    expect(verifyJob).toContain("Generated content is missing a valid SHA-256 contentHash");
-  });
-
-  it("keeps production and optional preview Turnstile build keys isolated", async () => {
-    const workflow = await readFile(workflowPath, "utf8");
-    const productionBuild = section(
-      workflow,
-      "- name: Build the exact production snapshot",
-      "- name: Build the exact develop preview snapshot"
-    );
-    const previewBuild = section(
-      workflow,
-      "- name: Build the exact develop preview snapshot",
-      "- name: Create and verify the artifact integrity manifest"
-    );
-
-    expect(productionBuild).toContain(
-      "NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}"
-    );
-    expect(productionBuild).not.toContain("NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY");
-    expect(previewBuild).toContain(
-      "NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY }}"
-    );
-    expect(previewBuild).not.toContain("vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}");
-  });
-
-  it("polls deployed no-cache metadata and skips expensive work only for the exact candidate", async () => {
-    const workflow = await readFile(workflowPath, "utf8");
-    const verifyJob = section(workflow, "  verify:", "\n  deploy:");
-    const comparisonStep = section(
-      verifyJob,
-      "- name: Compare the validated snapshot with production",
-      "- name: Decide verification tier and deployment"
-    );
-
-    expect(verifyJob).toContain("Compare the validated snapshot with production");
-    expect(verifyJob).toContain("node scripts/checkDeployedContent.mjs compare");
-    expect(verifyJob).toContain("CLOUDFLARE_PAGES_DOMAIN: ${{ steps.pages.outputs.pages_domain }}");
-    expect(verifyJob).toContain(
-      'node scripts/checkDeployedContent.mjs url "$CLOUDFLARE_PAGES_DOMAIN" main'
-    );
-    expect(verifyJob).toContain(
-      "(github.event_name == 'workflow_dispatch' && inputs.force_deploy == false)"
-    );
-    expect(verifyJob).not.toContain("https://${CLOUDFLARE_PAGES_PROJECT_NAME}.pages.dev");
-    expect(verifyJob).toContain('"${FORCE_DEPLOY:-false}" == "true"');
-    expect(verifyJob).toContain('"${DEPLOYED_CONTENT_MATCHES:-false}" != "true"');
-    expect(verifyJob).toContain('"${DEPLOYED_COMMIT_MATCHES:-false}" != "true"');
-    expect(verifyJob).toContain(
-      "DEPLOYED_COMMIT_MATCHES: ${{ steps.deployed_content.outputs.deployed_commit_matches }}"
-    );
-    expect(comparisonStep).toContain('"$CONTENT_HASH" \\');
-    expect(comparisonStep).toContain('"$CANDIDATE_SHA" \\');
-
-    for (const stepName of ["Documentation integrity", "Lint", "Typecheck", "Install Chromium for browser regressions"]) {
-      expect(verifyJob).toMatch(
-        new RegExp(`- name: ${stepName}\\s+if: steps\\.decision\\.outputs\\.should_verify == 'true'`)
-      );
+  it("isolates one prepared snapshot and preserves credential-free PR validation", async () => {
+    const workflow = validateWorkflowYaml(await readFile(workflowPath, "utf8"));
+    const preparation = workflow.jobs["prepare-content"];
+    const step = preparation.steps.find((step) => step.run === "node scripts/ci/run.mjs prepare");
+    expect(step.env.PORTFOLIO_WORKBOOK_URL).toContain("github.event_name != 'pull_request'");
+    expect(step.env.PORTFOLIO_WORKBOOK_URL).toContain("outputs.obsolete != 'true'");
+    expect(step.env.PORTFOLIO_WORKBOOK_URL).toContain("|| ''");
+    for (const [name, job] of Object.entries(workflow.jobs)) {
+      if (name === "deploy" || name === "prepare-content") continue;
+      expect(JSON.stringify(job)).not.toContain("secrets.");
+      expect(job.environment).toBeUndefined();
     }
-    for (const [stepName, tier] of [
-      ["Priority unit and contract tests", "priority"],
-      ["Priority browser regression suite", "priority"],
-      ["Linux skeleton visual regression", "priority"],
-      ["Full unit and integration suite", "full"],
-      ["Full browser regression suite", "full"]
-    ]) {
-      expect(verifyJob).toMatch(
-        new RegExp(`- name: ${stepName}\\s+if: steps\\.decision\\.outputs\\.verification_tier == '${tier}'`)
-      );
+    for (const job of ["quality", "unit-integration", "browser-e2e", "visual-regression", "cross-browser", "build-and-package", "export-check"]) {
+      expect(workflow.jobs[job].env.CI_SNAPSHOT_REFERENCE).toContain("outputs.snapshot_reference");
+      expect(JSON.stringify(workflow.jobs[job])).not.toMatch(/generate:content|npm run build(?=["\s])/);
     }
-    expect(verifyJob).toContain('verification_tier="priority"');
-    expect(verifyJob).toContain('verification_tier="full"');
-    expect(verifyJob).toContain('echo "verification_tier=$verification_tier" >> "$GITHUB_OUTPUT"');
-    expect(verifyJob).toMatch(
-      /- name: Upload the exact verified static export\s+if: steps\.decision\.outputs\.should_deploy == 'true'/
-    );
-
-    expect(verifyJob).toContain("runs-on: ubuntu-24.04");
-    expect(verifyJob.match(/playwright install --with-deps chromium/g)).toHaveLength(1);
-    expect(verifyJob.indexOf("Install Chromium for browser regressions")).toBeLessThan(
-      verifyJob.indexOf("Priority browser regression suite")
-    );
-    expect(verifyJob.indexOf("Priority browser regression suite")).toBeLessThan(
-      verifyJob.indexOf("Linux skeleton visual regression")
-    );
-    expect(verifyJob.indexOf("Linux skeleton visual regression")).toBeLessThan(
-      verifyJob.indexOf("Full browser regression suite")
-    );
-    expect(verifyJob.match(/run: npm run test:e2e:full/g)).toHaveLength(1);
-    expect(verifyJob).toMatch(
-      /- name: Full browser regression suite\s+if: steps\.decision\.outputs\.verification_tier == 'full'\s+run: npm run test:e2e:full/
-    );
-
-    const diagnosticsUpload = section(
-      verifyJob,
-      "- name: Upload Playwright diagnostics on failure",
-      "- name: Build the pull-request snapshot without remote credentials"
-    );
-    expect(diagnosticsUpload).toContain("if: failure()");
-    expect(diagnosticsUpload).toContain(
-      "uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1"
-    );
-    expect(diagnosticsUpload).toContain(
-      "name: playwright-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}"
-    );
-    expect(diagnosticsUpload).toMatch(/path: \|\s+playwright-report\/\s+test-results\//);
-    expect(diagnosticsUpload).toContain("if-no-files-found: ignore");
-    expect(diagnosticsUpload).not.toContain("cloudflare-pages-build");
-    expect(diagnosticsUpload).not.toContain("path: out/");
-    expect(diagnosticsUpload).not.toContain("should_deploy");
-    expect(verifyJob.indexOf("Upload Playwright diagnostics on failure")).toBeLessThan(
-      verifyJob.indexOf("Build the pull-request snapshot without remote credentials")
-    );
-    expect(verifyJob.match(/name: cloudflare-pages-build/g)).toHaveLength(1);
+    expect(preparation.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY).toContain("vars.");
+    expect(preparation.env.NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY).toContain("vars.");
   });
 
-  it("deploys only the immutable green artifact with pinned local Wrangler", async () => {
-    const workflow = await readFile(workflowPath, "utf8");
-    const verifyJob = section(workflow, "  verify:", "\n  deploy:");
-    const deployJob = section(workflow, "  deploy:", "\n  heartbeat:");
-
-    expect(verifyJob).toContain("node scripts/artifactIntegrity.mjs create out");
-    expect(verifyJob).toContain("node scripts/artifactIntegrity.mjs verify out");
-    expect(verifyJob).toContain("name: cloudflare-pages-build");
-    expect(verifyJob).toMatch(/path: out\/\s+include-hidden-files: true\s+if-no-files-found: error/);
-    expect(deployJob).toContain("needs: verify");
-    expect(deployJob).toContain(
-      "if: needs.verify.result == 'success' && needs.verify.outputs.should_deploy == 'true'"
-    );
-    expect(deployJob).toContain("ref: ${{ needs.verify.outputs.candidate_sha }}");
-    expect(deployJob).toContain('run: node scripts/artifactIntegrity.mjs verify out "$CANDIDATE_SHA"');
-    expect(deployJob).not.toContain("npm run build");
-    expect(deployJob).not.toContain("npm run generate:content");
-    expect(deployJob).toContain("group: cloudflare-${{ needs.verify.outputs.deploy_target }}");
-    expect(deployJob).toContain("cancel-in-progress: true");
-    expect(deployJob).toContain("Recheck the deployment branch immediately before Wrangler");
-    expect(deployJob).toContain(
-      "CLOUDFLARE_PAGES_PROJECT_NAME: ${{ needs.verify.outputs.pages_project_name }}"
-    );
-    expect(deployJob).toContain(
-      "CLOUDFLARE_PAGES_DOMAIN: ${{ needs.verify.outputs.pages_domain }}"
-    );
-    expect(deployJob).not.toContain("vars.CLOUDFLARE_PAGES_PROJECT_NAME");
-    expect(deployJob).not.toContain("vars.CLOUDFLARE_PAGES_DOMAIN");
-    expect(deployJob).toContain("npx --no-install wrangler pages deploy out");
-    expect(deployJob).not.toContain("npx --yes");
-    expect(deployJob).toContain('--branch "$CANDIDATE_BRANCH"');
-    expect(verifyJob).toContain(
-      '[[ "$GITHUB_EVENT_NAME" == "push" && "$GITHUB_REF" == "refs/heads/main" ]]'
-    );
-    expect(verifyJob).toContain('deploy_target="production"');
-    expect(verifyJob).toContain(
-      '[[ "$GITHUB_EVENT_NAME" == "push" && "$GITHUB_REF" == "refs/heads/develop" ]]'
-    );
-    expect(verifyJob).toContain('deploy_target="preview"');
-    expect(verifyJob).toContain('candidate_branch="$GITHUB_REF_NAME"');
-    expect(deployJob).toContain("node scripts/checkDeployedContent.mjs smoke");
-    expect(deployJob).toContain(
-      'node scripts/checkDeployedContent.mjs url "$CLOUDFLARE_PAGES_DOMAIN" "$CANDIDATE_BRANCH"'
-    );
-    expect(deployJob).not.toContain(".${CLOUDFLARE_PAGES_PROJECT_NAME}.pages.dev");
-    expect(deployJob.indexOf("Recheck the deployment branch immediately before Wrangler")).toBeLessThan(
-      deployJob.indexOf("npx --no-install wrangler pages deploy out")
-    );
+  it("pins every action and confines write authority to its required boundary", async () => {
+    const workflow = validateWorkflowYaml(await readFile(workflowPath, "utf8"));
+    expect(workflow.permissions).toEqual({ contents: "read" });
+    for (const [name, job] of Object.entries(workflow.jobs)) {
+      if (job.permissions?.contents === "write") expect(name).toBe("heartbeat");
+      if (job.permissions?.["security-events"] === "write") expect(name).toBe("codeql");
+      if (job.permissions?.["id-token"] === "write" || job.permissions?.attestations === "write") expect(name).toBe("deploy");
+      for (const step of job.steps) {
+        if (step.uses) expect(step.uses).toMatch(/^[^@]+@[a-f0-9]{40}$/);
+        if (step.uses?.startsWith("actions/checkout@")) expect(step.with["persist-credentials"]).toBe(false);
+        if (step.run === "node scripts/ci/metrics.mjs") expect(step["continue-on-error"]).toBe(true);
+        else expect(step["continue-on-error"]).toBeUndefined();
+      }
+    }
+    expect(workflow.jobs.codeql.steps.find((step) => step.uses?.startsWith("github/codeql-action/init@")).with).toMatchObject({ "build-mode": "none", queries: "security-extended" });
+    expect(workflow.jobs.codeql.steps.find((step) => step.uses?.startsWith("github/codeql-action/analyze@")).with.upload).toBe("never");
+    expect(workflow.jobs.heartbeat.if).toBe("github.event_name == 'schedule'");
+    expect(workflow.jobs.heartbeat.steps.find((step) => step.uses?.startsWith("actions/checkout@")).with.ref).toBe("develop");
   });
 
-  it("allows repository writes only for the guarded existing develop heartbeat", async () => {
-    const workflow = await readFile(workflowPath, "utf8");
-    const deployJob = section(workflow, "  deploy:", "\n  heartbeat:");
-    const heartbeatJob = section(workflow, "  heartbeat:");
-
-    expect(workflow.match(/contents: write/g)).toHaveLength(1);
-    expect(workflow).not.toMatch(
-      /(?:actions|checks|deployments|id-token|issues|packages|pull-requests|security-events|statuses): write/
-    );
-    expect(deployJob).toMatch(/permissions:\s+contents: read/);
-    expect(heartbeatJob).toContain("if: github.event_name == 'schedule'");
-    expect(heartbeatJob).toMatch(
-      /concurrency:\s+group: develop-schedule-heartbeat\s+cancel-in-progress: false/
-    );
-    expect(heartbeatJob).toContain("ref: develop");
-    expect(heartbeatJob).toContain("refs/remotes/origin/main");
-    expect(heartbeatJob).toContain("refs/remotes/origin/develop");
-    expect(heartbeatJob).toContain("origin/develop must already exist");
-    expect(heartbeatJob).toContain("30 * 24 * 60 * 60");
-    expect(heartbeatJob).toContain('heartbeat_path=".github/schedule-heartbeat"');
-    expect(heartbeatJob).toContain("git merge --ff-only refs/remotes/origin/develop");
-    expect(heartbeatJob).toContain("git switch --track --create develop refs/remotes/origin/develop");
-    expect(heartbeatJob).toContain('git merge-base --is-ancestor "$develop_sha" HEAD');
-    expect(heartbeatJob).toContain('remote_develop_sha="$(git ls-remote origin refs/heads/develop | awk \'{print $1}\')"');
-    expect(heartbeatJob).toContain('git push origin "HEAD:refs/heads/develop"');
-    expect(heartbeatJob).not.toContain("automation-heartbeat");
-    expect(heartbeatJob).not.toContain("git push --force");
-    const developRefCheck = heartbeatJob.indexOf(
-      "git ls-remote --exit-code --heads origin develop"
-    );
-    const developBaseline = heartbeatJob.indexOf(
-      'develop_sha="$(git rev-parse refs/remotes/origin/develop)"'
-    );
-    const fastForwardCheck = heartbeatJob.indexOf(
-      'git merge-base --is-ancestor "$develop_sha" HEAD'
-    );
-    const remoteShaReread = heartbeatJob.indexOf(
-      'remote_develop_sha="$(git ls-remote origin refs/heads/develop | awk \'{print $1}\')"'
-    );
-    const nonForcePush = heartbeatJob.indexOf('git push origin "HEAD:refs/heads/develop"');
-
-    expect(nonForcePush).toBeGreaterThan(-1);
-    for (const guard of [developRefCheck, developBaseline, fastForwardCheck, remoteShaReread]) {
-      expect(guard).toBeGreaterThan(-1);
-      expect(guard).toBeLessThan(nonForcePush);
-    }
-    expect(workflow).not.toContain("git push origin HEAD:main");
-    expect(workflow).not.toContain("git add -- \"$snapshot\"");
-    expect(workflow).not.toContain("sync published Google Sheet");
-    expect(workflow).not.toContain("[skip ci]");
+  it("keeps acceptance, signing and serialized deployment in one candidate graph", async () => {
+    const workflow = validateWorkflowYaml(await readFile(workflowPath, "utf8"));
+    const deploy = workflow.jobs.deploy;
+    expect(deploy.if).toContain("!cancelled()");
+    expect(deploy.if).toContain("needs.verify.result == 'success'");
+    expect(deploy.if).toContain("needs.verify.outputs.deploy == 'true'");
+    expect(deploy.if).toContain("github.event_name != 'pull_request'");
+    expect(deploy.concurrency["cancel-in-progress"]).toBe(false);
+    const prepare = deploy.steps.findIndex((step) => step.run === "node scripts/ci/run.mjs deployment-prepare");
+    const attest = deploy.steps.findIndex((step) => step.uses?.startsWith("actions/attest-build-provenance@"));
+    const mutate = deploy.steps.findIndex((step) => step.run === "node scripts/ci/run.mjs deploy");
+    expect(prepare).toBeGreaterThan(-1);
+    expect(attest).toBeGreaterThan(prepare);
+    expect(mutate).toBeGreaterThan(attest);
+    expect(deploy.env.CI_ACCEPTANCE).toContain("needs.verify.outputs.acceptance");
+    expect(deploy.env.CI_RELEASE_REFERENCE).toContain("outputs.release_reference");
+    expect(deploy.steps[mutate].env.CLOUDFLARE_API_TOKEN).toContain("secrets.");
+    expect(deploy.environment).toBeUndefined(); // activation is a separate operational change
   });
 
   it("sets no-cache headers for both deployment metadata files", async () => {
@@ -489,7 +288,7 @@ describe("package and CI deployment automation", () => {
     const wranglerConfig = JSON.parse(await readFile(path.join(projectRoot, "wrangler.jsonc"), "utf8"));
     const serializedConfig = JSON.stringify(wranglerConfig);
 
-    for (const secretName of ["TURNSTILE_SECRET_KEY", "RESEND_API_KEY", "CONTACT_RECIPIENT_EMAIL"]) {
+    for (const secretName of sealedRuntimeConfigContracts.runtimeSecrets) {
       expect(serializedConfig).not.toContain(secretName);
     }
     expect(wranglerConfig.vars.TURNSTILE_ALLOWED_HOSTNAMES).toBe(
@@ -551,7 +350,12 @@ describe("package and CI deployment automation", () => {
       await writeContentVersion({
         generatedContentPath,
         outputPath: path.join(artifactDirectory, "content-version.json"),
-        environment: { DEPLOYMENT_COMMIT_SHA: candidateSha }
+        environment: { DEPLOYMENT_COMMIT_SHA: candidateSha },
+        identity: {
+          target: "local",
+          publicBuildInputDigest: "b".repeat(64),
+          producer: { kind: "local", runId: "local", runNumber: null, attempt: null }
+        }
       });
 
       const manifest = await createArtifactManifest(artifactDirectory);
@@ -567,9 +371,11 @@ describe("package and CI deployment automation", () => {
       await expect(verifyArtifactManifest(artifactDirectory, candidateSha)).resolves.toBeDefined();
 
       const version = await readContentVersion(path.join(artifactDirectory, "content-version.json"));
-      expect(Object.keys(version)).toEqual(["schemaVersion", "contentHash", "commitSha", "generatedAt", "deployedAt"]);
+      expect(Object.keys(version)).toEqual(["schemaVersion", "contentHash", "commitSha", "generatedAt", "deployedAt", "target", "publicBuildInputDigest", "producer"]);
+      expect(version.schemaVersion).toBe(2);
       expect(version.contentHash).toBe(contentHash);
       expect(version.commitSha).toBe(candidateSha);
+      expect(version.target).toBe("local");
       expect(version.deployedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
 
       await writeFile(path.join(artifactDirectory, "index.html"), "tampered", "utf8");
