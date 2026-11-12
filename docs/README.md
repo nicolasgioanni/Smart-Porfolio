@@ -17,8 +17,7 @@ This documentation explains how Smart Portfolio is authored, built, tested, depl
 | Portfolio owner or developer setting up a local copy | [Local development](development/LOCAL_DEVELOPMENT.md) | [Agent workflow](development/AGENT_WORKFLOW.md) for repository changes, or [local content editing](content/LOCAL_CONTENT_EDITING.md) for content updates |
 | Agent or automated contributor | [Agent workflow](development/AGENT_WORKFLOW.md) | [Local development](development/LOCAL_DEVELOPMENT.md), the selected repository skill, and [testing](quality/TESTING.md) |
 | Design contributor | [Design system](design/DESIGN_SYSTEM.md) | [Accessibility](design/ACCESSIBILITY.md), [animation guidelines](design/ANIMATION_GUIDELINES.md), and [skeleton loading guidelines](design/SKELETON_LOADING_GUIDELINES.md) |
-| Deployment operator restoring this service or adapting a fork | [Deployment](operations/DEPLOYMENT.md) | [Search indexing](operations/SEARCH_INDEXING.md) | Canonical identity, route classification, search files, and operator checks. |
-| [Operations](operations/OPERATIONS.md), [testing](quality/TESTING.md), and [troubleshooting](development/TROUBLESHOOTING.md) |
+| Deployment operator restoring this service or adapting a fork | [Deployment](operations/DEPLOYMENT.md) | [Operations](operations/OPERATIONS.md), [testing](quality/TESTING.md), and [troubleshooting](development/TROUBLESHOOTING.md) |
 | Security reviewer | [Security](security/SECURITY.md) | [Contact system](security/CONTACT_SYSTEM.md), [architecture](architecture/ARCHITECTURE.md), and [security checklist](security/SECURITY_CHECKLIST.md) |
 
 ## Dependency and setup contract
