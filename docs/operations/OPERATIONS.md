@@ -112,7 +112,7 @@ Both metadata endpoints should return explicit no-store and no-cache headers.
 
 ### Verify static routes
 
-The automated deployment smoke compares the assigned alias against the sealed release for `/`, `robots.txt`, `sitemap.xml`, both metadata documents, and safe Function method rejections, including their exact scoped headers. It does not cover every static route or the custom domain. For a release, use the current route registry and check the exported portfolio, contact, and legal routes manually. At minimum, include:
+The automated deployment smoke compares the assigned alias against the sealed release for `/`, `robots.txt`, `sitemap.xml`, both metadata documents, and safe Function method rejections, including their exact scoped headers. Identity-only hosts also reject empty POSTs with their own and a spoofed canonical Origin. It does not cover every static route or the custom domain. For a release, use the current route registry and check the exported portfolio, contact, and legal routes manually. At minimum, include:
 
 - `/`
 - `/experience`

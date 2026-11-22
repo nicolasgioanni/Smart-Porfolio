@@ -292,10 +292,10 @@ describe("package and CI deployment automation", () => {
       expect(serializedConfig).not.toContain(secretName);
     }
     expect(wranglerConfig.vars.TURNSTILE_ALLOWED_HOSTNAMES).toBe(
-      "smart-portfolio-bds.pages.dev,nicolasmgioanni.dev,www.nicolasmgioanni.dev"
+      "nicolasmgioanni.dev"
     );
     expect(wranglerConfig.vars.CONTACT_ALLOWED_ORIGINS).toBe(
-      "https://smart-portfolio-bds.pages.dev,https://nicolasmgioanni.dev,https://www.nicolasmgioanni.dev"
+      "https://nicolasmgioanni.dev"
     );
     expect(wranglerConfig.vars.CONTACT_FROM_EMAIL).toBe(
       "Nicolas Gioanni <noreply@mail.nicolasmgioanni.dev>"
