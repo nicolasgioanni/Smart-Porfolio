@@ -108,7 +108,9 @@ The Node entry point accepts the equivalent `--force-install` and `--force-gener
 | Turnstile runtime | `TURNSTILE_SECRET_KEY`, `TURNSTILE_ALLOWED_HOSTNAMES` | Verification Function |
 | Delivery runtime | `RESEND_API_KEY`, `CONTACT_RECIPIENT_EMAIL`, `CONTACT_FROM_EMAIL`, `CONTACT_REPLY_TO_EMAIL` | Delivery Function |
 | Origin control | `CONTACT_ALLOWED_ORIGINS` | Both contact Functions |
-| Address quota | `CONTACT_RATE_LIMIT_DB` from `wrangler.jsonc` | Local D1 emulation; no environment variable |
+| Delivery quotas | `CONTACT_RATE_LIMIT_DB` from `wrangler.jsonc` | Local D1 emulation; no environment variable |
+
+Local delivery requests require a valid `CF-Connecting-IP` fixture at the Functions boundary; a missing or invalid value fails closed, and forwarding headers are not substitutes. The production boundary trusts the Cloudflare-supplied header and has no local-bypass switch.
 
 Leave `PORTFOLIO_WORKBOOK_URL` blank and `PORTFOLIO_REQUIRE_REMOTE_CONTENT=false` to use checked-in templates. A configured workbook URL is still an anonymous public download. Do not place production provider credentials or production contact secrets in the local file.
 

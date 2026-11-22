@@ -17,6 +17,7 @@ describe("priority validation tier", () => {
     expect(priorityTestTargets).toEqual(expect.arrayContaining([
       "scripts/permanentBranchRuleset.test.mjs",
       "scripts/contactTransport.integration.test.ts",
+      "scripts/contactQuota.workers.integration.test.ts",
       "scripts/checkDependencyAudit.test.mjs",
       "scripts/security",
       "scripts/localAutomation.test.mjs",
