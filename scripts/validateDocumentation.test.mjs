@@ -1,8 +1,14 @@
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { execFile } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
+import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
 import { validateDocumentation } from "./validateDocumentation.mjs";
+import { indexableSiteRoutePaths, siteRoutePaths } from "../src/lib/routing/siteRoutes.ts";
+
+const projectRoot = path.resolve(import.meta.dirname, "..");
+const execFileAsync = promisify(execFile);
 
 async function createFixture(files) {
   const root = await mkdtemp(path.join(os.tmpdir(), "portfolio-docs-test-"));
@@ -16,7 +22,143 @@ async function createFixture(files) {
   return root;
 }
 
+function validateMinimalFixture(projectRoot) {
+  return validateDocumentation({ projectRoot, requireOwnershipMap: false });
+}
+
+function headingForAnchor(anchor) {
+  return "## " + anchor.replaceAll("-", " ") + "\n";
+}
+
+function samplePathForPattern(pattern) {
+  return pattern.replaceAll("**", "fixture").replaceAll("*", "fixture");
+}
+
+async function createOwnershipFixture(mutateManifest = () => {}) {
+  const baselineManifest = JSON.parse(
+    await readFile(
+      path.join(projectRoot, ".agents", "agent-map.json"),
+      "utf8",
+    ),
+  );
+  const manifest = structuredClone(baselineManifest);
+  mutateManifest(manifest);
+  const files = {
+    "README.md": "# Project\n",
+    "AGENTS.md": "# Agent guidance\n",
+    ".agents/README.md": "# Agent map\n",
+    ".agents/knowledge/SYSTEM_DECISIONS.md": "# System decisions\n",
+    "docs/development/AGENT_MAP.md": "# Agent map\n",
+    "docs/quality/CI_CONTRACTS.md": "# CI contracts\n",
+    "docs/development/AGENT_WORKFLOW.md": "# Workflow\n\n## Start a repository task\n",
+  };
+  const documentAnchors = new Map();
+  const addFile = (relativePath, contents = "") => {
+    if (!(relativePath in files)) files[relativePath] = contents;
+  };
+
+  for (const owner of baselineManifest.owners) {
+    addFile(owner.card, await readFile(path.join(projectRoot, owner.card), "utf8"));
+    for (const relativePath of [
+      ...owner.entrypoints,
+      ...owner.tests,
+      ...owner.reuse,
+    ]) {
+      addFile(
+        relativePath,
+        relativePath.startsWith(".agents/skills/")
+          ? await readFile(path.join(projectRoot, relativePath), "utf8")
+          : "",
+      );
+    }
+    for (const pattern of owner.pathPatterns) addFile(samplePathForPattern(pattern));
+    for (const reference of owner.documentation) {
+      const [relativePath, anchor] = reference.split("#");
+      const anchors = documentAnchors.get(relativePath) ?? [];
+      anchors.push(anchor);
+      documentAnchors.set(relativePath, anchors);
+    }
+  }
+  for (const exception of baselineManifest.codePathExceptions)
+    addFile(exception.path);
+  for (const [relativePath, anchors] of documentAnchors) {
+    files[relativePath] = [
+      "# Document",
+      "",
+      ...anchors.map((anchor) => headingForAnchor(anchor)),
+    ].join("\n");
+  }
+
+  files["docs/design/SKELETON_LOADING_GUIDELINES.md"] += "\n## Layout matching\n";
+  files["docs/quality/CI_CONTRACTS.md"] += "\n## Browser discovery and terminal evidence\n";
+
+  const sourcePackage = JSON.parse(
+    await readFile(path.join(projectRoot, "package.json"), "utf8"),
+  );
+  files["package.json"] = JSON.stringify({
+    scripts: Object.fromEntries(
+      Object.keys(sourcePackage.scripts).map((name) => [name, "true"]),
+    ),
+  });
+  files[".agents/agent-map.json"] = JSON.stringify(manifest);
+  return createFixture(files);
+}
+
+async function createGitOwnershipFixture(mutateManifest = () => {}) {
+  const root = await createOwnershipFixture(mutateManifest);
+  await writeFile(
+    path.join(root, ".gitignore"),
+    (await readFile(path.join(projectRoot, ".gitignore"), "utf8")) + "\n*.log\nignored-private.md\n",
+    "utf8",
+  );
+  await execFileAsync("git", ["init", "--quiet"], { cwd: root });
+  return root;
+}
+
+async function expectOwnershipError(mutateManifest, expectedMessage) {
+  const root = await createOwnershipFixture(mutateManifest);
+  try {
+    const result = await validateDocumentation({ projectRoot: root });
+    expect(result.errors).toEqual(
+      expect.arrayContaining([expect.stringContaining(expectedMessage)]),
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}
+
 describe("documentation validation", () => {
+  it("keeps the documented route inventory and indexing list aligned with the registry", async () => {
+    const rootReadme = await readFile(path.resolve("README.md"), "utf8");
+    const structure = await readFile(path.resolve("docs/architecture/PROJECT_STRUCTURE.md"), "utf8");
+    const search = await readFile(path.resolve("docs/operations/SEARCH_INDEXING.md"), "utf8");
+    const routeRows = (source, heading) => {
+      const section = source.split(`## ${heading}\n`)[1]?.split("\n## ")[0] ?? "";
+      return [...section.matchAll(/^\| `([^`]+)` \|/gm)].map((match) => match[1]);
+    };
+    const ordered = (routes) => [...routes].sort();
+    const indexingSection = search.split("## Route policy")[1].split("## Generated search files")[0];
+    const indexedRoutes = [...indexingSection.matchAll(/^\d+\. `([^`]+)`$/gm)].map((match) => match[1]);
+    expect(ordered(routeRows(rootReadme, "Documented route map"))).toEqual(ordered(siteRoutePaths));
+    expect(ordered(routeRows(structure, "Documented application routes"))).toEqual(ordered(siteRoutePaths));
+    const staleReadme = rootReadme.replace("\n## Technology and project role", "\n| `/retired` | Stale route | Removed |\n\n## Technology and project role");
+    expect(ordered(routeRows(staleReadme, "Documented route map"))).not.toEqual(ordered(siteRoutePaths));
+    expect(indexedRoutes).toEqual(indexableSiteRoutePaths);
+    for (const phrase of ["absolute canonical URLs", "URLs", "discovered URLs"]) {
+      expect(search).toContain(`${indexableSiteRoutePaths.length} ${phrase}`);
+    }
+  });
+
+  it("indexes each maintained guide and validates infrastructure and agent guidance", async () => {
+    const result = await validateDocumentation();
+    const index = await readFile(path.resolve("docs/README.md"), "utf8");
+    const guides = result.checkedFiles.filter((file) => file.startsWith("docs/") && file !== "docs/README.md" && !file.startsWith("docs/quality/evidence/"));
+    expect(guides.length).toBeGreaterThan(0);
+    for (const guide of guides) expect(index).toContain(`(${guide.slice("docs/".length)})`);
+    expect(result.checkedFiles).toEqual(expect.arrayContaining(["infra/README.md", "infra/ADOPTION.md", "AGENTS.md", ".agents/README.md"]));
+    expect(result.errors).toEqual([]);
+  });
+
   it("accepts a linked documentation set with balanced structure", async () => {
     const root = await createFixture({
       "README.md":
@@ -31,7 +173,7 @@ describe("documentation validation", () => {
 
     try {
       await expect(
-        validateDocumentation({ projectRoot: root }),
+        validateMinimalFixture(root),
       ).resolves.toEqual({
         checkedFiles: ["README.md", "docs/GUIDE_(v1).md", "docs/README.md"],
         errors: [],
@@ -48,7 +190,7 @@ describe("documentation validation", () => {
     });
 
     try {
-      await expect(validateDocumentation({ projectRoot: root })).resolves.toMatchObject({ errors: [] });
+      await expect(validateMinimalFixture(root)).resolves.toMatchObject({ errors: [] });
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -62,7 +204,7 @@ describe("documentation validation", () => {
     });
 
     try {
-      await expect(validateDocumentation({ projectRoot: root })).resolves.toMatchObject({ errors: [] });
+      await expect(validateMinimalFixture(root)).resolves.toMatchObject({ errors: [] });
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -75,7 +217,7 @@ describe("documentation validation", () => {
     });
 
     try {
-      await expect(validateDocumentation({ projectRoot: root })).resolves.toMatchObject({ errors: [] });
+      await expect(validateMinimalFixture(root)).resolves.toMatchObject({ errors: [] });
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -117,7 +259,7 @@ describe("documentation validation", () => {
     });
 
     try {
-      const result = await validateDocumentation({ projectRoot: root });
+      const result = await validateMinimalFixture(root);
       expect(result.errors).toEqual(
         expect.arrayContaining([
           expect.stringContaining("expected exactly one H1, found 2"),
@@ -146,7 +288,7 @@ describe("documentation validation", () => {
     });
 
     try {
-      const result = await validateDocumentation({ projectRoot: root });
+      const result = await validateMinimalFixture(root);
       expect(result.errors).toEqual(
         expect.arrayContaining([
           expect.stringContaining("Markdown heading fragment does not exist"),
@@ -177,7 +319,7 @@ describe("documentation validation", () => {
     });
 
     try {
-      const result = await validateDocumentation({ projectRoot: root });
+      const result = await validateMinimalFixture(root);
       expect(result.errors).toEqual(
         expect.arrayContaining([
           expect.stringContaining("links to a local environment file"),
@@ -195,6 +337,61 @@ describe("documentation validation", () => {
     }
   });
 
+  it("includes maintained infrastructure guides and checks their bodies", async () => {
+    const root = await createFixture({
+      "README.md": "# Project\n",
+      "docs/README.md": "# Docs\n",
+      "infra/README.md": "# Infrastructure\n\n[Adoption](ADOPTION.md#sequence)\n",
+      "infra/ADOPTION.md": "# Adoption\n\n## Sequence\n\n[Missing](missing.md)\n\nhttps://docs.google.com/spreadsheets/private\n",
+    });
+    try {
+      const result = await validateMinimalFixture(root);
+      expect(result.checkedFiles).toEqual(expect.arrayContaining(["infra/README.md", "infra/ADOPTION.md"]));
+      expect(result.errors).toEqual(expect.arrayContaining([
+        expect.stringContaining("infra/ADOPTION.md: contains a private-workbook URL pattern"),
+        expect.stringContaining("relative link target does not exist: missing.md"),
+      ]));
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects escapes and symbolic links in relative and public asset targets", async () => {
+    const root = await createFixture({
+      "README.md": "# Project\n\n[Escape](../outside.md)\n\n[Encoded](/%2e%2e/outside)\n\n[Linked](alias/guide.md)\n\n![Linked asset](/images/link.png)\n",
+      "docs/README.md": "# Docs\n",
+      "real/guide.md": "# Guide\n",
+      "public/images/image.png": "fixture",
+    });
+    try {
+      await symlink(path.join(root, "real"), path.join(root, "alias"), "dir");
+      await symlink(path.join(root, "public/images/image.png"), path.join(root, "public/images/link.png"));
+      const result = await validateMinimalFixture(root);
+      expect(result.errors).toEqual(expect.arrayContaining([
+        expect.stringContaining("relative link escapes the repository"),
+        expect.stringContaining("root-relative asset link escapes public/"),
+        expect.stringContaining("relative link target contains a symbolic link"),
+        expect.stringContaining("root-relative asset target contains a symbolic link"),
+      ]));
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it.each(["description: []", "description: |", "description: first\ndescription: second", "description: # comment"])("rejects malformed skill field %s", async (field) => {
+    const root = await createFixture({
+      "README.md": "# Project\n",
+      "docs/README.md": "# Docs\n",
+      ".agents/skills/example/SKILL.md": `---\nname: example\n${field}\n---\n\n# Example\n`,
+    });
+    try {
+      const result = await validateMinimalFixture(root);
+      expect(result.errors).toEqual(expect.arrayContaining([expect.stringContaining("skill frontmatter requires a description")]));
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("allows localhost only in approved local-development documents", async () => {
     const root = await createFixture({
       "README.md": "# Project\n\nUse http://localhost:3000 locally.\n",
@@ -203,7 +400,7 @@ describe("documentation validation", () => {
     });
 
     try {
-      const result = await validateDocumentation({ projectRoot: root });
+      const result = await validateMinimalFixture(root);
       expect(result.errors).toEqual([
         "docs/GUIDE.md: contains a localhost URL outside an approved local-development document",
       ]);
@@ -221,7 +418,7 @@ describe("documentation validation", () => {
     });
 
     try {
-      const result = await validateDocumentation({ projectRoot: root });
+      const result = await validateMinimalFixture(root);
       expect(result.errors).toEqual([]);
       expect(result.checkedFiles).toEqual(
         expect.arrayContaining([
@@ -242,7 +439,7 @@ describe("documentation validation", () => {
     });
 
     try {
-      const result = await validateDocumentation({ projectRoot: root });
+      const result = await validateMinimalFixture(root);
       expect(result.errors).toEqual(
         expect.arrayContaining([
           ".agents/skills/example/SKILL.md: skill name must match its directory",
@@ -261,12 +458,664 @@ describe("documentation validation", () => {
     });
 
     try {
-      const result = await validateDocumentation({ projectRoot: root });
+      const result = await validateMinimalFixture(root);
       expect(result.errors).toEqual(
         expect.arrayContaining([
           ".agents/skills/example/SKILL.md: skill frontmatter requires a description",
         ]),
       );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("accepts a complete ownership map with direct cards", async () => {
+    const root = await createOwnershipFixture();
+
+    try {
+      await expect(validateDocumentation({ projectRoot: root })).resolves.toMatchObject({
+        errors: [],
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("requires every bootstrap file and the ownership manifest by default", async () => {
+    const root = await createFixture({
+      "README.md": "# Project\n",
+      "docs/README.md": "# Documentation\n",
+    });
+
+    try {
+      const result = await validateDocumentation({ projectRoot: root });
+      expect(result.errors).toEqual(
+        expect.arrayContaining([
+          ".agents/agent-map.json: required bootstrap file is missing: AGENTS.md",
+          ".agents/agent-map.json: required bootstrap file is missing: .agents/README.md",
+          ".agents/agent-map.json: required bootstrap file is missing: .agents/knowledge/SYSTEM_DECISIONS.md",
+          ".agents/agent-map.json: required ownership manifest is missing",
+        ]),
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects moved, private, and legacy feature ownership paths", async () => {
+    await expectOwnershipError((manifest) => {
+      manifest.owners.find((owner) => owner.id === "routes-metadata").entrypoints[0] =
+        "src/app/moved-layout.tsx";
+    }, "invalid or private entrypoint: src/app/moved-layout.tsx");
+    await expectOwnershipError((manifest) => {
+      manifest.owners.find((owner) => owner.id === "routes-metadata").entrypoints[0] =
+        ".env.local";
+    }, "invalid or private entrypoint: .env.local");
+    await expectOwnershipError((manifest) => {
+      manifest.owners.find((owner) => owner.id === "portfolio-home-profile").pathPatterns[0] =
+        "src/features/missing/**";
+    }, "path pattern matches no repository file: src/features/missing/**");
+  });
+
+  it("rejects manifest references that escape through file and parent-directory symlinks", async () => {
+    const root = await createOwnershipFixture((manifest) => {
+      manifest.documentationCommandExceptions.push({
+        document: "docs/architecture/ARCHITECTURE.md",
+        command: "illustrative-command",
+        reason: "This fixture exercises a contained documentation reference.",
+      });
+    });
+    const outside = await mkdtemp(
+      path.join(os.tmpdir(), "portfolio-outside-reference-"),
+    );
+    try {
+      const directReferences = [
+        ["src/app/layout.tsx", "outside-layout.tsx"],
+        ["src/app/robots.test.ts", "outside-robots.test.ts"],
+        ["src/lib/routing/siteRoutes.ts", "outside-site-routes.ts"],
+        ["next.config.mjs", "outside-next.config.mjs"],
+      ];
+      for (const [relativePath, outsideName] of directReferences) {
+        const target = path.join(root, relativePath);
+        const outsideTarget = path.join(outside, outsideName);
+        await rm(target, { force: true });
+        await writeFile(outsideTarget, "export {};\n", "utf8");
+        await symlink(outsideTarget, target);
+      }
+
+      await rm(path.join(root, "docs", "architecture"), {
+        recursive: true,
+        force: true,
+      });
+      const outsideArchitecture = path.join(outside, "architecture");
+      await mkdir(outsideArchitecture, { recursive: true });
+      await writeFile(
+        path.join(outsideArchitecture, "ARCHITECTURE.md"),
+        "# Outside architecture\n",
+        "utf8",
+      );
+      await writeFile(
+        path.join(outsideArchitecture, "PROJECT_STRUCTURE.md"),
+        "# Outside structure\n",
+        "utf8",
+      );
+      await symlink(outsideArchitecture, path.join(root, "docs", "architecture"));
+
+      await rm(path.join(root, "docs", "development"), {
+        recursive: true,
+        force: true,
+      });
+      const outsideDevelopment = path.join(outside, "development");
+      await mkdir(outsideDevelopment, { recursive: true });
+      await writeFile(
+        path.join(outsideDevelopment, "AGENT_MAP.md"),
+        "# Outside map\n",
+        "utf8",
+      );
+      await symlink(outsideDevelopment, path.join(root, "docs", "development"));
+
+      const result = await validateDocumentation({ projectRoot: root });
+      expect(result.errors).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining(
+            "mapDocument must be an existing repository Markdown file",
+          ),
+          expect.stringContaining(
+            "owner routes-metadata has an invalid or private entrypoint: src/app/layout.tsx",
+          ),
+          expect.stringContaining(
+            "owner routes-metadata has an invalid or private test path: src/app/robots.test.ts",
+          ),
+          expect.stringContaining(
+            "owner architecture documentation file does not exist: docs/architecture/ARCHITECTURE.md#application-layers",
+          ),
+          expect.stringContaining(
+            "owner routes-metadata has an invalid or private reuse primitive: src/lib/routing/siteRoutes.ts",
+          ),
+          expect.stringContaining(
+            "code path exceptions require an existing public path and reason",
+          ),
+          expect.stringContaining(
+            "documentation command exceptions require a Markdown document, command, and reason",
+          ),
+        ]),
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+      await rm(outside, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects missing commands, anchors, and unowned implementation paths", async () => {
+    await expectOwnershipError((manifest) => {
+      manifest.owners.find((owner) => owner.id === "content").commands[0] =
+        "npm run missing-content-check";
+    }, "references an unknown npm command: npm run missing-content-check");
+    await expectOwnershipError((manifest) => {
+      manifest.owners.find((owner) => owner.id === "docs-maintenance").documentation[0] =
+        "docs/README.md#missing-section";
+    }, "documentation anchor does not exist: docs/README.md#missing-section");
+    await expectOwnershipError((manifest) => {
+      manifest.owners = manifest.owners.filter(
+        (owner) => owner.id !== "shared-theme",
+      );
+    }, "relevant repository path has no owner or explicit exception: src/components/theme/ThemeSwitcher.test.tsx");
+  });
+
+  it("rejects a relevant source path without an owner or explicit exception", async () => {
+    const root = await createOwnershipFixture();
+    try {
+      await mkdir(path.join(root, "src", "lib", "unowned"), {
+        recursive: true,
+      });
+      await writeFile(
+        path.join(root, "src", "lib", "unowned", "new.ts"),
+        "export {};\n",
+        "utf8",
+      );
+      const result = await validateDocumentation({ projectRoot: root });
+      expect(result.errors).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining(
+            "relevant repository path has no owner or explicit exception: src/lib/unowned/new.ts",
+          ),
+        ]),
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a new functional root configuration without an owner or exception", async () => {
+    const root = await createOwnershipFixture();
+    try {
+      await writeFile(
+        path.join(root, "unowned.config.mjs"),
+        "export default {};\n",
+        "utf8",
+      );
+      const result = await validateDocumentation({ projectRoot: root });
+      expect(result.errors).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining(
+            "relevant repository path has no owner or explicit exception: unowned.config.mjs",
+          ),
+        ]),
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("requires ownership for dotfile and extensionless root configuration", async () => {
+    const root = await createOwnershipFixture();
+    const rootConfigs = [
+      ".npmrc",
+      ".prettierrc",
+      ".tool-versions",
+      "Dockerfile",
+      "Makefile",
+    ];
+    try {
+      for (const filename of rootConfigs) {
+        await writeFile(path.join(root, filename), "fixture\n", "utf8");
+      }
+      const result = await validateDocumentation({ projectRoot: root });
+      for (const filename of rootConfigs) {
+        expect(result.errors).toEqual(
+          expect.arrayContaining([
+            expect.stringContaining(
+              "relevant repository path has no owner or explicit exception: " +
+                filename,
+            ),
+          ]),
+        );
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("requires each feature to be covered by its assigned owner even when a broad owner covers it", async () => {
+    await expectOwnershipError((manifest) => {
+      const owner = manifest.owners.find((entry) => entry.id === "portfolio-projects");
+      owner.pathPatterns = owner.pathPatterns.filter((pattern) => pattern !== "src/features/projects/**");
+      manifest.owners.find((entry) => entry.id === "quality-tests").pathPatterns.push("src/features/projects/**");
+    }, "feature group is not covered by its owner: src/features/projects/");
+  });
+
+  it("requires a narrow exception for the checked-in environment template", async () => {
+    await expectOwnershipError((manifest) => {
+      manifest.codePathExceptions = manifest.codePathExceptions.filter(
+        (exception) => exception.path !== ".env.example",
+      );
+    }, "relevant repository path has no owner or explicit exception: .env.example");
+    await expectOwnershipError((manifest) => {
+      manifest.codePathExceptions.push({
+        path: ".env.local",
+        reason: "Private local configuration must not be documented.",
+      });
+    }, "code path exceptions require an existing public path and reason");
+  });
+
+  it("uses Git ignore rules for private local files while retaining unignored configuration", async () => {
+    const root = await createGitOwnershipFixture();
+    try {
+      await Promise.all([
+        writeFile(path.join(root, ".env"), "TOKEN=private-env-sentinel\n", "utf8"),
+        writeFile(path.join(root, ".dev.vars"), "SECRET=private-vars-sentinel\n", "utf8"),
+        writeFile(path.join(root, "local-generated.log"), "private-log-sentinel\n", "utf8"),
+        writeFile(path.join(root, "docs/ignored-private.md"), "# Private\n\nTODO private-markdown-sentinel\n", "utf8"),
+        writeFile(path.join(root, "unowned.config.mjs"), "export default {};\n", "utf8"),
+        writeFile(path.join(root, ".npmrc"), "registry=https://registry.npmjs.org/\n", "utf8"),
+      ]);
+
+      const result = await validateDocumentation({ projectRoot: root });
+      const diagnostics = result.errors.join("\n");
+      expect(result.errors).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining(
+            "relevant repository path has no owner or explicit exception: unowned.config.mjs",
+          ),
+          expect.stringContaining(
+            "relevant repository path has no owner or explicit exception: .npmrc",
+          ),
+        ]),
+      );
+      expect(diagnostics).not.toContain(".env");
+      expect(diagnostics).not.toContain("local-generated.log");
+      expect(diagnostics).not.toContain("private-env-sentinel");
+      expect(diagnostics).not.toContain("private-vars-sentinel");
+      expect(diagnostics).not.toContain("private-log-sentinel");
+      expect(diagnostics).not.toContain("ignored-private.md");
+      expect(diagnostics).not.toContain("private-markdown-sentinel");
+      expect(result.checkedFiles).not.toContain("docs/ignored-private.md");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("fails closed when Git inventory fails without reading ignored Markdown", async () => {
+    const root = await createGitOwnershipFixture();
+    try {
+      await writeFile(path.join(root, "docs/ignored-private.md"), "# private-markdown-sentinel\n\nTODO\n", "utf8");
+      await writeFile(path.join(root, ".git/config"), "[invalid private-config-sentinel\n", "utf8");
+      await expect(validateDocumentation({ projectRoot: root })).rejects.toThrow(
+        /^Unable to determine repository inventory\.$/,
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not read an ignored Markdown target to resolve a fragment", async () => {
+    const root = await createGitOwnershipFixture();
+    try {
+      await writeFile(path.join(root, "docs/ignored-private.md"), "# private-secret-heading\n", "utf8");
+      await writeFile(path.join(root, "docs/README.md"), "# Documentation\n\n[Private](ignored-private.md#private-secret-heading)\n", "utf8");
+      const result = await validateDocumentation({ projectRoot: root });
+      expect(result.errors).toEqual(expect.arrayContaining([
+        expect.stringContaining("Markdown target is outside the repository inventory"),
+      ]));
+      expect(result.checkedFiles).not.toContain("docs/ignored-private.md");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("validates a fresh Git checkout before Next generates its ignored declarations", async () => {
+    const root = await createGitOwnershipFixture();
+    try {
+      await expect(readFile(path.join(root, "next-env.d.ts"), "utf8")).rejects.toThrow();
+      await expect(validateDocumentation({ projectRoot: root })).resolves.toMatchObject({
+        errors: [],
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps generated Next declarations outside non-Git fixture inventory", async () => {
+    const root = await createOwnershipFixture();
+    try {
+      await writeFile(path.join(root, "next-env.d.ts"), "/// <reference types=\"next\" />\n", "utf8");
+      await expect(validateDocumentation({ projectRoot: root })).resolves.toMatchObject({
+        errors: [],
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects symlinked ownership inputs before private content can be parsed or read", async () => {
+    const protectedPaths = [
+      ".agents/agent-map.json",
+      "AGENTS.md",
+      ".agents/README.md",
+      ".agents/knowledge/SYSTEM_DECISIONS.md",
+    ];
+    const outside = await mkdtemp(path.join(os.tmpdir(), "portfolio-private-symlink-"));
+    try {
+      for (const [index, protectedPath] of protectedPaths.entries()) {
+        for (const targetType of ["internal", "external"]) {
+          const root = await createOwnershipFixture();
+          const sentinel = `private-symlink-sentinel-${index}-${targetType}`;
+          const target =
+            targetType === "internal"
+              ? path.join(root, ".env")
+              : path.join(outside, `${index}-${targetType}.txt`);
+          try {
+            await writeFile(target, `{"private":"${sentinel}"`, "utf8");
+            await rm(path.join(root, protectedPath), { force: true });
+            await symlink(target, path.join(root, protectedPath));
+
+            const result = await validateDocumentation({ projectRoot: root });
+            const diagnostics = result.errors.join("\n");
+            expect(diagnostics).toContain(
+              `${protectedPath}: documentation path must not be a symlink`,
+            );
+            expect(diagnostics).not.toContain(sentinel);
+            expect(diagnostics).not.toContain("Unexpected token");
+            expect(diagnostics).not.toContain("Expected property name");
+            if (protectedPath === ".agents/agent-map.json") {
+              expect(diagnostics).toContain("required ownership manifest is missing");
+            } else {
+              expect(diagnostics).toContain(
+                `required bootstrap file is missing: ${protectedPath}`,
+              );
+            }
+          } finally {
+            await rm(root, { recursive: true, force: true });
+          }
+        }
+      }
+    } finally {
+      await rm(outside, { recursive: true, force: true });
+    }
+  });
+
+  it("does not traverse symlinked documentation roots during discovery", async () => {
+    const outside = await mkdtemp(path.join(os.tmpdir(), "portfolio-docs-root-symlink-"));
+    try {
+      for (const [index, directory] of ["docs", ".agents"].entries()) {
+        const root = await createOwnershipFixture();
+        const sentinel = `private-document-root-sentinel-${index}`;
+        const target = path.join(outside, `root-${index}`);
+        try {
+          await mkdir(target, { recursive: true });
+          await writeFile(path.join(target, "PRIVATE.md"), `# ${sentinel}\n`, "utf8");
+          await rm(path.join(root, directory), { recursive: true, force: true });
+          await symlink(target, path.join(root, directory));
+
+          const result = await validateDocumentation({ projectRoot: root });
+          const diagnostics = result.errors.join("\n");
+          expect(diagnostics).toContain(
+            `${directory}: documentation path must not be a symlink`,
+          );
+          expect(diagnostics).not.toContain(sentinel);
+        } finally {
+          await rm(root, { recursive: true, force: true });
+        }
+      }
+    } finally {
+      await rm(outside, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects relevant root and source symlinks without reading their targets", async () => {
+    const root = await createOwnershipFixture();
+    const outside = await mkdtemp(path.join(os.tmpdir(), "portfolio-symlink-"));
+    try {
+      const rootTarget = path.join(outside, "root-config.mjs");
+      const sourceTarget = path.join(outside, "source.ts");
+      await writeFile(rootTarget, "external root fixture\n", "utf8");
+      await writeFile(sourceTarget, "external source fixture\n", "utf8");
+      await symlink(rootTarget, path.join(root, "unowned.config.mjs"));
+      await symlink(sourceTarget, path.join(root, "src", "unowned-link.ts"));
+
+      const result = await validateDocumentation({ projectRoot: root });
+      expect(result.errors).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining(
+            "relevant repository path must not be a symlink: unowned.config.mjs",
+          ),
+          expect.stringContaining(
+            "relevant repository path must not be a symlink: src/unowned-link.ts",
+          ),
+        ]),
+      );
+      expect(result.errors.join("\n")).not.toContain("external root fixture");
+      expect(result.errors.join("\n")).not.toContain("external source fixture");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+      await rm(outside, { recursive: true, force: true });
+    }
+  });
+
+  it("enforces bootstrap and task-card budgets", async () => {
+    const root = await createOwnershipFixture();
+    try {
+      await writeFile(path.join(root, "AGENTS.md"), "x".repeat(12289), "utf8");
+      const result = await validateDocumentation({ projectRoot: root });
+      expect(result.errors).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining("combined bootstrap size"),
+        ]),
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+
+    const cardRoot = await createOwnershipFixture();
+    try {
+      await writeFile(
+        path.join(cardRoot, ".agents/cards/content.md"),
+        "x".repeat(6145),
+        "utf8",
+      );
+      const result = await validateDocumentation({ projectRoot: cardRoot });
+      expect(result.errors).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining("task card .agents/cards/content.md size 6145"),
+        ]),
+      );
+    } finally {
+      await rm(cardRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("checks future infrastructure Markdown when the directory appears", async () => {
+    const root = await createOwnershipFixture();
+    try {
+      await mkdir(path.join(root, "infrastructure"), { recursive: true });
+      await writeFile(
+        path.join(root, "infrastructure/README.md"),
+        "# Infrastructure\n\nTODO\n",
+        "utf8",
+      );
+      const result = await validateDocumentation({ projectRoot: root });
+      expect(result.errors).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining(
+            "infrastructure/README.md: contains an obvious unresolved placeholder",
+          ),
+          expect.stringContaining(
+            "infrastructure owner must cover every infrastructure path",
+          ),
+        ]),
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("accepts owned implemented infrastructure", async () => {
+    const root = await createOwnershipFixture((manifest) => {
+      manifest.owners
+        .find((owner) => owner.id === "infrastructure")
+        .pathPatterns.push("infrastructure/**");
+    });
+    try {
+      await mkdir(path.join(root, "infrastructure"), { recursive: true });
+      await writeFile(
+        path.join(root, "infrastructure", "main.tf"),
+        "terraform {}\n",
+        "utf8",
+      );
+      await expect(validateDocumentation({ projectRoot: root })).resolves.toMatchObject({
+        errors: [],
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("checks documented npm commands and allows narrow registered examples", async () => {
+    const root = await createOwnershipFixture();
+    try {
+      const documentationPath = path.join(root, "docs", "README.md");
+      await writeFile(
+        documentationPath,
+        (await readFile(documentationPath, "utf8")) +
+          "\nUse `npm run removed-doc-command -- --help`.\n",
+        "utf8",
+      );
+      const result = await validateDocumentation({ projectRoot: root });
+      expect(result.errors).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining(
+            "document references an unknown npm command: docs/README.md -> npm run removed-doc-command",
+          ),
+        ]),
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+
+    const allowedRoot = await createOwnershipFixture((manifest) => {
+      manifest.documentationCommandExceptions.push({
+        document: "docs/README.md",
+        command: "illustrative-command",
+        reason: "The documentation labels this as a non-executable example.",
+      });
+    });
+    try {
+      const documentationPath = path.join(allowedRoot, "docs", "README.md");
+      await writeFile(
+        documentationPath,
+        (await readFile(documentationPath, "utf8")) +
+          "\nUse `npm run illustrative-command -- --example`.\n",
+        "utf8",
+      );
+      await expect(
+        validateDocumentation({ projectRoot: allowedRoot }),
+      ).resolves.toMatchObject({ errors: [] });
+    } finally {
+      await rm(allowedRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects private paths and sensitive Markdown without exposing their values", async () => {
+    const root = await createFixture({
+      "README.md": "# Project\n\nA prose path is `/Users/alice/private`.\n",
+      "docs/GUIDE.md": [
+        "# Guide",
+        "",
+        "```text",
+        "/home/alice/private",
+        "```",
+        "",
+        "API_TOKEN=not-a-real-token",
+        "https://alice:not-a-real-password@example.test/path",
+        "ghp_abcdefghijklmnopqrstuvwx",
+      ].join("\n"),
+    });
+    try {
+      const result = await validateMinimalFixture(root);
+      expect(result.errors).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining("absolute macOS or Linux user path"),
+          expect.stringContaining("sensitive configuration assignment"),
+          expect.stringContaining("credential-bearing URL"),
+          expect.stringContaining("key-shaped credential value"),
+        ]),
+      );
+      expect(result.errors.join("\n")).not.toContain("not-a-real-token");
+      expect(result.errors.join("\n")).not.toContain("not-a-real-password");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("detects every bare sensitive configuration assignment without echoing values", async () => {
+    const names = [
+      "TOKEN",
+      "SECRET",
+      "PASSWORD",
+      "PRIVATE_KEY",
+      "CREDENTIAL",
+      "API_KEY",
+    ];
+    for (const name of names) {
+      const root = await createFixture({
+        "README.md": "# Project\n",
+        "docs/GUIDE.md": `# Guide\n\n${name}=unsafe-fixture-value\n`,
+      });
+      try {
+        const result = await validateMinimalFixture(root);
+        expect(result.errors).toEqual(
+          expect.arrayContaining([
+            expect.stringContaining("sensitive configuration assignment"),
+          ]),
+        );
+        expect(result.errors.join("\n")).not.toContain("unsafe-fixture-value");
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    }
+  });
+
+  it("allows narrow placeholder-only configuration and credential examples", async () => {
+    const root = await createFixture({
+      "README.md": "# Project\n",
+      "docs/GUIDE.md": [
+        "# Guide",
+        "",
+        "TOKEN=<REDACTED>",
+        "SECRET=<REDACTED>",
+        "PASSWORD=<REDACTED>",
+        "PRIVATE_KEY=<REDACTED>",
+        "CREDENTIAL=<REDACTED>",
+        "API_KEY=<REDACTED>",
+        "API_TOKEN=<REDACTED>",
+        "https://<username>:<password>@example.test/path",
+      ].join("\n"),
+    });
+    try {
+      await expect(validateMinimalFixture(root)).resolves.toEqual({
+        checkedFiles: ["README.md", "docs/GUIDE.md"],
+        errors: [],
+      });
     } finally {
       await rm(root, { recursive: true, force: true });
     }

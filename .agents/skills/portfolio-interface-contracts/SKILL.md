@@ -5,9 +5,9 @@ description: Modify Smart Portfolio components, themes, motion, dialogs, or acce
 
 # Portfolio interface contracts
 
-Use this skill for visible components, CSS, responsive behavior, theme handling, motion, dialogs, and accessibility.
+Use for visible UI, CSS, themes, motion, dialogs, and accessibility.
 
-Read [Design system](../../../docs/design/DESIGN_SYSTEM.md), [Accessibility](../../../docs/design/ACCESSIBILITY.md), and [Animation guidelines](../../../docs/design/ANIMATION_GUIDELINES.md). Search for an existing component, selector, validation pattern, and test helper before adding one.
+Read [Design system](../../../docs/design/DESIGN_SYSTEM.md#themes), [Accessibility](../../../docs/design/ACCESSIBILITY.md), and [Animation guidelines](../../../docs/design/ANIMATION_GUIDELINES.md). Search for an existing component, selector, validation pattern, and test helper before adding one.
 
 All hydrated `data-theme` writes go through `src/lib/theme/themeTransition.ts`. Initial preference reconciliation is immediate; eligible later changes use its shared `160ms` opacity-only native View Transition. Keep the existing immediate fallbacks for reduced motion, hidden documents, unsupported transitions, failed transitions, and unchanged palettes.
 

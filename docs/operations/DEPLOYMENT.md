@@ -4,6 +4,8 @@ Smart Portfolio is deployed to Cloudflare Pages by GitHub Actions. The repositor
 
 This guide defines the deployment architecture and initial configuration. Use [Operations](OPERATIONS.md) for recurring releases, monitoring, rollback, and incident response. Use [Troubleshooting](../development/TROUBLESHOOTING.md) when a local or hosted check fails.
 
+The workflow and checked-in configuration are repository-declared release behavior. Cloudflare and GitHub dashboard settings, encrypted values, and the state of a deployed alias are operator-managed evidence; [Implementation inventory](../architecture/IMPLEMENTATION_INVENTORY.md) explains the distinction.
+
 ## Current deployment targets
 
 These are the reviewed targets for this deployed portfolio. They are not generic defaults for a fork or a different Cloudflare account; see [Set up or restore a deployment](#set-up-or-restore-a-deployment) before changing them.
@@ -346,7 +348,7 @@ The Pages Functions compiler emits sealed `out/_routes.json` only after it match
 - `/api/contact/verify`
 - `/api/contact`
 
-All other route and asset requests remain on the static Pages path. The sealed compiler emits `out/_headers` from the reviewed `public/_headers` source; its static Content Security Policy, permissions policy, referrer policy, HSTS, content-type protection, frame denial, and metadata cache rules are the exact values compared by assigned-alias smoke.
+All other route and asset requests remain on the static Pages path. Release packaging generates `out/_headers` with route-specific script hashes from the exported HTML; its static Content Security Policy, permissions policy, referrer policy, HSTS, content-type protection, frame denial, and metadata cache rules are the exact values compared by assigned-alias smoke.
 
 Pages `_headers` rules do not apply to Function responses. Both Functions set their own JSON content type, no-store caching, referrer, and content-type-sniffing headers.
 

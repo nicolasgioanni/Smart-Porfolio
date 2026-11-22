@@ -6,6 +6,8 @@ Use this guide for the complete request contract and trust boundary. See [Securi
 
 ## Source of truth
 
+The files in this table define the implemented request contract. Cloudflare secrets, Turnstile widgets, D1 bindings, DNS results, WAF rules, and Resend acceptance remain operator-managed or provider-observed state. [Implementation inventory](../architecture/IMPLEMENTATION_INVENTORY.md) defines the evidence boundary; do not infer live readiness solely from a local test or tracked configuration.
+
 | Concern | Authoritative source |
 | --- | --- |
 | Static Contact route and metadata | `src/app/contact/page.tsx` |
@@ -19,7 +21,7 @@ Use this guide for the complete request contract and trust boundary. See [Securi
 | Verification handler | `functions/api/contact/verify.ts` |
 | Delivery handler | `functions/api/contact.ts` |
 | Function route allowlist | `public/_routes.json` |
-| Static response headers | `public/_headers` |
+| Static response headers | `public/_headers` and `scripts/release/csp.mjs` |
 | Function JSON response headers | `functions/_shared/contact/request.ts` |
 | Production and preview non-secret values | `wrangler.jsonc` |
 | Contact-rate reservation schema | `migrations/` |
@@ -310,7 +312,7 @@ Every Function response sets:
 - `X-Content-Type-Options: nosniff`;
 - `X-Frame-Options: DENY`.
 
-Cloudflare Pages does not apply `public/_headers` rules to Function-generated responses. Static pages receive the broader Content Security Policy, Permissions Policy, HSTS, framing, referrer, and content-type protections declared there. See [Cloudflare Pages custom headers](https://developers.cloudflare.com/pages/configuration/headers/).
+Cloudflare Pages does not apply `public/_headers` rules to Function-generated responses. Static pages receive the broader security headers from the release-generated `out/_headers`; its route-specific CSP hashes are derived from exported HTML. See [Security](SECURITY.md#response-headers-and-browser-policy). See [Cloudflare Pages custom headers](https://developers.cloudflare.com/pages/configuration/headers/).
 
 ## Configuration
 

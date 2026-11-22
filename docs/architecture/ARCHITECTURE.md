@@ -2,6 +2,8 @@
 
 Smart Portfolio is a static-first Next.js application with a build-time content pipeline, a typed generated-content boundary, and two isolated Cloudflare Pages Functions for the contact workflow. The browser never reads the workbook. GitHub Actions owns verification and deployment.
 
+The implementation map in [Implementation inventory](IMPLEMENTATION_INVENTORY.md) identifies the exact source for each boundary and distinguishes checked-in behavior from operator-managed live configuration.
+
 ## System goals
 
 - Deliver the portfolio as static HTML, CSS, JavaScript, and public assets from Cloudflare Pages.
@@ -92,7 +94,7 @@ Each route segment layout uses the shared `RouteNoScriptFallback` outside its si
 
 `src/lib/content/routeHeaderContent.ts` owns the exhaustive page-header registry shared by resolved routes and `RouteHeaderSkeleton`. The skeleton renders those same strings as transparent, noninteractive, `aria-hidden` ink over a solid fill so browser typography determines the loader's responsive line boxes. Experience is the sole generated header override: the server-side `resolveRouteHeaderContent()` path consumes the validated profile summary for both the resolved route and loading composition, with the same registry fallback. Research skeleton resource counts likewise reuse validated selected detail content and `getResearchVisibleResources()` rather than maintaining a second presentation model.
 
-Next 16's client router requests flattened `__next.*.txt` segment-cache files. On Windows, the framework exporter can preserve platform separators inside those generated names and create nested directories instead, as tracked in Next.js issues [#92339](https://github.com/vercel/next.js/issues/92339) and [#85374](https://github.com/vercel/next.js/issues/85374). Next 16.3.4 runs the stable `adapterPath` build-completion hook after the full static export, so the local adapter invokes `scripts/normalizeNextStaticExport.mjs` before the content-version writer runs. It converts only directory trees that match 16.3.4's filesystem-safe, dot-free encoded-segment grammar, beginning with one `__next.<encoded-segment>` root, to the same flat layout produced on Linux. It rejects malformed trees, symbolic links, unexpected entries, path escapes, and collisions, preserves the segment bytes, and leaves an already-correct export untouched.
+Next 16's client router requests flattened `__next.*.txt` segment-cache files. On Windows, the framework exporter can preserve platform separators inside those generated names and create nested directories instead, as tracked in Next.js issues [#92339](https://github.com/vercel/next.js/issues/92339) and [#85374](https://github.com/vercel/next.js/issues/85374). Next 16.4.0 runs the stable `adapterPath` build-completion hook after the full static export, so the local adapter invokes `scripts/normalizeNextStaticExport.mjs` before the content-version writer runs. It converts only directory trees that match 16.4.0's filesystem-safe, dot-free encoded-segment grammar, beginning with one `__next.<encoded-segment>` root, to the same flat layout produced on Linux. It rejects malformed trees, symbolic links, unexpected entries, path escapes, and collisions, preserves the segment bytes, and leaves an already-correct export untouched.
 
 Static export does not mean the site contains no JavaScript. Focused client components hydrate browser-only behavior:
 
@@ -103,7 +105,7 @@ Static export does not mean the site contains no JavaScript. Focused client comp
 - Home role rotation;
 - scroll reveal where enabled and IntersectionObserver is available, with readable server output before enhancement;
 - skills dialogs through the shared modal layer;
-- independent Project Preview/Architecture switchers;
+- independent Project Concept/How it works tabs;
 - recommendation measurement and expansion;
 - contact verification and submission.
 
@@ -161,43 +163,17 @@ See [Design system](../design/DESIGN_SYSTEM.md), [Accessibility](../design/ACCES
 
 ## Contact boundary
 
-The Contact page itself is a static route. Runtime work begins only when its client component calls one of the two same-origin Functions allowed by `public/_routes.json`.
+The Contact page is static. Runtime work begins only when its client component calls the two same-origin Functions allowlisted by `public/_routes.json`. The browser submits a fresh Turnstile token and generated submission ID to `/api/contact/verify`; after server-side verification, the host-only signed ticket binds the later request to that same ID. The browser then sends the locked, acknowledged form payload to `/api/contact`. The delivery Function independently validates it, validates mail-domain routing, reserves a pseudonymous D1 quota slot, and requests provider acceptance of the visitor confirmation before the private owner notification.
 
-### Verification
-
-Before contact fields are rendered, the visitor completes a visible Turnstile gate. The browser sends the fresh token and generated submission ID to `/api/contact/verify`, and the same ID is supplied as Turnstile custom data. The Function enforces POST, JSON media type, exact origin, a narrow request shape, configuration, Turnstile success, the fixed `portfolio_contact` action, an allowed hostname, and matching `cdata`. One transient Siteverify failure receives one bounded retry with a separate operation UUID that is reused only for that token.
-
-A successful result sets a 30-minute `__Host-portfolio_contact_ticket` cookie. It is `HttpOnly`, `Secure`, `SameSite=Strict`, host-only, path-scoped to `/`, signed with an HMAC key derived from `TURNSTILE_SECRET_KEY`, and bound to the submission ID. It contains no contact fields.
-
-Successful verification enables Continue and opens the form automatically after 500 milliseconds unless the visitor continues sooner. Opening the form records the form-start time and presents three data-entry steps: name, contact details, and review. The review requires two acknowledgements and limits the message to 500 characters. Every new logical message receives a fresh token and submission identity. A still-valid ticket supports only the same locked delivery and its retries. If that ticket expires, the browser returns to the gate without changing the locked UUID, start time, acknowledgement values, or byte-equivalent payload. Successful refresh returns to locked review and never starts delivery automatically.
-
-### Delivery
-
-The browser submits contact fields, acknowledgements, timing metadata, honeypot value, and the same submission ID to `/api/contact`. The Function applies its request and schema rules, verifies the ticket binding, validates mail routing for the email domain, and reserves one of two rolling 24-hour slots in D1. It then asks Resend to accept the visitor confirmation before sending the private owner notification. Each message has its own submission-scoped idempotency key.
-
-Successful delivery clears the ticket. Delivery failure retains an otherwise valid ticket and the original quota reservation for retry. The D1 row stores only the submission UUID, keyed normalized-email and canonical-IP hashes, opaque keyed payload and delivery-configuration fingerprints, renderer version, and reservation and expiry epoch seconds; it stores no raw IP or contact fields. The fingerprint rejects same-ID retries whose normalized payload differs. Raw IPs, request bodies, or personal fields must not be written to application logs.
-
-The atomic email, IP, and environment quotas do not authenticate mailbox ownership, and the shared budget can throttle unrelated visitors, so Cloudflare WAF rate limiting remains an operator-managed defense in depth. Source code can document and test the expected endpoint behavior, but it cannot prove the live zone rule, plan capability, or response customization. See [Contact system](../security/CONTACT_SYSTEM.md) and [Security](../security/SECURITY.md).
+The request schema, byte and time bounds, status mapping, one-operation Turnstile retry, cookie semantics, retry-payload binding, D1 columns, idempotency keys, and Function response headers have one canonical home in [Contact System: endpoint contract](../security/CONTACT_SYSTEM.md#endpoint-contract), [verification ticket](../security/CONTACT_SYSTEM.md#verification-ticket), [quota](../security/CONTACT_SYSTEM.md#mail-domain-validation-and-rolling-quota), and [delivery](../security/CONTACT_SYSTEM.md#email-delivery-and-idempotency). Its [configuration](../security/CONTACT_SYSTEM.md#configuration) and [abuse-control](../security/CONTACT_SYSTEM.md#abuse-protection-enforced-and-external-controls) sections distinguish repository enforcement from the operator-managed WAF, provider, and dashboard state. Do not duplicate those API limits or provider behavior in architecture changes.
 
 ## Deployment boundary
 
 The deployment design makes GitHub Actions the sole deployment owner. Operators must keep Cloudflare Pages Git integration disabled. The workflow sends Direct Upload only an artifact that passed the repository gate.
 
-A deployable candidate follows this sequence:
+At the architecture level, the release has five boundaries: select the exact candidate and one content snapshot; verify the selected validation plan and static export; bind content and artifact metadata to that candidate; revalidate the immutable artifact and selected D1 target before Wrangler; then smoke-test the assigned Pages alias. The workflow does not rebuild or fetch content after verification.
 
-1. Resolve the exact candidate commit and target branch.
-2. Generate one validated content snapshot.
-3. Compare its canonical normalized content subset hash and exact commit SHA with the active production manifest when the event permits a no-op.
-4. Run documentation validation, lint, typecheck, focused footer and navigation regressions, the full Vitest suite, and the skeleton, navigation, footer, recommendation, experience, and research Playwright Chromium suites before the static build.
-5. Write `content-version.json` and `artifact-integrity.json`.
-6. Upload and download the immutable Actions artifact.
-7. Verify every artifact digest and the candidate commit.
-8. Recheck that a production candidate is still current.
-9. Validate the selected D1 target and apply pending migrations.
-10. Deploy the static export and Functions from repository root with pinned Wrangler.
-11. Smoke-test static content, both manifests, and GET rejection from both contact Functions.
-
-The active `/content-version.json` remains the deployed source of truth. A failure before Wrangler upload leaves it unchanged. A post-upload smoke failure can occur after the new manifest is already active, so operators must inspect the deployed result and choose retry or rollback deliberately. See [Operations](../operations/OPERATIONS.md) for event behavior, retry, and rollback considerations.
+[Deployment: single-snapshot, exact-artifact pipeline](../operations/DEPLOYMENT.md#single-snapshot-exact-artifact-pipeline) owns the ordered release steps, including no-op selection, manifest transfer, branch recheck, and migration ordering. [Testing: CI quality gates](../quality/TESTING.md#ci-quality-gates) owns the CI validation matrix. [Operations: failure triage](../operations/OPERATIONS.md#failure-triage) owns the recovery decision: a failure before Wrangler leaves the active target unchanged, while a post-upload smoke failure may occur after the new candidate is active and requires a deliberate retry or rollback.
 
 ## Public and private data
 
@@ -240,6 +216,8 @@ The two-step ticket flow avoids sending a consumed Turnstile token twice and kee
 
 ## Sources of truth
 
+Use [Implementation inventory](IMPLEMENTATION_INVENTORY.md) to decide whether a fact is implemented, repository-declared, operator-managed, historical, or proposed before changing this guide. The table below then identifies the detailed authority for each implemented contract.
+
 | Topic | Authoritative source |
 | --- | --- |
 | Dependencies and scripts | `package.json` and `package-lock.json` |
@@ -257,7 +235,7 @@ The two-step ticket flow avoids sending a consumed Turnstile token twice and kee
 | Glass and interaction primitives | `src/components/glass/`, `glass.css`, and `interactions.css` |
 | Contact verification and delivery | `functions/api/`, the stable `functions/_shared/contact.ts` facade, and its focused `functions/_shared/contact/` modules |
 | Contact-rate storage schema | `migrations/` and `wrangler.jsonc` |
-| Function routing and static headers | `public/_routes.json` and `public/_headers` |
+| Function routing and static headers | `public/_routes.json`, `public/_headers`, and `scripts/release/csp.mjs` |
 | Cloudflare project configuration | `wrangler.jsonc` |
 | Candidate and deployment behavior | `.github/workflows/ci.yml` |
 | Artifact and manifest behavior | `scripts/artifactIntegrity.mjs`, `writeContentVersion.mjs`, and `checkDeployedContent.mjs` |

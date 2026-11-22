@@ -256,7 +256,7 @@ Repository configuration can prove the intended non-secret values, but not the p
 
 ## Deployment security
 
-Every production artifact must contain the exact `_routes.json` and `_headers` files. Deployment smoke testing sends unauthenticated `GET` requests to both Function paths and requires `405` JSON responses. On identity-only hosts it also requires `403` for empty POSTs with both the host’s own Origin and a spoofed canonical Origin. This establishes that both routes are deployed and reject the wrong method and those unauthorized POSTs.
+Every production artifact must contain the exact `_routes.json` and release-generated `_headers` files admitted by sealed artifact checks. Deployment smoke testing sends unauthenticated `GET` requests to both Function paths and requires `405` JSON responses. On identity-only hosts it also requires `403` for empty POSTs with both the host’s own Origin and a spoofed canonical Origin. This establishes that both routes are deployed and reject the wrong method and those unauthorized POSTs.
 
 The smoke test does not establish successful POST handling, exact-origin behavior, live Turnstile validation, ticket cookie acceptance, D1 migration state, DNS behavior, WAF state, Resend delivery, sender-domain verification, recipient correctness, or mailbox receipt. Those items require controlled deployed checks. See [Deployment](../operations/DEPLOYMENT.md) for the activation sequence.
 
