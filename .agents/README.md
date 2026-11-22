@@ -4,4 +4,4 @@ Read [AGENTS.md](../AGENTS.md), then [system decisions](knowledge/SYSTEM_DECISIO
 
 Without Node, open [cards](cards/) as `.agents/cards/<domain>.md`. Domains: home, experience, research, projects, recommendations, skills, legal, resume, contact-ui, routes-seo, content, contact-functions, migrations, theme, shared-ui, motion, skeletons, tests, tooling, ci, release, infrastructure, documentation.
 
-Open one card, its relevant specialist, and linked product section; expand when contracts cross. [Agent workflow](../docs/development/AGENT_WORKFLOW.md) documents the schema, workflow, and budgets. Run `npm run docs:check` for documentation and registry checks.
+Open one card and specialist; expand across contracts. [Agent workflow](../docs/development/AGENT_WORKFLOW.md) documents the schema, workflow, and budgets. Run `npm run docs:check` for documentation and registry checks.

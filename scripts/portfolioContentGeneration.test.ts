@@ -873,7 +873,7 @@ describe("XLSX workbook structure and cells", () => {
   it("preserves content from workbooks with ignored presentation rules", async () => {
     const bytes = await createWorkbookBytes({ mutate: (workbook) => {
       getWorksheet(workbook, "profile").addConditionalFormatting({
-        ref: "B2:B4", rules: [{ type: "expression", formulae: ["TRUE"], style: { font: { bold: true } } }]
+        ref: "B2:B4", rules: [{ type: "expression", priority: 1, formulae: ["TRUE"], style: { font: { bold: true } } }]
       });
     } });
     const sheets = await parsePortfolioWorkbook(bytes);

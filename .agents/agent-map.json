@@ -381,7 +381,12 @@
         "src/lib/content/**",
         "src/lib/csv/**",
         "src/lib/formatting/**",
-        "src/lib/media/**"
+        "src/lib/media/**",
+        "scripts/lib/workbookParserChild.ts",
+        "scripts/lib/workbookParserProcess.test.ts",
+        "scripts/lib/workbookParserProcess.ts",
+        "scripts/lib/workbookSemanticPreflight.test.ts",
+        "scripts/lib/workbookSemanticPreflight.ts"
       ],
       "ownerExclusions": [],
       "consumers": [
@@ -427,7 +432,9 @@
         "scripts/contactTransport.integration.test.ts",
         "scripts/updateContactTlds.mjs",
         "scripts/updateContactTlds.test.mjs",
-        "src/lib/contact/**"
+        "src/lib/contact/**",
+        "scripts/contactQuota.workers.integration.test.ts",
+        "scripts/testSupport/contactQuotaWorker.ts"
       ],
       "ownerExclusions": [],
       "consumers": [
@@ -780,7 +787,9 @@
         "scripts/verify-local.mjs",
         "scripts/verify-local.ps1",
         "tsconfig.json",
-        ".github/dependabot.yml"
+        ".github/dependabot.yml",
+        "scripts/dependabotConfig.test.mjs",
+        "scripts/dependencyCompatibility.test.mjs"
       ],
       "ownerExclusions": [],
       "consumers": [],
@@ -866,7 +875,10 @@
         "scripts/security/**",
         "scripts/writeContentVersion.mjs",
         "security/**",
-        "wrangler.jsonc"
+        "wrangler.jsonc",
+        "scripts/posture/**",
+        "scripts/privatePreviewCheck.mjs",
+        "scripts/privatePreviewCheck.test.mjs"
       ],
       "ownerExclusions": [],
       "consumers": [],
@@ -905,7 +917,8 @@
       "ownerPatterns": [
         ".github/rulesets/**",
         "infra/**",
-        "scripts/permanentBranchRuleset.test.mjs"
+        "scripts/permanentBranchRuleset.test.mjs",
+        "scripts/permanentBranchRuleset.mjs"
       ],
       "ownerExclusions": [],
       "consumers": [

@@ -1,6 +1,6 @@
 # System decisions
 
-This compact reference links to authoritative product documentation; update it when a durable decision changes.
+Update this reference when a durable decision changes.
 
 | Decision | Contract | Authority |
 | --- | --- | --- |
