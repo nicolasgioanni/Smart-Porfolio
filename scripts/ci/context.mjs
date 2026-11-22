@@ -22,6 +22,8 @@ export function currentProducer(job, environment = process.env) {
     attempt: number("GITHUB_RUN_ATTEMPT"), job }, job);
 }
 
+export { gitIdentityEnvironment } from "./sourceIdentity.mjs";
+
 export function checkedCandidate(environment = process.env, projectRoot = process.cwd(), { allowGenerated = false, stage = allowGenerated ? "application verification" : "source admission" } = {}) {
   const candidate = parseCandidate(jsonEnvironment("CI_CANDIDATE", environment));
   assertSourceIdentity(projectRoot, candidate.sourceSha, { allowGenerated, stage });

@@ -217,12 +217,14 @@ describe("deployment smoke checks", () => {
 
     const requestedPaths = [];
     const redirectModes = [];
+    const requestHeaders = [];
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input, init) => {
         const url = input instanceof URL ? input : new URL(String(input));
         requestedPaths.push(url.pathname);
         redirectModes.push(init?.redirect);
+        requestHeaders.push(init?.headers);
 
         if (url.pathname === "/") {
           return new Response(rootHtml, { headers: staticHeaders });
@@ -255,6 +257,14 @@ describe("deployment smoke checks", () => {
       "/api/contact"
     ]);
     expect(redirectModes).toEqual(Array(7).fill("manual"));
+
+    const config = { emails: ["owner@example.com"], groups: [], hostname: "preview.example.com", humanAppId: "11111111-1111-1111-1111-111111111111", idpId: "22222222-2222-2222-2222-222222222222", pagesAppId: "33333333-3333-3333-3333-333333333333", serviceTokenId: "44444444-4444-4444-4444-444444444444" };
+    const environment = { PREVIEW_ACCESS_ENABLED: "true", PREVIEW_ACCESS_CONFIG: JSON.stringify(config), PREVIEW_ACCESS_CLIENT_ID: "client", PREVIEW_ACCESS_CLIENT_SECRET: "secret" };
+    await smokeDeployment("https://0123abcd.smart-portfolio-bds.pages.dev", artifactDirectory, contentHash, commitSha, { privatePreview: true, environment });
+    expect(redirectModes.slice(7)).toEqual(Array(7).fill("manual"));
+    for (const headers of requestHeaders.slice(7)) expect(headers).toMatchObject({ "CF-Access-Client-Id": "client", "CF-Access-Client-Secret": "secret" });
+    await expect(smokeDeployment("https://smart-portfolio-bds.pages.dev", artifactDirectory, contentHash, commitSha, { privatePreview: true, environment })).rejects.toThrow();
+    expect(requestHeaders).toHaveLength(14);
   });
 
   it("rejects substituted root bytes and a static CSP that bypasses a route replacement", async () => {

@@ -2,6 +2,10 @@ import { execFileSync } from "node:child_process";
 import { assertSha } from "./plan.mjs";
 import { generatedContentPath } from "./snapshot.mjs";
 
+export function gitIdentityEnvironment(environment = process.env) {
+  return { ...environment, PREVIEW_ACCESS_CLIENT_ID: undefined, PREVIEW_ACCESS_CLIENT_SECRET: undefined };
+}
+
 // Inspect only names and metadata. Never include source content or unbounded Git output in errors.
 export function assertSourceIdentity(projectRoot, sourceSha, { allowGenerated = false, stage = "source admission" } = {}) {
   try { assertSha(sourceSha, "Accepted source revision"); }
@@ -9,7 +13,7 @@ export function assertSourceIdentity(projectRoot, sourceSha, { allowGenerated = 
   const git = (...args) => {
     try {
       return execFileSync("git", ["-c", "core.filemode=true", "-c", "core.ignoreStat=false", ...args], { cwd: projectRoot, encoding: "buffer", maxBuffer: 8 * 1024 * 1024,
-        env: { ...process.env, GIT_OPTIONAL_LOCKS: "0" }, stdio: ["ignore", "pipe", "ignore"] });
+        env: { ...gitIdentityEnvironment(), GIT_OPTIONAL_LOCKS: "0" }, stdio: ["ignore", "pipe", "ignore"] });
     } catch { throw new Error(`Unable to inspect accepted Git source identity. Checkpoint: ${stage}.`); }
   };
   const head = git("rev-parse", "--verify", "HEAD").toString("ascii").trim();

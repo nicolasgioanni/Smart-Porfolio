@@ -56,8 +56,8 @@ async function git(directory, ...args) {
   });
 }
 
-function candidate(sha) {
-  const ref = "refs/heads/main";
+function candidate(sha, target = "production") {
+  const ref = target === "preview" ? "refs/heads/develop" : "refs/heads/main";
   return {
     schemaVersion: 1,
     repository,
@@ -135,7 +135,7 @@ async function directoryDigest(directory) {
   return digest(Buffer.concat([Buffer.from(`${name}\0`), bytes, Buffer.from("\0")]));
 }
 
-async function deploymentFixture({ mutateConfig } = {}) {
+async function deploymentFixture({ mutateConfig, target = "production" } = {}) {
   const parent = await mkdtemp(path.join(os.tmpdir(), "portfolio-deployment-runner-"));
   temporary.push(parent);
   const root = path.join(parent, "repository");
@@ -160,13 +160,14 @@ async function deploymentFixture({ mutateConfig } = {}) {
   await git(root, "add", "--all");
   await git(root, "commit", "-qm", "fixture");
   const { stdout } = await git(root, "rev-parse", "HEAD");
-  const input = candidate(stdout.trim());
+  const input = candidate(stdout.trim(), target);
   const baseEnvironment = {
     NEXT_PUBLIC_TURNSTILE_SITE_KEY: "fixture-public-turnstile-key",
+    NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY: "fixture-preview-turnstile-key",
     CLOUDFLARE_PAGES_PROJECT_NAME: "smart-portfolio",
     CLOUDFLARE_PAGES_DOMAIN: "smart-portfolio-bds.pages.dev"
   };
-  const publicInputs = await collectPublicBuildInputs({ projectRoot: root, target: "production", sourceCommit: input.sourceSha, environment: baseEnvironment });
+  const publicInputs = await collectPublicBuildInputs({ projectRoot: root, target, sourceCommit: input.sourceSha, environment: baseEnvironment });
   const snapshot = createSnapshot({
     bytes: accepted,
     candidate: input,
@@ -195,7 +196,7 @@ async function deploymentFixture({ mutateConfig } = {}) {
     migrationsHash: "0".repeat(64),
     wranglerConfigHash: "0".repeat(64),
     sourceMode: "remote",
-    target: "production",
+    target,
     producer,
     toolchain: {
       node: process.version,
@@ -219,7 +220,7 @@ async function deploymentFixture({ mutateConfig } = {}) {
     writeFile(path.join(out, "_routes.json"), '{"version":1,"include":["/api/contact","/api/contact/verify"],"exclude":[]}\n'),
     writeFile(path.join(out, "content-version.json"), `${JSON.stringify({
       schemaVersion: 2, commitSha: input.sourceSha, contentHash, generatedAt: "2026-10-12T00:00:00.000Z",
-      deployedAt: "2026-10-12T00:00:01.000Z", target: "production", publicBuildInputDigest: snapshot.publicBuildInputDigest, producer
+      deployedAt: "2026-10-12T00:00:01.000Z", target, publicBuildInputDigest: snapshot.publicBuildInputDigest, producer
     })}\n`),
     writeFile(path.join(out, "_next", "fixture.js"), "export {};"),
     writeFile(path.join(migrations, "0001_fixture.sql"), "select 1;\n"),
@@ -306,7 +307,7 @@ function providerCommand(calls) {
     await mkdir(cache, { recursive: true });
     await writeFile(path.join(cache, args.includes("pages") ? "pages.json" : "d1.json"), "{}\n");
     if (args.includes("pages")) {
-      await writeFile(options.env.WRANGLER_OUTPUT_FILE_PATH, deploymentOutput({ sourceSha: args.at(-3) }));
+      await writeFile(options.env.WRANGLER_OUTPUT_FILE_PATH, deploymentOutput({ sourceSha: args.at(-3), target: args.includes("develop") ? "preview" : "production" }));
     }
     return { stdout: "", stderr: "" };
   });
@@ -356,6 +357,18 @@ describe("release orchestration failure boundaries", () => {
 });
 
 describe("deployment admission and provider evidence", () => {
+  it.each([null, "existing"])('blocks private preview %s before cloud operations', async (observed) => {
+    const fixture = await deploymentFixture({ target: "preview" });
+    fixture.environment.PREVIEW_ACCESS_ENABLED = "true";
+    const observe = vi.fn().mockResolvedValue(observed ? fixture.identity : null);
+    const executeCommand = vi.fn(), preflight = vi.fn(), verifyProvenance = vi.fn();
+    const environmentPreflight = vi.fn(), accessPreflight = vi.fn(), accessDenial = vi.fn(), smoke = vi.fn();
+    await expect(executeDeployment({ environment: fixture.environment, projectRoot: fixture.root, observe,
+      branchTip: vi.fn(), executeCommand, preflight, verifyProvenance, environmentPreflight, accessPreflight, accessDenial, smoke }))
+      .rejects.toThrow("entitlement_mapping_unreviewed");
+    for (const operation of [observe, executeCommand, preflight, verifyProvenance, environmentPreflight, accessPreflight, accessDenial, smoke]) expect(operation).not.toHaveBeenCalled();
+  });
+
   it("binds deploy acceptance to a deployable target, plan, and original release reference", () => {
     const input = candidate("a".repeat(40));
     const plan = createPlan(input, { snapshotDigest: "b".repeat(64) });

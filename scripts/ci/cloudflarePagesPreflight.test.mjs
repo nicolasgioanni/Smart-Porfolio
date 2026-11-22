@@ -139,3 +139,25 @@ describe("Cloudflare Pages deployment preflight", () => {
     await expect(verifyCloudflarePagesProject({ accountId, apiToken, fetcher: async () => response("{") })).rejects.toThrow(/preflight rejected/);
   });
 });
+
+describe("private preview current deployment inventory", () => {
+  const sha = "a".repeat(40);
+  const deployment = { id: "01234567-89ab-4cde-8fab-0123456789ab", url: "https://01234567.smart-portfolio-bds.pages.dev", project_name: "smart-portfolio", environment: "preview", aliases: ["https://develop.smart-portfolio-bds.pages.dev"], is_skipped: false, latest_stage: { name: "deploy", status: "success" }, deployment_trigger: { type: "ad_hoc", metadata: { branch: "develop", commit_dirty: false, commit_hash: sha } } };
+  const inventory = (result) => ({ success: true, errors: [], result, result_info: { page: 1, per_page: 100, total_pages: 1, count: result.length, total_count: result.length } });
+  it("selects the exact successful hash behind the develop alias", async () => {
+    const { findCurrentPreviewDeployment } = await import("./cloudflarePagesPreflight.mjs");
+    const fetcher = vi.fn(async () => response(inventory([deployment])));
+    await expect(findCurrentPreviewDeployment({ accountId, apiToken, sourceSha: sha, fetcher })).resolves.toBe(deployment.url);
+    expect(fetcher.mock.calls[0][1]).toMatchObject({ redirect: "manual" });
+  });
+  it.each([
+    ["ambiguous alias", [deployment, { ...deployment }]],
+    ["missing alias", [{ ...deployment, aliases: [] }]],
+    ["failed deploy", [{ ...deployment, latest_stage: { name: "deploy", status: "failure" } }]],
+    ["different commit", [{ ...deployment, deployment_trigger: { metadata: { branch: "develop", commit_dirty: false, commit_hash: "b".repeat(40) } } }]],
+    ["foreign origin", [{ ...deployment, url: "https://evil.test" }]]
+  ])("rejects %s", async (_name, result) => {
+    const { findCurrentPreviewDeployment } = await import("./cloudflarePagesPreflight.mjs");
+    await expect(findCurrentPreviewDeployment({ accountId, apiToken, sourceSha: sha, fetcher: async () => response(inventory(result)) })).rejects.toThrow();
+  });
+});

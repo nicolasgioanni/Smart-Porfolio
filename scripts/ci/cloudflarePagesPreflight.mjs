@@ -88,7 +88,7 @@ function parseProject(value) {
  * mutate D1 or ask Wrangler to upload. All provider failures deliberately
  * collapse to one credential-safe diagnostic.
  */
-export async function verifyCloudflarePagesProject({ accountId, apiToken, fetcher = fetch }) {
+export async function cloudflareReadJson(apiPath, { accountId, apiToken, fetcher = fetch }) {
   if (typeof accountId !== "string" || !accountIdPattern.test(accountId) ||
       typeof apiToken !== "string" || apiToken.trim().length === 0) {
     throw preflightFailure();
@@ -100,7 +100,7 @@ export async function verifyCloudflarePagesProject({ accountId, apiToken, fetche
   let timeoutId;
   const operation = Promise.resolve().then(async () => {
     const response = await fetcher(
-      `${cloudflareApiOrigin}/accounts/${accountId}/pages/projects/${reviewedPagesProjectName}`,
+      `${cloudflareApiOrigin}${apiPath}`,
       {
         method: "GET",
         headers: { Accept: "application/json", Authorization: `Bearer ${apiToken}` },
@@ -126,11 +126,37 @@ export async function verifyCloudflarePagesProject({ accountId, apiToken, fetche
   });
 
   try {
-    return parseProject(await Promise.race([operation, deadline]));
+    const value = await Promise.race([operation, deadline]);
+    if (!value || value.success !== true || !Array.isArray(value.errors) || value.errors.length !== 0) throw preflightFailure();
+    return value;
   } catch {
     throw preflightFailure();
   } finally {
     clearTimeout(timeoutId);
     void operation.catch(() => undefined);
   }
+}
+
+export async function verifyCloudflarePagesProject({ accountId, apiToken, fetcher = fetch }) {
+  return parseProject(await cloudflareReadJson(`/accounts/${accountId}/pages/projects/${reviewedPagesProjectName}`, { accountId, apiToken, fetcher }));
+}
+
+// A smoke-only retry must prove which immutable deployment currently owns the
+// branch alias. Refuse incomplete or ambiguous provider inventories.
+export async function findCurrentPreviewDeployment({ accountId, apiToken, sourceSha, fetcher = fetch }) {
+  if (!/^[a-f0-9]{40}$/.test(sourceSha)) throw preflightFailure();
+  const value = await cloudflareReadJson(`/accounts/${accountId}/pages/projects/${reviewedPagesProjectName}/deployments?env=preview&per_page=100`, { accountId, apiToken, fetcher });
+  const info = value.result_info;
+  if (!Array.isArray(value.result) || !info || info.page !== 1 || info.total_pages > 1 ||
+      info.total_count !== value.result.length || info.count !== value.result.length) throw preflightFailure();
+  const matches = value.result.filter((item) => Array.isArray(item.aliases) && item.aliases.includes(`https://develop.${reviewedPagesDomain}`));
+  if (matches.length !== 1) throw preflightFailure();
+  const item = matches[0];
+  if (item.project_name !== reviewedPagesProjectName || item.environment !== "preview" || item.is_skipped !== false ||
+      item.latest_stage?.name !== "deploy" || item.latest_stage?.status !== "success" ||
+      item.deployment_trigger?.metadata?.branch !== "develop" || item.deployment_trigger?.metadata?.commit_dirty !== false ||
+      item.deployment_trigger?.metadata?.commit_hash !== sourceSha ||
+      !/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(item.id) ||
+      item.url !== `https://${item.id.slice(0, 8)}.${reviewedPagesDomain}`) throw preflightFailure();
+  return item.url;
 }

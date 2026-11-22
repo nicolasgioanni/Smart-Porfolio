@@ -134,9 +134,26 @@ Do not reuse or copy the current live IDs for a different account, and do not co
 
 ## Private-preview checker is not activated
 
-`scripts/privatePreviewCheck.mjs` prepares credential-isolated, fail-closed Access inventory and private smoke checks. It is not connected to the current sealed deployment workflow and does not establish that the preview is private. Current preview deployment behavior is unchanged.
+`scripts/privatePreviewCheck.mjs` prepares credential-isolated, fail-closed Access inventory and private smoke checks. It remains separate from the prepared sealed deployment path and does not establish that the preview is private. Active private-preview deployment is blocked before environment selection or deployment until entitlement mapping is reviewed.
 
 Its preflight deliberately ends with `activation_blocked` and `entitlement_mapping_unreviewed`: the provider entitlement schema does not identify the Access feature keys and allocation semantics required to prove coverage. A separately reviewed provider observation and sealed-deployment integration are required before activation. That integration must preserve freshness, artifact and upload identity checks, use restricted runner-temporary evidence, and perform the private preflight before any preview migration or upload. Do not substitute public smoke checks for proof of private Access protection.
+
+## Prepared private preview controls
+
+The reviewed preview remains public: the 2026-11-11 read-only observation found public, stale preview content. The preparation in this repository has not adopted Terraform, configured Access, created a GitHub environment, or deployed a new release. Activation and reconciliation require separate authorization. Preserve the existing Pages Direct Upload, Functions, D1, Turnstile, and Resend stack.
+
+`PREVIEW_ACCESS_ENABLED` is a repository Actions variable: unset or `false` retains the current flow; exactly `true` opts in, and every other value fails. For an active preview, the credential-free preparation stage selects full verification rather than attempting the public no-op comparison. A trusted preflight checks an already existing GitHub `preview` environment before selecting it; it must expose a custom branch policy with exactly `develop`. It refuses missing, invisible, broad, or malformed evidence. The deployment job rechecks the environment and the Access configuration, denies anonymous requests, authenticates with the adopted service token, and verifies exact release identity at both the unique hash host and `develop` alias. It inspects host and path destinations across application types; unsupported or missing destination details block activation. Missing metadata or credentials fail closed. Production and source pull-request checks receive no Access credentials. Service credentials are sent only to those exact reviewed HTTPS origins and redirects are never followed.
+
+For a separately authorized activation, first independently reconcile provider ownership, entitlement, current Pages and DNS settings, both Access applications and all effective overlapping destinations, exact human identities and identity provider, and the adopted service token. Follow [Terraform adoption](../../infra/ADOPTION.md); no local source or mock proves live posture. Create and verify the GitHub `preview` environment independently, with only the exact `develop` branch policy and any separately approved protection rules. The API preflight requires Actions read visibility and an explicit `can_admins_bypass: false` response. The published GitHub environment API schema does not document that field; if it is missing or unobservable, activation is blocked. Independently inspect the controls and prevent changes between inspection and deployment. The preflight checks existing settings before selecting the environment, but it cannot make the provider's settings and job creation atomic.
+
+Place the Access client ID and secret only in that protected environment as `PREVIEW_ACCESS_CLIENT_ID` and `PREVIEW_ACCESS_CLIENT_SECRET`; do not put secrets in Terraform, source, logs, artifacts, or Wrangler configuration. Provide `PREVIEW_ACCESS_CONFIG` as a compact canonical JSON repository variable with exactly the keys and types shown below, replacing every illustrative value with independently approved values. The service token ID is its Cloudflare UUID, not its client ID or secret. The deployment API token additionally needs read access to Access applications, policies, and service tokens; its existing Pages and migration permissions remain separate.
+
+```json
+{"emails":["owner@example.com"],"groups":[],"hostname":"preview.example.com","humanAppId":"11111111-1111-1111-1111-111111111111","idpId":"22222222-2222-2222-2222-222222222222","pagesAppId":"33333333-3333-3333-3333-333333333333","serviceTokenId":"44444444-4444-4444-4444-444444444444"}
+```
+
+After a separately reviewed change resolves the entitlement activation block and independently verifies controls, credentials, and service-token association, an opt-in and fresh deployment require separate authorization. Verify anonymous denial and authenticated identity on the branch alias and new hash host, then reconcile any old accessible deployment or custom hostname independently. Failures after upload may leave a deployment serving; investigate without assuming rollback. Disabling the switch does not remove Access or establish public reachability.
+
 
 ## Set up or restore a deployment
 
