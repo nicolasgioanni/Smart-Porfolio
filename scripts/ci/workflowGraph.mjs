@@ -48,11 +48,10 @@ function codeqlReportProblems(job) {
     step.with?.output === "${{ runner.temp }}/smart-portfolio-codeql-sarif");
   const validate = stepIndex(steps, (step) => step?.env?.SARIF_OUTPUT === "${{ steps.analyze.outputs.sarif-output }}" &&
     typeof step.run === "string" && step.run.includes('node scripts/security/checkSarif.mjs "${sarif_files[0]}"'));
-  const upload = stepIndex(steps, (step) => step?.uses?.startsWith("github/codeql-action/upload-sarif@") &&
-    step.with?.sarif_file === "${{ steps.analyze.outputs.sarif-output }}");
   const receipt = stepIndex(steps, (step) => step?.run === "node scripts/ci/run.mjs source-receipt");
-  if ([analyze, validate, upload, receipt].some((index) => index < 0) || !(analyze < validate && validate < upload && upload < receipt)) {
-    return ["CodeQL must write SARIF outside the checkout, validate it before upload, and then record source evidence."];
+  const upload = stepIndex(steps, (step) => step?.uses?.startsWith("github/codeql-action/upload-sarif@"));
+  if ([analyze, validate, receipt].some((index) => index < 0) || !(analyze < validate && validate < receipt) || upload !== -1) {
+    return ["CodeQL must write SARIF outside the checkout, validate it privately, and then record source evidence."];
   }
   return [];
 }

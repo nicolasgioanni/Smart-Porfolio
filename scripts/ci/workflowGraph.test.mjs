@@ -24,7 +24,6 @@ function workflow() {
     codeql: { needs: "resolve-candidate", steps: [
       { id: "analyze", uses: "github/codeql-action/analyze@pin", with: { upload: "never", output: "${{ runner.temp }}/smart-portfolio-codeql-sarif" } },
       { env: { SARIF_OUTPUT: "${{ steps.analyze.outputs.sarif-output }}" }, run: 'node scripts/security/checkSarif.mjs "${sarif_files[0]}"' },
-      { uses: "github/codeql-action/upload-sarif@pin", with: { sarif_file: "${{ steps.analyze.outputs.sarif-output }}" } },
       { run: "node scripts/ci/run.mjs source-receipt" }
     ] },
     ...Object.fromEntries(applicationJobs.map((name) => [name, { needs: ["resolve-candidate", "prepare-content", ...(name === "export-check" ? ["build-and-package"] : [])] }])),
@@ -70,13 +69,13 @@ describe("CI graph responsibilities", () => {
       expect(() => validateWorkflowGraph(value)).toThrow();
     }
   });
-  it("keeps CodeQL reports outside the checkout and validates before upload and receipt", () => {
+  it("keeps CodeQL reports outside the checkout and validates privately before receipt", () => {
     for (const change of [
       (steps) => { steps.find((step) => step.id === "analyze").with.output = "sarif-results"; },
       (steps) => { steps.find((step) => step.id === "analyze").with.output = "${{ runner.temp }}/../workspace/report"; },
       (steps) => { steps.find((step) => step.id === "analyze").with.upload = "always"; },
       (steps) => { steps.find((step) => step.env?.SARIF_OUTPUT).env.SARIF_OUTPUT = "sarif-results"; },
-      (steps) => { steps.find((step) => step.uses?.startsWith("github/codeql-action/upload-sarif@")).with.sarif_file = "other"; },
+      (steps) => { steps.push({ uses: "github/codeql-action/upload-sarif@pin" }); },
       (steps) => { const index = steps.findIndex((step) => step.env?.SARIF_OUTPUT); steps.splice(index, 1); }
     ]) {
       const value = workflow();

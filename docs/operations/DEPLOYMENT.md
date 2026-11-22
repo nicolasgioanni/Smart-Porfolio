@@ -77,7 +77,7 @@ permissions:
   contents: read
 ```
 
-Ordinary jobs retain read-only repository access. The `codeql` job adds only `security-events: write` to upload its already-validated SARIF result; pull-request dependency review adds only `pull-requests: read`. Cloudflare deployment authority remains isolated to the restricted API token passed directly to Wrangler, not to a repository write permission.
+Ordinary jobs retain read-only repository access. CodeQL SARIF is validated privately without upload; pull-request dependency review adds only `pull-requests: read`. Cloudflare deployment authority remains isolated to the restricted API token passed directly to Wrangler, not to a repository write permission.
 
 The schedule-only heartbeat job is the sole exception. It declares `contents: write`, but the checked-in job is coded and guarded to update only `.github/schedule-heartbeat` on the existing `develop` branch after the inactivity threshold is met. That source-level guard and the tracked ruleset test do not replace independently verified external branch or ruleset protection.
 

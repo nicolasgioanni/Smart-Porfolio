@@ -182,7 +182,7 @@ function wranglerFixture() {
   const deployment_id = "abcd1234-89ab-4cde-8fab-0123456789ab";
   const common = { version: 1, pages_project: "smart-portfolio", deployment_id, url: `https://${hashHost}`, timestamp };
   return [
-    { type: "wrangler-session", version: 1, wrangler_version: "4.148.0", command_line_args: pagesDeploymentArguments({ target: "preview", sourceSha: candidateSha }), log_file_path: "/tmp/wrangler.log", timestamp },
+    { type: "wrangler-session", version: 1, wrangler_version: "4.160.1", command_line_args: pagesDeploymentArguments({ target: "preview", sourceSha: candidateSha }), log_file_path: "/tmp/wrangler.log", timestamp },
     { type: "pages-deploy", ...common },
     { type: "pages-deploy-detailed", ...common, alias: `https://${developHost}`, environment: "preview", production_branch: "main", deployment_trigger: { metadata: { commit_hash: candidateSha } } }
   ].map((record) => JSON.stringify(record)).join("\n");
@@ -247,7 +247,7 @@ describe("private preview checker parsers", () => {
     expect(parseWranglerPagesDeployOutput(source, config, candidateSha)).toMatchObject({
       id: "abcd1234-89ab-4cde-8fab-0123456789ab", hostname: hashHost, commitHash: candidateSha
     });
-    for (const bad of [source.replace("4.148.0", "4.147.0"), source.replace("--no-bundle", "--bundle"),
+    for (const bad of [source.replace("4.160.1", "4.160.2"), source.replace("--no-bundle", "--bundle"),
       source.replace("abcd1234-89ab-4cde-8fab-0123456789ab", "wrong-id"), `${source}\n${source}`]) {
       expect(() => parseWranglerPagesDeployOutput(bad, config, candidateSha)).toThrow("private_preview_invalid_wrangler_output");
     }
