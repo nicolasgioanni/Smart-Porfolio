@@ -203,7 +203,7 @@ async function expectPaintedPreviewFace(page: Page, card: Locator) {
 }
 
 async function expectDiagramLabelsContained(card: Locator) {
-  const labels = card.locator(".project-diagram__label");
+  const labels = card.locator(".project-diagram__label, .project-diagram__role");
   await expect(labels).not.toHaveCount(0);
   await expect
     .poll(() =>
@@ -213,10 +213,23 @@ async function expectDiagramLabelsContained(card: Locator) {
           if (!node) return false;
           const labelBox = label.getBoundingClientRect();
           const nodeBox = node.getBoundingClientRect();
+          const figure = node.closest<HTMLElement>(".project-diagram");
+          if (!figure) return false;
+          const figureBox = figure.getBoundingClientRect();
+          const first = node.firstElementChild?.getBoundingClientRect();
+          const last = node.lastElementChild?.getBoundingClientRect();
+          if (!first || !last) return false;
           return (
+            nodeBox.left >= figureBox.left - 1 &&
+            nodeBox.right <= figureBox.right + 1 &&
+            nodeBox.top >= figureBox.top - 1 &&
+            nodeBox.bottom <= figureBox.bottom + 1 &&
+            first.top >= nodeBox.top - 1 &&
+            last.bottom <= nodeBox.bottom + 1 &&
             labelBox.width > 0 &&
             labelBox.height > 0 &&
             label.scrollWidth <= label.clientWidth + 1 &&
+            label.scrollHeight <= label.clientHeight + 1 &&
             labelBox.left >= nodeBox.left - 1 &&
             labelBox.right <= nodeBox.right + 1 &&
             labelBox.top >= nodeBox.top - 1 &&
@@ -456,7 +469,7 @@ test.describe("Projects showcase", () => {
       await expect(switcher.getByRole("tablist")).toHaveCount(0);
       await expect(switcher.locator('[role="tabpanel"]')).toHaveCount(0);
       await expect(getToggle(card)).toHaveAccessibleName(
-        `Show how ${project.title} works`,
+        `Show architecture for ${project.title}`,
       );
       await expect(
         getToggle(card).locator(".project-visual-switcher__toggle-label"),
@@ -466,7 +479,7 @@ test.describe("Projects showcase", () => {
       ).toHaveText("Preview");
       await expect(
         getToggle(card).locator('.project-visual-switcher__toggle-label[data-view="workflow"]'),
-      ).toHaveText("How it works");
+      ).toHaveText("Architecture");
       await expect(switcher.locator(".project-visual-switcher__hint")).toHaveCount(0);
       await expect(switcher.getByText(/Open (live site|source|download)/i)).toHaveCount(0);
       await expectCenteredToggle(card);
@@ -586,7 +599,7 @@ test.describe("Projects showcase", () => {
     await settleLayout(page);
     for (const card of await getProjectCards(page).all()) {
       await expect(getTrack(card)).toHaveAttribute("data-view", "preview");
-      await expect(getToggle(card)).toHaveAccessibleName(/show how .* works/i);
+      await expect(getToggle(card)).toHaveAccessibleName(/show architecture for /i);
     }
   });
 
@@ -820,6 +833,8 @@ test.describe("Projects showcase", () => {
       ".project-card__showcase-header .content-card__summary > .project-card__attribution",
     );
     const attributionLink = attribution.locator(".project-card__attribution-link");
+    const attributionName = attributionLink.locator("span");
+    const attributionIcon = attributionLink.locator("svg");
     const divider = notePal.locator(".project-card__footer-divider");
     await expect(attribution).toHaveCount(1);
     await expect(attributionLink).toHaveAccessibleName("Parth Gupta");
@@ -829,6 +844,15 @@ test.describe("Projects showcase", () => {
     );
     await expect(attributionLink).toHaveAttribute("target", "_blank");
     await expect(attributionLink).toHaveAttribute("rel", /noopener/);
+    await expect(attributionLink).toHaveAttribute("rel", /noreferrer/);
+    await expect(attributionLink).toHaveCSS("text-decoration-line", "none");
+    await expect(attributionName).toHaveCSS("text-decoration-line", "underline");
+    await expect(attributionIcon).toHaveAttribute("aria-hidden", "true");
+    await expect(attributionIcon).toHaveAttribute("focusable", "false");
+    await expect(attributionIcon).toHaveAttribute("viewBox", "0 0 24 24");
+    await expect(attributionIcon).toHaveCSS("text-decoration-line", "none");
+    await expect(attributionIcon.locator("path")).toHaveCount(1);
+    await expect(attributionIcon.locator("path")).toHaveAttribute("fill", "currentColor");
     await expect(notePal.locator(".project-card__footer .project-card__attribution")).toHaveCount(0);
     await expect(divider).toHaveCount(1);
     await expect(divider).toHaveAttribute("aria-hidden", "true");
@@ -850,7 +874,9 @@ test.describe("Projects showcase", () => {
 
     const inactiveColor = await attributionLink.evaluate((element) => getComputedStyle(element).color);
     await attributionLink.hover();
-    await expect(attributionLink).toHaveCSS("text-decoration-line", "underline");
+    await expect(attributionLink).toHaveCSS("text-decoration-line", "none");
+    await expect(attributionName).toHaveCSS("text-decoration-line", "underline");
+    await expect(attributionIcon).toHaveCSS("text-decoration-line", "none");
     const hoverColor = await attributionLink.evaluate((element) => {
       const probe = document.createElement("span");
       probe.style.color = "var(--color-accent-strong)";
@@ -869,7 +895,9 @@ test.describe("Projects showcase", () => {
       .focus();
     await page.keyboard.press("Shift+Tab");
     await expect(attributionLink).toBeFocused();
-    await expect(attributionLink).toHaveCSS("text-decoration-line", "underline");
+    await expect(attributionLink).toHaveCSS("text-decoration-line", "none");
+    await expect(attributionName).toHaveCSS("text-decoration-line", "underline");
+    await expect(attributionIcon).toHaveCSS("text-decoration-line", "none");
     await expect(attributionLink).toHaveCSS("color", hoverColor);
   });
 

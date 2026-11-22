@@ -94,7 +94,7 @@ Every route under `src/app/` is compatible with the Next.js static export. Clien
 | `/` | `src/app/(home)/page.tsx` | Profile and portfolio overview | Yes |
 | `/experience` | `src/app/experience/page.tsx` | Two-depth, expandable experience showcase | Yes |
 | `/research` | `src/app/research/page.tsx` | Two-depth, alternating visual research showcase | Yes |
-| `/projects` | `src/app/projects/page.tsx` | Concise project gallery with independent Concept and How it works views | Yes |
+| `/projects` | `src/app/projects/page.tsx` | Concise project gallery with independent Preview and Architecture views | Yes |
 | `/recommendations` | `src/app/recommendations/page.tsx` | Recommendation list or configured empty state | Conditional |
 | `/resume` | `src/app/resume/page.tsx` | Private resume request instructions without a published file | Yes |
 | `/contact` | `src/app/contact/page.tsx` | Static form shell that calls the isolated contact Functions | No, footer only |
