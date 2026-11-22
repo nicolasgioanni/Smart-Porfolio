@@ -820,6 +820,8 @@ test.describe("Projects showcase", () => {
       ".project-card__showcase-header .content-card__summary > .project-card__attribution",
     );
     const attributionLink = attribution.locator(".project-card__attribution-link");
+    const attributionName = attributionLink.locator("span");
+    const attributionIcon = attributionLink.locator("svg");
     const divider = notePal.locator(".project-card__footer-divider");
     await expect(attribution).toHaveCount(1);
     await expect(attributionLink).toHaveAccessibleName("Parth Gupta");
@@ -829,6 +831,15 @@ test.describe("Projects showcase", () => {
     );
     await expect(attributionLink).toHaveAttribute("target", "_blank");
     await expect(attributionLink).toHaveAttribute("rel", /noopener/);
+    await expect(attributionLink).toHaveAttribute("rel", /noreferrer/);
+    await expect(attributionLink).toHaveCSS("text-decoration-line", "none");
+    await expect(attributionName).toHaveCSS("text-decoration-line", "underline");
+    await expect(attributionIcon).toHaveAttribute("aria-hidden", "true");
+    await expect(attributionIcon).toHaveAttribute("focusable", "false");
+    await expect(attributionIcon).toHaveAttribute("viewBox", "0 0 24 24");
+    await expect(attributionIcon).toHaveCSS("text-decoration-line", "none");
+    await expect(attributionIcon.locator("path")).toHaveCount(1);
+    await expect(attributionIcon.locator("path")).toHaveAttribute("fill", "currentColor");
     await expect(notePal.locator(".project-card__footer .project-card__attribution")).toHaveCount(0);
     await expect(divider).toHaveCount(1);
     await expect(divider).toHaveAttribute("aria-hidden", "true");
@@ -850,7 +861,9 @@ test.describe("Projects showcase", () => {
 
     const inactiveColor = await attributionLink.evaluate((element) => getComputedStyle(element).color);
     await attributionLink.hover();
-    await expect(attributionLink).toHaveCSS("text-decoration-line", "underline");
+    await expect(attributionLink).toHaveCSS("text-decoration-line", "none");
+    await expect(attributionName).toHaveCSS("text-decoration-line", "underline");
+    await expect(attributionIcon).toHaveCSS("text-decoration-line", "none");
     const hoverColor = await attributionLink.evaluate((element) => {
       const probe = document.createElement("span");
       probe.style.color = "var(--color-accent-strong)";
@@ -869,7 +882,9 @@ test.describe("Projects showcase", () => {
       .focus();
     await page.keyboard.press("Shift+Tab");
     await expect(attributionLink).toBeFocused();
-    await expect(attributionLink).toHaveCSS("text-decoration-line", "underline");
+    await expect(attributionLink).toHaveCSS("text-decoration-line", "none");
+    await expect(attributionName).toHaveCSS("text-decoration-line", "underline");
+    await expect(attributionIcon).toHaveCSS("text-decoration-line", "none");
     await expect(attributionLink).toHaveCSS("color", hoverColor);
   });
 

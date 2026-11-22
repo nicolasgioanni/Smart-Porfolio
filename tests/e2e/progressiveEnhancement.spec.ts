@@ -25,6 +25,17 @@ test.describe("progressive enhancement", () => {
         await expect(page.getByRole("heading", { level: 1, name: heading })).toBeVisible();
       }
 
+      await page.goto("/projects");
+      const credit = page.getByRole("link", { name: "Parth Gupta" });
+      await expect(credit).toBeVisible();
+      await expect(credit).toHaveAttribute("href", "https://www.linkedin.com/in/parthgu/");
+      await expect(credit).toHaveAttribute("target", "_blank");
+      await expect(credit).toHaveAttribute("rel", /noopener/);
+      await expect(credit).toHaveAttribute("rel", /noreferrer/);
+      await expect(credit).toHaveCSS("text-decoration-line", "none");
+      await expect(credit.locator("span")).toHaveCSS("text-decoration-line", "underline");
+      await expect(credit.locator("svg")).toHaveAttribute("aria-hidden", "true");
+
       await page.goto("/research");
       await expect(page.locator("main video[controls]").first()).toBeVisible();
       await expect(page.getByRole("navigation", { name: "Footer notices" })).toBeVisible();
