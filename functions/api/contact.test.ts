@@ -8,7 +8,7 @@ import {
   createContactTicket,
   createEmailMessages,
   parseContactPayload,
-  reserveContactSubmission,
+  reserveContactSubmission as reserveWithIp,
   validateEmailDomain,
   type ContactEnv,
   type ContactPayload,
@@ -17,7 +17,8 @@ import {
   type ContactRateLimitResult
 } from "../_shared/contact";
 import { oversizedJsonResponse, stalledJsonResponse } from "../testSupport/streams";
-import { createDeadline } from "../_shared/contact/transport";
+import { createDeadline, type Deadline } from "../_shared/contact/transport";
+import { canonicalizeIp } from "../_shared/contact/reservation";
 import { onRequest } from "./contact";
 
 const privateRecipient = "private-owner@example.net";
@@ -31,6 +32,7 @@ const validStartedAt = Date.now() - 5_000;
 interface ReservationRow {
   submission_id: string;
   email_hash: string;
+  ip_hash: string | null;
   payload_hash: string | null;
   delivery_config_hash: string | null;
   render_version: number | null;
@@ -94,23 +96,28 @@ class FakeContactDatabase implements ContactRateLimitDatabase {
     }
 
     if (query.startsWith("INSERT INTO contact_rate_reservations")) {
-      const [id, emailHash, payloadHash, deliveryConfigHash, renderVersion, reservedAt, expiresAt] = statement.values as [
+      const [id, emailHash, payloadHash, deliveryConfigHash, renderVersion, reservedAt, expiresAt, ipHash] = statement.values as [
         string,
         string,
         string,
         string,
         number,
         number,
-        number
+        number,
+        string
       ];
       const existing = this.rows.get(id);
       const activeCount = [...this.rows.values()].filter(
         (row) => row.email_hash === emailHash && row.expires_at > reservedAt
       ).length;
-      if (!existing && activeCount < CONTACT_RATE_LIMIT_MAX_SUBMISSIONS) {
+      const rows = [...this.rows.values()];
+      const ipCount = rows.filter((row) => row.ip_hash === ipHash && row.reserved_at > reservedAt - 3600 && row.expires_at > reservedAt).length;
+      const globalCount = rows.filter((row) => row.expires_at > reservedAt).length;
+      if (!existing && activeCount < CONTACT_RATE_LIMIT_MAX_SUBMISSIONS && ipCount < 10 && globalCount < 100) {
         this.rows.set(id, {
           submission_id: id,
           email_hash: emailHash,
+          ip_hash: ipHash,
           payload_hash: payloadHash,
           delivery_config_hash: deliveryConfigHash,
           render_version: renderVersion,
@@ -127,20 +134,13 @@ class FakeContactDatabase implements ContactRateLimitDatabase {
       return { success: true, results: row ? [{ ...row }] : [] };
     }
 
-    if (query.startsWith("SELECT COUNT(*) AS reservation_count")) {
-      const [emailHash, now] = statement.values as [string, number];
-      const active = [...this.rows.values()].filter(
-        (row) => row.email_hash === emailHash && row.expires_at > now
-      );
-      return {
-        success: true,
-        results: [
-          {
-            reservation_count: active.length,
-            next_expiry: active.length ? Math.min(...active.map((row) => row.expires_at)) : null
-          }
-        ]
-      };
+    if (query.startsWith("SELECT\n")) {
+      const [emailHash, ipHash, now] = statement.values as [string, string, number];
+      const rows = [...this.rows.values()].filter((row) => row.expires_at > now);
+      const email = rows.filter((row) => row.email_hash === emailHash).map((row) => row.expires_at).sort((a, b) => b - a);
+      const ip = rows.filter((row) => row.ip_hash === ipHash && row.reserved_at > now - 3600).map((row) => row.reserved_at + 3600).sort((a, b) => b - a);
+      const global = rows.map((row) => row.expires_at).sort((a, b) => b - a);
+      return { success: true, results: [{ email_count: email.length, email_release: email[1] ?? null, ip_count: ip.length, ip_release: ip[9] ?? null, global_count: global.length, global_release: global[99] ?? null }] };
     }
 
     throw new Error(`Unexpected query: ${query}`);
@@ -170,6 +170,10 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+function reserveContactSubmission(payload: ContactPayload, environment: ContactEnv, now?: number, deadline?: Deadline) {
+  return reserveWithIp(payload, environment, "203.0.113.10", now, deadline);
+}
+
 function validPayload(overrides: Record<string, unknown> = {}): ContactPayload {
   return {
     submissionId,
@@ -194,6 +198,7 @@ function requestFor(
     method: init.method ?? "POST",
     headers: {
       "Content-Type": "application/json",
+      "CF-Connecting-IP": "203.0.113.10",
       Origin: init.origin ?? "https://nicolasmgioanni.dev",
       ...(init.cookie ? { Cookie: init.cookie } : {}),
       ...init.headers
@@ -519,7 +524,7 @@ describe("Cloudflare contact function security boundary", () => {
 
 describe("email-domain validation", () => {
   it("accepts a non-null MX without requesting fallback records", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(mxResponse());
+    const fetchMock = vi.fn().mockImplementation(async () => mxResponse());
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(validateEmailDomain("Avery@Example.co")).resolves.toEqual({ kind: "valid" });
@@ -639,6 +644,37 @@ describe("email-domain validation", () => {
 });
 
 describe("pseudonymous rolling quota", () => {
+  it.each([
+    ["203.0.113.10", "203.0.113.10"], ["2001:0DB8:0:0::1", "2001:db8::1"],
+    ["::ffff:192.0.2.1", "192.0.2.1"], ["127.1", undefined], ["01.2.3.4", undefined],
+    ["256.1.1.1", undefined], ["2001:db8::1%en0", undefined], ["1.2.3.4, 5.6.7.8", undefined],
+    ["[::1]", undefined], [" ::1", undefined], ["", undefined]
+  ])("canonicalizes or rejects trusted IP %s", (input, expected) => {
+    expect(canonicalizeIp(input)).toBe(expected);
+  });
+
+  it("fails closed when required IP is missing or malformed even with forwarding headers", async () => {
+    const fetchMock = vi.fn().mockImplementation(async () => mxResponse());
+    vi.stubGlobal("fetch", fetchMock);
+    for (const ip of ["", "malformed"]) {
+      const response = await invoke(requestFor(validPayload(), { cookie: await ticketCookie(), headers: { "CF-Connecting-IP": ip, "X-Forwarded-For": "203.0.113.10" } }));
+      expect(response.status).toBe(503);
+      expect(await response.json()).toEqual({ ok: false, error: "service_unavailable" });
+    }
+    expect(rateLimitDatabase.rows.size).toBe(0);
+    expect(fetchMock.mock.calls.every(([url]) => url !== "https://api.resend.com/emails")).toBe(true);
+  });
+
+  it.each([2, 3])("fails closed if D1 result %i is absent even after a successful insertion", async (index) => {
+    const original = rateLimitDatabase.batch.bind(rateLimitDatabase);
+    vi.spyOn(rateLimitDatabase, "batch").mockImplementation(async (statements) => {
+      const result = await original(statements);
+      result[index].results = undefined;
+      return result;
+    });
+    expect(await reserveContactSubmission(validPayload(), env)).toEqual({ kind: "unavailable" });
+  });
+
   it("fails closed when a D1 batch reaches its three-second deadline", async () => {
     const cookie = await ticketCookie();
     const startedAt = Date.now();

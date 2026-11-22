@@ -62,7 +62,7 @@ sequenceDiagram
     Deliver->>Deliver: Validate body, timing, ticket, and binding
     Deliver->>DNS: Validate mail-domain routing
     DNS-->>Deliver: MX or address-routing result
-    Deliver->>D1: Reserve one of two rolling 24-hour slots
+    Deliver->>D1: Reserve email, IP, and environment quota atomically
     D1-->>Deliver: New or same-ID reservation
     Deliver->>Resend: Idempotent visitor confirmation
     Resend-->>Deliver: Accepted
@@ -238,7 +238,7 @@ The ticket payload contains only schema version `1`, the submission UUID, an iss
 
 The signing key is derived from `TURNSTILE_SECRET_KEY` with domain-separated HKDF-SHA-256, then used for HMAC-SHA-256. No additional ticket secret is configured. The delivery endpoint rejects an absent ticket, duplicate cookie name, malformed or non-canonical encoding, oversized ticket, wrong signature size, invalid signature, wrong version, future-issued ticket beyond the 30-second allowance, altered lifetime, expired ticket, or mismatched submission UUID.
 
-The application has no server-side ticket store, consumed-ticket record, or revocation list. The D1 quota row recognizes a submission UUID only for same-address, same-payload retries, but it is not a record of ticket consumption or final mail delivery. Successful delivery instructs the browser to clear the cookie. A failed delivery leaves it intact until expiry. Provider idempotency, the locked retry payload, exact origin enforcement, and the short lifetime limit duplicate-delivery risk; they do not turn the ticket itself into a database-backed single-use credential. Rotating `TURNSTILE_SECRET_KEY` invalidates outstanding tickets and changes the derived address and payload HMAC keys.
+The application has no server-side ticket store, consumed-ticket record, or revocation list. The D1 quota row recognizes a submission UUID only for same-address, same-payload retries, but it is not a record of ticket consumption or final mail delivery. Successful delivery instructs the browser to clear the cookie. A failed delivery leaves it intact until expiry. Provider idempotency, the locked retry payload, exact origin enforcement, and the short lifetime limit duplicate-delivery risk; they do not turn the ticket itself into a database-backed single-use credential. Rotating `TURNSTILE_SECRET_KEY` invalidates outstanding tickets and changes the derived address, IP, payload, and delivery-configuration HMAC keys.
 
 ## Mail-domain validation and rolling quota
 
@@ -250,15 +250,18 @@ Before calling Resend, the handler atomically reserves a slot in the `CONTACT_RA
 | --- | --- |
 | `submission_id` | Opaque submission UUID and primary key. |
 | `email_hash` | HMAC-SHA-256 of `email.trim().toLowerCase()`. |
+| `ip_hash` | Separately keyed HMAC-SHA-256 of the canonical Cloudflare connecting IP; `NULL` for legacy rows. |
 | `payload_hash` | HMAC-SHA-256 fingerprint of the normalized full delivery payload. |
 | `delivery_config_hash` | Opaque HMAC-SHA-256 fingerprint of the email renderer version and configured sender, recipient, and reply-to values. |
 | `render_version` | Integer email-renderer version for the reserved delivery. |
 | `reserved_at` | Reservation time as Unix epoch seconds. |
 | `expires_at` | Rolling-window expiry as Unix epoch seconds. |
 
-The address, payload, and delivery-configuration HMAC keys are derived from `TURNSTILE_SECRET_KEY` with separate domain-separated HKDF contexts. The payload fingerprint includes every normalized delivery field, and the configuration fingerprint binds the renderer version plus sender, recipient, and reply-to configuration without storing either fields or configuration values in D1. No provider-specific dot removal or plus-alias rewriting occurs. D1 never receives the raw email address, name, phone number, message, or configured mailboxes.
+The address, IP, payload, and delivery-configuration HMAC keys are derived from `TURNSTILE_SECRET_KEY` with separate domain-separated HKDF contexts. The payload fingerprint includes every normalized delivery field, and the configuration fingerprint binds the renderer version plus sender, recipient, and reply-to configuration without storing either fields or configuration values in D1. No provider-specific dot removal or plus-alias rewriting occurs. D1 never receives the raw IP address, email address, name, phone number, message, or configured mailboxes. The Functions boundary accepts only a valid canonicalizable IPv4 or IPv6 value from Cloudflare's `CF-Connecting-IP`; it never uses forwarding headers or request fields as an IP substitute. Missing or invalid IP fails closed.
 
-Expired rows are removed during reservation cleanup. Fewer than two unexpired rows for an email hash permits a new reservation; a third returns `429 rate_limited` with `Retry-After` set to the remaining time until the earliest applicable expiry. Reusing the same submission UUID is a free retry only when the email hash, payload fingerprint, delivery-configuration fingerprint, and renderer version all match. A mismatch is rejected. Rows created before migration `0003` have `NULL` delivery configuration and renderer fields; they fail closed rather than rerendering an uncertain prior send after a configuration or template change. A reservation is created before provider delivery and remains after a provider or network failure, while valid same-ID retries consume no additional slot. Missing or unavailable D1 configuration fails closed with `503 service_unavailable`.
+Expired rows are removed during reservation cleanup. One conditional insert within the D1 batch admits a new reservation only when all rolling budgets permit it: fewer than two active rows for the normalized email over 24 hours, fewer than ten for the IP over one hour, and fewer than 100 across that environment over 24 hours. Legacy rows without an IP hash still count globally and by email. Exhaustion returns generic `429 rate_limited`; `Retry-After` is the latest release needed across all exhausted budgets, bounded to 86,400 seconds. The environment-wide limit is shared, so one visitor can contribute to throttling others.
+
+Reusing the same submission UUID is a free retry only when the email hash, payload fingerprint, delivery-configuration fingerprint, and renderer version all match. A retry can arrive from a different valid IP without changing its original IP accounting or reservation time. A mismatch is rejected. Rows created before migration `0003` have `NULL` delivery configuration and renderer fields; they fail closed rather than rerendering an uncertain prior send after a configuration or template change. A reservation is created before provider delivery and remains after a provider or network failure. Missing or unavailable D1 configuration or quota evidence fails closed with `503 service_unavailable`.
 
 ## Email delivery and idempotency
 
@@ -290,7 +293,7 @@ Any network failure, timeout, redirect, or non-success provider response becomes
 | Exhausted transient Turnstile failure or provider integration fault | `503` | `verification_unavailable` |
 | Missing, invalid, expired, or mismatched ticket | `401` | `verification_required` |
 | Unroutable or null-MX email domain | `422` | `invalid_email` |
-| Two active reservations for the normalized address | `429` | `rate_limited`, with `Retry-After` |
+| Email, IP, or environment rolling quota exhausted | `429` | `rate_limited`, with `Retry-After` |
 | DNS lookup unavailable or indeterminate | `503` | `email_validation_unavailable` |
 | Resend failure or timeout | `502` | `delivery_failed` |
 | Accepted verification or delivery | `200` | none; body is `{"ok":true}` |
@@ -354,13 +357,13 @@ For local testing, copy the placeholder-only example into the ignored local envi
 - one bounded same-operation retry for transient Siteverify failure;
 - signed, short-lived, submission-bound ticket;
 - bounded mail-domain DNS validation;
-- pseudonymous two-per-address rolling 24-hour D1 quota with keyed retry-payload binding;
+- atomic pseudonymous email, IP, and environment rolling D1 quotas with keyed retry-payload binding;
 - separate provider idempotency keys and locked same-payload retries;
 - generic, non-cacheable Function responses.
 
 ### External operator requirement
 
-The D1 quota is address-based and therefore does not replace an IP- or network-based edge control. Production also requires an operator-managed Cloudflare rate-limit rule covering both exact paths, normally counted by source IP:
+The D1 delivery quotas do not replace an edge control for both endpoints. Production also requires an operator-managed Cloudflare rate-limit rule covering both exact paths, normally counted by source IP:
 
 ```text
 http.request.uri.path in {"/api/contact/verify" "/api/contact"}
@@ -376,9 +379,9 @@ Cloudflare documents custom JSON rate-limit block responses as a Pro-plan-or-hig
 
 ## Privacy, storage, and logging
 
-The browser holds the draft in memory. The signed cookie holds only the submission UUID and timing metadata. D1 stores the opaque submission UUID, keyed normalized-email hash, opaque keyed full-payload fingerprint, and reservation and expiry times; it stores no raw contact fields or message. Expired rows stop counting at expiry and are removed during later reservation cleanup. Cloudflare processes request metadata and the verification token; Siteverify also receives the optional Cloudflare-provided IP value. DNS resolution processes the email domain. Resend and the receiving mail systems process the complete email messages and delivery metadata. The visitor confirmation repeats the submitted contact details in email.
+The browser holds the draft in memory. The signed cookie holds only the submission UUID and timing metadata. D1 stores the opaque submission UUID, keyed normalized-email and canonical-IP hashes, opaque keyed payload and delivery-configuration fingerprints, renderer version, and reservation and expiry times; it stores no raw contact fields or message. Expired rows stop counting at expiry and are removed during later reservation cleanup. Cloudflare processes request metadata and the verification token; Siteverify also receives the optional Cloudflare-provided IP value. DNS resolution processes the email domain. Resend and the receiving mail systems process the complete email messages and delivery metadata. The visitor confirmation repeats the submitted contact details in email.
 
-There are no explicit `console` calls or request-body logging in the two Functions. This repository-level absence does not disable Cloudflare, Resend, or mailbox-provider logs and retention. Do not add body, token, contact-field, provider-response, recipient, or credential logging. Coarse outcomes and non-sensitive timing are the maximum appropriate application telemetry if logging is added later.
+There are no explicit `console` calls or request-body logging in the two Functions. This repository-level absence does not disable Cloudflare, Resend, or mailbox-provider logs and retention. Do not add raw IP, body, token, contact-field, provider-response, recipient, or credential logging. Coarse outcomes and non-sensitive timing are the maximum appropriate application telemetry if logging is added later.
 
 The private recipient is never returned in an endpoint response or included in the browser bundle. The configured sender and fixed reply-to are intentionally public identities and are not substitutes for the private destination inbox.
 

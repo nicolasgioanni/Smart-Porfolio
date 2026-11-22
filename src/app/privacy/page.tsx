@@ -154,13 +154,15 @@ export default function PrivacyPage() {
           refresh returns to the locked review and does not send automatically.
         </p>
         <p>
-          Before email delivery, an eligible request reserves one of two allowed attempts for that normalized address during
-          a rolling 24-hour window. The reservation stores only the opaque submission identifier, keyed email value, opaque keyed full-payload
-          fingerprint, reservation time, and expiry time in Cloudflare D1; it does not store the name, raw email address,
-          phone number, or message. The same identifier can retry without taking another slot only when its address and
-          payload fingerprints match, while a provider or network failure keeps the original reservation until it expires.
+          Before email delivery, an eligible request reserves a slot subject to rolling limits of two per normalized email
+          address per 24 hours, ten per IP address per hour, and 100 across the environment per 24 hours. Cloudflare D1
+          stores a pseudonymous reservation with an opaque submission identifier, keyed email and IP values, keyed payload
+          and delivery configuration fingerprints, renderer version, reservation time, and expiry time. The application
+          does not store or log the raw IP address, name, raw email address, phone number, or message in this record. The same identifier can retry without taking another slot only when its address and
+          payload and delivery-configuration fingerprints and renderer version match, while a provider or network failure keeps the original reservation until it expires.
           The server normalizes the address by trimming it and converting it to lowercase, then stores a keyed HMAC-SHA-256
-          value rather than the address itself. It separately fingerprints the normalized delivery payload so a changed
+          value rather than the address itself. The Cloudflare-supplied IP is validated and canonicalized before a separately keyed
+          HMAC is stored; the IP-derived value remains in the reservation for the same 24-hour expiry. It separately fingerprints the normalized delivery payload so a changed
           same-identifier retry is rejected without storing the field values.
         </p>
         <p>

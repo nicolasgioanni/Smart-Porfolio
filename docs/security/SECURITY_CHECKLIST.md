@@ -85,7 +85,7 @@ Use this checklist with [Contact System](CONTACT_SYSTEM.md), [Security](SECURITY
 
 - Keep the contact draft out of local storage and session storage.
 - Keep contact fields out of the ticket and the verification request.
-- Keep D1 limited to submission UUID, normalized-address HMAC, keyed normalized-payload fingerprint, reservation epoch seconds, and expiry epoch seconds; store no raw contact fields or delivery content.
+- Keep D1 limited to submission UUID, normalized-email and canonical-IP HMACs, keyed payload and configuration fingerprints, renderer version, reservation epoch seconds, and expiry epoch seconds; store no raw IP, contact fields, or delivery content.
 - Confirm expired rows are removed during reservation cleanup, same-ID retries require matching address and payload hashes, changed replay is rejected, and D1 failures fail closed.
 - Account for Cloudflare, Turnstile, Resend, receiving mailboxes, and the visitor's mailbox as processors or retention locations outside the repository.
 - Keep `TURNSTILE_SECRET_KEY`, `RESEND_API_KEY`, and `CONTACT_RECIPIENT_EMAIL` server-only.
@@ -96,7 +96,7 @@ Use this checklist with [Contact System](CONTACT_SYSTEM.md), [Security](SECURITY
 ## Abuse controls and WAF
 
 - Keep repository-enforced origin, body-size, schema, acknowledgment, honeypot, timing, Turnstile, ticket, and idempotency controls enabled.
-- Keep the repository-enforced D1 address quota and its `429` response distinct from the external IP-based WAF control.
+- Keep the atomic D1 email, IP, and environment quotas and generic `429` response distinct from the external IP-based WAF control for both endpoints.
 - Configure an external Cloudflare rate-limiting rule for both exact contact paths and review its counting characteristic, threshold, mitigation timeout, and action.
 - Treat live WAF state as unverified until checked in Cloudflare and through a controlled deployed test.
 - Do not place an interactive Managed Challenge on either JSON endpoint.
