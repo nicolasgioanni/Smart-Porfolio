@@ -1,4 +1,4 @@
-import { access, readFile, readdir, stat } from "node:fs/promises";
+import { access, lstat, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -32,15 +32,17 @@ function toPosix(relativePath) {
   return relativePath.split(path.sep).join("/");
 }
 
-async function listMarkdownFiles(directory) {
+async function listMarkdownFiles(directory, errors, projectRoot) {
   const files = [];
   const entries = await readdir(directory, { withFileTypes: true });
   entries.sort((left, right) => left.name.localeCompare(right.name));
 
   for (const entry of entries) {
     const absolutePath = path.join(directory, entry.name);
-    if (entry.isDirectory()) {
-      files.push(...(await listMarkdownFiles(absolutePath)));
+    if (entry.isSymbolicLink()) {
+      errors.push(`${toPosix(path.relative(projectRoot, absolutePath))}: symbolic links are not allowed in documentation directories`);
+    } else if (entry.isDirectory()) {
+      files.push(...(await listMarkdownFiles(absolutePath, errors, projectRoot)));
     } else if (entry.isFile() && entry.name.toLowerCase().endsWith(".md")) {
       files.push(absolutePath);
     }
@@ -49,20 +51,24 @@ async function listMarkdownFiles(directory) {
   return files;
 }
 
-async function listOptionalMarkdownFiles(directory) {
+async function listOptionalMarkdownFiles(directory, errors, projectRoot) {
   try {
-    const directoryStats = await stat(directory);
+    const directoryStats = await lstat(directory);
+    if (directoryStats.isSymbolicLink()) {
+      errors.push(`${toPosix(path.relative(projectRoot, directory))}: symbolic links are not allowed in documentation directories`);
+      return [];
+    }
     if (!directoryStats.isDirectory()) return [];
   } catch {
     return [];
   }
 
-  return listMarkdownFiles(directory);
+  return listMarkdownFiles(directory, errors, projectRoot);
 }
 
 async function readOptionalFile(filePath) {
   try {
-    await access(filePath);
+    await lstat(filePath);
     return filePath;
   } catch {
     return undefined;
@@ -402,7 +408,7 @@ async function verifyExactPath(projectRoot, targetPath) {
 
   if (!relativeTarget || relativeTarget === ".")
     return { exists: true, exactCase: true };
-  if (relativeTarget.startsWith("..") || path.isAbsolute(relativeTarget)) {
+  if (relativeTarget === ".." || relativeTarget.startsWith(`..${path.sep}`) || path.isAbsolute(relativeTarget)) {
     return { exists: false, exactCase: false, escaped: true };
   }
 
@@ -412,6 +418,9 @@ async function verifyExactPath(projectRoot, targetPath) {
     const exactEntry = entries.find((entry) => entry === segment);
     if (exactEntry) {
       currentDirectory = path.join(currentDirectory, exactEntry);
+      if ((await lstat(currentDirectory)).isSymbolicLink()) {
+        return { exists: false, exactCase: true, symlink: true };
+      }
       continue;
     }
 
@@ -507,10 +516,15 @@ function scanRepositorySkill(relativePath, source) {
   const frontmatter = /^---\r?\n([\s\S]*?)\r?\n---\r?\n/.exec(source)?.[1];
   if (!frontmatter) return ["skill is missing YAML frontmatter"];
 
-  const name = /^name:[ \t]*([^\r\n]+?)[ \t]*$/m.exec(frontmatter)?.[1]?.trim();
-  const description = /^description:[ \t]*(\S(?:.*\S)?)[ \t]*$/m.exec(frontmatter)?.[1]?.trim();
-  if (name !== skillPath[1]) return ["skill name must match its directory"];
-  if (!description) return ["skill frontmatter requires a description"];
+  const names = [...frontmatter.matchAll(/^name:[ \t]*([^\r\n]*)$/gm)];
+  const descriptions = [...frontmatter.matchAll(/^description:[ \t]*([^\r\n]*)$/gm)];
+  const name = names[0]?.[1]?.trim();
+  const description = descriptions[0]?.[1]?.trim();
+  if (names.length !== 1 || name !== skillPath[1]) return ["skill name must match its directory"];
+  // Repository skills use a single plain scalar, not YAML collections or block scalars.
+  if (descriptions.length !== 1 || !description || /^[[\]{},&*!|>'"%@`#]/.test(description) || /:\s|\s#/.test(description)) {
+    return ["skill frontmatter requires a description"];
+  }
 
   return [];
 }
@@ -523,18 +537,32 @@ export async function validateDocumentation({
   const readmePath = path.join(resolvedProjectRoot, "README.md");
   const agentGuidancePath = path.join(resolvedProjectRoot, "AGENTS.md");
   const agentDirectory = path.join(resolvedProjectRoot, ".agents");
-  const docsStats = await stat(docsDirectory);
-  if (!docsStats.isDirectory()) throw new Error("docs must be a directory");
+  const errors = [];
+  const docsStats = await lstat(docsDirectory);
+  if (!docsStats.isDirectory() || docsStats.isSymbolicLink()) throw new Error("docs must be a non-symlink directory");
 
   const optionalAgentGuidancePath = await readOptionalFile(agentGuidancePath);
+  const infrastructureGuides = (await Promise.all(
+    ["README.md", "ADOPTION.md"].map((name) => readOptionalFile(path.join(resolvedProjectRoot, "infra", name))),
+  )).filter(Boolean);
   const markdownFiles = [
     readmePath,
-    ...(await listMarkdownFiles(docsDirectory)),
+    ...(await listMarkdownFiles(docsDirectory, errors, resolvedProjectRoot)),
     ...(optionalAgentGuidancePath ? [optionalAgentGuidancePath] : []),
-    ...(await listOptionalMarkdownFiles(agentDirectory)),
+    ...(await listOptionalMarkdownFiles(agentDirectory, errors, resolvedProjectRoot)),
+    ...infrastructureGuides,
   ];
+  const safeMarkdownFiles = [];
+  for (const filePath of markdownFiles) {
+    const result = await verifyExactPath(resolvedProjectRoot, filePath);
+    if (result.symlink || result.escaped || !result.exists || !result.exactCase) {
+      errors.push(`${toPosix(path.relative(resolvedProjectRoot, filePath))}: unsafe documentation path`);
+    } else {
+      safeMarkdownFiles.push(filePath);
+    }
+  }
   const documents = await Promise.all(
-    markdownFiles.map(async (filePath) => ({
+    safeMarkdownFiles.map(async (filePath) => ({
       filePath,
       source: await readFile(filePath, "utf8"),
     })),
@@ -545,8 +573,6 @@ export async function validateDocumentation({
       extractHeadingAnchors(source),
     ]),
   );
-  const errors = [];
-
   async function validateHeadingFragment(
     filePath,
     fragment,
@@ -589,6 +615,10 @@ export async function validateDocumentation({
 
     const publicDirectory = path.join(resolvedProjectRoot, "public");
     const segments = cleanTarget.split("/");
+    if (segments.some((segment) => segment === ".." || segment === ".")) {
+      errors.push(`${relativePath}:${line}: root-relative asset link escapes public/: ${target}`);
+      return;
+    }
     const firstSegment = segments[0];
     const basename = segments.at(-1) ?? "";
 
@@ -644,7 +674,9 @@ export async function validateDocumentation({
       result = { exists: false, exactCase: false };
     }
 
-    if (!result.exists) {
+    if (result.symlink) {
+      errors.push(`${relativePath}:${line}: root-relative asset target contains a symbolic link: ${target}`);
+    } else if (!result.exists) {
       errors.push(
         `${relativePath}:${line}: root-relative asset target does not exist: ${target}`,
       );
@@ -722,6 +754,8 @@ export async function validateDocumentation({
         errors.push(
           `${relativePath}:${line}: relative link escapes the repository: ${target}`,
         );
+      } else if (result.symlink) {
+        errors.push(`${relativePath}:${line}: relative link target contains a symbolic link: ${target}`);
       } else if (!result.exists) {
         errors.push(
           `${relativePath}:${line}: relative link target does not exist: ${target}`,
@@ -743,7 +777,7 @@ export async function validateDocumentation({
   }
 
   return {
-    checkedFiles: markdownFiles.map((filePath) =>
+    checkedFiles: safeMarkdownFiles.map((filePath) =>
       toPosix(path.relative(resolvedProjectRoot, filePath)),
     ),
     errors,

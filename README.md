@@ -127,6 +127,7 @@ Page routes are statically exported. This table covers the visitor flows documen
 | `/recommendations` | Complete recommendation collection | Static cards with expandable long quotes; navigation is content-dependent. |
 | `/resume` | Private resume request instructions | Static request page with contact and email actions; no resume file or workbook sheet is published. |
 | `/contact` | Prioritized contact workflow | Static form shell that calls the two same-origin Pages Functions; marked `noindex`. |
+| `/contact-terms` | Contact and communication terms | Static footer-only legal route. |
 | `/privacy` | Privacy notice | Static footer-only legal route. |
 | `/terms` | Terms and accuracy notice | Static footer-only legal route. |
 | `/security` | Security and disclosure notice | Static footer-only legal route. |
@@ -340,15 +341,18 @@ See [Contact system](docs/security/CONTACT_SYSTEM.md), [Security](docs/security/
 ## Project structure
 
 ```text
-.github/             GitHub Actions workflow
+.agents/             Six focused specialists and durable system decisions
+.github/             GitHub Actions workflows and permanent-branch ruleset
 docs/                Guides, references, and checklists
 functions/           Cloudflare contact verification and delivery
+infra/               Inactive Terraform ownership preparation
 migrations/          Versioned Cloudflare D1 contact-rate schema
 public/              Static assets, headers, and Function route allowlist
-scripts/             Content, local automation, manifests, smoke checks, tests
-tests/e2e/            Playwright browser regressions
+scripts/             Content, CI, release, security, local automation, tests
+tests/e2e/           Playwright browser regressions
 src/app/             Static Next.js routes and loading files
-src/components/      Layout, navigation, theme, glass, portfolio, and contact UI
+src/components/      Shared layout, navigation, overlay, theme, and UI primitives
+src/features/        Domain UI, selectors, loaders, and styles
 src/content/         Types, local templates, and generated snapshot
 src/lib/             Content, CSV, formatting, and theme helpers
 src/styles/          Semantic tokens and focused CSS layers
