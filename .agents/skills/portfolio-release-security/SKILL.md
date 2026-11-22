@@ -28,3 +28,5 @@ Terraform ownership preparation remains inactive until separately authorized ado
 For source-scanner or CI governance changes, read [Scanner governance](../../../docs/security/SCANNER_GOVERNANCE.md). Preserve independent candidate-bound source receipts, private detailed reports, pinned tool checksums, exact scoped expiring exceptions, and sealed-output scan admission.
 
 Private-preview verification must remain credential-isolated and fail closed. Provider evidence belongs outside worktrees in mode-restricted temporary storage. An unreviewed entitlement mapping is an activation blocker; do not infer permission to mutate provider state.
+
+For manual runtime and GitHub governance observations, use [Runtime posture](../../../docs/operations/RUNTIME_POSTURE.md); keep public responses, source intent, and independently verified provider controls distinct.

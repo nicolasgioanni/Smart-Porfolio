@@ -76,6 +76,7 @@ This is an npm repository: `package.json`, `package-lock.json`, and `.nvmrc` are
 | Document | Purpose |
 | --- | --- |
 | [Deployment](operations/DEPLOYMENT.md) | GitHub and Cloudflare setup, environment separation, release governance, and first deployment. |
+| [Runtime posture](operations/RUNTIME_POSTURE.md) | Manual bounded observations and provider reconciliation. |
 | [Operations](operations/OPERATIONS.md) | Event behavior, candidate selection, exact-artifact deployment, manifests, smoke tests, retries, and rollback considerations. |
 | [Terraform ownership preparation](infrastructure/TERRAFORM_OWNERSHIP.md) | Inactive Terraform source boundary, saved-plan review, and adoption prerequisites. |
 | [Troubleshooting](development/TROUBLESHOOTING.md) | Symptoms, likely causes, diagnostics, safe corrections, and actions to avoid. |
