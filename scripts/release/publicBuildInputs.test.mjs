@@ -10,8 +10,8 @@ const inputs = {
   lockfileDigest: "c".repeat(64),
   wranglerConfigDigest: "d".repeat(64),
   nodeVersion: "v22.23.3",
-  nextVersion: "16.4.0",
-  wranglerVersion: "4.148.0"
+  nextVersion: "16.4.6",
+  wranglerVersion: "4.160.1"
 };
 
 describe("public build input identity", () => {

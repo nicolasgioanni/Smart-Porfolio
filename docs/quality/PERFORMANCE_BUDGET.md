@@ -95,6 +95,8 @@ Run it only after `npm run build:generated`. The baseline records the review env
 
 The reviewed /projects HTML baseline is 19,625 gzip bytes from the preserved product shape at f6334b93309bd0ba355937113cc4bf7ca31b6b59, measured with Node 22.23.3 and Next 16.3.4. It retains the approved preview, badge, attribution, footer, and visual-switcher markup; this correction is not a performance optimization or a visual-baseline change. The reconciled Node 22.23.3 and Next 16.4.0 build measures 19,739 bytes, leaving its 114-byte dependency-era change visible while remaining below the unchanged 20% route slack ceiling. Every other reviewed route and asset threshold remains unchanged.
 
+The dependency-security refresh measured on 2026-11-11 with Node 22.23.3 and Next 16.4.6 produces 19,771 gzip bytes for `/projects` HTML and 190,753 gzip bytes of shared initial framework JavaScript. All eleven route and Research asset budgets pass. The dated baseline measurements, Projects provenance, and every budget ceiling remain unchanged.
+
 The gate does not measure Lighthouse or Core Web Vitals. Do not claim a measured performance result without recording the tool, route, environment, and date.
 
 See [Performance checklist](PERFORMANCE_CHECKLIST.md), [Design system](../design/DESIGN_SYSTEM.md), and [Testing](TESTING.md).

@@ -195,7 +195,7 @@ async function deploymentFixture({ mutateConfig } = {}) {
     producer,
     toolchain: {
       node: process.version,
-      next: "16.4.0",
+      next: "16.4.6",
       wrangler: "4.160.1",
       compatibilityDate: "2026-08-27",
       compatibilityFlags: [],
@@ -324,7 +324,7 @@ describe("deployment admission and provider evidence", () => {
     expect(parseDeploymentOutput(withoutAlias, { target: "production", sourceSha })).toBe(deploymentUrl);
     for (const mutate of [
       (records) => [...records, { type: "notice" }],
-      (records) => [{ ...records[0], wrangler_version: "4.148.1" }, ...records.slice(1)],
+      (records) => [{ ...records[0], wrangler_version: "4.160.2" }, ...records.slice(1)],
       (records) => [{ ...records[0], command_line_args: ["pages", "deploy"] }, ...records.slice(1)],
       (records) => [{ ...records[0], extra: true }, ...records.slice(1)],
       (records) => records.map((record) => record.url ? { ...record, url: record.url.replace("pages.dev", "pagesXdev") } : record),

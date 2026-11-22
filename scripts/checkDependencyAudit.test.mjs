@@ -7,7 +7,7 @@ const counters = { info: 0, low: 0, moderate: 0, high: 2, critical: 0, total: 2 
 const audit = { auditReportVersion: 2, metadata: { vulnerabilities: counters }, vulnerabilities: { braces: { severity: "high", via: [{ url: "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm", title: "braces" }] }, parent: { severity: "high", via: ["braces"] } } };
 
 describe("dependency audit gate", () => {
-  it("permits only the current exact development-only exception", () => {
+  it("permits an exact, unexpired development-only exception", () => {
     validateAuditExceptions([exception], lock);
     expect(unresolvedAuditAdvisories(audit, [exception], new Date("2026-10-07"))).toEqual([]);
     expect(unresolvedAuditAdvisories(audit, [exception], new Date("2026-12-01"))).toHaveLength(2);

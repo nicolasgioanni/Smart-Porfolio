@@ -134,8 +134,8 @@ async function createSealedFixture(root) {
     producer: { kind: "local", runId: "local", runNumber: null, attempt: null },
     toolchain: {
       node: "v22.23.3",
-      next: "16.4.0",
-      wrangler: "4.148.0",
+      next: "16.4.6",
+      wrangler: "4.160.1",
       compatibilityDate: "2026-08-27",
       compatibilityFlags: [],
       lockfileHash: "f".repeat(64)
