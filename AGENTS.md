@@ -4,7 +4,7 @@
 
 - Start with the scoped map in [`.agents/README.md`](.agents/README.md). Read [system decisions](.agents/knowledge/SYSTEM_DECISIONS.md) for compact durable context, then only the linked product documentation needed for the task.
 - Use the architecture skill for module, route, and documentation ownership; content pipeline for source data and assets; interface contracts for components, themes, motion, dialogs, and accessibility; validation for tests and CI; release security for endpoints and deployment.
-- Use Sol or Astra for coordination, review, decomposition, and evidence synthesis. Use GPT-5.6 Terra at High or Extra High for implementation.
+- Use GPT-6.1 Sol for coordination, architecture, review, decomposition, and evidence synthesis. Use GPT-6.1 Terra at High or Extra High for implementation.
 - The current task's explicit authorization overrides generic procedural guidance. It does not relax the permanent-branch invariant.
 
 ## Shared invariants
@@ -15,7 +15,7 @@
 - Read the relevant installed Next.js guide in `node_modules/next/dist/docs/` before a framework-sensitive code change.
 - Update the guide that owns a changed contract and its links. Documentation, AGENTS.md, and `.agents` guidance are validated by `npm run docs:check`.
 - Treat `main` and `develop` as permanent branches. Never delete, rename, force-update, or recreate either local or remote ref, and never weaken their protection. Exclude both refs from branch-cleanup work.
-- Before creating a new focused improvement branch and worktree, the coordinating checkout fetches `origin`, fast-forwards local `main` from `origin/main`, and records the resulting fixed baseline SHA. Continuing that improvement retains its existing worktree and recorded baseline without refreshing, re-recording, or syncing newer work. An integration delta is allowed only when the current task expressly authorizes it and records the original baseline and the authorized delta.
+- Use one branch and worktree per improvement. Before creating a new focused improvement branch and worktree, the coordinating checkout fetches `origin`, fast-forwards local `main` from `origin/main`, and records the resulting fixed baseline SHA. Continuing that improvement retains its existing worktree and recorded baseline without refreshing, re-recording, or syncing newer work. Do not import, merge, rebase, or otherwise sync later changes into that worktree. Explicit current-worktree or local-only instructions forbid fetches, worktrees, imports, rebases, branch recreation, pushes, and remote mutation. Commit logical changes and, when authorized, push one pull request to `main`; do not merge or enable auto-merge.
 
 ## Required specialist rules
 

@@ -211,7 +211,7 @@ After `build:generated`, verify `/projects` without JavaScript against the expor
 | Release and artifact tests under `scripts/release/` plus `scripts/artifactIntegrity.mjs` | Accepted build input, sealed-package, Function/runtime, SBOM, manifest, and tamper rejection contracts |
 | `scripts/quality/recoveryDrill.test.mjs` | Credential-free local Wrangler D1 export, fresh `0001`–`0003` migration, and pseudonymous reservation restore; v2 sealed-envelope tamper rejection and restoration without collector files |
 | `scripts/localAutomation.test.mjs` | Project discovery, environment copy safety, dependency-state hashing, stale content, and port selection |
-| `scripts/permanentBranchRuleset.test.mjs` | Exact tracked permanent-branch ruleset name, active scope, deletion and non-fast-forward rules only, and empty bypass list |
+| `scripts/permanentBranchRuleset.test.mjs` | Strict tracked permanent-branch ruleset validator, including rejected scope, enforcement, bypass, and protection changes; also required by offline infrastructure acceptance |
 
 These tests execute local contracts and injected provider boundaries. They do not establish a hosted GitHub Actions run, attestation service, Cloudflare deployment, D1 migration, or external environment configuration. Hosted validation remains pending for the reconciled workflow.
 

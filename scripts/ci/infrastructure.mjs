@@ -3,6 +3,7 @@ import { readdir, lstat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
+import { validatePermanentBranchRulesetFile } from "../permanentBranchRuleset.mjs";
 
 const execute = promisify(execFile);
 const projectRoot = path.resolve(import.meta.dirname, "../..");
@@ -31,6 +32,7 @@ export async function discoverTerraformRoots(root = projectRoot) {
 export async function verifyOfflineInfrastructure({ root = projectRoot, terraform, opa,
   environment = process.env, run = execute, discover = discoverTerraformRoots } = {}) {
   for (const binary of [terraform, opa]) if (typeof binary !== "string" || !path.isAbsolute(binary)) throw new Error("Checksum-verified infrastructure binaries require absolute paths.");
+  await validatePermanentBranchRulesetFile(root);
   const roots = await discover(root);
   const childEnvironment = { PATH: environment.PATH, HOME: environment.HOME, TMPDIR: environment.TMPDIR,
     LANG: "C.UTF-8", TF_INPUT: "false", TF_IN_AUTOMATION: "true", CHECKPOINT_DISABLE: "1",
