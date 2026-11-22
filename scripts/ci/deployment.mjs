@@ -70,7 +70,7 @@ export function parseDeploymentOutput(text, { target, sourceSha }) {
   if (sessions.length !== 1) throw new Error("Wrangler session identity is missing or duplicated.");
   const session = sessions[0];
   exactKeys(session, ["type", "version", "wrangler_version", "command_line_args", "log_file_path", "timestamp"], "Wrangler session");
-  if (session.version !== 1 || session.wrangler_version !== "4.148.0" ||
+  if (session.version !== 1 || session.wrangler_version !== "4.160.1" ||
       recordDigest(session.command_line_args) !== recordDigest(pagesDeploymentArguments({ target, sourceSha })) ||
       typeof session.log_file_path !== "string" || !session.log_file_path) throw new Error("Wrangler session tool version or operation differs from the reviewed upload.");
   for (const record of records) if (typeof record.timestamp !== "string" || !Number.isFinite(Date.parse(record.timestamp))) throw new Error("Wrangler output timestamp is invalid.");

@@ -8,7 +8,7 @@ Smart Portfolio uses a layered quality gate for documentation, static content, R
 | --- | --- |
 | Node.js | 22.13 or newer locally, Node.js 22 in CI |
 | Package installation | `npm ci` from `package-lock.json` in CI |
-| Test runner | Vitest 4.1.11 |
+| Test runner | Vitest 4.1.12 |
 | Default test environment | jsdom |
 | DOM assertions | Testing Library and `@testing-library/jest-dom` |
 | Browser runner | Playwright 1.x with Chromium plus narrow Firefox critical, WebKit critical, and WebKit mobile Research/Projects projects |
