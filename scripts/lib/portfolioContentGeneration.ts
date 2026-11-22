@@ -13,6 +13,9 @@ import { parseCsv, type CsvRow } from "../../src/lib/csv/parseCsv";
 import { validateContentKeyRows } from "../../src/lib/content/contentSheetKeys";
 import type { PortfolioSheetName } from "../../src/lib/content/normalizePortfolioContent";
 import { invalidXlsxWorkbookError, validatePortfolioWorkbookArchive } from "./workbookArchive";
+import { portfolioWorkbookMaxRowsPerSheet, portfolioWorkbookMaxColumnsPerSheet, portfolioWorkbookMaxCellsPerSheet, validateWorkbookSemantics } from "./workbookSemanticPreflight";
+import { runWorkbookParser } from "./workbookParserProcess";
+export { portfolioWorkbookMaxRowsPerSheet, portfolioWorkbookMaxColumnsPerSheet, portfolioWorkbookMaxCellsPerSheet } from "./workbookSemanticPreflight";
 
 export const portfolioWorkbookSheetNames = [
   "profile",
@@ -28,10 +31,6 @@ export const portfolioWorkbookSheetNames = [
 
 export type PortfolioWorkbookSheetName = (typeof portfolioWorkbookSheetNames)[number];
 export type PortfolioWorkbookSheets = Record<PortfolioWorkbookSheetName, CsvRow[]>;
-
-export const portfolioWorkbookMaxRowsPerSheet = 5_000;
-export const portfolioWorkbookMaxColumnsPerSheet = 128;
-export const portfolioWorkbookMaxCellsPerSheet = 250_000;
 
 const expectedHeaders: Record<PortfolioSheetName, readonly string[]> = {
   profile: ["key", "value"],
@@ -319,13 +318,18 @@ function normalizeWorksheetTitle(title: string): string {
 }
 
 export async function parsePortfolioWorkbook(bytes: Uint8Array): Promise<PortfolioWorkbookSheets> {
+  return runWorkbookParser(bytes);
+}
+
+export async function parsePortfolioWorkbookInChild(bytes: Uint8Array): Promise<PortfolioWorkbookSheets> {
   await validatePortfolioWorkbookArchive(bytes);
+  await validateWorkbookSemantics(bytes);
 
   const workbook = new ExcelJS.Workbook();
   const arrayBuffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
 
   try {
-    await workbook.xlsx.load(arrayBuffer);
+    await workbook.xlsx.load(arrayBuffer, { ignoreNodes: ["dataValidations", "conditionalFormatting", "extLst", "drawing", "picture", "tableParts", "sheetViews", "pageMargins", "pageSetup", "printOptions", "headerFooter", "rowBreaks", "sheetProtection", "autoFilter"] });
   } catch {
     throw invalidXlsxWorkbookError();
   }
