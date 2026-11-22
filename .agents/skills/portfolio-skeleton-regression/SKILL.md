@@ -17,15 +17,9 @@ Experience is the only generated header override. Pass validated content through
 
 ## Preserve the visual harness
 
-`tests/e2e/standaloneSkeletonDocument.ts` is the shared document and asset-readiness contract for `skeleton-alignment.spec.ts` and `skeletons.visual.spec.ts`. The live page may supply resolved HTML and body attributes, the generated body font class, and absolute compiled stylesheet URLs; each suite fulfills a separate same-origin fixture route with canonical server-rendered skeleton markup.
+Use `tests/e2e/standaloneSkeletonDocument.ts` for an inert same-origin fixture route; never mutate React-owned DOM. Preserve stylesheet and font readiness, diagnostic rejection, two-frame settling, static-animation assertions, and zero-difference screenshots. Research visual snapshots use canonical local-template detail items only in the visual renderer; normal loading and alignment use generated-workbook data. See [visual and transition coverage](../../../docs/design/SKELETON_LOADING_GUIDELINES.md#visual-and-transition-regression-coverage).
 
-Keep that fixture inert: no application scripts, development portal, or mutation of React-owned DOM. Do not use `replaceChildren`, remove mounted nodes, or inject a fixture into the hydrated application tree. Preserve stylesheet and font readiness checks, browser-diagnostic rejection, two-frame layout settling, static-animation assertions, and zero-difference screenshots.
-
-Research visual snapshots receive controlled canonical local-template detail items only through `tests/e2e/renderRouteSkeleton.tsx`. Keep that injection isolated to the visual renderer. Normal loading boundaries and component or alignment coverage must resolve generated-workbook data so their resource geometry follows validated content.
-
-Research has two distinct media footprints. CytoCV reserves an abstract/divider/video stack; AML and Guide Donor Scheduler reserve one full-height, vertically centered abstract group above `920px` and intrinsic natural height at or below it. Keep resolved and skeleton alignment helpers shape-aware, retain the `32rem` media cap and `16px` padding, and never restore explainer-scene, label, legend, or playback-control placeholders.
-
-Projects and affected Home profiles must derive card/action counts from selected generated records and the shared project action resolver, supporting both the old workbook and the five-row migration. The Projects loader mirrors the resolved card’s three shared desktop rows: a normal-flow title/badge and summary header including any inline attribution, top-aligned media plus a centered padded 44px control, then an inset divider and source-first actions. Only the isolated screenshot renderer may use controlled local-template project records. Preserve the gallery's `980/981px` column boundary and the `16:10`/`4:3` media footprint when updating its loader.
+Research and Projects loaders retain shape-aware media and generated-record geometry, including the Projects gallery breakpoint and footprint. See [layout matching](../../../docs/design/SKELETON_LOADING_GUIDELINES.md#layout-matching).
 
 ## Review Linux baselines
 
@@ -35,7 +29,7 @@ If route coverage or the viewport matrix changes intentionally, update the visua
 
 ## Keep CI and transition semantics accurate
 
-A full CI plan derives exact browser identities, runs nonvisual Chromium coverage across two Ubuntu 24.04 functional shards, and runs the Linux visual selection in its own Ubuntu job; narrow critical Firefox and WebKit coverage remains separate. The complete selection must retain all three `npm run test:e2e:skeletons` parts: direct resolved-versus-loader alignment, held-navigation transition semantics, and the Linux visual matrix. Receipts must account for every assigned test before the aggregate can accept it. Preserve the failure-only diagnostics artifact as separate from the deployable static artifact. See [CI input and evidence contracts](../../../docs/quality/CI_CONTRACTS.md) for the authoritative workflow and receipt graph.
+The CI aggregate retains alignment, held-navigation transitions, and the Linux visual matrix, with receipts for each assignment. Keep failure diagnostics separate from the deployable artifact. See [CI contracts](../../../docs/quality/CI_CONTRACTS.md#browser-discovery-and-terminal-evidence).
 
 The transition suite suppresses viewport prefetch and holds the first non-prefetch RSC request. With synchronous route rendering, holding that response preserves the source body rather than mounting a streamable fallback. Static export does not provide loading streaming; do not change this into a fallback-visibility claim.
 

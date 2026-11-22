@@ -1,6 +1,6 @@
 # Agent map
 
-This portable overview routes a repository task without requiring a particular agent product. Read [AGENTS.md](../../AGENTS.md), [.agents](../../.agents/README.md), and [system decisions](../../.agents/knowledge/SYSTEM_DECISIONS.md) first. The direct cards in `.agents` reach implementation, tests, and authoritative documentation in two hops from the bootstrap; the [ownership manifest](../../.agents/ownership-manifest.json) keeps those cards machine-checkable.
+This portable overview routes a repository task without requiring a particular agent product. Read [AGENTS.md](../../AGENTS.md), [.agents](../../.agents/README.md), and [system decisions](../../.agents/knowledge/SYSTEM_DECISIONS.md) first. The direct cards in `.agents` reach implementation, tests, and authoritative documentation in two hops from the bootstrap; the [ownership manifest](../../.agents/agent-map.json) keeps those cards machine-checkable.
 
 The optional read-only shortcut is `node scripts/routeAgentWork.mjs <intent>`; use `--list` to print deterministic intents and aliases. Markdown and the JSON manifest remain the source of truth, so the shortcut is never required.
 

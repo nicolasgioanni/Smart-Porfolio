@@ -35,3 +35,7 @@ Use GPT-6.1 Sol for coordination, review, decomposition, and evidence synthesis.
 ## Complete a change
 
 Find an existing implementation before adding a new one. Keep work in a focused branch or worktree, update the applicable product and agent documentation with a changed contract, and run the relevant checks from [Testing](../quality/TESTING.md). A passing CI status is evidence from the configured workflow; merge enforcement remains a repository setting and must not be assumed from this documentation.
+
+## Agent registry and routing
+
+The [unified registry](../../.agents/agent-map.json) provides primary path ownership, exclusions and consumers alongside task-oriented routing cards. `npm run agents:route -- --path <path>` reports the primary owner; `--task <intent>` reports matching cards and ambiguity. Add `--json` for structured output. `npm run route:agent -- <intent>` opens an intent card. `npm run agents:check` checks ownership coverage, references and guidance budgets; `npm run docs:check` runs both documentation and registry validation.

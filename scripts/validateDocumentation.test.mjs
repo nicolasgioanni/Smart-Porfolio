@@ -37,7 +37,7 @@ function samplePathForPattern(pattern) {
 async function createOwnershipFixture(mutateManifest = () => {}) {
   const baselineManifest = JSON.parse(
     await readFile(
-      path.join(projectRoot, ".agents", "ownership-manifest.json"),
+      path.join(projectRoot, ".agents", "agent-map.json"),
       "utf8",
     ),
   );
@@ -89,6 +89,9 @@ async function createOwnershipFixture(mutateManifest = () => {}) {
     ].join("\n");
   }
 
+  files["docs/design/SKELETON_LOADING_GUIDELINES.md"] += "\n## Layout matching\n";
+  files["docs/quality/CI_CONTRACTS.md"] += "\n## Browser discovery and terminal evidence\n";
+
   const sourcePackage = JSON.parse(
     await readFile(path.join(projectRoot, "package.json"), "utf8"),
   );
@@ -97,7 +100,7 @@ async function createOwnershipFixture(mutateManifest = () => {}) {
       Object.keys(sourcePackage.scripts).map((name) => [name, "true"]),
     ),
   });
-  files[".agents/ownership-manifest.json"] = JSON.stringify(manifest);
+  files[".agents/agent-map.json"] = JSON.stringify(manifest);
   return createFixture(files);
 }
 
@@ -488,10 +491,10 @@ describe("documentation validation", () => {
       const result = await validateDocumentation({ projectRoot: root });
       expect(result.errors).toEqual(
         expect.arrayContaining([
-          ".agents/ownership-manifest.json: required bootstrap file is missing: AGENTS.md",
-          ".agents/ownership-manifest.json: required bootstrap file is missing: .agents/README.md",
-          ".agents/ownership-manifest.json: required bootstrap file is missing: .agents/knowledge/SYSTEM_DECISIONS.md",
-          ".agents/ownership-manifest.json: required ownership manifest is missing",
+          ".agents/agent-map.json: required bootstrap file is missing: AGENTS.md",
+          ".agents/agent-map.json: required bootstrap file is missing: .agents/README.md",
+          ".agents/agent-map.json: required bootstrap file is missing: .agents/knowledge/SYSTEM_DECISIONS.md",
+          ".agents/agent-map.json: required ownership manifest is missing",
         ]),
       );
     } finally {
@@ -806,7 +809,7 @@ describe("documentation validation", () => {
 
   it("rejects symlinked ownership inputs before private content can be parsed or read", async () => {
     const protectedPaths = [
-      ".agents/ownership-manifest.json",
+      ".agents/agent-map.json",
       "AGENTS.md",
       ".agents/README.md",
       ".agents/knowledge/SYSTEM_DECISIONS.md",
@@ -834,7 +837,7 @@ describe("documentation validation", () => {
             expect(diagnostics).not.toContain(sentinel);
             expect(diagnostics).not.toContain("Unexpected token");
             expect(diagnostics).not.toContain("Expected property name");
-            if (protectedPath === ".agents/ownership-manifest.json") {
+            if (protectedPath === ".agents/agent-map.json") {
               expect(diagnostics).toContain("required ownership manifest is missing");
             } else {
               expect(diagnostics).toContain(

@@ -7,7 +7,7 @@ const defaultProjectRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
 );
-const manifestPath = ".agents/ownership-manifest.json";
+const manifestPath = ".agents/agent-map.json";
 
 async function inspectRepositoryPath(projectRoot, targetPath) {
   const resolvedProjectRoot = path.resolve(projectRoot);

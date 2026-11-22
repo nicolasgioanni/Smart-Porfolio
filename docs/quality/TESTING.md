@@ -71,7 +71,7 @@ Run:
 npm run docs:check
 ```
 
-`scripts/validateDocumentation.mjs` reads `README.md`, every Markdown file under `docs/` and `.agents/`, and Markdown under `infrastructure/` or `infra/` when either exists. It requires the root agent bootstrap (`AGENTS.md`, `.agents/README.md`, and `.agents/knowledge/SYSTEM_DECISIONS.md`) and `.agents/ownership-manifest.json`. It checks:
+`scripts/validateDocumentation.mjs` reads `README.md`, every Markdown file under `docs/` and `.agents/`, and Markdown under `infrastructure/` or `infra/` when either exists. It requires the root agent bootstrap (`AGENTS.md`, `.agents/README.md`, and `.agents/knowledge/SYSTEM_DECISIONS.md`) and `.agents/agent-map.json`. It checks:
 
 - Exactly one H1 per document.
 - Balanced fenced code blocks.

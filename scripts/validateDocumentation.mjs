@@ -23,7 +23,7 @@ const nonFunctionalRootFiles = new Set([
   "LICENSE",
   "tsconfig.tsbuildinfo",
 ]);
-const ownershipManifestPath = ".agents/ownership-manifest.json";
+const ownershipManifestPath = ".agents/agent-map.json";
 const bootstrapPaths = [
   "AGENTS.md",
   ".agents/README.md",
@@ -546,7 +546,7 @@ function hasPrivateWorkbookUrl(source) {
   );
 }
 
-function extractHeadingAnchors(source) {
+export function extractHeadingAnchors(source) {
   const anchors = new Set();
   const duplicateCounts = new Map();
 

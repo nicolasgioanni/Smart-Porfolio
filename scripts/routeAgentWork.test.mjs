@@ -15,7 +15,7 @@ const projectRoot = path.resolve(import.meta.dirname, "..");
 async function readManifest() {
   return JSON.parse(
     await readFile(
-      path.join(projectRoot, ".agents", "ownership-manifest.json"),
+      path.join(projectRoot, ".agents", "agent-map.json"),
       "utf8",
     ),
   );
@@ -69,7 +69,7 @@ describe("agent work routing", () => {
     try {
       await mkdir(path.join(malformedRoot, ".agents"), { recursive: true });
       await writeFile(
-        path.join(malformedRoot, ".agents", "ownership-manifest.json"),
+        path.join(malformedRoot, ".agents", "agent-map.json"),
         "{not JSON}\n",
         "utf8",
       );
@@ -126,7 +126,7 @@ describe("agent work routing", () => {
           await writeFile(target, `{"private":"${sentinel}"`, "utf8");
           await symlink(
             target,
-            path.join(root, ".agents", "ownership-manifest.json"),
+            path.join(root, ".agents", "agent-map.json"),
           );
 
           let message = "";
