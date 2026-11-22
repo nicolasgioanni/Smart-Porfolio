@@ -102,11 +102,13 @@ export default function SecurityPage() {
           30-minute ticket can authorize only the same locked delivery and its retries.
         </p>
         <p>
-          The application enforces at most two reservations per normalized email address in a rolling 24-hour window. It
-          stores only an opaque submission identifier, a domain-separated keyed HMAC-SHA-256 of the normalized address, an
-          opaque keyed fingerprint of the normalized full delivery payload, and reservation and expiry times in Cloudflare
-          D1. It does not store the raw address, name, phone number, or message in D1. A same-identifier retry does not consume
-          another slot only when both keyed values match. The handler fails closed when the D1 binding or query is unavailable.
+          The application enforces rolling limits of two reservations per normalized email address per 24 hours, ten per IP
+          address per hour, and 100 across the environment per 24 hours. Cloudflare D1 stores an opaque submission identifier,
+          separately keyed HMAC-SHA-256 values for the normalized email and canonical IP, keyed fingerprints of the normalized
+          delivery payload and delivery configuration, a renderer version, and reservation and expiry times. It does not store
+          the raw IP address, email address, name, phone number, or message in D1. A same-identifier retry does not consume
+          another slot only when its address, fingerprints, and renderer version match. The handler fails closed when the D1
+          binding or query is unavailable.
           Operator-managed Cloudflare WAF rate limiting remains defense in depth and should
           use a non-interactive response rather than add another human check. The application code does not
           intentionally log request bodies or contact fields; Cloudflare and other providers may maintain request, delivery,
