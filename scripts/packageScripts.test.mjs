@@ -289,7 +289,7 @@ describe("package and CI deployment automation", () => {
     expect(deploy.env.CI_ACCEPTANCE).toContain("needs.verify.outputs.acceptance");
     expect(deploy.env.CI_RELEASE_REFERENCE).toContain("outputs.release_reference");
     expect(deploy.steps[mutate].env.CLOUDFLARE_API_TOKEN).toContain("secrets.");
-    expect(deploy.environment).toBeUndefined(); // activation is a separate operational change
+    expect(deploy.environment).toBe("${{ needs['preview-environment'].outputs.environment }}"); // The selection blocks active preview until entitlement review.
   });
 
   it("sets no-cache headers for both deployment metadata files", async () => {
