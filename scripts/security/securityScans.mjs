@@ -251,6 +251,7 @@ async function scanGitleaks({ binary, mode, target, tempDir, inputs, root }) {
   const reportPath = path.join(tempDir, "gitleaks-report.json");
   const process = await capturePrivateOutput(binary, [
     mode,
+    ...(mode === "git" ? ["--log-opts", "--full-history HEAD"] : []),
     "--redact",
     "--verbose",
     "--no-banner",
@@ -293,7 +294,9 @@ export async function runSecurityScans({ gitleaks, gitleaksMode, target, zizmor,
   await chmod(tempDir, 0o700);
   try {
     const inputs = await writeSuppressionInputs(tempDir, suppressions);
-    const scans = [scanGitleaks({ binary: gitleaks, mode: gitleaksMode, target, tempDir, inputs, root })];
+    if (!gitleaks && !zizmor) throw new Error("At least one scanner is required.");
+    const scans = [];
+    if (gitleaks) scans.push(scanGitleaks({ binary: gitleaks, mode: gitleaksMode, target, tempDir, inputs, root }));
     if (zizmor) scans.push(scanZizmor({ binary: zizmor, tempDir, inputs, root }));
     return await Promise.all(scans);
   } finally {
@@ -310,12 +313,12 @@ export function parseSecurityScansCli(argv, env = process.env) {
     values.set(key, value);
   }
   const allowed = new Set(["--gitleaks", "--gitleaks-mode", "--target", "--temp-root", "--zizmor"]);
-  if ([...values.keys()].some((key) => !allowed.has(key)) || !values.has("--gitleaks") || !values.has("--gitleaks-mode") || !values.has("--target")) {
+  if ([...values.keys()].some((key) => !allowed.has(key)) || (!values.has("--gitleaks") && !values.has("--zizmor")) || (values.has("--gitleaks") !== values.has("--gitleaks-mode")) || (values.has("--gitleaks") !== values.has("--target"))) {
     throw new Error("Security scan arguments are invalid.");
   }
   const gitleaksMode = values.get("--gitleaks-mode");
   const target = values.get("--target");
-  if (!new Set(["git", "dir"]).has(gitleaksMode) || !/^(?:\.|[A-Za-z0-9][A-Za-z0-9_./-]*)$/.test(target) || target.includes("..")) {
+  if (values.has("--gitleaks") && (!new Set(["git", "dir"]).has(gitleaksMode) || !/^(?:\.|[A-Za-z0-9][A-Za-z0-9_./-]*)$/.test(target) || target.includes(".."))) {
     throw new Error("Security scan arguments are invalid.");
   }
   const tempRoot = values.get("--temp-root") ?? env.RUNNER_TEMP;

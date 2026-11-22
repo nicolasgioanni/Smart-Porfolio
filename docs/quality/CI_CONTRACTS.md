@@ -4,9 +4,9 @@ The contracts under `scripts/ci/` are the validation boundary used by `.github/w
 
 ## Workflow composition
 
-`resolve-candidate` admits only the supported event/ref/workflow combinations before checkout. `prepare-content` creates one plan and, except for obsolete candidates, one snapshot artifact; a full plan also carries browser discovery. Full plans fan out to `quality`, `unit-integration`, two Chromium functional shards, `visual-regression`, `cross-browser`, `build-and-package`, and `export-check`. `build-and-package` emits its ordinary release receipt and a distinct built-output Gitleaks receipt for the same sealed manifest before the release artifact uploads. `security-tools`, `security-scans`, `codeql`, and `infrastructure` fan out from candidate resolution for every plan, while `dependency-review` applies to pull requests.
+`resolve-candidate` admits only the supported event/ref/workflow combinations before checkout. `prepare-content` creates one plan and, except for obsolete candidates, one snapshot artifact; a full plan also carries browser discovery. Full plans fan out to `quality`, `unit-integration`, two Chromium functional shards, `visual-regression`, `cross-browser`, `build-and-package`, and `export-check`. `build-and-package` emits its ordinary release receipt and a distinct built-output Gitleaks receipt for the same sealed manifest before the release artifact uploads. `security-tools`, `history-secrets`, `workflow-security`, `dependency-audit`, `codeql`, and `infrastructure` fan out from candidate resolution for every plan, while `dependency-review` applies to pull requests.
 
-`verify` requires every plan-required job result and the exact original producer artifacts. Source-security receipts bind directly to the candidate and workflow rather than the content snapshot, so obsolete and unchanged plans still require them. The deploy job runs only for a full, accepted, non-PR plan, and its parsed eligibility expression requires an uncancelled workflow, explicit `verify` success, and the exact `deploy=true` output. This explicit status guard lets an intentionally skipped pull-request-only review remain optional on trusted events without GitHub Actions' implicit skip propagation preventing deployment. The schedule heartbeat is a separate guarded write path and has no acceptance or deployment authority.
+`verify` requires every plan-required job result and the exact original producer artifacts. Source-security receipts bind directly to the candidate and workflow rather than the content snapshot, so obsolete and unchanged plans still require them. The deploy job runs only for a full, accepted, non-PR plan, and its parsed eligibility expression requires an uncancelled workflow, explicit `verify` success, the exact `deploy=true` output, and the successful optional preview-environment preflight. This explicit status guard lets an intentionally skipped pull-request-only review remain optional on trusted events without GitHub Actions' implicit skip propagation preventing deployment. The schedule heartbeat is a separate guarded write path and has no acceptance or deployment authority.
 
 `scripts/ci/infrastructure.mjs` discovers every module and state root, rejects missing lockfiles or mock suites, and executes formatting, backend-disabled initialization, validation, mocked plans, saved-plan regressions, and OPA policies with a credential-free child environment. Its source receipt is required independently of content changes. Provider-shaped diagnostics remain private; [infrastructure ownership](../../infra/README.md) describes local reproduction and the separate adoption boundary.
 
@@ -18,7 +18,13 @@ Every candidate records its workflow revision, source revision, triggering revis
 
 `scripts/ci/resolve.mjs` verifies the checked-out revision and workflow ref before content preparation or dependency installation. PR resolution makes no provider request. Trusted branch observations are read-only, bounded, reject redirects and cannot resolve arbitrary branch names. Workflow outputs reject embedded newlines and control characters.
 
-Only an obsolete permanent-branch revision or a validated unchanged deployment comparison produces a no-op. A no-op does not authorize deployment. Scheduled and ordinary manual comparisons require validated deployed-identity evidence; a missing comparison is an error. Forced manual execution bypasses only that comparison. Independent source-security checks and receipts remain required for every plan.
+Only an obsolete permanent-branch revision or a validated unchanged deployment comparison produces a no-op. A no-op does not authorize deployment. Scheduled and ordinary manual comparisons require validated deployed-identity evidence; a missing comparison is an error. Forced manual execution bypasses only that comparison. A private preview opt-in also selects a full plan without a deployed comparison so source preparation stays credential-free. Independent source-security checks and receipts remain required for every plan.
+
+## Source integrity checkpoints
+
+`scripts/ci/sourceIdentity.mjs` checks the candidate's HEAD, index, and working tree separately and rejects nonignored untracked inputs. Initial and source-only checks permit no source changes. During content preparation and snapshot restoration, only the generated content JSON working-tree bytes may differ; staging, file type, and mode changes are rejected. Consumers verify those bytes against the accepted snapshot. Checks run after preparation and discovery, before receipts and build outputs, and before deployment mutations. A mismatch fails the evidence or pre-mutation boundary; restore a clean candidate and rerun all affected work rather than reusing its evidence.
+
+These checks observe persistent changes at checkpoints; they do not continuously isolate subprocesses or prove that no temporary modification occurred between checks. The local release CLI retains its existing behavior. CodeQL raw SARIF stays in a dedicated runner temporary directory, is validated, and is uploaded via the action’s absolute `sarif-output` path, so the source guard needs no scanner-output exception.
 
 ## Content snapshot and artifact identity
 
@@ -46,7 +52,11 @@ For a consumer rerun, GitHub may relabel copied job rows with the later attempt.
 
 `githubEvidence.mjs` admits only bounded, read-only GitHub Actions API responses for this repository and rejects redirects. It verifies the run's event, workflow path, run-head revision and attempt, then reads every page of job/artifact evidence. Matrix evidence uses an exact immutable name containing the original producer run, attempt, role and validator; the unique match becomes an artifact-ID reference. It never uses wildcard selection or a latest-successful fallback. Consumer-only reruns keep the original producer reference; a newer producer execution with missing evidence requires a full affected rerun.
 
+The sealed Pages export check exercises visible route content and footer links with JavaScript disabled, including native Projects disclosures and Research media. With JavaScript enabled it verifies an actual theme change and client navigation, and detects content-security-policy errors. It tests the restored sealed export, not a deployed site.
+
 ## Sealed deployment admission
+
+Private-preview opt-in is blocked before environment selection or deployment while entitlement mapping is unreviewed. The prepared checks for environment, Access policy and token evidence, anonymous denial, and authenticated identities remain inactive until a separately reviewed integration resolves that blocker. See [prepared private preview controls](../operations/DEPLOYMENT.md#prepared-private-preview-controls).
 
 The deploy path restores the sealed release from its original immutable reference, verifies the release and archive digest, and binds its manifest producer to the accepted plan. GitHub provenance and SBOM attestations are created for that archive before the deployment command performs its bounded Pages-project preflight; the command then verifies those attestations against the repository, trusted workflow certificate/ref, source and signer digests, and GitHub OIDC issuer. Missing credentials, malformed attestations, changed bytes, or a changed producer fail before a provider mutation.
 
@@ -70,4 +80,4 @@ Keep two Chromium functional shards until three comparable full trials show at l
 
 ## Source-audit placement
 
-Security scans run the dependency audit for every candidate, including unchanged scheduled candidates. Its advisory and exception-expiry decision remains blocking in that source-security job; quality validation does not replace the receipt.
+The `dependency-audit` job runs the dependency audit for every candidate, including unchanged scheduled candidates. Its advisory and exception-expiry decision remains blocking in that source-security job; quality validation does not replace the receipt.

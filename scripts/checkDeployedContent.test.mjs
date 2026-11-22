@@ -218,12 +218,16 @@ describe("deployment smoke checks", () => {
 
     const requestedPaths = [];
     const redirectModes = [];
+    const requestHeaders = [];
+    const requestMethods = [];
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input, init) => {
         const url = input instanceof URL ? input : new URL(String(input));
         requestedPaths.push(url.pathname);
         redirectModes.push(init?.redirect);
+        requestHeaders.push(init?.headers);
+        requestMethods.push(init?.method ?? "GET");
 
         if (url.pathname === "/") {
           return new Response(rootHtml, { headers: staticHeaders });
@@ -258,6 +262,29 @@ describe("deployment smoke checks", () => {
       "/api/contact", "/api/contact", "/api/contact"
     ]);
     expect(redirectModes).toEqual(Array(11).fill("manual"));
+    expect(requestMethods.slice(5)).toEqual(["GET", "POST", "POST", "GET", "POST", "POST"]);
+    expect(requestHeaders.slice(5).map((headers) => headers.Origin)).toEqual([
+      undefined, "https://smart-portfolio-bds.pages.dev", "https://nicolasmgioanni.dev",
+      undefined, "https://smart-portfolio-bds.pages.dev", "https://nicolasmgioanni.dev"
+    ]);
+
+    const config = { emails: ["owner@example.com"], groups: [], hostname: "preview.example.com", humanAppId: "11111111-1111-1111-1111-111111111111", idpId: "22222222-2222-2222-2222-222222222222", pagesAppId: "33333333-3333-3333-3333-333333333333", serviceTokenId: "44444444-4444-4444-4444-444444444444" };
+    const environment = { PREVIEW_ACCESS_ENABLED: "true", PREVIEW_ACCESS_CONFIG: JSON.stringify(config), PREVIEW_ACCESS_CLIENT_ID: "client", PREVIEW_ACCESS_CLIENT_SECRET: "secret" };
+    await smokeDeployment("https://0123abcd.smart-portfolio-bds.pages.dev", artifactDirectory, contentHash, commitSha, { privatePreview: true, environment });
+    expect(redirectModes.slice(11)).toEqual(Array(11).fill("manual"));
+    for (const headers of requestHeaders.slice(11)) expect(headers).toMatchObject({ "CF-Access-Client-Id": "client", "CF-Access-Client-Secret": "secret" });
+    await expect(smokeDeployment("https://smart-portfolio-bds.pages.dev", artifactDirectory, contentHash, commitSha, { privatePreview: true, environment })).rejects.toThrow();
+    expect(requestHeaders).toHaveLength(22);
+    expect(requestMethods.slice(16)).toEqual(["GET", "POST", "POST", "GET", "POST", "POST"]);
+    expect(requestHeaders.slice(16).map((headers) => headers.Origin)).toEqual([
+      undefined, "https://0123abcd.smart-portfolio-bds.pages.dev", "https://nicolasmgioanni.dev",
+      undefined, "https://0123abcd.smart-portfolio-bds.pages.dev", "https://nicolasmgioanni.dev"
+    ]);
+    for (const origin of ["https://nicolasmgioanni.dev", "https://develop.smart-portfolio-bds.pages.dev"]) {
+      const start = requestMethods.length;
+      await smokeDeployment(origin, artifactDirectory, contentHash, commitSha);
+      expect(requestMethods.slice(start)).toEqual(Array(7).fill("GET"));
+    }
   });
 
   it("bounds and strictly decodes Function rejection bodies", async () => {
@@ -319,6 +346,7 @@ describe("deployment smoke checks", () => {
     await pending;
     await Promise.resolve();
     expect(cancel).toHaveBeenCalledOnce();
+
   });
 
   it("rejects substituted root bytes and a static CSP that bypasses a route replacement", async () => {

@@ -3,14 +3,15 @@ import { applicationJobs, chromiumShards, securityJobs } from "./plan.mjs";
 export const gateDependencies = Object.freeze([
   "resolve-candidate", "prepare-content", ...securityJobs, "dependency-review", ...applicationJobs
 ]);
-const auxiliaryJobs = ["verify", "deploy", "heartbeat"];
+const auxiliaryJobs = ["verify", "preview-environment", "deploy", "heartbeat"];
 const sorted = (values) => [...values].sort().join(",");
 const needs = (job) => typeof job?.needs === "string" ? [job.needs] : Array.isArray(job?.needs) ? job.needs : [];
 const deployEligibilityTerms = Object.freeze([
   "!cancelled()",
   "github.event_name != 'pull_request'",
   "needs.verify.result == 'success'",
-  "needs.verify.outputs.deploy == 'true'"
+  "needs.verify.outputs.deploy == 'true'",
+  "needs['preview-environment'].result == 'success'"
 ]);
 
 function stepIndex(steps, predicate) {
@@ -40,6 +41,22 @@ function builtOutputScanProblems(job) {
   return [];
 }
 
+function codeqlReportProblems(job) {
+  const steps = job?.steps;
+  const analyze = stepIndex(steps, (step) => step?.id === "analyze" &&
+    step.uses?.startsWith("github/codeql-action/analyze@") && step.with?.upload === "never" &&
+    step.with?.output === "${{ runner.temp }}/smart-portfolio-codeql-sarif");
+  const validate = stepIndex(steps, (step) => step?.env?.SARIF_OUTPUT === "${{ steps.analyze.outputs.sarif-output }}" &&
+    typeof step.run === "string" && step.run.includes('node scripts/security/checkSarif.mjs "${sarif_files[0]}"'));
+  const upload = stepIndex(steps, (step) => step?.uses?.startsWith("github/codeql-action/upload-sarif@") &&
+    step.with?.sarif_file === "${{ steps.analyze.outputs.sarif-output }}");
+  const receipt = stepIndex(steps, (step) => step?.run === "node scripts/ci/run.mjs source-receipt");
+  if ([analyze, validate, upload, receipt].some((index) => index < 0) || !(analyze < validate && validate < upload && upload < receipt)) {
+    return ["CodeQL must write SARIF outside the checkout, validate it before upload, and then record source evidence."];
+  }
+  return [];
+}
+
 function deployEligibilityProblems(value) {
   if (typeof value !== "string") return ["Deployment must have an explicit eligibility expression."];
   const expression = value.trim().match(/^\$\{\{\s*([\s\S]*?)\s*\}\}$/)?.[1];
@@ -53,7 +70,8 @@ function deployEligibilityProblems(value) {
     ["!cancelled()", "block cancellation"],
     ["github.event_name != 'pull_request'", "exclude pull requests"],
     ["needs.verify.result == 'success'", "require explicit verify success"],
-    ["needs.verify.outputs.deploy == 'true'", "require the exact deploy output"]
+    ["needs.verify.outputs.deploy == 'true'", "require the exact deploy output"],
+    ["needs['preview-environment'].result == 'success'", "require preview environment preflight success"]
   ]);
   for (const [term, label] of labels) {
     const occurrences = terms.filter((candidate) => candidate === term).length;
@@ -73,7 +91,7 @@ export function workflowEvents(value) {
 }
 
 // Consume parsed YAML. This enforces responsibilities and graph edges. Only
-// the sealed-output scan has an ordering contract; other setup remains free.
+// the sealed-output scan and CodeQL report have ordering contracts; other setup remains free.
 export function validateWorkflowGraph(workflow) {
   const problems = [];
   if (workflow?.name !== "CI") problems.push("Preserve the CI workflow identity.");
@@ -86,6 +104,7 @@ export function validateWorkflowGraph(workflow) {
   if (!needs(jobs["prepare-content"]).includes("resolve-candidate")) problems.push("Content preparation must consume the resolved candidate.");
   for (const name of [...securityJobs, "dependency-review"]) {
     if (sorted(needs(jobs[name])) !== "resolve-candidate") problems.push(`${name} must run independently after candidate resolution.`);
+    if (name !== "dependency-review" && jobs[name]?.if !== undefined) problems.push(`${name} must run for every candidate plan.`);
   }
   for (const name of applicationJobs) {
     const dependencies = needs(jobs[name]);
@@ -97,6 +116,20 @@ export function validateWorkflowGraph(workflow) {
     }
   }
   problems.push(...builtOutputScanProblems(jobs["build-and-package"]));
+  problems.push(...codeqlReportProblems(jobs.codeql));
+  const preview = jobs["preview-environment"];
+  if (!needs(jobs.deploy).includes("preview-environment") ||
+      jobs.deploy?.environment !== "${{ needs['preview-environment'].outputs.environment }}" ||
+      jobs.deploy?.env?.PREVIEW_ACCESS_ENABLED !== "${{ needs['preview-environment'].outputs.enabled }}" ||
+      sorted(needs(preview)) !== sorted(["resolve-candidate", "prepare-content", "verify"]) ||
+      preview?.if !== "${{ !cancelled() && github.event_name != 'pull_request' && needs.verify.result == 'success' && needs.verify.outputs.deploy == 'true' }}" ||
+      sorted(Object.keys(preview?.permissions ?? {})) !== "actions,contents" ||
+      preview.permissions.actions !== "read" || preview.permissions.contents !== "read" ||
+      preview?.outputs?.environment !== "${{ steps.check.outputs.environment }}" ||
+      preview?.outputs?.enabled !== "${{ steps.check.outputs.enabled }}" ||
+      !preview?.steps?.some((step) => step.id === "check" && step.run === "node scripts/ci/previewEnvironment.mjs" &&
+        step.env?.GH_TOKEN === "${{ github.token }}" && step.env?.PREVIEW_ACCESS_ENABLED === "${{ vars.PREVIEW_ACCESS_ENABLED }}" &&
+        step.env?.CI_DEPLOY_TARGET === "${{ needs['prepare-content'].outputs.target }}" && Object.keys(step.env).length === 3)) problems.push("Deployment must use the validated preview environment selection.");
   if (!needs(jobs.deploy).includes("verify")) problems.push("Deployment must depend on verify.");
   problems.push(...deployEligibilityProblems(jobs.deploy?.if));
   if (jobs.deploy?.concurrency?.["cancel-in-progress"] !== false) problems.push("An active deployment must never be interrupted by concurrency.");

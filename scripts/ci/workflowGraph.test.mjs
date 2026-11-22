@@ -7,7 +7,7 @@ import { validateWorkflowYaml } from "./workflowYaml.mjs";
 
 const projectRoot = path.resolve(import.meta.dirname, "..", "..");
 const workflowPath = path.join(projectRoot, ".github", "workflows", "ci.yml");
-const deployEligibility = "${{ !cancelled() && github.event_name != 'pull_request' && needs.verify.result == 'success' && needs.verify.outputs.deploy == 'true' }}";
+const deployEligibility = "${{ !cancelled() && github.event_name != 'pull_request' && needs.verify.result == 'success' && needs.verify.outputs.deploy == 'true' && needs['preview-environment'].result == 'success' }}";
 const builtOutputScanSteps = [
   { name: "Install checksum-verified built-output scanner", run: "node scripts/security/installPinnedTool.mjs gitleaks /runner/tools > /dev/null" },
   { name: "Build once and seal the full candidate", run: "node scripts/ci/run.mjs build", env: { CI_GITLEAKS: "${{ runner.temp }}/smart-portfolio-tools/gitleaks/gitleaks" } },
@@ -21,11 +21,18 @@ function workflow() {
   return { name: "CI", on: { push: {}, pull_request: {}, schedule: [], workflow_dispatch: {} }, jobs: {
     "resolve-candidate": {}, "prepare-content": { needs: "resolve-candidate" },
     ...Object.fromEntries([...securityJobs, "dependency-review"].map((name) => [name, { needs: "resolve-candidate" }])),
+    codeql: { needs: "resolve-candidate", steps: [
+      { id: "analyze", uses: "github/codeql-action/analyze@pin", with: { upload: "never", output: "${{ runner.temp }}/smart-portfolio-codeql-sarif" } },
+      { env: { SARIF_OUTPUT: "${{ steps.analyze.outputs.sarif-output }}" }, run: 'node scripts/security/checkSarif.mjs "${sarif_files[0]}"' },
+      { uses: "github/codeql-action/upload-sarif@pin", with: { sarif_file: "${{ steps.analyze.outputs.sarif-output }}" } },
+      { run: "node scripts/ci/run.mjs source-receipt" }
+    ] },
     ...Object.fromEntries(applicationJobs.map((name) => [name, { needs: ["resolve-candidate", "prepare-content", ...(name === "export-check" ? ["build-and-package"] : [])] }])),
     "browser-e2e": { needs: ["resolve-candidate", "prepare-content"], strategy: { matrix: { shard: ["1/2", "2/2"] }, "fail-fast": false } },
     "build-and-package": { needs: ["resolve-candidate", "prepare-content"], steps: structuredClone(builtOutputScanSteps) },
     verify: { name: "verify", needs: [...gateDependencies], if: "always()" },
-    deploy: { needs: ["verify", "prepare-content", "build-and-package"], if: deployEligibility, concurrency: { group: "deployment-target", "cancel-in-progress": false } },
+    "preview-environment": { needs: ["resolve-candidate", "verify", "prepare-content"], if: "${{ !cancelled() && github.event_name != 'pull_request' && needs.verify.result == 'success' && needs.verify.outputs.deploy == 'true' }}", permissions: { contents: "read", actions: "read" }, outputs: { environment: "${{ steps.check.outputs.environment }}", enabled: "${{ steps.check.outputs.enabled }}" }, steps: [{ id: "check", run: "node scripts/ci/previewEnvironment.mjs", env: { GH_TOKEN: "${{ github.token }}", PREVIEW_ACCESS_ENABLED: "${{ vars.PREVIEW_ACCESS_ENABLED }}", CI_DEPLOY_TARGET: "${{ needs['prepare-content'].outputs.target }}" } }] },
+    deploy: { environment: "${{ needs['preview-environment'].outputs.environment }}", env: { PREVIEW_ACCESS_ENABLED: "${{ needs['preview-environment'].outputs.enabled }}" }, needs: ["verify", "prepare-content", "build-and-package", "preview-environment"], if: deployEligibility, concurrency: { group: "deployment-target", "cancel-in-progress": false } },
     heartbeat: {}
   } };
 }
@@ -54,12 +61,27 @@ describe("CI graph responsibilities", () => {
   it("keeps source security and maintenance independent and build/export ordered", () => {
     for (const change of [
       (value) => value.jobs.codeql.needs.push("quality"),
+      (value) => { value.jobs["history-secrets"].if = "false"; },
       (value) => { value.jobs.heartbeat.needs = "verify"; },
       (value) => { value.jobs["export-check"].needs = ["resolve-candidate", "prepare-content"]; },
       (value) => { value.jobs["build-and-package"].needs.push("unit-integration"); }
     ]) {
       const value = workflow(); value.jobs.codeql.needs = ["resolve-candidate"]; change(value);
       expect(() => validateWorkflowGraph(value)).toThrow();
+    }
+  });
+  it("keeps CodeQL reports outside the checkout and validates before upload and receipt", () => {
+    for (const change of [
+      (steps) => { steps.find((step) => step.id === "analyze").with.output = "sarif-results"; },
+      (steps) => { steps.find((step) => step.id === "analyze").with.output = "${{ runner.temp }}/../workspace/report"; },
+      (steps) => { steps.find((step) => step.id === "analyze").with.upload = "always"; },
+      (steps) => { steps.find((step) => step.env?.SARIF_OUTPUT).env.SARIF_OUTPUT = "sarif-results"; },
+      (steps) => { steps.find((step) => step.uses?.startsWith("github/codeql-action/upload-sarif@")).with.sarif_file = "other"; },
+      (steps) => { const index = steps.findIndex((step) => step.env?.SARIF_OUTPUT); steps.splice(index, 1); }
+    ]) {
+      const value = workflow();
+      change(value.jobs.codeql.steps);
+      expect(() => validateWorkflowGraph(value)).toThrow(/CodeQL must write SARIF outside/);
     }
   });
   it("requires a sealed-output scanner receipt before artifact upload", () => {
@@ -76,6 +98,9 @@ describe("CI graph responsibilities", () => {
   it("rejects deployment cancellation, bypass paths and broad privilege", () => {
     for (const change of [
       (value) => { value.jobs.deploy.needs = ["build-and-package"]; },
+      (value) => { value.jobs["preview-environment"].if = "always()"; },
+      (value) => { value.jobs["preview-environment"].permissions.actions = "write"; },
+      (value) => { value.jobs.deploy.environment = "preview"; },
       (value) => { value.jobs.deploy.concurrency["cancel-in-progress"] = true; },
       (value) => { value.concurrency = { "cancel-in-progress": true }; },
       (value) => { value.concurrency = { "cancel-in-progress": "${{ true }}" }; },

@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { appendFile, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { assertSourceIdentity } from "./sourceIdentity.mjs";
 import { assertSha, parseBoolean, parseCandidate, positiveInteger, repository, workflowPath } from "./plan.mjs";
 
 function integerEnvironment(value, name) {
@@ -77,6 +78,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   try {
     const event = JSON.parse(await readFile(process.env.GITHUB_EVENT_PATH, "utf8"));
     const checkoutSha = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8", maxBuffer: 1024 }).trim();
+    assertSourceIdentity(process.cwd(), checkoutSha);
     const candidate = await resolveCandidate({ environment: process.env, event, checkoutSha });
     await writeOutputs({ candidate: JSON.stringify(candidate), candidate_sha: candidate.sourceSha,
       obsolete: String(candidate.event !== "pull_request" && candidate.sourceSha !== candidate.branchTip) });

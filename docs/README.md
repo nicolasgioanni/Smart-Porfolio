@@ -76,6 +76,7 @@ This is an npm repository: `package.json`, `package-lock.json`, and `.nvmrc` are
 | Document | Purpose |
 | --- | --- |
 | [Deployment](operations/DEPLOYMENT.md) | GitHub and Cloudflare setup, environment separation, release governance, and first deployment. |
+| [Runtime posture](operations/RUNTIME_POSTURE.md) | Manual bounded observations and provider reconciliation. |
 | [Operations](operations/OPERATIONS.md) | Event behavior, candidate selection, exact-artifact deployment, manifests, smoke tests, retries, and rollback considerations. |
 | [Terraform ownership preparation](infrastructure/TERRAFORM_OWNERSHIP.md) | Inactive Terraform source boundary, saved-plan review, and adoption prerequisites. |
 | [Troubleshooting](development/TROUBLESHOOTING.md) | Symptoms, likely causes, diagnostics, safe corrections, and actions to avoid. |
@@ -86,6 +87,7 @@ This is an npm repository: `package.json`, `package-lock.json`, and `.nvmrc` are
 | --- | --- |
 | [Security](security/SECURITY.md) | Threat model, trust boundaries, public and private data, headers, URL rules, contact security, and publication review. |
 | [Contact system](security/CONTACT_SYSTEM.md) | Client workflow, verification ticket, request validation, Turnstile, Resend, configuration, and abuse controls. |
+| [Scanner governance](security/SCANNER_GOVERNANCE.md) | Independent security jobs, private report handling, and scoped exception review. |
 | [Security checklist](security/SECURITY_CHECKLIST.md) | Concise operational security review linked to the deeper guides. |
 
 ## Maintenance

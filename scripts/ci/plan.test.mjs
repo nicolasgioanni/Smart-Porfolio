@@ -34,7 +34,7 @@ describe("CI event and result contract", () => {
     const input = candidate(event);
     const unchanged = createPlan(input, { snapshotDigest, comparison: { schemaVersion: 1, equivalent: true, identityDigest: snapshotDigest } });
     expect(unchanged).toMatchObject({ mode: "unchanged", tier: "none", deploy: false });
-    expect(unchanged.requiredJobs).toContain("security-scans");
+    expect(unchanged.requiredJobs).toContain("dependency-audit");
     expect(evaluateResults(unchanged, results(unchanged))).toMatchObject({ accepted: true, deploy: false });
     expect(createPlan(input, { snapshotDigest, comparison: { schemaVersion: 1, equivalent: false, identityDigest: null } }).deploy).toBe(true);
     for (const comparison of [null, {}, { schemaVersion: 1, equivalent: true, identityDigest: null }]) {

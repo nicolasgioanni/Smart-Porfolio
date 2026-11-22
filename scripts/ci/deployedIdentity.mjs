@@ -1,3 +1,4 @@
+import { previewHeaders, privatePreviewEnabled } from "./previewAccess.mjs";
 import { randomUUID } from "node:crypto";
 import { parseContentVersion } from "../writeContentVersion.mjs";
 import { candidateTarget, parseCandidate, recordDigest } from "./plan.mjs";
@@ -36,9 +37,9 @@ export async function readDeployedIdentity(target, { environment = process.env, 
   let reader;
   try {
     const response = await Promise.race([Promise.resolve().then(() => fetchImplementation(deployedIdentityUrl(origin), {
-      headers: { "Cache-Control": "no-cache", Pragma: "no-cache" }, redirect: "error", signal
+      headers: { "Cache-Control": "no-cache", Pragma: "no-cache", ...(target === "preview" ? previewHeaders(origin, environment) : {}) }, redirect: "error", signal
     })), expired]);
-    if (response.status === 404) { void response.body?.cancel().catch(() => {}); return null; }
+    if (response.status === 404 && !(target === "preview" && privatePreviewEnabled(environment))) { void response.body?.cancel().catch(() => {}); return null; }
     if (response.status !== 200 || !response.body) throw new Error("Deployed identity observation failed; it cannot authorize a no-op or deployment.");
     reader = response.body.getReader();
     const chunks = [];
