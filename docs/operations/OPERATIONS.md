@@ -205,7 +205,7 @@ Use the first failing stage to decide whether production could have changed:
 | --- | --- | --- |
 | Candidate marked obsolete | None | Review the newer branch run |
 | Target or content validation | None | Correct configuration or workbook data |
-| Source-security, documentation, lint, typecheck, test, browser, or export receipt | None | Fix the reported repository failure or evidence mismatch |
+| Source-integrity checkpoint or source-security, documentation, lint, typecheck, test, browser, or export receipt | None before deployment mutation | Restore a clean candidate, fix the reported failure, and rerun all affected work; do not reuse mismatched evidence |
 | Static build, sealed package, or artifact transfer | None | Inspect original-producer artifact identity and candidate SHA |
 | Branch recheck | No Pages upload after the failed check | Review the newer branch run |
 | D1 target validation | None | Restore the reviewed database ID or correct environment isolation before retrying |

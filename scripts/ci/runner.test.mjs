@@ -2,13 +2,13 @@
 
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { copyFile, mkdtemp, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { chmod, copyFile, mkdtemp, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { browserAssignment } from "./browserRun.mjs";
-import { restoreAcceptedInputs, verifyAcceptedInputs } from "./consume.mjs";
+import { restoreAcceptedInputs, verifyAcceptedInputs, writeSourceEvidence, writeValidationEvidence } from "./consume.mjs";
 import { artifactName } from "./githubEvidence.mjs";
 import { allowedBrowserSkips } from "./browserSkips.mjs";
 import { createPlan, recordDigest, repository, workflowPath } from "./plan.mjs";
@@ -17,6 +17,7 @@ import { assertReleaseProducer } from "./releaseStages.mjs";
 import { testIdentity } from "./receipts.mjs";
 import { uploadedReference } from "./run.mjs";
 import { createSnapshot, generatedContentPath } from "./snapshot.mjs";
+import { assertSourceIdentity } from "./sourceIdentity.mjs";
 import { collectPublicBuildInputs, publicBuildInputDigest } from "../release/publicBuildInputs.mjs";
 
 const execute = promisify(execFile);
@@ -270,8 +271,6 @@ describe("CI runner boundaries", () => {
     const input = candidate(fixture.sha);
     const environment = environmentFor(input, fixture, { job: "quality", attempt: "2", extra: { GH_TOKEN: "fixture-read-token" } });
     const accepted = generatedBytes("accepted-producer-content");
-    const prior = generatedBytes("consumer-local-change");
-    await writeFile(path.join(fixture.root, generatedContentPath), prior);
     const inputs = await collectPublicBuildInputs({ projectRoot: fixture.root, target: "local", sourceCommit: input.sourceSha, environment });
     const snapshot = createSnapshot({
       bytes: accepted,
@@ -310,9 +309,86 @@ describe("CI runner boundaries", () => {
     expect(await readFile(path.join(fixture.root, generatedContentPath))).toEqual(accepted);
     await expect(verifyAcceptedInputs({ environment, projectRoot: fixture.root })).resolves.toMatchObject({ snapshot });
 
+    await writeFile(path.join(fixture.root, "package.json"), "mutated by validation");
+    await expect(writeValidationEvidence({ environment, projectRoot: fixture.root, validator: "quality" })).rejects.toThrow(/application receipt.*worktree/);
+    await expect(readFile(path.join(fixture.runnerTemp, "portfolio-ci", "receipt", "receipt.json"))).rejects.toMatchObject({ code: "ENOENT" });
+    await git(fixture.root, "checkout", "--", "package.json");
     await writeFile(path.join(fixture.root, generatedContentPath), Buffer.concat([accepted, Buffer.from(" ")]));
     await expect(verifyAcceptedInputs({ environment, projectRoot: fixture.root }))
       .rejects.toThrow("accepted generation");
+  });
+
+  it("rejects index, worktree, untracked and unsafe index flags independently", async () => {
+    const fixture = await createFixture();
+    const target = path.join(fixture.root, "package.json");
+    const original = await readFile(target);
+    const check = () => assertSourceIdentity(fixture.root, fixture.sha);
+    expect(check).not.toThrow();
+    await writeFile(target, "staged private contents");
+    await git(fixture.root, "add", "package.json");
+    await writeFile(target, original);
+    expect(check).toThrow(/index.*package.json/);
+    await git(fixture.root, "reset", "-q", "HEAD", "--", "package.json");
+    await writeFile(target, "changed");
+    expect(check).toThrow(/worktree.*package.json/);
+    await rm(target);
+    expect(check).toThrow(/worktree.*package.json/);
+    await writeFile(target, original, { mode: 0o755 });
+    await git(fixture.root, "update-index", "--chmod=+x", "package.json");
+    expect(check).toThrow(/index.*package.json/);
+    await git(fixture.root, "reset", "-q", "HEAD", "--", "package.json");
+    await git(fixture.root, "checkout", "--", "package.json");
+    await writeFile(path.join(fixture.root, "new\nfile"), "secret must not appear");
+    expect(check).toThrow(/untracked.*new\\nfile/);
+    await rm(path.join(fixture.root, "new\nfile"));
+    await git(fixture.root, "update-index", "--assume-unchanged", "package.json");
+    expect(check).toThrow(/index flag/);
+    expect(() => assertSourceIdentity(fixture.root, "invalid", { stage: "fixture checkpoint" })).toThrow(/Accepted source revision is invalid.*fixture checkpoint/);
+    expect(() => assertSourceIdentity(path.join(fixture.root, "missing"), fixture.sha, { stage: "fixture checkpoint" })).toThrow(/Unable to inspect.*fixture checkpoint/);
+    expect(() => assertSourceIdentity(fixture.root, "a".repeat(40), { stage: "fixture checkpoint" })).toThrow(/Checkout\/run identity differs.*fixture checkpoint/);
+  });
+
+  it("allows only generated content changes during content phases", async () => {
+    const fixture = await createFixture();
+    const target = path.join(fixture.root, generatedContentPath);
+    await writeFile(target, generatedBytes("new"));
+    expect(() => assertSourceIdentity(fixture.root, fixture.sha)).toThrow();
+    expect(() => assertSourceIdentity(fixture.root, fixture.sha, { allowGenerated: true })).not.toThrow();
+    await git(fixture.root, "config", "core.filemode", "false");
+    await git(fixture.root, "config", "core.ignoreStat", "true");
+    await chmod(target, 0o755);
+    expect(() => assertSourceIdentity(fixture.root, fixture.sha, { allowGenerated: true })).toThrow(/worktree/);
+    await rm(target);
+    await symlink("../../../package.json", target);
+    expect(() => assertSourceIdentity(fixture.root, fixture.sha, { allowGenerated: true })).toThrow(/worktree/);
+    await rm(target);
+    await writeFile(target, generatedBytes("new"));
+    await git(fixture.root, "add", generatedContentPath);
+    expect(() => assertSourceIdentity(fixture.root, fixture.sha, { allowGenerated: true })).toThrow(/index/);
+  });
+
+  it("rejects mutations by generation and source validators before writing evidence", async () => {
+    const fixture = await createFixture();
+    const input = candidate(fixture.sha);
+    const environment = environmentFor(input, fixture);
+    await expect(prepareCandidate({ environment, projectRoot: fixture.root,
+      generate: async () => writeFile(path.join(fixture.root, "package.json"), "modified"),
+      discover: async () => browserDiscovery() })).rejects.toThrow(/content preparation/);
+    await expect(readFile(path.join(fixture.runnerTemp, "portfolio-ci", "snapshot", "snapshot.json"))).rejects.toMatchObject({ code: "ENOENT" });
+    const sourceEnvironment = environmentFor(input, fixture, { job: "infrastructure" });
+    await expect(writeSourceEvidence({ environment: sourceEnvironment, projectRoot: fixture.root })).rejects.toThrow(/source receipt/);
+    await expect(readFile(path.join(fixture.runnerTemp, "portfolio-ci", "receipt.json"))).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("does not write preparation evidence when discovery mutates source", async () => {
+    const fixture = await createFixture();
+    const environment = environmentFor(candidate(fixture.sha), fixture);
+    await expect(prepareCandidate({ environment, projectRoot: fixture.root,
+      generate: async () => {}, discover: async () => {
+        await writeFile(path.join(fixture.root, "package.json"), "modified");
+        return browserDiscovery();
+      } })).rejects.toThrow(/worktree/);
+    await expect(readFile(path.join(fixture.runnerTemp, "portfolio-ci", "snapshot", "snapshot.json"))).rejects.toMatchObject({ code: "ENOENT" });
   });
 
   it("requires a sealed manifest to retain the original package producer and candidate", () => {
