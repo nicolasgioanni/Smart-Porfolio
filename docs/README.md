@@ -86,6 +86,7 @@ This is an npm repository: `package.json`, `package-lock.json`, and `.nvmrc` are
 | --- | --- |
 | [Security](security/SECURITY.md) | Threat model, trust boundaries, public and private data, headers, URL rules, contact security, and publication review. |
 | [Contact system](security/CONTACT_SYSTEM.md) | Client workflow, verification ticket, request validation, Turnstile, Resend, configuration, and abuse controls. |
+| [Scanner governance](security/SCANNER_GOVERNANCE.md) | Independent security jobs, private report handling, and scoped exception review. |
 | [Security checklist](security/SECURITY_CHECKLIST.md) | Concise operational security review linked to the deeper guides. |
 
 ## Maintenance

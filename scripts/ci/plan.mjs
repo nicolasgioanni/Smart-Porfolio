@@ -6,7 +6,7 @@ export const applicationJobs = Object.freeze([
   "quality", "unit-integration", "browser-e2e", "visual-regression",
   "cross-browser", "build-and-package", "export-check"
 ]);
-export const securityJobs = Object.freeze(["security-tools", "security-scans", "codeql", "infrastructure"]);
+export const securityJobs = Object.freeze(["security-tools", "history-secrets", "workflow-security", "dependency-audit", "codeql", "infrastructure"]);
 export const chromiumShards = Object.freeze(["1/2", "2/2"]);
 // This is a full-plan receipt produced by build-and-package, rather than a
 // separate job. The gate still requires its own artifact because source scans

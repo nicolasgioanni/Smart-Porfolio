@@ -217,7 +217,7 @@ These tests execute local contracts and injected provider boundaries. They do no
 
 ## CI quality gates
 
-`resolve-candidate` rejects ineligible event and workflow references before checkout, then resolves one immutable candidate. `prepare-content` produces either an obsolete, unchanged, or full plan. Full plans restore the same snapshot in every application job. `security-tools`, `security-scans`, `codeql`, and `infrastructure` are source-only jobs with independent receipts; they run even when application work is skipped. `dependency-review` is source-only and applies to pull requests.
+`resolve-candidate` rejects ineligible event and workflow references before checkout, then resolves one immutable candidate. `prepare-content` produces either an obsolete, unchanged, or full plan. Full plans restore the same snapshot in every application job. `security-tools`, `history-secrets`, `workflow-security`, `dependency-audit`, `codeql`, and `infrastructure` are source-only jobs with independent receipts; they run even when application work is skipped. `dependency-review` is source-only and applies to pull requests.
 
 ### Pull requests: complete validation without deployment
 

@@ -202,12 +202,30 @@ describe("package and CI deployment automation", () => {
     expect(metrics["continue-on-error"]).toBe(true);
     expect(workflow.jobs.verify.outputs.accepted).toBe("${{ steps.gate.outputs.accepted }}");
     expect(workflow.jobs.verify.steps.find((step) => step.id === "gate")["continue-on-error"]).toBeUndefined();
-    const audit = workflow.jobs["security-scans"].steps.filter((step) => step.run === "npm run audit:check");
+    const audit = workflow.jobs["dependency-audit"].steps.filter((step) => step.run === "npm run audit:check");
     expect(audit).toHaveLength(1);
     expect(audit[0].if).toBeUndefined();
     expect(audit[0]["continue-on-error"]).toBeUndefined();
-    expect(workflow.jobs["security-scans"].if).toBeUndefined();
+    expect(workflow.jobs["dependency-audit"].if).toBeUndefined();
     expect(workflow.jobs.quality.steps.some((step) => (step.run ?? "").includes("audit:check"))).toBe(false);
+    for (const lane of ["security-tools", "history-secrets", "workflow-security", "dependency-audit", "codeql", "infrastructure"]) {
+      const job = workflow.jobs[lane];
+      expect(job.if).toBeUndefined();
+      expect(job.needs).toBe("resolve-candidate");
+      expect(job.steps.every((step) => step.if === undefined)).toBe(true);
+      const receiptIndex = job.steps.findIndex((step) => step.run === "node scripts/ci/run.mjs source-receipt");
+      const uploadIndex = job.steps.findIndex((step) => step.id === "receipt");
+      expect(receiptIndex).toBeGreaterThan(0);
+      expect(uploadIndex).toBeGreaterThan(receiptIndex);
+      expect(job.steps[uploadIndex].with).toMatchObject({ name: "${{ steps.evidence.outputs.receipt_name }}", path: "${{ steps.evidence.outputs.receipt_path }}", "if-no-files-found": "error" });
+    }
+    const historyRuns = workflow.jobs["history-secrets"].steps.map((step) => step.run ?? "").join("\n");
+    const workflowRuns = workflow.jobs["workflow-security"].steps.map((step) => step.run ?? "").join("\n");
+    expect(historyRuns).toContain("--gitleaks-mode git");
+    expect(historyRuns).not.toContain("--zizmor");
+    expect(workflowRuns).toContain("--zizmor");
+    expect(workflowRuns).not.toContain("--gitleaks");
+    expect(workflow.jobs.codeql.steps.some((step) => step.uses?.includes("upload-sarif"))).toBe(false);
     const toolRuns = workflow.jobs["security-tools"].steps.map((step) => step.run ?? "").join("\n");
     expect(toolRuns).toContain("-shellcheck ''");
     expect(toolRuns).toContain("-pyflakes ''");
