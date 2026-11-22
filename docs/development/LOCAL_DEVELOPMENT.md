@@ -2,6 +2,8 @@
 
 Smart Portfolio uses Node.js, npm, Next.js App Router, a build-time CSV or XLSX content generator, and Cloudflare Pages Functions. The core portfolio routes render as a static export. The complete contact flow requires Wrangler because Next.js development mode does not run Pages Functions.
 
+Local commands validate repository behavior and local emulation only. They do not establish current Cloudflare, GitHub, DNS, WAF, Turnstile, Resend, or mailbox state; [Implementation inventory](../architecture/IMPLEMENTATION_INVENTORY.md) maps those operator-managed boundaries.
+
 ## Prerequisites
 
 - Git, to clone the repository and create focused branches or worktrees.

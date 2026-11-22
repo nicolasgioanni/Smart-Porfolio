@@ -2,6 +2,8 @@
 
 Use this guide to diagnose local setup, content generation, quality-gate, Cloudflare Pages, and contact-flow failures. Start with the exact failing command or workflow step. Do not print environment values, workbook URLs, provider responses containing user data, or contact request bodies while investigating.
 
+Classify evidence before acting: source and local commands can establish implemented behavior, while a dashboard, provider, or live deployment needs an operator observation. [Implementation inventory](../architecture/IMPLEMENTATION_INVENTORY.md) defines these boundaries and links each failure class to its owning implementation.
+
 ## Fast diagnostic sequence
 
 From the repository root, run:
