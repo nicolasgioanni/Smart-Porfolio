@@ -502,6 +502,20 @@ describe("documentation validation", () => {
     }
   });
 
+  it("accepts the owned develop heartbeat with or without its branch-specific marker", async () => {
+    const root = await createOwnershipFixture();
+    try {
+      const marker = path.join(root, ".github/schedule-heartbeat");
+      expect((await validateDocumentation({ projectRoot: root })).errors).toEqual([]);
+      await rm(marker);
+      expect((await validateDocumentation({ projectRoot: root })).errors).toEqual([]);
+      await writeFile(path.join(root, ".github/unowned-marker"), "");
+      expect((await validateDocumentation({ projectRoot: root })).errors).toContain(
+        ".agents/agent-map.json: relevant repository path has no owner or explicit exception: .github/unowned-marker"
+      );
+    } finally { await rm(root, { recursive: true, force: true }); }
+  });
+
   it("rejects moved, private, and legacy feature ownership paths", async () => {
     await expectOwnershipError((manifest) => {
       manifest.owners.find((owner) => owner.id === "routes-metadata").entrypoints[0] =

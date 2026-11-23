@@ -89,6 +89,17 @@ describe("agent navigation", () => {
     expect(errors).toContain("unowned-file: 0 exclusions, 0 owners");
     expect(errors).toContain("src/lib/theme/themeTransition.ts: 0 exclusions, 2 owners");
   });
+  it("owns the develop-only heartbeat whether the marker is present or absent", () => {
+    const marker = ".github/schedule-heartbeat";
+    expect(ownerFor(map, marker).owners.map(c => c.id)).toEqual(["ci"]);
+    expect(validate(map, files.filter(file => file !== marker), scripts)).toEqual([]);
+    expect(validate(map, [...new Set([...files, marker])], scripts)).toEqual([]);
+    const unknown = ".github/unowned-marker";
+    expect(validate(map, [...files, unknown], scripts)).toContain(`${unknown}: 0 exclusions, 0 owners`);
+    const broken = clone();
+    broken.cards.find(c => c.id === "ci").ownerPatterns.push(".github/another-optional-marker");
+    expect(validate(broken, files, scripts)).toContain("unused pattern ci: .github/another-optional-marker");
+  });
   it("enforces all byte budgets", () => {
     const errors = validate(map, files, scripts, () => 5000).join("\n");
     expect(errors).toContain("core exceeds 6144 bytes");

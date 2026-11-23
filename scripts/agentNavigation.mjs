@@ -7,6 +7,8 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const expectedIds = ["home", "experience", "research", "projects", "recommendations", "skills", "legal", "resume", "contact-ui", "routes-seo", "content", "contact-functions", "migrations", "theme", "shared-ui", "motion", "skeletons", "tests", "tooling", "ci", "release", "infrastructure", "documentation"];
 const specialists = ["portfolio-architecture", "portfolio-content-pipeline", "portfolio-interface-contracts", "portfolio-validation", "portfolio-release-security", "portfolio-skeleton-regression"];
+// The guarded workflow creates this marker only on develop; main need not have it.
+const optionalOwnerPattern = { owner: "ci", pattern: ".github/schedule-heartbeat" };
 const cardKeys = ["id", "card", "responsibility", "ownerPatterns", "ownerExclusions", "consumers", "entrypoints", "tests", "specialists", "authority", "commands", "triggers", "expandWhen"];
 const listKeys = cardKeys.slice(3);
 const exactKeys = (object, keys) => object && typeof object === "object" && !Array.isArray(object) && Object.keys(object).sort().join() === [...keys].sort().join();
@@ -60,7 +62,7 @@ export function validate(map, files, packageScripts, readSize = size) {
     if (c.card !== `.agents/cards/${c.id}.md` || !targetExists(c.card)) errors.push(`missing card: ${c.id}`);
     if (!c.ownerPatterns.length || !c.entrypoints.length || !c.tests.length || !c.specialists.length || !c.authority.length || !c.commands.length || !c.triggers.length || !c.expandWhen.length) errors.push(`empty required field: ${c.id}`);
     for (const p of [...c.ownerPatterns, ...c.ownerExclusions]) if (!patternValid(p)) errors.push(`invalid pattern ${c.id}: ${p}`);
-    for (const p of c.ownerPatterns) if (!files.some(f => matches(p, f) && !c.ownerExclusions.some(x => matches(x, f)))) errors.push(`unused pattern ${c.id}: ${p}`);
+    for (const p of c.ownerPatterns) if (!(c.id === optionalOwnerPattern.owner && p === optionalOwnerPattern.pattern) && !files.some(f => matches(p, f) && !c.ownerExclusions.some(x => matches(x, f)))) errors.push(`unused pattern ${c.id}: ${p}`);
     for (const p of c.ownerExclusions) if (!files.some(f => matches(p, f) && c.ownerPatterns.some(x => matches(x, f)))) errors.push(`unused pattern ${c.id}: ${p}`);
     for (const id of c.consumers) if (!expectedIds.includes(id) || id === c.id) errors.push(`invalid consumer ${c.id}: ${id}`);
     for (const id of c.specialists) if (!specialists.includes(id) || !targetExists(`.agents/skills/${id}/SKILL.md`)) errors.push(`invalid specialist ${c.id}: ${id}`);

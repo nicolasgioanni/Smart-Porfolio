@@ -256,7 +256,9 @@ test("keeps CSP hashes on explicit HTML aliases and missing-route 404 responses"
   await selectThemeWithChooser(page, "dark");
 });
 
-test("loads the mocked Turnstile provider through the allowed CSP source and hydrates the verification gate", async ({ page }) => {
+test("checks the sealed candidate Turnstile configuration and verification gate", async ({ page }) => {
+  const configured = process.env.PLAYWRIGHT_RELEASE_TURNSTILE_ENABLED ?? "true";
+  if (configured !== "true" && configured !== "false") throw new Error("Invalid sealed Turnstile expectation.");
   await installTurnstileMock(page, "provider-script");
   await page.route("**/api/contact/verify", (route) =>
     route.fulfill({ body: JSON.stringify({ ok: true }), contentType: "application/json", status: 200 })
@@ -266,6 +268,13 @@ test("loads the mocked Turnstile provider through the allowed CSP source and hyd
   const policy = response?.headers()["content-security-policy"];
   if (!policy) throw new Error("Expected the Pages contact response to include a CSP header.");
   expect(scriptSource(policy)).toContain("https://challenges.cloudflare.com");
+  if (configured === "false") {
+    await expect(page.locator(".contact-turnstile")).toHaveAttribute("data-status", "unavailable");
+    await expect(page.locator(".contact-turnstile [role=status]")).toHaveText("Verification is temporarily unavailable.");
+    await expect(page.locator('script[src^="https://challenges.cloudflare.com/turnstile/"]')).toHaveCount(0);
+    expect(await page.evaluate(() => Boolean(window.turnstile))).toBe(false);
+    return;
+  }
   await expect.poll(() => page.evaluate(() => Boolean(window.turnstile))).toBe(true);
 
   const challenge = page.getByRole("button", { name: "Complete test security check" });
