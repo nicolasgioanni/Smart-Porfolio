@@ -1096,7 +1096,10 @@ async function validateOwnershipManifest({
           );
           continue;
         }
+        // The guarded heartbeat is created on develop and may be absent on main.
+        const optionalHeartbeat = owner.id === "release-deployment" && pattern === ".github/schedule-heartbeat";
         if (
+          !optionalHeartbeat &&
           !repositoryFiles.some((filePath) =>
             pathPatternToRegExp(pattern).test(filePath),
           )

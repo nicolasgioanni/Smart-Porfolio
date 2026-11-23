@@ -157,7 +157,7 @@ async function validate() {
     npm('test:quality:payload');
     await compileReleaseOutput({ sourceCommit: head() });
     run('npx', ['--no-install', 'playwright', 'install', '--with-deps', 'chromium'], { env: cleanEnv() });
-    run('npm', ['run', 'test:e2e:release-static', '--', '--reporter=line,junit', '--output=test-results/playwright'], { env: { ...cleanEnv(), PLAYWRIGHT_JUNIT_OUTPUT_NAME: path.join(root, 'test-results/circleci-junit/static-export.xml') } });
+    run('npm', ['run', 'test:e2e:release-static', '--', '--reporter=line,junit', '--output=test-results/playwright'], { env: { ...cleanEnv(), PLAYWRIGHT_RELEASE_TURNSTILE_ENABLED: "true", PLAYWRIGHT_JUNIT_OUTPUT_NAME: path.join(root, 'test-results/circleci-junit/static-export.xml') } });
   } else if (validator === 'security' || validator === 'infrastructure') {
     const toolRoot = path.join('/tmp', 'portfolio-circleci-tools');
     await mkdir(toolRoot, { recursive: true });

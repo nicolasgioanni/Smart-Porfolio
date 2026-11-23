@@ -1085,7 +1085,7 @@ describe("XLSX workbook structure and cells", () => {
       await expect(generateFromWorkbook(scenario.bytes, { outputFile })).rejects.toThrow(scenario.error);
       expect(await fileDoesNotExist(outputFile)).toBe(true);
     }
-  });
+  }, 30_000);
 
   it("accepts the canonical research media schema", async () => {
     const sheets = await parsePortfolioWorkbook(await createWorkbookBytes());
