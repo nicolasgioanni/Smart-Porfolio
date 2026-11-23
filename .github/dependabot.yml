@@ -9,10 +9,25 @@ updates:
         patterns:
           - next
           - '@next/eslint-plugin-next'
+      routine-patches:
+        patterns:
+          - '*'
+        update-types:
+          - patch
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    groups:
+      codeql-action:
+        patterns:
+          - github/codeql-action
+          - github/codeql-action/*
+      routine-patches:
+        patterns:
+          - "*"
+        update-types:
+          - patch
   - package-ecosystem: terraform
     directories:
       - /infra/modules/edge-controls

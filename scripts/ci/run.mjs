@@ -2,9 +2,29 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { writeOutputs } from "./resolve.mjs";
 import { parsePlan, recordDigest } from "./plan.mjs";
+import { gateDependencies } from "./workflowGraph.mjs";
 import { parseArtifactReference } from "./snapshot.mjs";
 import { artifactName } from "./githubEvidence.mjs";
 import { checkedCandidate, currentProducer, jsonEnvironment } from "./context.mjs";
+
+const githubResults = new Set(["success", "failure", "cancelled", "skipped"]);
+
+// Diagnostics are advisory only. Never print arbitrary needs keys, outputs, or
+// invalid result values: these can contain provider data or untrusted text.
+export function upstreamDiagnostics(needs) {
+  const status = (value) => githubResults.has(value) ? value : "unknown";
+  const entries = gateDependencies.map((job) => [job, status(needs?.[job]?.result)])
+    .filter(([, result]) => result !== "success")
+    .map(([job, result]) => `${job}=${result}`);
+  if (needs?.["prepare-content"]?.result !== "success") {
+    entries.push(`prepare-content preflight=${status(needs?.["prepare-content"]?.outputs?.preflight_result)}`);
+  }
+  return entries.length ? `Upstream results: ${entries.join(", ")}.` : "Upstream results: all jobs reported success.";
+}
+
+function parseOutput(value) {
+  try { return JSON.parse(value); } catch { throw new Error("Missing or invalid prepared output."); }
+}
 
 export function uploadedReference(environment = process.env) {
   const role = environment.CI_ARTIFACT_ROLE;
@@ -31,20 +51,26 @@ export async function run(command, environment = process.env) {
     case "deployment-prepare": return (await import("./deployment.mjs")).prepareDeployment({ environment });
     case "deploy": return (await import("./deployment.mjs")).executeDeployment({ environment });
     case "verify": {
-      const needs = jsonEnvironment("CI_NEEDS", environment);
-      const plan = parsePlan(JSON.parse(needs["prepare-content"]?.outputs?.plan));
-      if (!["native", "circleci"].includes(needs["prepare-content"]?.outputs?.test_provider)) throw new Error("Missing or invalid prepared test provider.");
-      if (recordDigest(checkedCandidate(environment)) !== recordDigest(plan.candidate)) throw new Error("Aggregate candidate differs from the prepared plan.");
-      const reference = (value) => value === "" ? null : parseArtifactReference(JSON.parse(value));
-      const result = await (await import("./gate.mjs")).verifyCompleteEvidence({ plan, results: needs, provider: needs["prepare-content"].outputs.test_provider,
-        currentAttempt: currentProducer("verify", environment).attempt, references: {
-          snapshot: reference(needs["prepare-content"].outputs.snapshot_reference),
-          discovery: reference(needs["prepare-content"].outputs.discovery_reference),
-          release: reference(needs["build-and-package"].outputs.release_reference ?? "")
-        } }, { token: environment.GH_TOKEN, environment });
-      console.log(JSON.stringify({ mode: result.mode, accepted: result.accepted, deploy: result.deploy, summaries: result.summaries }));
-      return { accepted: String(result.accepted), deploy: String(result.deploy), plan: JSON.stringify(plan),
-        acceptance: JSON.stringify(result) };
+      let needs;
+      try {
+        needs = jsonEnvironment("CI_NEEDS", environment);
+        const plan = parsePlan(parseOutput(needs["prepare-content"]?.outputs?.plan));
+        if (!["native", "circleci"].includes(needs["prepare-content"]?.outputs?.test_provider)) throw new Error("Missing or invalid prepared test provider.");
+        if (recordDigest(checkedCandidate(environment)) !== recordDigest(plan.candidate)) throw new Error("Aggregate candidate differs from the prepared plan.");
+        const reference = (value) => value === "" ? null : parseArtifactReference(parseOutput(value));
+        const result = await (await import("./gate.mjs")).verifyCompleteEvidence({ plan, results: needs, provider: needs["prepare-content"].outputs.test_provider,
+          currentAttempt: currentProducer("verify", environment).attempt, references: {
+            snapshot: reference(needs["prepare-content"].outputs.snapshot_reference),
+            discovery: reference(needs["prepare-content"].outputs.discovery_reference),
+            release: reference(needs["build-and-package"].outputs.release_reference ?? "")
+          } }, { token: environment.GH_TOKEN, environment });
+        console.log(JSON.stringify({ mode: result.mode, accepted: result.accepted, deploy: result.deploy, summaries: result.summaries }));
+        return { accepted: String(result.accepted), deploy: String(result.deploy), plan: JSON.stringify(plan),
+          acceptance: JSON.stringify(result) };
+      } catch (error) {
+        console.error(upstreamDiagnostics(needs));
+        throw error;
+      }
     }
     default: throw new Error("Unsupported CI operation.");
   }

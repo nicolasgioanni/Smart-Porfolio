@@ -19,7 +19,11 @@ const builtOutputScanSteps = [
 
 function workflow() {
   return { name: "CI", on: { push: {}, pull_request: {}, schedule: [], workflow_dispatch: {} }, jobs: {
-    "resolve-candidate": {}, "prepare-content": { needs: "resolve-candidate" },
+    "resolve-candidate": {}, "prepare-content": { needs: "resolve-candidate", outputs: { preflight_result: "${{ steps.preflight.outcome || 'skipped' }}" }, steps: [
+      { run: "npm ci" },
+      { id: "preflight", run: "node scripts/ci/dependencyPreflight.mjs", if: "${{ github.event_name == 'pull_request' && needs['resolve-candidate'].outputs.obsolete != 'true' }}" },
+      { id: "prepare", run: "node scripts/ci/run.mjs prepare" }, { uses: "actions/upload-artifact@pin" }
+    ] },
     ...Object.fromEntries([...securityJobs, "dependency-review"].map((name) => [name, { needs: "resolve-candidate" }])),
     codeql: { needs: "resolve-candidate", steps: [
       { id: "analyze", uses: "github/codeql-action/analyze@pin", with: { upload: "never", output: "${{ runner.temp }}/smart-portfolio-codeql-sarif" } },
@@ -50,6 +54,19 @@ describe("CI graph responsibilities", () => {
     expect(value.jobs.verify.permissions).toEqual({ contents: "read", actions: "read", "pull-requests": "read" });
     expect(value.jobs.verify["timeout-minutes"]).toBeGreaterThanOrEqual(35);
     expect(value.jobs.verify.steps.some((step) => step.run?.includes("npm ci"))).toBe(false);
+  });
+  it("requires the preflight between install and artifact production", () => {
+    for (const change of [
+      (job) => job.steps.splice(1, 1),
+      (job) => { job.steps[1]["continue-on-error"] = true; },
+      (job) => { job.steps[1].env = { GH_TOKEN: "token" }; },
+      (job) => { job.steps[1].if = "true"; },
+      (job) => { job.outputs.preflight_result = ""; },
+      (job) => job.steps.reverse()
+    ]) {
+      const value = workflow(); change(value.jobs["prepare-content"]);
+      expect(() => validateWorkflowGraph(value)).toThrow("Dependency preflight");
+    }
   });
   it("permits arbitrary job ordering while retaining acceptance edges", () => {
     const value = workflow(); value.jobs = Object.fromEntries(Object.entries(value.jobs).reverse());

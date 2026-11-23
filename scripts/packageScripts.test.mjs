@@ -276,6 +276,11 @@ describe("package and CI deployment automation", () => {
     }
     expect(workflow.jobs.codeql.steps.find((step) => step.uses?.startsWith("github/codeql-action/init@")).with).toMatchObject({ "build-mode": "none", queries: "security-extended" });
     expect(workflow.jobs.codeql.steps.find((step) => step.uses?.startsWith("github/codeql-action/analyze@")).with.upload).toBe("never");
+    const codeqlInit = workflow.jobs.codeql.steps.filter((step) => step.uses?.startsWith("github/codeql-action/init@"));
+    const codeqlAnalyze = workflow.jobs.codeql.steps.filter((step) => step.uses?.startsWith("github/codeql-action/analyze@"));
+    expect(codeqlInit).toHaveLength(1);
+    expect(codeqlAnalyze).toHaveLength(1);
+    expect(codeqlInit[0].uses.split("@")[1]).toBe(codeqlAnalyze[0].uses.split("@")[1]);
     expect(workflow.jobs.heartbeat.if).toBe("github.event_name == 'schedule'");
     expect(workflow.jobs.heartbeat.steps.find((step) => step.uses?.startsWith("actions/checkout@")).with.ref).toBe("develop");
   });

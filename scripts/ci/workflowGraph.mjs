@@ -101,6 +101,18 @@ export function validateWorkflowGraph(workflow) {
   if (sorted(needs(jobs.verify)) !== sorted(gateDependencies)) problems.push("verify must directly depend on every required validator and producer.");
   if (!/^\s*(?:\$\{\{\s*)?always\(\)(?:\s*\}\})?\s*$/.test(jobs.verify?.if ?? "")) problems.push("Only complete lightweight result evaluation may define verify acceptance.");
   if (!needs(jobs["prepare-content"]).includes("resolve-candidate")) problems.push("Content preparation must consume the resolved candidate.");
+  const preparation = jobs["prepare-content"];
+  const steps = preparation?.steps ?? [];
+  const install = steps.findIndex((step) => step.run === "npm ci");
+  const preflight = steps.findIndex((step) => step.id === "preflight" && step.run === "node scripts/ci/dependencyPreflight.mjs");
+  const prepare = steps.findIndex((step) => step.id === "prepare" && step.run === "node scripts/ci/run.mjs prepare");
+  const uploads = steps.flatMap((step, index) => step.uses?.startsWith("actions/upload-artifact@") ? [index] : []);
+  if (install < 0 || preflight <= install || prepare <= preflight || !uploads.length || uploads.some((index) => index <= preflight) ||
+      steps[preflight]?.if !== "${{ github.event_name == 'pull_request' && needs['resolve-candidate'].outputs.obsolete != 'true' }}" ||
+      steps[preflight]?.env !== undefined || steps[preflight]?.["continue-on-error"] !== undefined ||
+      preparation?.outputs?.preflight_result !== "${{ steps.preflight.outcome || 'skipped' }}") {
+    problems.push("Dependency preflight must run after locked install and before preparation and uploads, with a visible outcome.");
+  }
   for (const name of [...securityJobs, "dependency-review"]) {
     if (sorted(needs(jobs[name])) !== "resolve-candidate") problems.push(`${name} must run independently after candidate resolution.`);
     if (name !== "dependency-review" && jobs[name]?.if !== undefined) problems.push(`${name} must run for every candidate plan.`);
