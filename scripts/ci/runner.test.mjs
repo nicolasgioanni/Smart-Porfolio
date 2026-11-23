@@ -176,9 +176,15 @@ describe("CI runner boundaries", () => {
     const discover = vi.fn(async () => browserDiscovery());
     const observe = vi.fn();
 
-    const result = await prepareCandidate({ environment, projectRoot: fixture.root, generate, discover, observe });
+    const selectLane = vi.fn(async ({ candidate: selected, snapshotBytes }) => {
+      expect(selected).toEqual(input);
+      expect(snapshotBytes).toEqual(generated);
+      return "circleci";
+    });
+    const result = await prepareCandidate({ environment, projectRoot: fixture.root, generate, discover, observe, selectLane });
 
-    expect(result).toMatchObject({ mode: "full", target: "local" });
+    expect(result).toMatchObject({ mode: "full", target: "local", test_provider: "circleci" });
+    expect(selectLane).toHaveBeenCalledOnce();
     expect(result.snapshot_name).toBe("ci-741-1-snapshot-content");
     expect(result.discovery_name).toBe("ci-741-1-discovery-browsers");
     expect(generate).toHaveBeenCalledOnce();
@@ -232,6 +238,7 @@ describe("CI runner boundaries", () => {
     expect(result).toEqual({
       plan: JSON.stringify(createPlan(input)),
       mode: "obsolete",
+      test_provider: "native",
       target: "production",
       snapshot_name: "",
       snapshot_path: "",

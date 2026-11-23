@@ -18,13 +18,14 @@ export function generateContent(projectRoot, environment) {
 }
 
 export async function prepareCandidate({ environment = process.env, projectRoot = process.cwd(),
-  generate = generateContent, discover = discoverCompleteBrowserCoverage, observe = readDeployedIdentity } = {}) {
+  generate = generateContent, discover = discoverCompleteBrowserCoverage, observe = readDeployedIdentity,
+  selectLane = async (args) => (await import("../circleci/prGate.mjs")).selectPullRequestLane(args) } = {}) {
   const candidate = checkedCandidate(environment, projectRoot);
   const producer = currentProducer("prepare-content", environment);
   if (producer.runId !== candidate.runId || producer.runNumber !== candidate.runNumber || producer.attempt < candidate.producerAttempt) throw new Error("Preparation producer differs from the accepted candidate.");
   if (candidate.event !== "pull_request" && candidate.sourceSha !== candidate.branchTip) {
     return { plan: JSON.stringify(createPlan(candidate)), mode: "obsolete", target: candidateTarget(candidate),
-      snapshot_name: "", snapshot_path: "", snapshot_digest: "", discovery_name: "", discovery_path: "", discovery_digest: "" };
+      test_provider: "native", snapshot_name: "", snapshot_path: "", snapshot_digest: "", discovery_name: "", discovery_path: "", discovery_digest: "" };
   }
   const target = candidateTarget(candidate), isPr = candidate.event === "pull_request";
   if (!isPr) {
@@ -46,7 +47,9 @@ export async function prepareCandidate({ environment = process.env, projectRoot 
   await mkdir(snapshotPath, { mode: 0o700 });
   await writeFile(path.join(snapshotPath, "portfolio.generated.json"), bytes, { flag: "wx", mode: 0o600 });
   await writeRecord(snapshotPath, "snapshot.json", snapshot);
-  const outputs = { plan: JSON.stringify(plan), mode: plan.mode, target,
+  const testProvider = isPr ? await selectLane({ candidate, environment, projectRoot, snapshotBytes: bytes }) : "native";
+  if (!["native", "circleci"].includes(testProvider)) throw new Error("Unexpected test provider.");
+  const outputs = { plan: JSON.stringify(plan), mode: plan.mode, target, test_provider: testProvider,
     snapshot_name: artifactName({ role: "snapshot", validator: "content", producer }), snapshot_path: snapshotPath,
     snapshot_digest: recordDigest(snapshot), discovery_name: "", discovery_path: "", discovery_digest: "" };
   if (plan.mode === "full") {

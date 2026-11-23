@@ -13,6 +13,8 @@ describe("priority validation tier", () => {
   it("selects the required trust-boundary contracts before running Vitest", () => {
     expect(priorityTestTargets).toContain("functions");
     expect(priorityTestDirectories).toContain("scripts/ci");
+    expect(priorityTestDirectories).toContain("scripts/circleci");
+    expect(requiredPriorityFiles).toContain("scripts/circleci/impact.test.mjs");
     expect(requiredPriorityFiles).toContain("scripts/ci/workflowGraph.test.mjs");
     expect(priorityTestTargets).toEqual(expect.arrayContaining([
       "scripts/permanentBranchRuleset.test.mjs",

@@ -6,6 +6,7 @@ export const applicationJobs = Object.freeze([
   "quality", "unit-integration", "browser-e2e", "visual-regression",
   "cross-browser", "build-and-package", "export-check"
 ]);
+export const delegatedJobs = Object.freeze(["quality", "unit-integration", "browser-e2e", "visual-regression", "cross-browser"]);
 export const securityJobs = Object.freeze(["security-tools", "security-scans", "codeql", "infrastructure"]);
 export const chromiumShards = Object.freeze(["1/2", "2/2"]);
 // This is a full-plan receipt produced by build-and-package, rather than a
@@ -130,13 +131,14 @@ export function parsePlan(value) {
   return expected;
 }
 
-export function evaluateResults(planValue, results) {
+export function evaluateResults(planValue, results, provider = "native") {
   const plan = parsePlan(planValue);
+  if (!["native", "circleci"].includes(provider) || (provider === "circleci" && (plan.candidate.event !== "pull_request" || plan.mode !== "full"))) throw new Error("Invalid test provider for candidate.");
   const knownJobs = [...new Set([...requiredJobs(plan.candidate, "full"), "dependency-review"])];
   exactKeys(results, knownJobs, "CI aggregate dependencies");
   const failures = [];
   for (const job of knownJobs) {
-    const expected = plan.requiredJobs.includes(job) ? "success" : "skipped";
+    const expected = plan.requiredJobs.includes(job) && !(provider === "circleci" && delegatedJobs.includes(job)) ? "success" : "skipped";
     if (results[job]?.result !== expected) failures.push(`${job}=${results[job]?.result ?? "missing"} (expected ${expected})`);
   }
   return { accepted: failures.length === 0, deploy: failures.length === 0 && plan.deploy, failures };

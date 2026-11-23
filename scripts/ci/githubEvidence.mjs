@@ -6,7 +6,8 @@ const apiRoot = `https://api.github.com/repos/${repository}`;
 const responseBudget = 8 * 1024 * 1024;
 
 export async function readGithubEvidence(endpoint, { token, fetchImplementation = fetch } = {}) {
-  if (!/^\/actions\/(?:runs\/[1-9]\d*(?:\/attempts\/[1-9]\d*|\/(?:jobs\?filter=all&per_page=100&page=[1-9]\d*|artifacts\?per_page=100&page=[1-9]\d*))?|artifacts\/[1-9]\d*)$/.test(endpoint)) {
+  const isPullRequest = /^\/pulls\/[1-9]\d*$/.test(endpoint);
+  if (!isPullRequest && !/^\/actions\/(?:runs\/[1-9]\d*(?:\/attempts\/[1-9]\d*|\/(?:jobs\?filter=all&per_page=100&page=[1-9]\d*|artifacts\?per_page=100&page=[1-9]\d*))?|artifacts\/[1-9]\d*)$/.test(endpoint)) {
     throw new Error("Unsupported GitHub evidence endpoint.");
   }
   if (typeof token !== "string" || !token || /\s/.test(token)) throw new Error("Read-only GitHub evidence credentials are missing or invalid.");

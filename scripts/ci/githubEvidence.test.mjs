@@ -20,11 +20,13 @@ describe("same-run GitHub evidence admission", () => {
     expect(fetchImplementation.mock.calls[0][0]).toBe(`https://api.github.com/repos/${repository}/actions/runs/12345`);
     expect(fetchImplementation.mock.calls[0][1]).toMatchObject({ redirect: "error", headers: { Authorization: "Bearer read-only-fixture-token" } });
     expect(await readGithubEvidence("/actions/runs/12345/attempts/2", { ...options, fetchImplementation })).toEqual({ id: 12345 });
-    for (const endpoint of ["https://evil.test", "/actions/runs/latest", "/actions/runs/12345/attempts/0", "/actions/runs/12345/attempts/2/jobs", "/actions/runs/12345/../../secrets", "/actions/runs/12345?redirect=elsewhere"]) {
+    await readGithubEvidence("/pulls/144", { ...options, fetchImplementation });
+    expect(fetchImplementation.mock.calls[2][0]).toBe(`https://api.github.com/repos/${repository}/pulls/144`);
+    for (const endpoint of ["/pulls/0", "/pulls/144/files", "https://evil.test", "/actions/runs/latest", "/actions/runs/12345/attempts/0", "/actions/runs/12345/attempts/2/jobs", "/actions/runs/12345/../../secrets", "/actions/runs/12345?redirect=elsewhere"]) {
       await expect(readGithubEvidence(endpoint, { ...options, fetchImplementation })).rejects.toThrow("Unsupported");
     }
     await expect(readGithubEvidence("/actions/runs/12345", { fetchImplementation })).rejects.toThrow("credentials");
-    expect(fetchImplementation).toHaveBeenCalledTimes(2);
+    expect(fetchImplementation).toHaveBeenCalledTimes(3);
   });
 
   it("rejects unavailable, malformed and oversized reports without exposing their body", async () => {

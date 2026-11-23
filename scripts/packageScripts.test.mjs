@@ -50,6 +50,7 @@ describe("package and CI deployment automation", () => {
     expect(packageJson.scripts["audit:check"]).toBe("node scripts/checkDependencyAudit.mjs");
     expect(packageJson.scripts["generate:content"]).toBe("node scripts/generateContent.mjs");
     expect(packageJson.scripts.verify).toBe("node scripts/runVerification.mjs verify");
+    expect(packageJson.scripts["test:circleci"]).toBe("vitest run scripts/circleci");
     expect(packageJson.scripts["test:priority"]).toBe(
       "node scripts/runValidationTier.mjs priority"
     );
@@ -59,7 +60,7 @@ describe("package and CI deployment automation", () => {
     expect(packageJson.devDependencies.miniflare).toBe("5.20261006.0-alpha");
     expect(packageJson.devDependencies.yaml).toBe("2.9.1");
     expect(packageJson.devDependencies["js-yaml"]).toBeUndefined();
-    expect(packageJson.devDependencies.vitest).toBe("4.1.11");
+    expect(packageJson.devDependencies.vitest).toBe("4.1.12");
     expect(packageJson.devDependencies["@playwright/test"]).toMatch(/^\^1\./);
     expect(packageJson.scripts["test:footer"]).toBe(
       "vitest run src/components/layout/InteractiveBlobFooter.test.tsx src/components/layout/footerStyles.test.ts"
@@ -141,6 +142,7 @@ describe("package and CI deployment automation", () => {
     expect(priorityTestTargets).toContain("scripts/permanentBranchRuleset.test.mjs");
     expect(priorityTestDirectories).toEqual([
       "scripts/ci",
+      "scripts/circleci",
       "scripts/security",
       "src/components/overlay",
       "src/features/home",

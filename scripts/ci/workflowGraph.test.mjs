@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { applicationJobs, securityJobs } from "./plan.mjs";
+import { applicationJobs, delegatedJobs, securityJobs } from "./plan.mjs";
 import { gateDependencies, validateWorkflowGraph, workflowEvents } from "./workflowGraph.mjs";
 import { validateWorkflowYaml } from "./workflowYaml.mjs";
 
@@ -31,6 +31,20 @@ function workflow() {
 }
 
 describe("CI graph responsibilities", () => {
+  it("routes only the five delegated validators and retains native build and source checks", async () => {
+    const value = validateWorkflowYaml(await readFile(workflowPath, "utf8"));
+    const guard = "${{ needs['prepare-content'].outputs.mode == 'full' && needs['prepare-content'].outputs.test_provider == 'native' }}";
+    for (const job of delegatedJobs) expect(value.jobs[job].if).toBe(guard);
+    for (const job of ["build-and-package", "export-check"]) expect(value.jobs[job].if).toBe("${{ needs['prepare-content'].outputs.mode == 'full' }}");
+    expect(value.jobs["prepare-content"].outputs.test_provider).toBe("${{ steps.prepare.outputs.test_provider }}");
+    for (const job of ["prepare-content", "verify"]) {
+      expect(value.jobs[job].steps.find((step) => step.uses?.startsWith("actions/checkout@")).with["fetch-depth"])
+        .toBe("${{ github.event_name == 'pull_request' && '0' || '1' }}");
+    }
+    expect(value.jobs.verify.permissions).toEqual({ contents: "read", actions: "read", "pull-requests": "read" });
+    expect(value.jobs.verify["timeout-minutes"]).toBeGreaterThanOrEqual(35);
+    expect(value.jobs.verify.steps.some((step) => step.run?.includes("npm ci"))).toBe(false);
+  });
   it("permits arbitrary job ordering while retaining acceptance edges", () => {
     const value = workflow(); value.jobs = Object.fromEntries(Object.entries(value.jobs).reverse());
     expect(validateWorkflowGraph(value)).toBe(true);

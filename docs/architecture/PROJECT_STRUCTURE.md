@@ -71,7 +71,9 @@ Smart-Porfolio/
 
 | Location | Responsibility |
 | --- | --- |
+| `.circleci/config.yml`, `scripts/circleci/` | PR test selection, browser assignments and receipt acceptance. GitHub independently validates eligible CircleCI runs against the merge candidate and expected pipeline configuration. See [CircleCI validation](../quality/CIRCLECI.md). |
 | `.github/workflows/ci.yml` | Candidate selection, content generation, verification, artifact transfer, Cloudflare Direct Upload, smoke tests, and schedule heartbeat. |
+| `.github/workflows/circleci-verification.yml` | Manual diagnostic check of an exact CircleCI workflow and commit. |
 | `.agents/skills/portfolio-skeleton-regression/` | Repository-scoped guidance for deterministic skeleton alignment, visual, and transition regression work. |
 | `docs/` | Guides, references, checklists, and README assets. |
 | `functions/` | Cloudflare Pages Functions for contact verification and delivery. `functions/_shared/contact.ts` is the stable public facade; focused modules under `functions/_shared/contact/` own configuration, request parsing, provider verification, domain checks, D1 reservations, signed tickets, and delivery. These are not Next.js route handlers. |
