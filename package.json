@@ -10,7 +10,7 @@
     "dev": "next dev",
     "dev:pages": "npm run build && npm run db:migrate:local && npx --no-install wrangler pages dev out --env-file .env",
     "db:migrate:local": "npx --no-install wrangler d1 migrations apply CONTACT_RATE_LIMIT_DB --local",
-    "docs:check": "node scripts/validateDocumentation.mjs",
+    "docs:check": "node scripts/validateDocumentation.mjs && npm run agents:check",
     "audit:check": "node scripts/checkDependencyAudit.mjs",
     "update:contact-tlds": "node scripts/updateContactTlds.mjs",
     "generate:content": "node scripts/generateContent.mjs",
@@ -65,11 +65,18 @@
     "release:verify": "node scripts/release.mjs verify",
     "infrastructure:check": "node infra/validate-ownership.mjs",
     "test:infrastructure": "node --test infra/tests/saved-plan.test.mjs",
-    "test:infrastructure:policy": "node --test infra/tests/check-plan.test.mjs infra/tests/mock-plan-export.test.mjs"
+    "test:infrastructure:policy": "node --test infra/tests/check-plan.test.mjs infra/tests/mock-plan-export.test.mjs",
+    "posture:check": "node scripts/posture/check.mjs",
+    "agents:route": "node scripts/agentNavigation.mjs",
+    "agents:check": "node scripts/agentNavigation.mjs --check",
+    "test:agents": "vitest run scripts/agentNavigation.test.mjs",
+    "test:content-pipeline": "vitest run scripts/portfolioContentGeneration.test.ts",
+    "test:contact-functions": "vitest run functions/api/contact.test.ts functions/api/contact/verify.test.ts",
+    "route:agent": "node scripts/routeAgentWork.mjs"
   },
   "dependencies": {
     "csv-parse": "^7.0.2",
-    "next": "^16.4.0",
+    "next": "^16.4.6",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "simple-icons": "^16.28.0"
@@ -77,8 +84,9 @@
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
     "@eslint/js": "^9.18.0",
-    "@next/eslint-plugin-next": "^16.4.0",
+    "@next/eslint-plugin-next": "^16.4.6",
     "@playwright/test": "^1.62.1",
+    "@testing-library/dom": "10.4.1",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
     "@types/node": "^22.10.7",
@@ -90,13 +98,14 @@
     "globals": "^15.14.0",
     "jsdom": "^25.0.1",
     "jszip": "3.10.1",
-    "miniflare": "5.20261006.0-alpha",
+    "miniflare": "5.20261110.1-beta",
     "parse5": "7.3.0",
+    "saxes": "6.0.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",
-    "typescript-eslint": "^8.20.0",
+    "typescript-eslint": "8.72.2",
     "vitest": "4.1.12",
-    "wrangler": "4.148.0",
+    "wrangler": "4.160.1",
     "yaml": "2.9.1"
   },
   "overrides": {
@@ -112,9 +121,7 @@
       }
     },
     "@typescript-eslint/typescript-estree": {
-      "minimatch": {
-        "brace-expansion": "5.0.12"
-      }
+      "minimatch": "11.0.8"
     },
     "postcss": {
       "source-map-js": "1.2.2"
@@ -125,6 +132,7 @@
     },
     "next": {
       "sharp": "0.35.5"
-    }
+    },
+    "vite": "8.2.4"
   }
 }

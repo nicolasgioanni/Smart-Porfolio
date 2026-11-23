@@ -133,7 +133,10 @@ describe("legal document routes", () => {
     expect(screen.getByText(/stores a keyed HMAC-SHA-256 value rather than the address itself/)).toBeInTheDocument();
     expect(screen.getByText(/changed same-identifier retry is rejected without storing the field values/)).toBeInTheDocument();
     expect(screen.getByText(/server sends only the domain portion of the supplied address/)).toBeInTheDocument();
-    expect(screen.getByText(/reserves one of two allowed attempts.*rolling 24-hour window/)).toBeInTheDocument();
+    expect(screen.getByText(/rolling limits of two per normalized email address per 24 hours, ten per IP address per hour, and 100 across the environment per 24 hours/)).toBeInTheDocument();
+    expect(screen.getByText(/does not store or log the raw IP address, name, raw email address, phone number, or message in this record/)).toBeInTheDocument();
+    expect(screen.getByText(/confirmation uses fixed copy without repeating your submitted details/)).toBeInTheDocument();
+    expect(screen.getByText(/Resend receives the submitted name, email address, optional phone number, message/)).toBeInTheDocument();
     expect(screen.getByText(/Resend is asked first to deliver a transactional confirmation/)).toBeInTheDocument();
     expect(screen.getByText(/Acceptance by Resend does not guarantee final mailbox delivery/)).toBeInTheDocument();
     expect(screen.getByText(/does not send Resend the Turnstile token/)).toBeInTheDocument();
@@ -196,9 +199,10 @@ describe("legal document routes", () => {
     expect(screen.getByText(/bounded mail-domain DNS validation/)).toBeInTheDocument();
     expect(screen.getByText(/same separately idempotent Resend payloads/)).toBeInTheDocument();
     expect(screen.getByText(/returns to locked review without sending automatically/)).toBeInTheDocument();
-    expect(screen.getByText(/at most two reservations per normalized email address in a rolling 24-hour window/)).toBeInTheDocument();
-    expect(screen.getByText(/does not store the raw address, name, phone number, or message in D1/)).toBeInTheDocument();
-    expect(screen.getByText(/opaque keyed fingerprint of the normalized full delivery payload/)).toBeInTheDocument();
+    expect(screen.getByText(/rolling limits of two reservations per normalized email address per 24 hours, ten per IP address per hour, and 100 across the environment per 24 hours/)).toBeInTheDocument();
+    expect(screen.getByText(/separately keyed HMAC-SHA-256 values for the normalized email and canonical IP/)).toBeInTheDocument();
+    expect(screen.getByText(/keyed fingerprints of the normalized delivery payload and delivery configuration, a renderer version/)).toBeInTheDocument();
+    expect(screen.getByText(/does not store the raw IP address, email address, name, phone number, or message in D1/)).toBeInTheDocument();
     expect(screen.getByText(/WAF rate limiting remains defense in depth/)).toBeInTheDocument();
     expect(screen.getByText(/noreply@mail\.nicolasmgioanni\.dev/)).toBeInTheDocument();
     expect(screen.getByText(/private owner destination and all provider secrets remain server-side/)).toBeInTheDocument();

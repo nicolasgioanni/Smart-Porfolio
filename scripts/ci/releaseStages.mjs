@@ -78,8 +78,10 @@ export async function buildCandidate({ environment = process.env, projectRoot = 
     snapshotRecordDigest: plan.snapshotDigest, publicBuildInputDigest: snapshot.publicBuildInputDigest,
     producer: `${producer.runId}:${producer.runNumber}:${producer.attempt}`, environment };
   await buildAcceptedSnapshot(options);
+  await verifyAcceptedInputs({ environment, projectRoot, stage: "build completion" });
   await compileReleaseOutput({ projectRoot, outDirectory: "out", sourceCommit: plan.candidate.sourceSha });
   await evaluatePayloadBudget({ outputDirectory: path.join(projectRoot, "out"), nextDirectory: path.join(projectRoot, ".next") });
+  await verifyAcceptedInputs({ environment, projectRoot, stage: "release packaging" });
   const directory = path.join(root, "release");
   const manifest = await createSealedPackage({ ...options, outDirectory: "out", releaseDirectory: directory });
   await scanSealedCandidate({ projectRoot, releaseDirectory: directory, manifest, environment });

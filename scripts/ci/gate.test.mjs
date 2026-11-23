@@ -383,7 +383,7 @@ describe("complete CI evidence gate", () => {
     const value = await fixture({ event: "pull_request", delegated: true });
     const accepted = await verify(value);
     expect(accepted).toMatchObject({ accepted: true, deploy: false, externalEvidence: { provider: "circleci" } });
-    expect(Object.keys(accepted.receiptDigests)).toEqual(expect.arrayContaining(["built-output-scan", "build-and-package", "export-check", "security-scans", "dependency-review"]));
+    expect(Object.keys(accepted.receiptDigests)).toEqual(expect.arrayContaining(["built-output-scan", "build-and-package", "export-check", "history-secrets", "workflow-security", "dependency-audit", "dependency-review"]));
     expect(accepted.receiptDigests).not.toHaveProperty("quality");
     value.providers.readExternal = async () => ({ provider: "circleci", mergeSha: sha, headSha: sha, snapshotByteDigest: "f".repeat(64) });
     await expect(verify(value)).rejects.toThrow("immutable snapshot");
@@ -409,6 +409,23 @@ describe("complete CI evidence gate", () => {
       expect(value.downloaded.every(({ role }) => role === "receipt")).toBe(true);
       expect(value.references.discovery).toBeNull();
       expect(value.references.release).toBeNull();
+    }
+  }, 30_000);
+
+  it("requires each independent source lane's original and current evidence", async () => {
+    for (const lane of securityJobs) {
+      const missing = await fixture({ mode: "unchanged" });
+      const artifact = missing.artifacts.find(({ name }) => name.includes(`receipt-${lane}`));
+      expect(artifact).toBeDefined();
+      missing.artifacts.splice(missing.artifacts.indexOf(artifact), 1);
+      await expect(verify(missing)).rejects.toThrow("Original producer artifact is missing");
+
+      const rerun = await fixture({ mode: "obsolete" });
+      physicalCurrentJob(rerun, lane);
+      await expect(verify(rerun)).rejects.toThrow("Original producer artifact is missing");
+
+      const tampered = await fixture({ mode: "unchanged", receiptPatch: { [lane]: (receipt) => ({ ...receipt, candidateDigest: "c".repeat(64) }) } });
+      await expect(verify(tampered)).rejects.toThrow();
     }
   }, 30_000);
 

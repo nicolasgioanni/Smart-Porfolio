@@ -2,6 +2,8 @@
 
 Smart Portfolio uses Node.js, npm, Next.js App Router, a build-time CSV or XLSX content generator, and Cloudflare Pages Functions. The core portfolio routes render as a static export. The complete contact flow requires Wrangler because Next.js development mode does not run Pages Functions.
 
+Local commands validate repository behavior and local emulation only. They do not establish current Cloudflare, GitHub, DNS, WAF, Turnstile, Resend, or mailbox state; [Implementation inventory](../architecture/IMPLEMENTATION_INVENTORY.md) maps those operator-managed boundaries.
+
 ## Prerequisites
 
 - Git, to clone the repository and create focused branches or worktrees.
@@ -108,7 +110,9 @@ The Node entry point accepts the equivalent `--force-install` and `--force-gener
 | Turnstile runtime | `TURNSTILE_SECRET_KEY`, `TURNSTILE_ALLOWED_HOSTNAMES` | Verification Function |
 | Delivery runtime | `RESEND_API_KEY`, `CONTACT_RECIPIENT_EMAIL`, `CONTACT_FROM_EMAIL`, `CONTACT_REPLY_TO_EMAIL` | Delivery Function |
 | Origin control | `CONTACT_ALLOWED_ORIGINS` | Both contact Functions |
-| Address quota | `CONTACT_RATE_LIMIT_DB` from `wrangler.jsonc` | Local D1 emulation; no environment variable |
+| Delivery quotas | `CONTACT_RATE_LIMIT_DB` from `wrangler.jsonc` | Local D1 emulation; no environment variable |
+
+Local delivery requests require a valid `CF-Connecting-IP` fixture at the Functions boundary; a missing or invalid value fails closed, and forwarding headers are not substitutes. The production boundary trusts the Cloudflare-supplied header and has no local-bypass switch.
 
 Leave `PORTFOLIO_WORKBOOK_URL` blank and `PORTFOLIO_REQUIRE_REMOTE_CONTENT=false` to use checked-in templates. A configured workbook URL is still an anonymous public download. Do not place production provider credentials or production contact secrets in the local file.
 

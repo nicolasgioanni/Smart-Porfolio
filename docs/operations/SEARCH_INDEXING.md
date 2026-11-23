@@ -45,7 +45,7 @@ The Next.js static metadata source in `src/app/robots.txt` is emitted as `/robot
 
 The file also advertises `https://nicolasmgioanni.dev/sitemap.xml`. It does not block `/contact`, page routes, or Next.js assets.
 
-The static metadata source in `src/app/sitemap.xml` is emitted as `/sitemap.xml`. It contains the nine absolute canonical URLs listed above and no contact, Function, metadata, asset, preview, `www`, query-string, or fragment URL. Entries intentionally omit priority, change frequency, and modification dates because the repository has no accurate per-route modification timestamp.
+The static metadata source in `src/app/sitemap.xml` is emitted as `/sitemap.xml`. It contains the 10 absolute canonical URLs listed above and no contact, Function, metadata, asset, preview, `www`, query-string, or fragment URL. Entries intentionally omit priority, change frequency, and modification dates because the repository has no accurate per-route modification timestamp.
 
 Both source-controlled static metadata files are copied into the generated artifact. Their focused tests compare the crawler policy and sitemap URLs with shared site configuration and the indexable route registry, and the deployment smoke check compares each deployed response with the already-verified local artifact. See [Deployment](DEPLOYMENT.md#exact-automated-smoke-scope) for that check.
 
@@ -93,7 +93,7 @@ Check these production URLs after the deployment completes:
 - `https://nicolasmgioanni.dev/favicon/favicon.png`
 - `https://nicolasmgioanni.dev/favicon.ico`
 
-Confirm that the two generated search files return successful responses with their expected text or XML content. Confirm that the sitemap lists exactly nine URLs. In page source, verify each page's own canonical URL and robots directive, the homepage's single JSON-LD graph, and the absence of `pages.dev` canonical URLs or Google verification markup. Contact must remain crawlable while reporting `noindex, follow`.
+Confirm that the two generated search files return successful responses with their expected text or XML content. Confirm that the sitemap lists exactly 10 URLs. In page source, verify each page's own canonical URL and robots directive, the homepage's single JSON-LD graph, and the absence of `pages.dev` canonical URLs or Google verification markup. Contact must remain crawlable while reporting `noindex, follow`.
 
 Validate the live homepage with Google's [Rich Results Test](https://search.google.com/test/rich-results) and the [Schema Markup Validator](https://validator.schema.org/). The latter is useful for schema types that do not produce a Google-specific rich result. Confirm one `WebSite`, one `ProfilePage`, one `Person`, valid canonical references, and no review or rating node.
 
@@ -117,7 +117,7 @@ After the Domain property is verified:
 
 1. Open the **Sitemaps** report for `nicolasmgioanni.dev`.
 2. Submit `sitemap.xml`, which resolves to `https://nicolasmgioanni.dev/sitemap.xml`.
-3. Confirm that Search Console fetches it successfully and discovers nine URLs. Investigate any fetch, parsing, hostname, or count discrepancy before requesting indexing.
+3. Confirm that Search Console fetches it successfully and discovers 10 URLs. Investigate any fetch, parsing, hostname, or count discrepancy before requesting indexing.
 4. Use **URL Inspection** for the canonical homepage and each indexable detail or legal URL. Run the live test, confirm that crawling is allowed and the declared canonical is correct, then select **Request indexing** when available.
 5. Inspect `/contact` only to confirm its `noindex` state. Do not request indexing for it.
 
@@ -127,7 +127,7 @@ Submitting a sitemap and requesting indexing are discovery signals, not guarante
 
 Review Search Console after releases and periodically thereafter:
 
-- **Sitemaps:** successful retrieval, the expected nine discovered URLs, and no stale or foreign sitemap.
+- **Sitemaps:** successful retrieval, the expected 10 discovered URLs, and no stale or foreign sitemap.
 - **Page indexing:** approved routes indexed or progressing normally, `/contact` excluded by `noindex`, and no unexpected robots, duplicate, redirect, or canonical-selection issue.
 - **URL Inspection:** Google's selected canonical agrees with the declared `nicolasmgioanni.dev` URL and the last crawl sees current metadata.
 - **Performance:** queries, impressions, clicks, and result presentation for useful trends; this reporting does not require site analytics or tracking.

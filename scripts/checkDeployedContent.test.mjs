@@ -8,6 +8,7 @@ import {
   assertNoCacheMetadataHeaders,
   assertRootResponse,
   assertStaticHeaders,
+  checkFunctionResponse,
   compareDeployedContent,
   compareProducerGeneration,
   decideDeployment,
@@ -217,12 +218,16 @@ describe("deployment smoke checks", () => {
 
     const requestedPaths = [];
     const redirectModes = [];
+    const requestHeaders = [];
+    const requestMethods = [];
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input, init) => {
         const url = input instanceof URL ? input : new URL(String(input));
         requestedPaths.push(url.pathname);
         redirectModes.push(init?.redirect);
+        requestHeaders.push(init?.headers);
+        requestMethods.push(init?.method ?? "GET");
 
         if (url.pathname === "/") {
           return new Response(rootHtml, { headers: staticHeaders });
@@ -236,7 +241,9 @@ describe("deployment smoke checks", () => {
           return new Response(sitemapXml, { headers: { "Content-Type": "application/xml; charset=utf-8" } });
         }
         if (url.pathname === "/api/contact/verify" || url.pathname === "/api/contact") {
-          return Response.json({ ok: false, error: "method_not_allowed" }, { status: 405, headers: functionHeaders });
+          return init?.method === "POST"
+            ? Response.json({ ok: false, error: "request_rejected" }, { status: 403, headers: functionHeaders })
+            : Response.json({ ok: false, error: "method_not_allowed" }, { status: 405, headers: functionHeaders });
         }
         throw new Error(`Unexpected smoke-check URL: ${url}`);
       })
@@ -251,10 +258,95 @@ describe("deployment smoke checks", () => {
       `/${artifactManifestFileName}`,
       "/robots.txt",
       "/sitemap.xml",
-      "/api/contact/verify",
-      "/api/contact"
+      "/api/contact/verify", "/api/contact/verify", "/api/contact/verify",
+      "/api/contact", "/api/contact", "/api/contact"
     ]);
-    expect(redirectModes).toEqual(Array(7).fill("manual"));
+    expect(redirectModes).toEqual(Array(11).fill("manual"));
+    expect(requestMethods.slice(5)).toEqual(["GET", "POST", "POST", "GET", "POST", "POST"]);
+    expect(requestHeaders.slice(5).map((headers) => headers.Origin)).toEqual([
+      undefined, "https://smart-portfolio-bds.pages.dev", "https://nicolasmgioanni.dev",
+      undefined, "https://smart-portfolio-bds.pages.dev", "https://nicolasmgioanni.dev"
+    ]);
+
+    const config = { emails: ["owner@example.com"], groups: [], hostname: "preview.example.com", humanAppId: "11111111-1111-1111-1111-111111111111", idpId: "22222222-2222-2222-2222-222222222222", pagesAppId: "33333333-3333-3333-3333-333333333333", serviceTokenId: "44444444-4444-4444-4444-444444444444" };
+    const environment = { PREVIEW_ACCESS_ENABLED: "true", PREVIEW_ACCESS_CONFIG: JSON.stringify(config), PREVIEW_ACCESS_CLIENT_ID: "client", PREVIEW_ACCESS_CLIENT_SECRET: "secret" };
+    await smokeDeployment("https://0123abcd.smart-portfolio-bds.pages.dev", artifactDirectory, contentHash, commitSha, { privatePreview: true, environment });
+    expect(redirectModes.slice(11)).toEqual(Array(11).fill("manual"));
+    for (const headers of requestHeaders.slice(11)) expect(headers).toMatchObject({ "CF-Access-Client-Id": "client", "CF-Access-Client-Secret": "secret" });
+    await expect(smokeDeployment("https://smart-portfolio-bds.pages.dev", artifactDirectory, contentHash, commitSha, { privatePreview: true, environment })).rejects.toThrow();
+    expect(requestHeaders).toHaveLength(22);
+    expect(requestMethods.slice(16)).toEqual(["GET", "POST", "POST", "GET", "POST", "POST"]);
+    expect(requestHeaders.slice(16).map((headers) => headers.Origin)).toEqual([
+      undefined, "https://0123abcd.smart-portfolio-bds.pages.dev", "https://nicolasmgioanni.dev",
+      undefined, "https://0123abcd.smart-portfolio-bds.pages.dev", "https://nicolasmgioanni.dev"
+    ]);
+    for (const origin of ["https://nicolasmgioanni.dev", "https://develop.smart-portfolio-bds.pages.dev"]) {
+      const start = requestMethods.length;
+      await smokeDeployment(origin, artifactDirectory, contentHash, commitSha);
+      expect(requestMethods.slice(start)).toEqual(Array(7).fill("GET"));
+    }
+  });
+
+  it("bounds and strictly decodes Function rejection bodies", async () => {
+    const cases = [
+      [new Uint8Array(16 * 1024 + 1), /budget/],
+      [new Uint8Array([0xff]), /encoded data|encoding/i],
+      [new TextEncoder().encode("not json"), /JSON|Unexpected token/i]
+    ];
+    for (const [bytes, error] of cases) {
+      const cancel = vi.fn();
+      const stream = new ReadableStream({ start(controller) { controller.enqueue(bytes); }, cancel });
+      // Close malformed finite bodies so strict decoding and JSON parsing run.
+      if (bytes.length <= 16 * 1024) {
+        const finite = new Response(bytes, { status: 403, headers: { ...functionHeaders, "Content-Type": "application/json" } });
+        await expect(checkFunctionResponse(new URL("https://identity.example/api/contact"), "api/contact", {
+          method: "POST", origin: "https://identity.example", fetchImplementation: async () => finite
+        })).rejects.toThrow(error);
+      } else {
+        await expect(checkFunctionResponse(new URL("https://identity.example/api/contact"), "api/contact", {
+          method: "POST", origin: "https://identity.example", fetchImplementation: async () => new Response(stream, { status: 403, headers: { ...functionHeaders, "Content-Type": "application/json" } })
+        })).rejects.toThrow(error);
+        expect(cancel).toHaveBeenCalledOnce();
+      }
+    }
+    const cancel = vi.fn();
+    const oversized = new Response(new ReadableStream({ cancel }), { status: 403, headers: { ...functionHeaders, "Content-Type": "application/json", "Content-Length": "16385" } });
+    await expect(checkFunctionResponse(new URL("https://identity.example/api/contact"), "api/contact", {
+      method: "POST", origin: "https://identity.example", fetchImplementation: async () => oversized
+    })).rejects.toThrow("budget");
+    expect(cancel).toHaveBeenCalledOnce();
+  });
+
+  it("cancels a stalled Function body when the shared deadline expires", async () => {
+    const controller = new AbortController();
+    const cancel = vi.fn();
+    const response = new Response(new ReadableStream({ cancel }), { status: 403, headers: { ...functionHeaders, "Content-Type": "application/json" } });
+    const observation = checkFunctionResponse(new URL("https://identity.example/api/contact"), "api/contact", {
+      method: "POST", origin: "https://identity.example", signal: controller.signal, fetchImplementation: async () => response
+    });
+    const rejection = expect(observation).rejects.toThrow("timed out");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    controller.abort();
+    await rejection;
+    expect(cancel).toHaveBeenCalledOnce();
+  });
+
+  it("cancels a late Function response after the header deadline", async () => {
+    const controller = new AbortController();
+    const cancel = vi.fn();
+    let finishFetch;
+    const pending = new Promise((resolve) => { finishFetch = resolve; });
+    const observation = checkFunctionResponse(new URL("https://identity.example/api/contact"), "api/contact", {
+      method: "POST", origin: "https://identity.example", signal: controller.signal, fetchImplementation: () => pending
+    });
+    const rejection = expect(observation).rejects.toThrow("timed out");
+    controller.abort();
+    await rejection;
+    finishFetch(new Response(new ReadableStream({ cancel }), { status: 403 }));
+    await pending;
+    await Promise.resolve();
+    expect(cancel).toHaveBeenCalledOnce();
+
   });
 
   it("rejects substituted root bytes and a static CSP that bypasses a route replacement", async () => {

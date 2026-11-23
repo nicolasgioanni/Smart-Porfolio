@@ -4,18 +4,20 @@ GitHub’s required `verify` check uses CircleCI for quality, unit and browser t
 
 ## Pipeline and selection
 
-`.circleci/config.yml` starts `portfolio-setup`. Its setup script checks the checkout revision, computes a complete Git comparison, and produces a continuation configuration with only the selected jobs. Unknown comparisons, unrecognized paths, empty diffs, protected-branch pushes, tags, and forced or scheduled runs select full validation.
+`.circleci/config.yml` starts `portfolio-setup`. Setup uses the pinned Node runtime to check the checkout and classify the complete Git diff before installing project dependencies. A verified PR that needs full native coverage ends after setup. The same handoff applies to GitHub App pushes to `main` or `develop`. GitHub runs the full suite and owns acceptance. CircleCI emits no acceptance evidence on this path.
+
+Documentation and allowlisted feature PRs continue to their selected CircleCI jobs. An explicit full CircleCI run, a tag, or a trigger whose owner cannot be established takes the conservative full CircleCI path.
 
 Narrow selection requires a GitHub App push or pull-request event with a same-repository PR URL. A bounded, credential-free GitHub API read must confirm that the PR is open, targets `main` or `develop`, and still has this exact head revision and branch. The comparison uses the PR's actual base SHA. Unavailable metadata, a moved head, forks, or missing local base history select full coverage.
 
 `scripts/circleci/impact.mjs` owns the versioned impact policy. The plan records the base/head revisions, changed paths, trigger, selection reasons, and selected specifications. Consumers recompute the policy before accepting a plan. A rename must include both paths; a deletion includes its old path. Remote workbook updates cannot be classified from Git paths and remain on the existing strict release pipeline.
 
-| Change | CircleCI selection |
+| Change on a verified PR | Test selection |
 | --- | --- |
 | Ordinary Markdown documentation | Quality and source-security checks |
 | Allowlisted feature implementation or styling | Quality, all unit tests, affected Chromium specifications, build/export, and source-security checks; UI coverage retains skeleton alignment, transitions, and visual comparison |
-| Shared UI, global styles, routing, content generation/parsing, dependencies, CI, security or unknown paths | Full validation |
-| Security, operations or CI-contract documentation | Full validation |
+| Shared UI, global styles, routing, content generation/parsing, dependencies, CI, security or unknown paths | Full GitHub suite, CircleCI setup only |
+| Security, operations or CI-contract documentation | Full GitHub suite, CircleCI setup only |
 
 The targeted browser selection includes shared navigation, accessibility, and progressive-enhancement checks. Changes to Projects or Research also select the cross-browser job, including their mobile WebKit tests. Full validation retains two functional Chromium shards, the 25 existing Linux visual baselines, Firefox critical, WebKit critical, and mobile WebKit Research/Projects coverage. No baseline bytes, screenshot thresholds, or skeleton specifications change.
 
@@ -25,7 +27,7 @@ CircleCI runs existing source scanners and full-plan dependency audits, plus cre
 
 ## Runtime and reports
 
-Jobs use the pinned Ubuntu 24.04 machine image and Node version declared in the CircleCI configuration. Dependencies come from `package-lock.json`; npm downloads are cached by its checksum. Existing installed Playwright versions determine the browser binaries. Linux screenshots must compare against the existing reviewed baselines with zero difference.
+Jobs use the pinned Ubuntu 24.04 machine image and Node version declared in the CircleCI configuration. Only continued validation jobs install project dependencies. Dependencies come from `package-lock.json`; npm downloads are cached by its checksum. Existing installed Playwright versions determine the browser binaries. Linux screenshots must compare against the existing reviewed baselines with zero difference.
 
 The pipeline uses local templates and does not need a workbook locator, Cloudflare credentials, contact-provider secrets, or a CircleCI personal API token. The setup job uses only CircleCI's built-in continuation credential against its fixed official endpoint. Child validation commands receive a restricted environment.
 

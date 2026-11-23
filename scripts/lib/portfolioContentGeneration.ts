@@ -13,6 +13,9 @@ import { parseCsv, type CsvRow } from "../../src/lib/csv/parseCsv";
 import { validateContentKeyRows } from "../../src/lib/content/contentSheetKeys";
 import type { PortfolioSheetName } from "../../src/lib/content/normalizePortfolioContent";
 import { invalidXlsxWorkbookError, validatePortfolioWorkbookArchive } from "./workbookArchive";
+import { portfolioWorkbookMaxRowsPerSheet, portfolioWorkbookMaxColumnsPerSheet, portfolioWorkbookMaxCellsPerSheet, validateWorkbookSemantics } from "./workbookSemanticPreflight";
+import { runWorkbookParser } from "./workbookParserProcess";
+export { portfolioWorkbookMaxRowsPerSheet, portfolioWorkbookMaxColumnsPerSheet, portfolioWorkbookMaxCellsPerSheet } from "./workbookSemanticPreflight";
 
 export const portfolioWorkbookSheetNames = [
   "profile",
@@ -28,10 +31,6 @@ export const portfolioWorkbookSheetNames = [
 
 export type PortfolioWorkbookSheetName = (typeof portfolioWorkbookSheetNames)[number];
 export type PortfolioWorkbookSheets = Record<PortfolioWorkbookSheetName, CsvRow[]>;
-
-export const portfolioWorkbookMaxRowsPerSheet = 5_000;
-export const portfolioWorkbookMaxColumnsPerSheet = 128;
-export const portfolioWorkbookMaxCellsPerSheet = 250_000;
 
 const expectedHeaders: Record<PortfolioSheetName, readonly string[]> = {
   profile: ["key", "value"],
@@ -260,10 +259,14 @@ function normalizeDisplayedCellText(cell: Cell, location: string): string {
 }
 
 function worksheetToRows(worksheet: Worksheet, sheetName: PortfolioWorkbookSheetName): CsvRow[] {
+  // ExcelJS computes columnCount by scanning rows; cache both dimensions before
+  // traversing and avoid creating cells for gaps in sparse worksheets.
+  const rowCount = worksheet.rowCount;
+  const columnCount = worksheet.columnCount;
   if (
-    worksheet.rowCount > portfolioWorkbookMaxRowsPerSheet ||
-    worksheet.columnCount > portfolioWorkbookMaxColumnsPerSheet ||
-    worksheet.rowCount * worksheet.columnCount > portfolioWorkbookMaxCellsPerSheet
+    rowCount > portfolioWorkbookMaxRowsPerSheet ||
+    columnCount > portfolioWorkbookMaxColumnsPerSheet ||
+    rowCount * columnCount > portfolioWorkbookMaxCellsPerSheet
   ) {
     throw new Error(`The ${sheetName} tab exceeds the allowed worksheet dimensions`);
   }
@@ -272,16 +275,17 @@ function worksheetToRows(worksheet: Worksheet, sheetName: PortfolioWorkbookSheet
   let lastMeaningfulRow = 0;
   let lastMeaningfulColumn = 0;
 
-  for (let rowIndex = 1; rowIndex <= worksheet.rowCount; rowIndex += 1) {
+  const maxHeaderColumns = Math.max(...acceptedHeaderSets(sheetName).map((headers) => headers.length));
+  for (let rowIndex = 1; rowIndex <= rowCount; rowIndex += 1) {
     const row: string[] = [];
 
-    for (let columnIndex = 1; columnIndex <= worksheet.columnCount; columnIndex += 1) {
-      const cell = worksheet.getCell(rowIndex, columnIndex);
-      const text = normalizeDisplayedCellText(cell, `${sheetName}!${cell.address}`);
+    for (let columnIndex = 1; columnIndex <= columnCount; columnIndex += 1) {
+      const cell = worksheet.findCell(rowIndex, columnIndex);
+      const text = cell ? normalizeDisplayedCellText(cell, `${sheetName}!${cell.address}`) : "";
 
       if (
         rowIndex > 1 &&
-        columnIndex > Math.max(...acceptedHeaderSets(sheetName).map((headers) => headers.length)) &&
+        columnIndex > maxHeaderColumns &&
         text.trim()
       ) {
         throw new Error(`The ${sheetName} tab has a malformed row structure`);
@@ -319,13 +323,18 @@ function normalizeWorksheetTitle(title: string): string {
 }
 
 export async function parsePortfolioWorkbook(bytes: Uint8Array): Promise<PortfolioWorkbookSheets> {
+  return runWorkbookParser(bytes);
+}
+
+export async function parsePortfolioWorkbookInChild(bytes: Uint8Array): Promise<PortfolioWorkbookSheets> {
   await validatePortfolioWorkbookArchive(bytes);
+  await validateWorkbookSemantics(bytes);
 
   const workbook = new ExcelJS.Workbook();
   const arrayBuffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
 
   try {
-    await workbook.xlsx.load(arrayBuffer);
+    await workbook.xlsx.load(arrayBuffer, { ignoreNodes: ["dataValidations", "conditionalFormatting", "extLst", "drawing", "picture", "tableParts", "sheetViews", "pageMargins", "pageSetup", "printOptions", "headerFooter", "rowBreaks", "sheetProtection", "autoFilter"] });
   } catch {
     throw invalidXlsxWorkbookError();
   }

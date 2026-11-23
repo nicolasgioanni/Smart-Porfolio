@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applicationJobs, createPlan, evaluateResults, parseBoolean, parseCandidate, parsePlan, repository, requiredJobs, workflowPath } from "./plan.mjs";
+import { applicationJobs, delegatedJobs, securityJobs, createPlan, evaluateResults, parseBoolean, parseCandidate, parsePlan, repository, requiredJobs, workflowPath } from "./plan.mjs";
 
 const sha = "a".repeat(40);
 const snapshotDigest = "c".repeat(64);
@@ -34,7 +34,7 @@ describe("CI event and result contract", () => {
     const input = candidate(event);
     const unchanged = createPlan(input, { snapshotDigest, comparison: { schemaVersion: 1, equivalent: true, identityDigest: snapshotDigest } });
     expect(unchanged).toMatchObject({ mode: "unchanged", tier: "none", deploy: false });
-    expect(unchanged.requiredJobs).toContain("security-scans");
+    expect(unchanged.requiredJobs).toContain("dependency-audit");
     expect(evaluateResults(unchanged, results(unchanged))).toMatchObject({ accepted: true, deploy: false });
     expect(createPlan(input, { snapshotDigest, comparison: { schemaVersion: 1, equivalent: false, identityDigest: null } }).deploy).toBe(true);
     for (const comparison of [null, {}, { schemaVersion: 1, equivalent: true, identityDigest: null }]) {
@@ -92,6 +92,18 @@ describe("CI event and result contract", () => {
       expect(() => evaluateResults(plan, missing)).toThrow("dependencies");
     }
     expect(() => evaluateResults(plan, { ...results(plan), "new-disconnected-validator": { result: "success" } })).toThrow("dependencies");
+  });
+
+  it("requires independent source security and native release checks for delegated PRs", () => {
+    const plan = createPlan(candidate("pull_request"), { snapshotDigest });
+    const outcome = results(plan);
+    for (const job of delegatedJobs) outcome[job] = { result: "skipped" };
+    expect(evaluateResults(plan, outcome, "circleci")).toMatchObject({ accepted: true, deploy: false });
+    for (const job of [...securityJobs, "dependency-review", "build-and-package", "export-check"]) {
+      const failed = structuredClone(outcome); failed[job] = { result: "failure" };
+      expect(evaluateResults(plan, failed, "circleci").accepted, job).toBe(false);
+    }
+    expect(() => evaluateResults(createPlan(candidate("push"), { snapshotDigest }), results(createPlan(candidate("push"), { snapshotDigest })), "circleci")).toThrow();
   });
 
   it("never accepts an unexpected application result on a no-op", () => {

@@ -92,6 +92,58 @@ describe("Cloudflare contact verification function", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("preserves method checks on the identity-only Pages host", async () => {
+    for (const method of ["GET", "HEAD"]) {
+      const response = await invoke(new Request("https://smart-portfolio-bds.pages.dev/api/contact/verify", { method }));
+      expect(response.status).toBe(405);
+      expect(response.headers.get("Allow")).toBe("POST");
+      expect(response.headers.get("Cache-Control")).toContain("no-store");
+    }
+  });
+
+  it("rejects identity-only host POSTs before unavailable provider configuration", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const identityHost = "https://deployment.smart-portfolio-bds.pages.dev";
+    for (const origin of [identityHost, "https://nicolasmgioanni.dev"]) {
+      const request = new Request(`${identityHost}/api/contact/verify`, {
+        method: "POST", headers: { Origin: origin, "Content-Type": "application/json" }, body: ""
+      });
+      const response = await invoke(request, { ...env, TURNSTILE_SECRET_KEY: "" });
+      expect(response.status).toBe(403);
+      expect(await response.json()).toEqual({ ok: false, error: "request_rejected" });
+      expect(response.headers.get("Cache-Control")).toContain("no-store");
+    }
+    const invalidAllowlist = await invoke(new Request(`${identityHost}/api/contact/verify`, {
+      method: "POST", headers: { Origin: identityHost }, body: ""
+    }), { ...env, CONTACT_ALLOWED_ORIGINS: "https://valid.example,not an origin", TURNSTILE_SECRET_KEY: "" });
+    expect(invalidAllowlist.status).toBe(503);
+    expect(await invalidAllowlist.json()).toEqual({ ok: false, error: "service_unavailable" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("admits only configured request URL origins regardless of forwarded host headers", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const cases = [
+      ["https://nicolasmgioanni.dev", "https://nicolasmgioanni.dev", "https://nicolasmgioanni.dev", 400],
+      ["https://develop.smart-portfolio-bds.pages.dev", "https://develop.smart-portfolio-bds.pages.dev", "https://develop.smart-portfolio-bds.pages.dev", 400],
+      ["http://localhost:8788", "http://localhost:8788", "http://localhost:8788", 400],
+      ["http://127.0.0.1:8788", "http://127.0.0.1:8788", "http://127.0.0.1:8788", 400],
+      ["https://smart-portfolio-bds.pages.dev", "https://smart-portfolio-bds.pages.dev", "https://nicolasmgioanni.dev", 403],
+      ["https://smart-portfolio-bds.pages.dev", "https://nicolasmgioanni.dev", "https://nicolasmgioanni.dev", 403],
+      ["https://nicolasmgioanni.dev", "https://smart-portfolio-bds.pages.dev", "https://nicolasmgioanni.dev", 403],
+      ["https://www.nicolasmgioanni.dev", "https://www.nicolasmgioanni.dev", "https://nicolasmgioanni.dev", 403]
+    ] as const;
+    for (const [target, origin, allowed, status] of cases) {
+      const request = new Request(`${target}/api/contact/verify`, {
+        method: "POST", headers: { Origin: origin, Host: "nicolasmgioanni.dev", "X-Forwarded-Host": "nicolasmgioanni.dev", "Content-Type": "application/json" }, body: "{}"
+      });
+      expect((await invoke(request, { ...env, CONTACT_ALLOWED_ORIGINS: allowed })).status).toBe(status);
+    }
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("rejects cross-origin, non-JSON, malformed, oversized, and non-exact bodies before Siteverify", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);

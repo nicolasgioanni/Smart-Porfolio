@@ -5,6 +5,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { parseImpactPlan } from './impact.mjs';
+import { assertSourceIdentity } from '../ci/sourceIdentity.mjs';
 import { parseBrowserReport } from '../ci/browserDiscovery.mjs';
 import { allowedBrowserSkips, validateSkipRegistry } from '../ci/browserSkips.mjs';
 import { parseTestIdentity, verifyDiscoveryCoverage } from '../ci/receipts.mjs';
@@ -52,6 +53,10 @@ export function verifyBrowser(assignment, report) {
   }
   if (parsed.identities.some((id) => !seen.has(id))) throw new Error('Browser identities differ from execution.');
 }
+export async function assertCircleSource(projectRoot, sha, stage, expectedSnapshot) {
+  assertSourceIdentity(projectRoot, sha, { allowGenerated: expectedSnapshot !== undefined, stage });
+  if (expectedSnapshot !== undefined && !(await readFile(path.join(projectRoot, generated))).equals(expectedSnapshot)) throw new Error(`Generated content differs from the accepted snapshot. Checkpoint: ${stage}.`);
+}
 export function verifyInputEnvelope({ envelope, planBytes, snapshot, assignmentBytes, pipelinePlan, currentHead, candidateSha, committedSnapshot }) {
   const expectedKeys = ['assignmentDigest', 'headSha', 'planDigest', 'snapshotDigest'];
   if (!envelope || Object.keys(envelope).sort().join(',') !== expectedKeys.join(',')) throw new Error('Invalid input manifest.');
@@ -76,25 +81,30 @@ export function verifyUnchangedInputs(before, after, generatedBytes) {
 }
 const committedContent = () => execFileSync('git', ['show', `HEAD:${generated}`], { cwd: root, timeout: 30_000, maxBuffer: 10_000_000 });
 async function inputs() {
+  await assertCircleSource(root, process.env.CIRCLE_SHA1, 'CircleCI input admission');
   const initial = await readInputBytes();
   const envelope = JSON.parse(initial['manifest.json']);
   const pipelinePlan = JSON.parse(Buffer.from(process.env.CIRCLECI_PLAN ?? '', 'base64').toString('utf8'));
   const plan = verifyInputEnvelope({ envelope, planBytes: initial['plan.json'], snapshot: initial['content.json'], assignmentBytes: initial['assignments.json'], pipelinePlan, currentHead: head(), candidateSha: process.env.CIRCLE_SHA1, committedSnapshot: committedContent() });
   await copyFile(path.join(workspace, 'input/content.json'), generated);
+  await assertCircleSource(root, plan.headSha, 'CircleCI restored snapshot', initial['content.json']);
   return { plan, envelope, initial };
 }
 async function verifyInputsAfter(initial, plan) {
   verifyUnchangedInputs(initial, await readInputBytes(), await readFile(generated));
+  await assertCircleSource(root, plan.headSha, 'CircleCI validator completion', initial['content.json']);
   if (head() !== plan.headSha || head() !== process.env.CIRCLE_SHA1) throw new Error('Validation changed the candidate revision.');
   if (plan.tier !== 'full' && !initial['content.json'].equals(committedContent())) throw new Error('Narrow-plan snapshot differs from committed content.');
 }
 async function prepare() {
   const plan = parseImpactPlan(JSON.parse(Buffer.from(process.env.CIRCLECI_PLAN ?? '', 'base64').toString('utf8')));
   if (head() !== process.env.CIRCLE_SHA1 || plan.headSha !== head()) throw new Error('Plan revision mismatch.');
+  await assertCircleSource(root, plan.headSha, 'CircleCI preparation admission');
   await mkdir(path.join(workspace, 'input'), { recursive: true });
   run('npm', ['run', 'generate:content'], { env: cleanEnv() });
   const content = await readFile(generated);
   validateGeneratedSource(JSON.parse(content), 'local');
+  await assertCircleSource(root, plan.headSha, 'CircleCI content preparation', content);
   if (plan.tier !== 'full' && !content.equals(committedContent())) throw new Error('Narrow-plan snapshot differs from committed content.');
   const planBytes = Buffer.from(JSON.stringify(plan));
   await writeFile(path.join(workspace, 'input/plan.json'), planBytes);
@@ -122,6 +132,7 @@ async function prepare() {
     const projects = [...new Set(assignments['cross-browser'].map((id) => parseTestIdentity(id)[0]))].sort();
     if (projects.join(',') !== 'firefox-critical,webkit-critical,webkit-mobile') throw new Error('Cross-browser discovery omitted a required project.');
   }
+  await assertCircleSource(root, plan.headSha, 'CircleCI browser discovery', content);
   const assignmentBytes = Buffer.from(JSON.stringify(assignments));
   await writeFile(path.join(workspace, 'input/assignments.json'), assignmentBytes);
   await writeFile(path.join(workspace, 'input/manifest.json'), JSON.stringify({ headSha: head(), planDigest: hash(planBytes), snapshotDigest: hash(content), assignmentDigest: hash(assignmentBytes) }));
@@ -146,7 +157,7 @@ async function validate() {
     npm('test:quality:payload');
     await compileReleaseOutput({ sourceCommit: head() });
     run('npx', ['--no-install', 'playwright', 'install', '--with-deps', 'chromium'], { env: cleanEnv() });
-    run('npm', ['run', 'test:e2e:release-static', '--', '--reporter=line,junit', '--output=test-results/playwright'], { env: { ...cleanEnv(), PLAYWRIGHT_JUNIT_OUTPUT_NAME: path.join(root, 'test-results/circleci-junit/static-export.xml') } });
+    run('npm', ['run', 'test:e2e:release-static', '--', '--reporter=line,junit', '--output=test-results/playwright'], { env: { ...cleanEnv(), PLAYWRIGHT_RELEASE_TURNSTILE_ENABLED: "true", PLAYWRIGHT_JUNIT_OUTPUT_NAME: path.join(root, 'test-results/circleci-junit/static-export.xml') } });
   } else if (validator === 'security' || validator === 'infrastructure') {
     const toolRoot = path.join('/tmp', 'portfolio-circleci-tools');
     await mkdir(toolRoot, { recursive: true });

@@ -4,6 +4,8 @@ Smart Portfolio is deployed to Cloudflare Pages by GitHub Actions. The repositor
 
 This guide defines the deployment architecture and initial configuration. Use [Operations](OPERATIONS.md) for recurring releases, monitoring, rollback, and incident response. Use [Troubleshooting](../development/TROUBLESHOOTING.md) when a local or hosted check fails.
 
+The workflow and checked-in configuration are repository-declared release behavior. Cloudflare and GitHub dashboard settings, encrypted values, and the state of a deployed alias are operator-managed evidence; [Implementation inventory](../architecture/IMPLEMENTATION_INVENTORY.md) explains the distinction.
+
 ## Current deployment targets
 
 These are the reviewed targets for this deployed portfolio. They are not generic defaults for a fork or a different Cloudflare account; see [Set up or restore a deployment](#set-up-or-restore-a-deployment) before changing them.
@@ -35,11 +37,13 @@ The repository cannot verify Cloudflare or GitHub dashboard state. Operators mus
 - No legacy provider continues to publish the custom domain.
 - Cloudflare runtime secrets and separate D1 bindings exist in the correct production and preview environments.
 - WAF rate limiting covers both contact endpoints, and the selected Cloudflare plan or provider-compatible control preserves the JSON API contract.
-- The tracked [permanent-branch ruleset](../../.github/rulesets/protect-permanent-branches.json) declares one active `protect-permanent-branches` ruleset for exactly `main` and `develop`, with deletion and non-fast-forward protection and no bypass actors. GitHub readback reverified the matching live ruleset on 2026-10-12. The JSON records the configuration but cannot prove or change future live state.
+- The tracked [permanent-branch ruleset](../../.github/rulesets/protect-permanent-branches.json) declares one active `protect-permanent-branches` ruleset for exactly `main` and `develop`, with deletion and non-fast-forward protection and no bypass actors. GitHub readback reverified the matching live ruleset on 2026-10-12. The strict source validator also runs in offline infrastructure acceptance. The JSON and validator cannot prove or change live state.
 - Current GitHub branch-response evidence establishes that `main` is protected and has a `verify` requirement from GitHub Actions app `15368`. A signed-in, read-only settings inspection on 2026-10-12 confirmed required pull-request changes, up-to-date branches, no required review count, administrator enforcement, and disabled force pushes and deletion. The detailed classic-protection API remained inaccessible; this observation came from the settings UI and changed no controls. Do not replace or weaken the intended classic policy; the limited permanent-branch ruleset permits the guarded ordinary `develop` heartbeat. Re-verify both external controls after any GitHub policy change.
 - Custom-domain bindings, redirects, certificates, and DNS remain healthy.
 
 Provider-dashboard uploads and deploy hooks bypass the repository quality gate and are not part of the supported release path.
+
+Private-preview admission and authenticated smoke checks share the serialized deployment path. The entitlement mapping still blocks private-preview activation before environment selection or provider mutation.
 
 ## Trigger and branch behavior
 
@@ -60,9 +64,11 @@ For eligible pull requests, the required GitHub `verify` check admits [CircleCI 
 
 Scheduled and manual runs explicitly execute the trusted `main` workflow. Pushes use `main` or `develop`; pull requests use the GitHub merge candidate and never receive workbook or Cloudflare deployment credentials. A stale permanent-branch candidate becomes an explicit obsolete plan. A scheduled or ordinary manual candidate is unchanged only when a validated deployable-v2 identity has the same content, source, target, public-build inputs, and GitHub Actions producer kind. A missing identity (`404`), legacy v1, or valid but non-equivalent v2 identity selects full validation. A malformed, failed, any other non-200 response, or unavailable observation fails closed. Producer ordering protects the later serialized deployment decision and does not make a current run ineligible for this comparison.
 
-Every full native plan runs `quality`, `unit-integration`, two Chromium functional shards, Linux visual regression, Firefox critical, WebKit critical, and WebKit mobile Research/Projects coverage, `build-and-package`, and `export-check` from the same restored snapshot. `security-tools`, `security-scans`, `codeql`, and `infrastructure` run for every accepted candidate, including obsolete and unchanged plans; `dependency-review` is also required for pull requests. All source-security jobs write independent source receipts, and `verify` reads their exact producer artifacts rather than inferring success from job names.
+Every full native plan runs `quality`, `unit-integration`, two Chromium functional shards, Linux visual regression, Firefox critical, WebKit critical, and WebKit mobile Research/Projects coverage, `build-and-package`, and `export-check` from the same restored snapshot. `security-tools`, `history-secrets`, `workflow-security`, `dependency-audit`, `codeql`, and `infrastructure` run for every accepted candidate, including obsolete and unchanged plans; `dependency-review` is also required for pull requests. All source-security jobs write independent source receipts, and `verify` reads their exact producer artifacts rather than inferring success from job names.
 
-The workflow uses Node `22.23.3`, Next `16.4.6`, Wrangler `4.148.0`, and the pinned Miniflare pair in the lockfile. The security path checks workflows with checksum-verified actionlint, scans complete Git history with checksum-verified Gitleaks and Zizmor, and scans the exact sealed full-plan release directory with the same pinned Gitleaks binary before it can upload. It runs JavaScript/TypeScript CodeQL `security-extended` in `build-mode: none`, checks SARIF fail-closed, and uses GitHub dependency review on pull requests. These repository checks do not prove that an external environment, protection rule, or provider setting is enabled.
+CI also checks candidate source integrity at the evidence and pre-mutation boundaries, with only snapshot-verified generated JSON allowed during content preparation and restoration. These are checkpoint observations, not continuous subprocess isolation. A mismatch fails the relevant boundary and requires a clean candidate and full affected rerun. See [CI input and evidence contracts](../quality/CI_CONTRACTS.md#source-integrity-checkpoints).
+
+The workflow uses Node `22.23.3`, Next `16.4.6`, Wrangler `4.160.1`, and the pinned Miniflare pair in the lockfile. The security path checks workflows with checksum-verified actionlint, scans complete Git history with checksum-verified Gitleaks and Zizmor, and scans the exact sealed full-plan release directory with the same pinned Gitleaks binary before it can upload. It runs JavaScript/TypeScript CodeQL `security-extended` in `build-mode: none`, checks SARIF fail-closed, and uses GitHub dependency review on pull requests. These repository checks do not prove that an external environment, protection rule, or provider setting is enabled.
 
 ## Permissions and credentials
 
@@ -73,7 +79,7 @@ permissions:
   contents: read
 ```
 
-Ordinary jobs retain read-only repository access. The `codeql` job adds only `security-events: write` to upload its already-validated SARIF result; pull-request dependency review adds only `pull-requests: read`. Cloudflare deployment authority remains isolated to the restricted API token passed directly to Wrangler, not to a repository write permission.
+Ordinary jobs retain read-only repository access. CodeQL SARIF is validated privately without upload; pull-request dependency review adds only `pull-requests: read`. Cloudflare deployment authority remains isolated to the restricted API token passed directly to Wrangler, not to a repository write permission.
 
 The schedule-only heartbeat job is the sole exception. It declares `contents: write`, but the checked-in job is coded and guarded to update only `.github/schedule-heartbeat` on the existing `develop` branch after the inactivity threshold is met. That source-level guard and the tracked ruleset test do not replace independently verified external branch or ruleset protection.
 
@@ -130,6 +136,29 @@ The tracked `database_id` values identify the reviewed live resources. Do not re
 
 Do not reuse or copy the current live IDs for a different account, and do not commit a shared ID for both environments. `preview_database_id: contact-rate-limit-local` is a local-emulation identifier, not a remote database. The deploy job rejects missing, all-zero, or shared remote IDs, then applies tracked migrations to the selected database before uploading Pages.
 
+## Private-preview checker is not activated
+
+`scripts/privatePreviewCheck.mjs` prepares credential-isolated, fail-closed Access inventory and private smoke checks. It remains separate from the prepared sealed deployment path and does not establish that the preview is private. Active private-preview deployment is blocked before environment selection or deployment until entitlement mapping is reviewed.
+
+Its preflight deliberately ends with `activation_blocked` and `entitlement_mapping_unreviewed`: the provider entitlement schema does not identify the Access feature keys and allocation semantics required to prove coverage. A separately reviewed provider observation and sealed-deployment integration are required before activation. That integration must preserve freshness, artifact and upload identity checks, use restricted runner-temporary evidence, and perform the private preflight before any preview migration or upload. Do not substitute public smoke checks for proof of private Access protection.
+
+## Prepared private preview controls
+
+The reviewed preview remains public: the 2026-11-11 read-only observation found public, stale preview content. The preparation in this repository has not adopted Terraform, configured Access, created a GitHub environment, or deployed a new release. Activation and reconciliation require separate authorization. Preserve the existing Pages Direct Upload, Functions, D1, Turnstile, and Resend stack.
+
+`PREVIEW_ACCESS_ENABLED` is a repository Actions variable: unset or `false` retains the current flow; exactly `true` requests private mode and currently fails admission until the entitlement mapping is reviewed. Every other value fails parsing. For a candidate requesting private mode, the credential-free preparation stage selects full verification rather than attempting the public no-op comparison. A trusted preflight checks an already existing GitHub `preview` environment before selecting it; it must expose a custom branch policy with exactly `develop`. It refuses missing, invisible, broad, or malformed evidence. The deployment job rechecks the environment and the Access configuration, denies anonymous requests, authenticates with the adopted service token, and verifies exact release identity at both the unique hash host and `develop` alias. It inspects host and path destinations across application types; unsupported or missing destination details block activation. Missing metadata or credentials fail closed. Production and source pull-request checks receive no Access credentials. Service credentials are sent only to those exact reviewed HTTPS origins and redirects are never followed.
+
+For a separately authorized activation, first independently reconcile provider ownership, entitlement, current Pages and DNS settings, both Access applications and all effective overlapping destinations, exact human identities and identity provider, and the adopted service token. Follow [Terraform adoption](../../infra/ADOPTION.md); no local source or mock proves live posture. Create and verify the GitHub `preview` environment independently, with only the exact `develop` branch policy and any separately approved protection rules. The API preflight requires Actions read visibility and an explicit `can_admins_bypass: false` response. The published GitHub environment API schema does not document that field; if it is missing or unobservable, activation is blocked. Independently inspect the controls and prevent changes between inspection and deployment. The preflight checks existing settings before selecting the environment, but it cannot make the provider's settings and job creation atomic.
+
+Place the Access client ID and secret only in that protected environment as `PREVIEW_ACCESS_CLIENT_ID` and `PREVIEW_ACCESS_CLIENT_SECRET`; do not put secrets in Terraform, source, logs, artifacts, or Wrangler configuration. Provide `PREVIEW_ACCESS_CONFIG` as a compact canonical JSON repository variable with exactly the keys and types shown below, replacing every illustrative value with independently approved values. The service token ID is its Cloudflare UUID, not its client ID or secret. The deployment API token additionally needs read access to Access applications, policies, and service tokens; its existing Pages and migration permissions remain separate.
+
+```json
+{"emails":["owner@example.com"],"groups":[],"hostname":"preview.example.com","humanAppId":"11111111-1111-1111-1111-111111111111","idpId":"22222222-2222-2222-2222-222222222222","pagesAppId":"33333333-3333-3333-3333-333333333333","serviceTokenId":"44444444-4444-4444-4444-444444444444"}
+```
+
+After a separately reviewed change resolves the entitlement activation block and independently verifies controls, credentials, and service-token association, an opt-in and fresh deployment require separate authorization. Verify anonymous denial and authenticated identity on the branch alias and new hash host, then reconcile any old accessible deployment or custom hostname independently. Failures after upload may leave a deployment serving; investigate without assuming rollback. Disabling the switch does not remove Access or establish public reachability.
+
+
 ## Set up or restore a deployment
 
 The tracked workflow uses Cloudflare Pages Direct Upload. The current Cloudflare dashboard state is external and unverified by the repository. Choose the path that matches the target before changing provider settings.
@@ -151,7 +180,7 @@ The tracked workflow uses Cloudflare Pages Direct Upload. The current Cloudflare
 
    Count by source IP. A Free-plan baseline of 5 requests per 10 seconds with a 10-second block can reduce abuse, but Cloudflare custom rate-limit responses require Pro or higher. Free-plan rate limiting therefore cannot guarantee the required `application/json` response and must not be documented as fully satisfying the contact API contract. On Pro or higher, explicitly configure the rate-limit or block action for both endpoints with the required JSON response and verify the live status, content type, and body. Plan eligibility alone does not satisfy the prerequisite. Otherwise, use another provider-compatible control that preserves the JSON contract. Do not use an interactive Managed Challenge on either endpoint.
 9. Confirm the active custom-domain, redirect, DNS, and TLS state in Cloudflare. The repository allowlists do not attach a domain.
-10. Push the reviewed change to `develop`. Confirm the workflow applies all pending migrations, including `0002_contact_payload_fingerprint.sql` and `0003_contact_delivery_rendering.sql`, to the preview database before Pages upload. Complete the preview gate, observe its automatic transition or use Continue, and inspect the three data-entry steps, two acknowledgments, and 500-character limit without selecting Send request. This may consume a Turnstile token, but it must not call `/api/contact`, reserve D1 quota, or send email. Reserve any delivery test for a separately authorized owned mailbox.
+10. Push the reviewed change to `develop`. Confirm the workflow applies all pending migrations, including `0002_contact_payload_fingerprint.sql`, `0003_contact_delivery_rendering.sql`, and `0004_contact_ip_quota.sql`, to the preview database before Pages upload. Complete the preview gate, observe its automatic transition or use Continue, and inspect the three data-entry steps, two acknowledgments, and 500-character limit without selecting Send request. This may consume a Turnstile token, but it must not call `/api/contact`, reserve D1 quota, or send email. Reserve any delivery test for a separately authorized owned mailbox.
 11. Merge the verified change to `main` only after the preview and pull-request checks pass. Confirm the same migrations are applied to the production database before Pages upload, then perform the automated and manual no-delivery checks described below.
 
 The WAF rule, active Cloudflare plan, runtime secret presence, branch or ruleset protection, and provider integration state are external prerequisites. Their desired values are documented here, but their current live state is unverified by the tracked files.
@@ -215,7 +244,7 @@ flowchart TD
 
 The exact job graph, receipt contracts, and hosted-evidence limits are maintained in [CI input and evidence contracts](../quality/CI_CONTRACTS.md). `npm run build:generated` invokes Next.js, whose local build-completion adapter normalizes any Windows-emitted nested segment-cache filenames to Next's flat static-export URL layout, and then writes the content version without running the `prebuild` content generator. The normalization is a no-op on the already-flat Linux output and fails on malformed trees or collisions. This keeps generation at one accepted workbook snapshot even if its download needs the single bounded retry. The deploy job does not rebuild or download the workbook.
 
-`quality` runs documentation validation, ESLint with zero warnings, and strict TypeScript checking. The independent `security-scans` job runs the dependency audit for every plan, including no-ops. `unit-integration` runs the complete Vitest suite. Browser discovery creates one complete identity set; its two Chromium functional shards, the separate visual selection, and Firefox critical, WebKit critical, and WebKit mobile Research/Projects selections must cover their exact assignments. `build-and-package` builds once from the accepted bytes, compiles Functions, creates an artifact manifest and CycloneDX SBOM, then seals the release. It scans that exact sealed directory with pinned Gitleaks before uploading either its scan receipt or release artifact; the aggregate requires the distinct scan receipt bound to the sealed manifest. `export-check` restores that same sealed package and validates static output and compiled Pages runtime. Pull-request verification is deliberately deployment-free, but it uses this complete application path rather than a reduced priority tier.
+`quality` runs documentation validation, ESLint with zero warnings, and strict TypeScript checking. The independent `dependency-audit` job runs the dependency audit for every plan, including no-ops. `unit-integration` runs the complete Vitest suite. Browser discovery creates one complete identity set; its two Chromium functional shards, the separate visual selection, and Firefox critical, WebKit critical, and WebKit mobile Research/Projects selections must cover their exact assignments. `build-and-package` builds once from the accepted bytes, compiles Functions, creates an artifact manifest and CycloneDX SBOM, then seals the release. It scans that exact sealed directory with pinned Gitleaks before uploading either its scan receipt or release artifact; the aggregate requires the distinct scan receipt bound to the sealed manifest. `export-check` restores that same sealed package and validates static output and compiled Pages runtime. For eligible PRs, the verified CircleCI impact plan supplies the selected application tests. GitHub retains the native security, build, and export checks on both PR paths.
 
 Consumers restore the original snapshot artifact by immutable same-run ID, provider digest, role, record digest, and producer identity. They do not regenerate content. A consumer rerun continues to use the original producer; a regenerated snapshot, missing or expired artifact, changed lockfile or public-build input, or changed restored bytes invalidates affected receipts and requires a full affected rerun.
 
@@ -225,7 +254,7 @@ The deploy job checks out the same SHA so `functions/`, `migrations/`, and `wran
 
 ## D1 migration lifecycle
 
-Tracked SQL files under `migrations/` are append-only deployment inputs. `0001_contact_rate_reservations.sql` creates the four-column reservation table plus indexes for email-and-expiry lookup and expiry cleanup. `0002_contact_payload_fingerprint.sql` adds the keyed payload-fingerprint column used to reject changed same-ID retries without storing raw fields. `0003_contact_delivery_rendering.sql` adds opaque delivery-configuration and renderer-version fields. Existing rows retain `NULL` in the new fields and fail closed on retry, avoiding a changed configuration or template rerender of an uncertain prior send. Timestamps are Unix epoch seconds. D1 records successful files in its migration ledger, so a later deploy applies only pending migrations.
+Tracked SQL files under `migrations/` are append-only deployment inputs. `0001_contact_rate_reservations.sql` creates the four-column reservation table plus indexes for email-and-expiry lookup and expiry cleanup. `0002_contact_payload_fingerprint.sql` adds the keyed payload-fingerprint column used to reject changed same-ID retries without storing raw fields. `0003_contact_delivery_rendering.sql` adds opaque delivery-configuration and renderer-version fields. Existing rows retain `NULL` in the new fields and fail closed on retry, avoiding a changed configuration or template rerender of an uncertain prior send. `0004_contact_ip_quota.sql` adds a nullable IP HMAC and its lookup index; old rows have unknown IP but continue counting globally and by email. Timestamps are Unix epoch seconds. D1 records successful files in its migration ledger, so a later deploy applies only pending migrations.
 
 The workflow commands are:
 
@@ -310,6 +339,8 @@ Each successful attempt proves:
 6. `GET /api/contact/verify` returns HTTP `405`, an `application/json` content type, `{ "ok": false, "error": "method_not_allowed" }`, `Cache-Control: no-store`, `Referrer-Policy: no-referrer`, and `X-Content-Type-Options: nosniff`.
 7. `GET /api/contact` returns the same exact method-rejection and restrictive-header contract.
 
+On identity-only hosts (the unique deployment host and production assigned alias), both Function paths also reject empty POSTs with HTTP `403` and `request_rejected` for the host’s own Origin and a spoofed canonical Origin. The stable preview alias remains authorized for contact POSTs.
+
 The automated smoke test does not request every static route, test the custom domain, submit a valid Turnstile token, inspect D1 rows, exercise DNS validation, send email, exercise WAF rules, or prove end-to-end contact delivery. Those checks remain part of release and operations verification.
 
 ## Routing and response headers
@@ -319,7 +350,7 @@ The Pages Functions compiler emits sealed `out/_routes.json` only after it match
 - `/api/contact/verify`
 - `/api/contact`
 
-All other route and asset requests remain on the static Pages path. The sealed compiler emits `out/_headers` from the reviewed `public/_headers` source; its static Content Security Policy, permissions policy, referrer policy, HSTS, content-type protection, frame denial, and metadata cache rules are the exact values compared by assigned-alias smoke.
+All other route and asset requests remain on the static Pages path. Release packaging generates `out/_headers` with route-specific script hashes from the exported HTML; its static Content Security Policy, permissions policy, referrer policy, HSTS, content-type protection, frame denial, and metadata cache rules are the exact values compared by assigned-alias smoke.
 
 Pages `_headers` rules do not apply to Function responses. Both Functions set their own JSON content type, no-store caching, referrer, and content-type-sniffing headers.
 
@@ -366,3 +397,5 @@ The daily schedule also starts `develop-schedule-heartbeat`. It compares the new
 The preparation change retains version-1 identity output for existing `build:generated` callers that do not declare `RELEASE_TARGET`. Only the sealed-release builder supplies the explicit target, public-input fingerprint, and producer fields needed for version 2. A PR candidate may record its Actions producer while remaining target `local` and ineligible for deployment. Offline local builds use the explicit local producer.
 
 Preview public-key fingerprinting preserves the existing optional-key behavior: an absent preview key compiles an unavailable contact widget and never falls back to the production key. Its empty-value digest changes when a preview key is configured, invalidating deployment equivalence. Production still requires its configured public key.
+
+For a manual, bounded, read-only observation of published targets and GitHub governance, including its evidence limitations and reconciliation steps, see [Runtime posture](RUNTIME_POSTURE.md). It is separate from deployment and provider-control adoption.

@@ -46,7 +46,9 @@ describe("package and CI deployment automation", () => {
     expect(nextConfigSource).toMatch(/adapterPath:\s*fileURLToPath\(new URL\("\.\/scripts\/nextBuildAdapter\.mjs"/);
     expect(nextConfigSource).toMatch(/output:\s*"export"/);
     expect(packageJson.scripts["dev:pages"]).toContain("npx --no-install wrangler");
-    expect(packageJson.scripts["docs:check"]).toBe("node scripts/validateDocumentation.mjs");
+    expect(packageJson.scripts["docs:check"]).toBe("node scripts/validateDocumentation.mjs && npm run agents:check");
+    expect(packageJson.scripts["route:agent"]).toBe("node scripts/routeAgentWork.mjs");
+    expect(packageJson.scripts["agents:check"]).toBe("node scripts/agentNavigation.mjs --check");
     expect(packageJson.scripts["audit:check"]).toBe("node scripts/checkDependencyAudit.mjs");
     expect(packageJson.scripts["generate:content"]).toBe("node scripts/generateContent.mjs");
     expect(packageJson.scripts.verify).toBe("node scripts/runVerification.mjs verify");
@@ -54,13 +56,17 @@ describe("package and CI deployment automation", () => {
     expect(packageJson.scripts["test:priority"]).toBe(
       "node scripts/runValidationTier.mjs priority"
     );
-    expect(packageJson.dependencies.next).toBe("^16.4.0");
-    expect(packageJson.devDependencies["@next/eslint-plugin-next"]).toBe("^16.4.0");
-    expect(packageJson.devDependencies.wrangler).toBe("4.148.0");
-    expect(packageJson.devDependencies.miniflare).toBe("5.20261006.0-alpha");
+    expect(packageJson.dependencies.next).toBe("^16.4.6");
+    expect(packageJson.devDependencies["@next/eslint-plugin-next"]).toBe("^16.4.6");
+    expect(packageJson.devDependencies["@testing-library/dom"]).toBe("10.4.1");
+    expect(packageJson.devDependencies.wrangler).toBe("4.160.1");
+    expect(packageJson.devDependencies.miniflare).toBe("5.20261110.1-beta");
     expect(packageJson.devDependencies.yaml).toBe("2.9.1");
     expect(packageJson.devDependencies["js-yaml"]).toBeUndefined();
+    expect(packageJson.devDependencies["typescript-eslint"]).toBe("8.72.2");
     expect(packageJson.devDependencies.vitest).toBe("4.1.12");
+    expect(packageJson.overrides.vite).toBe("8.2.4");
+    expect(packageJson.overrides["@typescript-eslint/typescript-estree"].minimatch).toBe("11.0.8");
     expect(packageJson.devDependencies["@playwright/test"]).toMatch(/^\^1\./);
     expect(packageJson.scripts["test:footer"]).toBe(
       "vitest run src/components/layout/InteractiveBlobFooter.test.tsx src/components/layout/footerStyles.test.ts"
@@ -204,12 +210,30 @@ describe("package and CI deployment automation", () => {
     expect(metrics["continue-on-error"]).toBe(true);
     expect(workflow.jobs.verify.outputs.accepted).toBe("${{ steps.gate.outputs.accepted }}");
     expect(workflow.jobs.verify.steps.find((step) => step.id === "gate")["continue-on-error"]).toBeUndefined();
-    const audit = workflow.jobs["security-scans"].steps.filter((step) => step.run === "npm run audit:check");
+    const audit = workflow.jobs["dependency-audit"].steps.filter((step) => step.run === "npm run audit:check");
     expect(audit).toHaveLength(1);
     expect(audit[0].if).toBeUndefined();
     expect(audit[0]["continue-on-error"]).toBeUndefined();
-    expect(workflow.jobs["security-scans"].if).toBeUndefined();
+    expect(workflow.jobs["dependency-audit"].if).toBeUndefined();
     expect(workflow.jobs.quality.steps.some((step) => (step.run ?? "").includes("audit:check"))).toBe(false);
+    for (const lane of ["security-tools", "history-secrets", "workflow-security", "dependency-audit", "codeql", "infrastructure"]) {
+      const job = workflow.jobs[lane];
+      expect(job.if).toBeUndefined();
+      expect(job.needs).toBe("resolve-candidate");
+      expect(job.steps.every((step) => step.if === undefined)).toBe(true);
+      const receiptIndex = job.steps.findIndex((step) => step.run === "node scripts/ci/run.mjs source-receipt");
+      const uploadIndex = job.steps.findIndex((step) => step.id === "receipt");
+      expect(receiptIndex).toBeGreaterThan(0);
+      expect(uploadIndex).toBeGreaterThan(receiptIndex);
+      expect(job.steps[uploadIndex].with).toMatchObject({ name: "${{ steps.evidence.outputs.receipt_name }}", path: "${{ steps.evidence.outputs.receipt_path }}", "if-no-files-found": "error" });
+    }
+    const historyRuns = workflow.jobs["history-secrets"].steps.map((step) => step.run ?? "").join("\n");
+    const workflowRuns = workflow.jobs["workflow-security"].steps.map((step) => step.run ?? "").join("\n");
+    expect(historyRuns).toContain("--gitleaks-mode git");
+    expect(historyRuns).not.toContain("--zizmor");
+    expect(workflowRuns).toContain("--zizmor");
+    expect(workflowRuns).not.toContain("--gitleaks");
+    expect(workflow.jobs.codeql.steps.some((step) => step.uses?.includes("upload-sarif"))).toBe(false);
     const toolRuns = workflow.jobs["security-tools"].steps.map((step) => step.run ?? "").join("\n");
     expect(toolRuns).toContain("-shellcheck ''");
     expect(toolRuns).toContain("-pyflakes ''");
@@ -273,7 +297,7 @@ describe("package and CI deployment automation", () => {
     expect(deploy.env.CI_ACCEPTANCE).toContain("needs.verify.outputs.acceptance");
     expect(deploy.env.CI_RELEASE_REFERENCE).toContain("outputs.release_reference");
     expect(deploy.steps[mutate].env.CLOUDFLARE_API_TOKEN).toContain("secrets.");
-    expect(deploy.environment).toBeUndefined(); // activation is a separate operational change
+    expect(deploy.environment).toBe("${{ needs['preview-environment'].outputs.environment }}"); // The selection blocks active preview until entitlement review.
   });
 
   it("sets no-cache headers for both deployment metadata files", async () => {
@@ -294,10 +318,10 @@ describe("package and CI deployment automation", () => {
       expect(serializedConfig).not.toContain(secretName);
     }
     expect(wranglerConfig.vars.TURNSTILE_ALLOWED_HOSTNAMES).toBe(
-      "smart-portfolio-bds.pages.dev,nicolasmgioanni.dev,www.nicolasmgioanni.dev"
+      "nicolasmgioanni.dev"
     );
     expect(wranglerConfig.vars.CONTACT_ALLOWED_ORIGINS).toBe(
-      "https://smart-portfolio-bds.pages.dev,https://nicolasmgioanni.dev,https://www.nicolasmgioanni.dev"
+      "https://nicolasmgioanni.dev"
     );
     expect(wranglerConfig.vars.CONTACT_FROM_EMAIL).toBe(
       "Nicolas Gioanni <noreply@mail.nicolasmgioanni.dev>"

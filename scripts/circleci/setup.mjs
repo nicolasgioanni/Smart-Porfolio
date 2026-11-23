@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { createImpactPlan } from './impact.mjs';
+import { assertSourceIdentity } from '../ci/sourceIdentity.mjs';
 
 const git = (...args) => execFileSync('git', args, { encoding: 'utf8', timeout: 30_000 });
 const installNode = `nvm install 22.23.3 && nvm use 22.23.3 && test "$(node -v)" = v22.23.3 && printf 'export PATH="%s:$PATH"\\n' "$(dirname "$(command -v node)")" >> "$BASH_ENV" && npm ci`;
@@ -79,11 +80,24 @@ export async function resolveImpactInputs(env, headSha, { runGit = git, fetcher 
     return { baseSha, changedPaths, trigger: 'pull_request' };
   } catch { return fallback; }
 }
+// Handoff is deliberately not CircleCI acceptance evidence. Unknown and forced
+// contexts continue through the full independent CircleCI validation graph.
+export function nativeOwnsValidation(env, plan) {
+  if (env.FORCE_FULL !== 'false' || env.CIRCLE_TAG || env.PIPELINE_TRIGGER !== 'github_app' || plan.forceFull || typeof env.CIRCLE_BRANCH !== 'string' || !env.CIRCLE_BRANCH) return false;
+  if (env.PIPELINE_EVENT === 'push' && ['main', 'develop'].includes(env.CIRCLE_BRANCH)) return true;
+  return ['push', 'pull_request'].includes(env.PIPELINE_EVENT) && plan.trigger === 'pull_request' && plan.tier === 'full' && !['main', 'develop'].includes(env.CIRCLE_BRANCH);
+}
 export async function main(env = process.env) {
   const headSha = git('rev-parse', 'HEAD').trim();
   if (headSha !== env.CIRCLE_SHA1) throw new Error('Checkout does not match pipeline revision.');
+  assertSourceIdentity(process.cwd(), headSha, { stage: 'CircleCI setup' });
   const { baseSha, changedPaths, trigger } = await resolveImpactInputs(env, headSha);
   const plan = createImpactPlan({ changedPaths, baseSha, headSha, forceFull: env.FORCE_FULL === 'true', trigger });
+  assertSourceIdentity(process.cwd(), headSha, { stage: 'CircleCI setup completion' });
+  if (nativeOwnsValidation(env, plan)) {
+    console.log('Native CI owns full validation; CircleCI setup ends without acceptance evidence.');
+    return;
+  }
   const configuration = continuationConfig(plan.validators, plan);
   await continuePipeline(env.CIRCLE_CONTINUATION_KEY, configuration);
   console.log(`Selected ${plan.tier} validation: ${plan.validators.join(', ')}.`);

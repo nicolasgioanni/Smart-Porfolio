@@ -73,6 +73,13 @@ export function publicBuildInputDigest(inputs) {
   return sha256(canonicalJson(parsePublicBuildInputs(inputs)));
 }
 
+// Derive the expected browser behavior only after authenticating the complete
+// build input identity against the sealed candidate.
+export function turnstileEnabledForSealedInputs(inputs, expectedDigest) {
+  if (publicBuildInputDigest(inputs) !== expectedDigest) throw new Error("Sealed public build inputs do not match the candidate");
+  return inputs.keyDigest !== sha256("");
+}
+
 async function readJson(filePath) {
   try {
     return JSON.parse(await readFile(filePath, "utf8"));

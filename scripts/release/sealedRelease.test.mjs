@@ -12,7 +12,7 @@ const candidate = {
   sourceCommit: "a".repeat(40), contentHash: "b".repeat(64), contentSnapshotHash: "c".repeat(64), snapshotRecordDigest: "d".repeat(64),
   publicBuildInputDigest: "e".repeat(64), migrationsHash: "f".repeat(64), wranglerConfigHash: "0".repeat(64), sourceMode: "remote", target: "preview",
   producer: { kind: "github-actions", runId: "31", runNumber: 12, attempt: 2 },
-  toolchain: { node: "v22.23.3", next: "16.4.0", wrangler: "4.148.0", compatibilityDate: "2026-08-27", compatibilityFlags: [], lockfileHash: "1".repeat(64) }
+  toolchain: { node: "v22.23.3", next: "16.4.6", wrangler: "4.160.1", compatibilityDate: "2026-08-27", compatibilityFlags: [], lockfileHash: "1".repeat(64) }
 };
 
 const digest = (value) => createHash("sha256").update(value).digest("hex");

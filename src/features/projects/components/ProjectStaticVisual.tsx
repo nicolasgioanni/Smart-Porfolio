@@ -18,7 +18,7 @@ export function ProjectStaticVisual({ diagramAction, previewAction, projectId, p
         <ProjectPreview action={previewAction} preview={visual.preview} />
       </div>
       <details className="project-visual-static__details">
-        <summary>How it works</summary>
+        <summary>Architecture</summary>
         <ProjectDiagramLink action={diagramAction} diagram={visual.diagram} id={`${projectId}-static`} projectId={projectId} />
       </details>
     </div>

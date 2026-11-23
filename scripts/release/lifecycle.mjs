@@ -9,7 +9,7 @@ import { createArtifactManifest, verifyArtifactManifest } from "../artifactInteg
 import { runCommand as runLocalAutomationCommand } from "../lib/localAutomation.mjs";
 import { readContentVersion } from "../writeContentVersion.mjs";
 import { createStaticCsp } from "./csp.mjs";
-import { effectivePublicBuildEnvironment, collectPublicBuildInputs, publicBuildInputDigest } from "./publicBuildInputs.mjs";
+import { effectivePublicBuildEnvironment, collectPublicBuildInputs, publicBuildInputDigest, turnstileEnabledForSealedInputs } from "./publicBuildInputs.mjs";
 import { packageSealedRelease, verifySealedRelease } from "./sealedRelease.mjs";
 import { readRegularFile } from "../lib/readRegularFile.mjs";
 import { validateRuntimeConfig } from "./runtimeConfig.mjs";
@@ -302,9 +302,12 @@ export async function verifyPackagedRuntime({ projectRoot = process.cwd(), relea
     target: manifest.candidate.target,
     toolchain: manifest.candidate.toolchain
   });
+  const inputs = await collectPublicBuildInputs({ projectRoot: root, target: manifest.candidate.target,
+    sourceCommit: manifest.candidate.sourceCommit, environment });
+  const turnstileEnabled = turnstileEnabledForSealedInputs(inputs, manifest.candidate.publicBuildInputDigest);
   const { compatibilityDate, compatibilityFlags } = runtime.target;
   await verifyCompiledWorker({ outDirectory: path.join(release, "out"), compatibilityDate, compatibilityFlags });
-  await runCommand("npm", ["run", "test:e2e:release-static"], { cwd: root, env: { ...environment, PLAYWRIGHT_RELEASE_OUT: path.join(release, "out") } });
+  await runCommand("npm", ["run", "test:e2e:release-static"], { cwd: root, env: { ...environment, PLAYWRIGHT_RELEASE_OUT: path.join(release, "out"), PLAYWRIGHT_RELEASE_TURNSTILE_ENABLED: String(turnstileEnabled) } });
   await verifySealedRelease(release, { sourceCommit: manifest.candidate.sourceCommit, contentHash: manifest.candidate.contentHash, target: manifest.candidate.target, publicBuildInputDigest: manifest.candidate.publicBuildInputDigest });
   return manifest;
 }

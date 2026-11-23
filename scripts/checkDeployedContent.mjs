@@ -1,3 +1,4 @@
+import { previewHeaders } from "./ci/previewAccess.mjs";
 import assert from "node:assert/strict";
 import { appendFile, readFile } from "node:fs/promises";
 import path from "node:path";
@@ -17,6 +18,37 @@ const staticHeaderNames = new Map([
   ["x-content-type-options", "X-Content-Type-Options"],
   ["x-frame-options", "X-Frame-Options"]
 ]);
+
+export function assertCanonicalHomepageHtml(rootHtml) {
+  if (typeof rootHtml !== "string") throw new Error("Deployment root did not return HTML");
+  const canonicalTag = (rootHtml.match(/<link\b[^>]*>/gi) ?? []).find((tag) =>
+    /\brel\s*=\s*(["'])canonical\1/i.test(tag)
+  );
+  const canonicalHref = canonicalTag?.match(/\bhref\s*=\s*(["'])([^"']+)\1/i)?.[2];
+  assert.ok(canonicalHref, "Deployment root did not declare a canonical link");
+
+  let deployedCanonical;
+  try {
+    deployedCanonical = new URL(canonicalHref);
+  } catch {
+    throw new Error("Deployment root canonical link is not an absolute URL");
+  }
+  assert.equal(deployedCanonical.origin, canonicalHomepageUrl.origin, "Deployment root canonical origin is incorrect");
+  assert.equal(deployedCanonical.pathname, canonicalHomepageUrl.pathname, "Deployment root canonical path is incorrect");
+  assert.equal(deployedCanonical.search, "", "Deployment root canonical must not contain a query string");
+  assert.equal(deployedCanonical.hash, "", "Deployment root canonical must not contain a fragment");
+}
+
+export function assertExactDeploymentText(actual, expected, mediaTypePattern, endpoint) {
+  assert.match(actual.contentType ?? "", mediaTypePattern, `${endpoint} returned an unexpected content type`);
+  assert.equal(actual.body, expected, `${endpoint} does not match the verified upload`);
+}
+
+export function assertMethodNotAllowedResponse(status, contentType, body, endpoint) {
+  assert.equal(status, 405, `/${endpoint} did not reject a GET request with HTTP 405`);
+  assert.match(contentType ?? "", /^application\/json\b/i, `/${endpoint} did not return JSON`);
+  assert.deepEqual(body, { ok: false, error: "method_not_allowed" }, `/${endpoint} did not return the expected method rejection`);
+}
 
 export function resolvePagesDeploymentUrl(pagesDomain, branch) {
   if (typeof pagesDomain !== "string" || !pagesDomainPattern.test(pagesDomain)) {
@@ -47,9 +79,9 @@ function endpointUrl(baseUrl, endpoint, cacheBust) {
   return url;
 }
 
-async function fetchNoCache(url, { allowNotFound = false, rejectRedirect = false } = {}) {
+async function fetchNoCache(url, { allowNotFound = false, rejectRedirect = false, headers = {} } = {}) {
   const response = await fetch(url, {
-    headers: { "Cache-Control": "no-cache", Pragma: "no-cache" },
+    headers: { "Cache-Control": "no-cache", Pragma: "no-cache", ...headers },
     redirect: rejectRedirect ? "manual" : "follow",
     signal: AbortSignal.timeout(20_000)
   });
@@ -120,6 +152,57 @@ export function assertFunctionHeaders(response, endpoint) {
   assert.equal(response.headers.get("permissions-policy"), "camera=(), geolocation=(), microphone=(), payment=(), usb=()", `/${endpoint} must disable sensitive browser features`);
   assert.equal(response.headers.get("strict-transport-security"), "max-age=31536000", `/${endpoint} must retain transport security`);
   assert.equal(response.headers.get("x-frame-options"), "DENY", `/${endpoint} must reject framing`);
+}
+
+// One deadline covers both response headers and the bounded JSON body.
+export async function checkFunctionResponse(url, endpoint, { method = "GET", origin, headers = {}, signal = AbortSignal.timeout(20_000), fetchImplementation = fetch } = {}) {
+  let abort;
+  const expired = new Promise((_, reject) => {
+    abort = () => reject(new Error(`/${endpoint} response timed out`));
+    signal.addEventListener("abort", abort, { once: true });
+    if (signal.aborted) abort();
+  });
+  let response;
+  let reader;
+  let completed = false;
+  try {
+    const pending = Promise.resolve().then(() => fetchImplementation(url, {
+      method, headers: { "Cache-Control": "no-cache", Pragma: "no-cache", ...headers, ...(origin ? { Origin: origin, "Content-Type": "application/json" } : {}) },
+      ...(origin ? { body: "{}" } : {}), redirect: "manual", signal
+    }));
+    // If headers arrive after the deadline, discard the late response as well.
+    void pending.then((late) => { if (signal.aborted) void late.body?.cancel().catch(() => {}); }, () => {});
+    response = await Promise.race([pending, expired]);
+    const expectedStatus = method === "GET" ? 405 : 403;
+    assert.equal(response.status, expectedStatus, `/${endpoint} returned an unexpected status`);
+    assert.match(response.headers.get("content-type") ?? "", /^application\/json\b/i, `/${endpoint} did not return JSON`);
+    assertFunctionHeaders(response, endpoint);
+    const declaredLength = response.headers.get("content-length");
+    if (declaredLength !== null && (!/^(?:0|[1-9][0-9]*)$/.test(declaredLength) || Number(declaredLength) > 16 * 1024)) {
+      throw new Error(`/${endpoint} response exceeds its budget or has an invalid length`);
+    }
+    if (!response.body) throw new Error(`/${endpoint} response has no body`);
+    reader = response.body.getReader();
+    const chunks = [];
+    let size = 0;
+    for (;;) {
+      const item = await Promise.race([reader.read(), expired]);
+      if (!item || typeof item.done !== "boolean") throw new Error(`/${endpoint} response is malformed`);
+      if (item.done) break;
+      if (Object.prototype.toString.call(item.value) !== "[object Uint8Array]") throw new Error(`/${endpoint} response is malformed`);
+      size += item.value.byteLength;
+      if (size > 16 * 1024) throw new Error(`/${endpoint} response exceeds its budget`);
+      chunks.push(Buffer.from(item.value));
+    }
+    const value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(Buffer.concat(chunks)));
+    assert.deepEqual(value, { ok: false, error: method === "GET" ? "method_not_allowed" : "request_rejected" });
+    completed = true;
+  } finally {
+    signal.removeEventListener("abort", abort);
+    if (!completed) {
+      try { void (reader ? reader.cancel() : response?.body?.cancel())?.catch(() => {}); } catch { /* Best-effort cleanup. */ }
+    }
+  }
 }
 
 export async function assertRootResponse(response, artifactDirectory) {
@@ -234,33 +317,18 @@ export function decideDeployment(candidateValue, deployedValue) {
   return { action: "full-verification", reason: "candidate-generation-is-newer" };
 }
 
-async function smokeAttempt(baseUrl, artifactDirectory, expectedContentHash, expectedCommitSha, cacheBust) {
-  const rootResponse = await fetchNoCache(endpointUrl(baseUrl, "/", cacheBust), { rejectRedirect: true });
+async function smokeAttempt(baseUrl, artifactDirectory, expectedContentHash, expectedCommitSha, cacheBust, headers) {
+  const rootResponse = await fetchNoCache(endpointUrl(baseUrl, "/", cacheBust), { rejectRedirect: true, headers });
   const rootHtml = await assertRootResponse(rootResponse, artifactDirectory);
-  const canonicalTag = (rootHtml.match(/<link\b[^>]*>/gi) ?? []).find((tag) =>
-    /\brel\s*=\s*(["'])canonical\1/i.test(tag)
-  );
-  const canonicalHref = canonicalTag?.match(/\bhref\s*=\s*(["'])([^"']+)\1/i)?.[2];
-  assert.ok(canonicalHref, "Deployment root did not declare a canonical link");
+  assertCanonicalHomepageHtml(rootHtml);
 
-  let deployedCanonical;
-  try {
-    deployedCanonical = new URL(canonicalHref);
-  } catch {
-    throw new Error("Deployment root canonical link is not an absolute URL");
-  }
-  assert.equal(deployedCanonical.origin, canonicalHomepageUrl.origin, "Deployment root canonical origin is incorrect");
-  assert.equal(deployedCanonical.pathname, canonicalHomepageUrl.pathname, "Deployment root canonical path is incorrect");
-  assert.equal(deployedCanonical.search, "", "Deployment root canonical must not contain a query string");
-  assert.equal(deployedCanonical.hash, "", "Deployment root canonical must not contain a fragment");
-
-  const versionResponse = await fetchNoCache(endpointUrl(baseUrl, "content-version.json", cacheBust), { rejectRedirect: true });
+  const versionResponse = await fetchNoCache(endpointUrl(baseUrl, "content-version.json", cacheBust), { rejectRedirect: true, headers });
   assertNoCacheMetadataHeaders(versionResponse, "content-version.json");
   const deployedVersion = parseContentVersion(await versionResponse.json());
   assert.equal(deployedVersion.contentHash, expectedContentHash, "Deployed content hash is stale");
   assert.equal(deployedVersion.commitSha, expectedCommitSha, "Deployed commit SHA is stale");
 
-  const manifestResponse = await fetchNoCache(endpointUrl(baseUrl, artifactManifestFileName, cacheBust), { rejectRedirect: true });
+  const manifestResponse = await fetchNoCache(endpointUrl(baseUrl, artifactManifestFileName, cacheBust), { rejectRedirect: true, headers });
   assertNoCacheMetadataHeaders(manifestResponse, artifactManifestFileName);
   const deployedManifest = await manifestResponse.json();
   const localManifest = JSON.parse(
@@ -268,52 +336,35 @@ async function smokeAttempt(baseUrl, artifactDirectory, expectedContentHash, exp
   );
   assert.deepEqual(deployedManifest, localManifest, "Deployed artifact manifest does not match the verified upload");
 
-  const robotsResponse = await fetchNoCache(endpointUrl(baseUrl, "robots.txt", cacheBust), { rejectRedirect: true });
-  assert.match(
-    robotsResponse.headers.get("content-type") ?? "",
-    /^text\/plain\b/i,
-    "/robots.txt did not return plain text"
-  );
-  assert.equal(
-    await robotsResponse.text(),
-    await readFile(path.join(path.resolve(artifactDirectory), "robots.txt"), "utf8"),
-    "Deployed robots.txt does not match the verified upload"
+  const robotsResponse = await fetchNoCache(endpointUrl(baseUrl, "robots.txt", cacheBust), { rejectRedirect: true, headers });
+  assertExactDeploymentText(
+    { contentType: robotsResponse.headers.get("content-type"), body: await robotsResponse.text() },
+    await readFile(path.join(path.resolve(artifactDirectory), "robots.txt"), "utf8"), /^text\/plain\b/i, "/robots.txt"
   );
 
-  const sitemapResponse = await fetchNoCache(endpointUrl(baseUrl, "sitemap.xml", cacheBust), { rejectRedirect: true });
-  assert.match(
-    sitemapResponse.headers.get("content-type") ?? "",
-    /^(?:application|text)\/(?:xml|[a-z0-9!#$&^_.+-]+\+xml)(?:\s*;|$)/i,
-    "/sitemap.xml did not return XML"
-  );
-  assert.equal(
-    await sitemapResponse.text(),
+  const sitemapResponse = await fetchNoCache(endpointUrl(baseUrl, "sitemap.xml", cacheBust), { rejectRedirect: true, headers });
+  assertExactDeploymentText(
+    { contentType: sitemapResponse.headers.get("content-type"), body: await sitemapResponse.text() },
+
     await readFile(path.join(path.resolve(artifactDirectory), "sitemap.xml"), "utf8"),
-    "Deployed sitemap.xml does not match the verified upload"
+    /^(?:application|text)\/(?:xml|[a-z0-9!#$&^_.+-]+\+xml)(?:\s*;|$)/i, "/sitemap.xml"
   );
 
   for (const endpoint of ["api/contact/verify", "api/contact"]) {
-    const apiResponse = await fetch(endpointUrl(baseUrl, endpoint, cacheBust), {
-      headers: { "Cache-Control": "no-cache", Pragma: "no-cache" },
-      redirect: "manual",
-      signal: AbortSignal.timeout(20_000)
-    });
-    assert.equal(apiResponse.status, 405, `/${endpoint} did not reject a GET request with HTTP 405`);
-    assert.match(
-      apiResponse.headers.get("content-type") ?? "",
-      /^application\/json\b/i,
-      `/${endpoint} did not return JSON`
-    );
-    assertFunctionHeaders(apiResponse, endpoint);
-    assert.deepEqual(
-      await apiResponse.json(),
-      { ok: false, error: "method_not_allowed" },
-      `/${endpoint} did not return the expected method rejection`
-    );
+    await checkFunctionResponse(endpointUrl(baseUrl, endpoint, cacheBust), endpoint, { headers });
+    // Unique deployment hosts and the assigned production alias establish artifact
+    // identity, but are not authorized to issue contact tickets or send mail.
+    const origin = normalizeBaseUrl(baseUrl).origin;
+    if (origin !== "https://nicolasmgioanni.dev" && origin !== "https://develop.smart-portfolio-bds.pages.dev") {
+      for (const claimedOrigin of [origin, "https://nicolasmgioanni.dev"]) {
+        await checkFunctionResponse(endpointUrl(baseUrl, endpoint, cacheBust), endpoint, { method: "POST", origin: claimedOrigin, headers });
+      }
+    }
   }
 }
 
-export async function smokeDeployment(baseUrl, artifactDirectory, expectedContentHash, expectedCommitSha) {
+export async function smokeDeployment(baseUrl, artifactDirectory, expectedContentHash, expectedCommitSha, options = {}) {
+  const headers = options.privatePreview ? previewHeaders(normalizeBaseUrl(baseUrl).origin, options.environment) : {};
   if (!contentHashPattern.test(expectedContentHash)) throw new Error("Expected content hash is invalid");
   if (!gitShaPattern.test(expectedCommitSha)) throw new Error("Expected commit SHA is invalid");
 
@@ -325,7 +376,8 @@ export async function smokeDeployment(baseUrl, artifactDirectory, expectedConten
         artifactDirectory,
         expectedContentHash,
         expectedCommitSha,
-        `${expectedCommitSha}-${Date.now()}-${attempt}`
+        `${expectedCommitSha}-${Date.now()}-${attempt}`,
+        headers
       );
       console.log(`Deployment smoke checks passed for ${normalizeBaseUrl(baseUrl).origin}.`);
       return;

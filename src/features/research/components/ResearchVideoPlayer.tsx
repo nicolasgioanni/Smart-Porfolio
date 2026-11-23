@@ -389,9 +389,13 @@ export function ResearchVideoPlayer({
 
   useLayoutEffect(() => {
     if (settingsView !== "root" || !restoreSpeedMenuFocusRef.current) return;
-    restoreSpeedMenuFocusRef.current = false;
     if (programmaticPointerSettingsFocusRef.current) suppressSettingsFocusRef.current = true;
     speedMenuButtonRef.current?.focus();
+    // WebKit delivers the inert speed-view blur after this layout effect; keep
+    // the handoff marker through that microtask so it cannot dismiss root.
+    queueMicrotask(() => {
+      restoreSpeedMenuFocusRef.current = false;
+    });
   }, [settingsView]);
 
   useLayoutEffect(() => {
@@ -814,6 +818,7 @@ export function ResearchVideoPlayer({
     setSettingsOpen(false);
     setSettingsPinned(false);
     setSettingsView("root");
+    restoreSpeedMenuFocusRef.current = false;
     programmaticPointerSettingsFocusRef.current = false;
     settingsPointerIntentRef.current = false;
   }
@@ -1009,6 +1014,11 @@ export function ResearchVideoPlayer({
         element instanceof Element && Boolean(element.closest(".research-video-player__settings"));
       const focusWithinSound = isWithinSound(activeElement) || isWithinSound(nextFocusTarget);
       const focusWithinSettings = isWithinSettings(activeElement) || isWithinSettings(nextFocusTarget);
+      if (restoreSpeedMenuFocusRef.current) {
+        setSettingsPinned(true);
+        setKeyboardFocusWithin(true);
+        return;
+      }
       const keyboardFocus = hasKeyboardVisibleFocus();
       setKeyboardFocusWithin(keyboardFocus);
       if (volumeOpen && volumePinned && !volumeOpenedByTouch && !volumeDraggingRef.current && !focusWithinSound) closeVolumeRange();
@@ -1165,6 +1175,8 @@ export function ResearchVideoPlayer({
     hasEnhancedCaptionLayers &&
     (captionVisible || captionExiting) &&
     (captionGeometry.suppressCenterControl || settingsOpen);
+  const canExpandPlayer = Boolean(showExpandControl && onRequestExpand && !fullscreen && !fullscreenFallbackActive);
+  const hasSettingsSecondary = pictureInPictureSupported || canExpandPlayer;
   const message = statusMessage(status);
 
   return (
@@ -1457,68 +1469,73 @@ export function ResearchVideoPlayer({
             ref={settingsPopoverRef}
             role="group"
           >
-            <div
-              aria-hidden={settingsView !== "root"}
-              className="research-video-player__settings-root"
-              data-open={settingsView === "root" ? "true" : "false"}
-              inert={settingsView !== "root"}
-            >
-              <button
-                aria-controls={`${settingsId}-speeds`}
-                aria-expanded={settingsView === "speeds"}
-                className="research-video-player__settings-item"
-                onClick={openSpeedMenu}
-                ref={speedMenuButtonRef}
-                type="button"
+            <div className="research-video-player__settings-viewport">
+              <div
+                aria-hidden={settingsView !== "root"}
+                className="research-video-player__settings-root"
+                data-open={settingsView === "root" ? "true" : "false"}
+                inert={settingsView !== "root"}
               >
-                Playback speed: {playbackRateText}
-              </button>
-              <div className="research-video-player__settings-secondary">
-                {pictureInPictureSupported ? (
-                  <button className="research-video-player__settings-item" onClick={togglePictureInPicture} type="button">
-                    {inPictureInPicture ? "Exit picture in picture" : "Picture in picture"}
-                  </button>
-                ) : null}
-                {showExpandControl && onRequestExpand && !fullscreen && !fullscreenFallbackActive ? (
-                  <button className="research-video-player__settings-item" onClick={requestExpandedPlayer} type="button">
-                    Open enlarged player
-                  </button>
+                <button
+                  aria-controls={`${settingsId}-speeds`}
+                  aria-expanded={settingsView === "speeds"}
+                  className="research-video-player__settings-item"
+                  onClick={openSpeedMenu}
+                  ref={speedMenuButtonRef}
+                  type="button"
+                >
+                  Playback speed: {playbackRateText}
+                </button>
+                {hasSettingsSecondary ? (
+                  <div className="research-video-player__settings-secondary">
+                    {pictureInPictureSupported ? (
+                      <button className="research-video-player__settings-item" onClick={togglePictureInPicture} type="button">
+                        {inPictureInPicture ? "Exit picture in picture" : "Picture in picture"}
+                      </button>
+                    ) : null}
+                    {canExpandPlayer ? (
+                      <button className="research-video-player__settings-item" onClick={requestExpandedPlayer} type="button">
+                        Open enlarged player
+                      </button>
+                    ) : null}
+                  </div>
                 ) : null}
               </div>
-            </div>
-            <div
-              aria-hidden={settingsView !== "speeds"}
-              className="research-video-player__settings-speeds"
-              data-open={settingsView === "speeds" ? "true" : "false"}
-              id={`${settingsId}-speeds`}
-              inert={settingsView !== "speeds"}
-            >
-              <button
-                aria-label="Back to video settings"
-                className="research-video-player__settings-back"
-                onClick={() => closeSpeedMenu(true)}
-                title="Back to video settings"
-                type="button"
+              <div
+                aria-hidden={settingsView !== "speeds"}
+                className="research-video-player__settings-speeds"
+                data-open={settingsView === "speeds" ? "true" : "false"}
+                id={`${settingsId}-speeds`}
+                inert={settingsView !== "speeds"}
               >
-                <LinkIcon kind="back" />
-              </button>
-              <div className="research-video-player__speed-control">
-                <p className="research-video-player__speed-rate">{playbackRateText}</p>
-                <input
-                  aria-label="Playback speed"
-                  aria-valuetext={playbackRateText}
-                  className="research-video-player__speed-range"
-                  max="5"
-                  min="0"
-                  onChange={(event) => changePlaybackRate(Number(event.target.value))}
-                  ref={speedRangeRef}
-                  step="1"
-                  type="range"
-                  value={playbackRateIndex}
-                />
-                <div aria-hidden="true" className="research-video-player__speed-endpoints">
-                  <span>0.5x</span>
-                  <span>2x</span>
+                <button
+                  aria-label="Back to video settings"
+                  className="research-video-player__settings-back"
+                  onClick={() => closeSpeedMenu(true)}
+                  onPointerDown={(event) => event.preventDefault()}
+                  title="Back to video settings"
+                  type="button"
+                >
+                  <LinkIcon kind="back" />
+                </button>
+                <div className="research-video-player__speed-control">
+                  <p className="research-video-player__speed-rate">{playbackRateText}</p>
+                  <input
+                    aria-label="Playback speed"
+                    aria-valuetext={playbackRateText}
+                    className="research-video-player__speed-range"
+                    max="5"
+                    min="0"
+                    onChange={(event) => changePlaybackRate(Number(event.target.value))}
+                    ref={speedRangeRef}
+                    step="1"
+                    type="range"
+                    value={playbackRateIndex}
+                  />
+                  <div aria-hidden="true" className="research-video-player__speed-endpoints">
+                    <span>0.5x</span>
+                    <span>2x</span>
+                  </div>
                 </div>
               </div>
             </div>

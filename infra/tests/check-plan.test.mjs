@@ -194,6 +194,8 @@ test("binds the saved collector plan to the verified sealed bundle path, digest,
 
 test("rejects every permanent-branch ruleset control mutation", () => {
   const cases = [
+    ["extra ref", "github_repository_ruleset.permanent_branches", (values) => { values.conditions[0].ref_name[0].include.push("refs/heads/feature"); }, "exactly main and develop"],
+    ["excluded ref", "github_repository_ruleset.permanent_branches", (values) => { values.conditions[0].ref_name[0].exclude = ["refs/heads/develop"]; }, "exactly main and develop"],
     ["scope", "github_repository_ruleset.permanent_branches", (values) => { values.conditions[0].ref_name[0].include = ["refs/heads/main"]; }, "exactly main and develop"],
     ["name", "github_repository_ruleset.permanent_branches", (values) => { values.name = "replacement-ruleset"; }, "one active"],
     ["enforcement", "github_repository_ruleset.permanent_branches", (values) => { values.enforcement = "evaluate"; }, "one active"],
@@ -216,6 +218,10 @@ test("rejects malformed, partial, destructive, mismatched, unsupported, and unkn
   missing.planned_values.root_module.resources = missing.planned_values.root_module.resources.filter((item) => item.address !== "cloudflare_r2_bucket_lock.release_control");
   missing.resource_changes = missing.resource_changes.filter((item) => item.address !== "cloudflare_r2_bucket_lock.release_control");
   rejects("cloudflare-audit", missing, /exactly 2 cloudflare_r2_bucket_lock/);
+
+  const destroyed = productionPlan();
+  destroyed.resource_changes[0].change.actions = ["delete"];
+  rejects("cloudflare-production", destroyed, "deletion or replacement");
 
   const destructive = previewPlan();
   destructive.resource_changes[0].change.actions = ["delete", "create"];

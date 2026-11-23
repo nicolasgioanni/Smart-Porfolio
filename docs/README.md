@@ -14,8 +14,12 @@ This documentation explains how Smart Portfolio is authored, built, tested, depl
 
 | Reader | Start with | Continue with |
 | --- | --- | --- |
-| Portfolio owner or developer setting up a local copy | [Local development](development/LOCAL_DEVELOPMENT.md) | [Agent workflow](development/AGENT_WORKFLOW.md) for repository changes, or [local content editing](content/LOCAL_CONTENT_EDITING.md) for content updates |
-| Agent or automated contributor | [Agent workflow](development/AGENT_WORKFLOW.md) | [Local development](development/LOCAL_DEVELOPMENT.md), the selected repository skill, and [testing](quality/TESTING.md) |
+| Portfolio owner or developer setting up a local copy | [Local development](development/LOCAL_DEVELOPMENT.md) | [Agent ownership map](development/AGENT_MAP.md) | Task routing and maintained ownership boundaries. |
+| [CI input and evidence contracts](quality/CI_CONTRACTS.md) | Candidate, snapshot, receipt, rerun, and deployment contracts. |
+| [Agent workflow](development/AGENT_WORKFLOW.md) for repository changes, or [local content editing](content/LOCAL_CONTENT_EDITING.md) for content updates |
+| Agent or automated contributor | [Agent ownership map](development/AGENT_MAP.md) | Task routing and maintained ownership boundaries. |
+| [CI input and evidence contracts](quality/CI_CONTRACTS.md) | Candidate, snapshot, receipt, rerun, and deployment contracts. |
+| [Agent workflow](development/AGENT_WORKFLOW.md) | [Local development](development/LOCAL_DEVELOPMENT.md), the selected repository skill, and [testing](quality/TESTING.md) |
 | Design contributor | [Design system](design/DESIGN_SYSTEM.md) | [Accessibility](design/ACCESSIBILITY.md), [animation guidelines](design/ANIMATION_GUIDELINES.md), and [skeleton loading guidelines](design/SKELETON_LOADING_GUIDELINES.md) |
 | Deployment operator restoring this service or adapting a fork | [Deployment](operations/DEPLOYMENT.md) | [Operations](operations/OPERATIONS.md), [testing](quality/TESTING.md), and [troubleshooting](development/TROUBLESHOOTING.md) |
 | Security reviewer | [Security](security/SECURITY.md) | [Contact system](security/CONTACT_SYSTEM.md), [architecture](architecture/ARCHITECTURE.md), and [security checklist](security/SECURITY_CHECKLIST.md) |
@@ -34,6 +38,7 @@ This is an npm repository: `package.json`, `package-lock.json`, and `.nvmrc` are
 | --- | --- |
 | [Project README](../README.md) | Product overview, architecture summary, setup path, route map, and links into the documentation suite. |
 | [Architecture](architecture/ARCHITECTURE.md) | System boundaries, layers, data flow, tradeoffs, and authoritative implementation sources. |
+| [Implementation inventory](architecture/IMPLEMENTATION_INVENTORY.md) | Source-of-truth and guide ownership map. |
 | [Project structure](architecture/PROJECT_STRUCTURE.md) | Repository tree, route ownership, component groups, tests, and guidance on where changes belong. |
 
 ## Content authoring
@@ -63,6 +68,8 @@ This is an npm repository: `package.json`, `package-lock.json`, and `.nvmrc` are
 | Document | Purpose |
 | --- | --- |
 | [Local development](development/LOCAL_DEVELOPMENT.md) | Supported Node.js version, setup commands, development servers, local content, and Pages Function testing. |
+| [Agent ownership map](development/AGENT_MAP.md) | Task routing and maintained ownership boundaries. |
+| [CI input and evidence contracts](quality/CI_CONTRACTS.md) | Candidate, snapshot, receipt, rerun, and deployment contracts. |
 | [Agent workflow](development/AGENT_WORKFLOW.md) | Portable repository-local guidance, focused skills, durable decisions, and model routing. |
 | [Testing](quality/TESTING.md) | Test layers, focused commands, Playwright navigation, recommendation, and footer coverage, the full quality gate, CI behavior, and test-extension guidance. |
 | [CircleCI validation](quality/CIRCLECI.md) | Change-aware PR testing, verification by the required GitHub check, and the production release boundary. |
@@ -77,6 +84,8 @@ This is an npm repository: `package.json`, `package-lock.json`, and `.nvmrc` are
 | Document | Purpose |
 | --- | --- |
 | [Deployment](operations/DEPLOYMENT.md) | GitHub and Cloudflare setup, environment separation, release governance, and first deployment. |
+| [Search indexing](operations/SEARCH_INDEXING.md) | Canonical identity, route classification, search files, and operator checks. |
+| [Runtime posture](operations/RUNTIME_POSTURE.md) | Manual bounded observations and provider reconciliation. |
 | [Operations](operations/OPERATIONS.md) | Event behavior, candidate selection, exact-artifact deployment, manifests, smoke tests, retries, and rollback considerations. |
 | [Terraform ownership preparation](infrastructure/TERRAFORM_OWNERSHIP.md) | Inactive Terraform source boundary, saved-plan review, and adoption prerequisites. |
 | [Troubleshooting](development/TROUBLESHOOTING.md) | Symptoms, likely causes, diagnostics, safe corrections, and actions to avoid. |
@@ -87,6 +96,7 @@ This is an npm repository: `package.json`, `package-lock.json`, and `.nvmrc` are
 | --- | --- |
 | [Security](security/SECURITY.md) | Threat model, trust boundaries, public and private data, headers, URL rules, contact security, and publication review. |
 | [Contact system](security/CONTACT_SYSTEM.md) | Client workflow, verification ticket, request validation, Turnstile, Resend, configuration, and abuse controls. |
+| [Scanner governance](security/SCANNER_GOVERNANCE.md) | Independent security jobs, private report handling, and scoped exception review. |
 | [Security checklist](security/SECURITY_CHECKLIST.md) | Concise operational security review linked to the deeper guides. |
 
 ## Maintenance

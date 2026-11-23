@@ -1,6 +1,7 @@
 // @vitest-environment node
+import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { effectivePublicBuildEnvironment, parsePublicBuildInputs, publicBuildInputDigest } from "./publicBuildInputs.mjs";
+import { effectivePublicBuildEnvironment, parsePublicBuildInputs, publicBuildInputDigest, turnstileEnabledForSealedInputs } from "./publicBuildInputs.mjs";
 
 const inputs = {
   schemaVersion: 1,
@@ -10,8 +11,8 @@ const inputs = {
   lockfileDigest: "c".repeat(64),
   wranglerConfigDigest: "d".repeat(64),
   nodeVersion: "v22.23.3",
-  nextVersion: "16.4.0",
-  wranglerVersion: "4.148.0"
+  nextVersion: "16.4.6",
+  wranglerVersion: "4.160.1"
 };
 
 describe("public build input identity", () => {
@@ -31,6 +32,13 @@ describe("public build input identity", () => {
     expect(effectivePublicBuildEnvironment("preview", { NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY: "" })).toEqual({
       NEXT_PUBLIC_TURNSTILE_SITE_KEY: ""
     });
+  });
+
+  it("derives widget availability only from the authenticated sealed inputs", () => {
+    const disabled = { ...inputs, keyDigest: createHash("sha256").update("").digest("hex") };
+    expect(turnstileEnabledForSealedInputs(disabled, publicBuildInputDigest(disabled))).toBe(false);
+    expect(turnstileEnabledForSealedInputs(inputs, publicBuildInputDigest(inputs))).toBe(true);
+    expect(() => turnstileEnabledForSealedInputs(disabled, publicBuildInputDigest(inputs))).toThrow("do not match");
   });
 
   it("rejects a missing production key and hashes canonical identities", () => {

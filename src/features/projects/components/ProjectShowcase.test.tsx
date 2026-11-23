@@ -36,6 +36,24 @@ describe("Project showcase", () => {
     expect(getProjectVisual("__proto__")).toBeUndefined();
   });
 
+  it("renders connected architecture components with accessible relationships", () => {
+    for (const [projectId, visual] of Object.entries(projectVisualRegistry)) {
+      const slots = visual.diagram.nodes.map((node) => node.slot);
+      expect(new Set(slots).size, projectId).toBe(slots.length);
+      expect(slots.length, projectId).toBeGreaterThanOrEqual(4);
+      for (const edge of visual.diagram.edges) {
+        expect(slots, projectId).toContain(edge.from);
+        expect(slots, projectId).toContain(edge.to);
+        // Edges occupy the gap between neighboring rows or columns, never a node.
+        expect(Math.abs(Math.floor(edge.from / 2) - Math.floor(edge.to / 2)), projectId).toBeLessThanOrEqual(1);
+      }
+      const markup = renderToStaticMarkup(<ProjectCard item={{ ...complianceProject, id: projectId }} staticVisual variant="detail" />);
+      expect(markup).toContain(visual.diagram.description);
+      expect(markup.match(/class="project-diagram__edge"/g)).toHaveLength(visual.diagram.edges.length);
+      expect(markup).toContain('aria-describedby="' + projectId + '-static-diagram-description"');
+    }
+  });
+
   it("selects shuffled releases before generic GitHub source matching and chooses preview destinations by priority", () => {
     const links = [
       { label: "Download", url: "https://github.com/example/project/releases/latest" },
@@ -54,15 +72,15 @@ describe("Project showcase", () => {
   it("keeps card selection independent, applies scoped keyboard navigation, and removes inactive panel focusability", () => {
     render(<><ProjectCard item={complianceProject} variant="detail" /><ProjectCard item={{ ...complianceProject, id: "clair", title: "Clair" }} variant="detail" /></>);
     const [first, second] = screen.getAllByLabelText(/project preview for/i);
-    const firstToggle = within(first!).getByRole("button", { name: /how compliance label assistant works/i });
-    const secondToggle = within(second!).getByRole("button", { name: /how clair works/i });
+    const firstToggle = within(first!).getByRole("button", { name: /architecture for compliance label assistant/i });
+    const secondToggle = within(second!).getByRole("button", { name: /architecture for clair/i });
     fireEvent.keyDown(firstToggle, { key: "ArrowRight" });
     expect(firstToggle.querySelector('[data-view="preview"]')).toHaveTextContent("Preview");
-    expect(secondToggle.querySelector('[data-view="workflow"]')).toHaveTextContent("How it works");
+    expect(secondToggle.querySelector('[data-view="workflow"]')).toHaveTextContent("Architecture");
     expect(first!.querySelector('[data-view="workflow"]')).toBeInTheDocument();
     expect(first!.querySelector('.project-visual-switcher__panel[aria-hidden="true"]')).toHaveAttribute("inert");
     fireEvent.keyDown(firstToggle, { key: "Home" });
-    expect(firstToggle).toHaveAccessibleName("Show how Compliance Label Assistant works");
+    expect(firstToggle).toHaveAccessibleName("Show architecture for Compliance Label Assistant");
     fireEvent.keyDown(firstToggle, { key: "End" });
     expect(firstToggle).toHaveAccessibleName("Show preview for Compliance Label Assistant");
   });
@@ -72,11 +90,11 @@ describe("Project showcase", () => {
     const staticMarkup = renderToStaticMarkup(<ProjectCard item={complianceProject} staticVisual variant="detail" />);
     expect(enhancedMarkup).toContain('data-view="preview"');
     expect(enhancedMarkup).toContain("<h2");
-    expect(enhancedMarkup).toContain("How it works");
+    expect(enhancedMarkup).toContain("Architecture");
     expect(enhancedMarkup).toContain("Preview");
     expect(enhancedMarkup).not.toContain("project-visual-switcher__hint");
     expect(staticMarkup).toContain("<details");
-    expect(staticMarkup).toContain("<summary>How it works</summary>");
+    expect(staticMarkup).toContain("<summary>Architecture</summary>");
     expect(staticMarkup).toContain("https://github.com/nicolasgioanni/Compliance-Label-Assistant");
     expect(staticMarkup).not.toContain("project-visual-switcher__toggle");
   });
@@ -90,7 +108,7 @@ describe("Project showcase", () => {
       />,
     );
     expect(markup).toContain("project-visual-static__details");
-    expect(markup).toContain("Label image to reviewer results");
+    expect(markup).toContain("Compliance Label Assistant architecture");
     expect(markup).not.toContain("View source");
   });
 

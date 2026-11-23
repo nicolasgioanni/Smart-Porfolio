@@ -71,20 +71,25 @@ Run:
 npm run docs:check
 ```
 
-`scripts/validateDocumentation.mjs` reads `README.md`, every Markdown file under `docs/`, the optional root `AGENTS.md`, and every Markdown file under `.agents/`. It checks:
+`scripts/validateDocumentation.mjs` reads `README.md`, every Markdown file under `docs/` and `.agents/`, and Markdown under `infrastructure/` or `infra/` when either exists. It requires the root agent bootstrap (`AGENTS.md`, `.agents/README.md`, and `.agents/knowledge/SYSTEM_DECISIONS.md`) and `.agents/agent-map.json`. It checks:
 
 - Exactly one H1 per document.
 - Balanced fenced code blocks.
 - Resolution and exact capitalization of relative Markdown, image, reference, HTML `href`, and HTML `src` links.
 - Rejection of relative links that escape the repository.
 - Rejection of links to local environment files or generated output directories.
-- Rejection of absolute Windows user paths.
+- Rejection of absolute Windows, macOS, and Linux user paths, credential-bearing URLs, key-shaped values, and sensitive assignments without printing their values.
 - Localhost URL use only in the approved local-development documents.
 - Rejection of workbook URL patterns and obvious unresolved placeholders.
-- Validation of repository-local agent skill frontmatter and links when `.agents/` is present.
+- Validation of repository-local agent skill frontmatter and links.
 - Rejection of prose that presents generated output directories as committed source.
+- The ordered bootstrap's combined 12 KiB budget, each agent card's 6 KiB budget, direct card links to owned code, tests, and anchored documentation, and a manifest owner or explicit reason for every relevant source, test, documentation, CI, infrastructure, and functional root file, including dotfile and extensionless configuration.
+- Rejection of relevant root or source symlinks rather than silently skipping their targets during ownership discovery.
+- Existing in-repository manifest references only: map documents, documentation, entrypoints, tests, reuse primitives, and explicit exceptions cannot traverse through a file or parent-directory symlink.
+- Known `npm run` commands in checked Markdown, unless a narrow document-and-reason manifest exception registers an illustrative command.
+- Tracked `infrastructure/` or `infra/` paths need an owning card with documentation and checks.
 
-The validator uses only Node.js standard-library APIs and does not check external-link availability. Its fixture tests live in `scripts/validateDocumentation.test.mjs`.
+The portable [agent map](../development/AGENT_MAP.md) explains routing and cards; the manifest is the machine-readable ownership source. Minimal unit fixtures must explicitly set `requireOwnershipMap: false`. The validator inventories Git-tracked and nonignored files when Git is available, and fails closed if Git inventory fails; a privacy-safe fallback is reserved for non-Git fixtures. Ignored local environment files are never read for ownership coverage, while the checked-in `.env.example` template has an explicit exception. It does not check external-link availability. Its fixture tests live in `scripts/validateDocumentation.test.mjs`.
 
 ## Content pipeline coverage
 
@@ -96,7 +101,7 @@ The validator uses only Node.js standard-library APIs and does not check externa
 | Semantic hashing | `scripts/portfolioContentGeneration.test.ts` | Canonical normalized content subset, research-media fields, and `generatedAt` preservation |
 | Public asset references | `scripts/demoAssets.test.mjs`, `scripts/pngMetadata.test.mjs` | Referenced local assets and the three curated research abstracts exist and are non-empty; configured media stays under its allowlisted directory and extensions; Research PNG IHDR, palette, critical-chunk, zlib, Adam7 scanline, and nonempty image-data ordering semantics; stat-before-read size rejection; protected byte/chunk/decoded-data/dimension/canvas ceilings; restricted metadata absence; and dimensions, exact byte length, complete-file SHA-256, and IDAT-stream SHA-256 for every curated abstract |
 | Environment placeholders | `scripts/envConfiguration.test.mjs` | Supported variables, ignored local files, and removal of legacy variable families |
-| D1 configuration and schema | `scripts/d1Configuration.test.mjs`, `scripts/d1Reservation.integration.test.ts` | Distinct pinned remote UUIDs, local isolation, minimal reservation and payload-fingerprint columns, indexes, migration-before-deploy ordering, and real local-D1 changed-payload and third-reservation refusal |
+| D1 configuration and schema | `scripts/d1Configuration.test.mjs`, `scripts/d1Reservation.integration.test.ts`, `scripts/contactQuota.workers.integration.test.ts` | Distinct pinned remote UUIDs, local isolation, minimal reservation and payload-fingerprint columns, indexes, migration-before-deploy ordering, and real local-D1 changed-payload and third-reservation refusal, concurrent Workers/D1 email, IP and environment caps, retries and release boundaries |
 
 These are unit and integration-style tests with temporary files and injected fetch implementations. They do not download the production workbook during pull-request verification.
 
@@ -181,7 +186,7 @@ The shared `tests/e2e/generatedContent.ts` reader validates the on-disk generate
 
 ### Mobile Research video coverage
 
-The mobile video cases in `research.spec.ts` and `research-mobile-video.spec.ts` run in the normal Chromium Research suite and through the narrowly scoped `webkit-mobile` project. Run `npx playwright install webkit` followed by `npm run test:e2e:research:webkit` for the second engine; existing priority and skeleton scripts keep their Chromium selection. These cases exercise 320, 390, 420, 421, and 440 CSS-pixel widths, short landscape, and orientation changes. They cover captions near the contained picture, both control states, long cues, identical lower/raised typography, settings and volume expansion, themes, and accessibility display preferences.
+The mobile video cases in `research.spec.ts` and `research-mobile-video.spec.ts` run in the normal Chromium Research suite and through the narrowly scoped `webkit-mobile` project. Run `npx playwright install webkit` followed by `npm run test:e2e:research:webkit` for the second engine; existing priority and skeleton scripts keep their Chromium selection. These cases exercise 320, 390, 420, 421, and 440 CSS-pixel widths, short landscape, and orientation changes. They cover captions near the contained picture, both control states, long cues, identical lower/raised typography, settings and volume expansion, themes, and accessibility display preferences. Settings coverage samples root-to-speed-to-Back transitions in inline, popup, and fullscreen presentation, preserving stable width while the active view determines height; it checks clipped transition layers, real constrained vertical scrolling, keyboard reachability, and document-level horizontal containment.
 
 Fullscreen fallback coverage disables or rejects container fullscreen to exercise the shared in-place dialog. It verifies that the same video node and playback settings survive entry and exit, that inactive wrappers keep a self-contained inline-player name without modal state or focusability, and that fullscreen inside an enlarged popup remains accessible while its ancestor loses topmost status. Nested Escape, focus restoration, scroll locks, caption toggles, and native/picture-in-picture handoffs retain their separate contracts. Use normal-motion tests for caption transition timing and reduced-motion tests for immediate final states.
 
@@ -197,7 +202,7 @@ The mobile project cases also run through the narrow WebKit selection. After ins
 
 The Chromium painted-preview check compares the displayed screenshot with the selected source image, independently of ARIA and transform state. For WebKit, also inspect the native browser window: its screenshot API can paint a mirrored reverse face despite correct native compositing, as reproduced with a minimal standalone flip and described in [Playwright issue 21620](https://github.com/microsoft/playwright/issues/21620). Do not add visibility timers, remove clipping, or change production motion to conceal that capture limitation. The [preview evidence](evidence/project-previews/README.md) includes native-window checks of both faces.
 
-After `build:generated`, verify `/projects` without JavaScript against the exported site: one visible Projects heading, authored cards and source/demo links, loaded responsive website previews or the supplied/natively rendered alternatives, and usable native How it works disclosures. A component SSR assertion alone does not establish that streamed route boundaries are accessible without JavaScript.
+The accessibility suite also scans all open architecture faces. The sealed-export browser suite opens every authored known-project Architecture disclosure without JavaScript at 320px, checks component text containment, and verifies source links when available. After `build:generated`, verify `/projects` without JavaScript against the exported site: one visible Projects heading, authored cards and source/demo links, loaded responsive website previews or the supplied/natively rendered alternatives, and usable native Architecture disclosures. A component SSR assertion alone does not establish that streamed route boundaries are accessible without JavaScript.
 
 ## Deployment automation coverage
 
@@ -211,7 +216,7 @@ After `build:generated`, verify `/projects` without JavaScript against the expor
 | Release and artifact tests under `scripts/release/` plus `scripts/artifactIntegrity.mjs` | Accepted build input, sealed-package, Function/runtime, SBOM, manifest, and tamper rejection contracts |
 | `scripts/quality/recoveryDrill.test.mjs` | Credential-free local Wrangler D1 export, fresh `0001`–`0003` migration, and pseudonymous reservation restore; v2 sealed-envelope tamper rejection and restoration without collector files |
 | `scripts/localAutomation.test.mjs` | Project discovery, environment copy safety, dependency-state hashing, stale content, and port selection |
-| `scripts/permanentBranchRuleset.test.mjs` | Exact tracked permanent-branch ruleset name, active scope, deletion and non-fast-forward rules only, and empty bypass list |
+| `scripts/permanentBranchRuleset.test.mjs` | Strict tracked permanent-branch ruleset validator, including rejected scope, enforcement, bypass, and protection changes; also required by offline infrastructure acceptance |
 
 These tests execute local contracts and injected provider boundaries. They do not establish a hosted GitHub Actions run, attestation service, Cloudflare deployment, D1 migration, or external environment configuration. Hosted validation remains pending for the reconciled workflow.
 
@@ -219,7 +224,7 @@ These tests execute local contracts and injected provider boundaries. They do no
 
 The [CircleCI validation pipeline](CIRCLECI.md) provides change-aware tests for eligible PRs. Run `npm run test:circleci` for its provider and selection contracts. GitHub runs full native application tests for changes to CI, dependencies, shared modules, tests, content or other paths outside the allowlist.
 
-`resolve-candidate` rejects ineligible event and workflow references before checkout, then resolves one immutable candidate. `prepare-content` produces either an obsolete, unchanged, or full plan. Full plans restore the same snapshot in every application job. `security-tools`, `security-scans`, `codeql`, and `infrastructure` are source-only jobs with independent receipts; they run even when application work is skipped. `dependency-review` is source-only and applies to pull requests.
+`resolve-candidate` rejects ineligible event and workflow references before checkout, then resolves one immutable candidate. `prepare-content` produces either an obsolete, unchanged, or full plan. Full plans restore the same snapshot in every application job. `security-tools`, `history-secrets`, `workflow-security`, `dependency-audit`, `codeql`, and `infrastructure` are source-only jobs with independent receipts; they run even when application work is skipped. `dependency-review` is source-only and applies to pull requests.
 
 ### Pull requests
 
@@ -228,7 +233,7 @@ Pull requests targeting `main` or `develop`:
 1. Generate validated template content without workbook or Cloudflare credentials.
 2. Run documentation integrity, lint and type checking through the selected provider. Native and feature plans also run the complete Vitest suite. GitHub audits locked dependencies for every PR.
 3. Run the assigned browser coverage. Full native plans include both functional Chromium shards, Linux visuals, Firefox critical, WebKit critical and mobile WebKit. Targeted CircleCI plans include affected Chromium specs and Linux visuals, with cross-browser coverage for Projects and Research. Documentation-only plans omit browser execution.
-4. Build once from the accepted template snapshot, seal the candidate with configuration, migrations, manifest, and SBOM, scan that exact sealed directory with the pinned Gitleaks binary before artifact upload, then validate the exact static export and compiled runtime.
+4. Build once from the accepted template snapshot, seal the candidate with configuration, migrations, manifest, and SBOM, scan that exact sealed directory with the pinned Gitleaks binary before artifact upload, then validate the exact static export and compiled runtime. The sealed Pages check verifies visible route content and footer links without JavaScript, native Projects disclosures and Research media, and, after hydration, a theme change, client navigation, and absence of CSP errors.
 5. Run actionlint, Git-history/workflow scans, CodeQL security-extended analysis, and dependency review; `verify` checks the exact native receipts and any selected CircleCI evidence.
 6. Stop before deployment, signing, migration, or provider access.
 
@@ -239,6 +244,8 @@ Pull requests targeting `main` or `develop`:
 Scheduled and non-forced manual runs prepare the strict snapshot and compare a validated deployed identity before application work. A proven unchanged candidate or obsolete branch revision skips application jobs, packaging, and deployment, but source-security jobs and their receipts remain required. A forced manual run selects a full plan after preparation.
 
 ### Acceptance, diagnostics, and deployment boundary
+
+Source-integrity checkpoints compare HEAD, index, and working tree independently and reject nonignored untracked inputs; only snapshot-verified generated JSON is allowed during content preparation and restoration. They detect persistent changes at checkpoints, not transient subprocess modifications. A mismatch requires a clean candidate and a full affected rerun.
 
 `verify` reads current-run result states and immutable original-producer evidence. It refuses stale, missing, expired, substituted, ambiguous, or rerun-mismatched inputs; it does not substitute a previous green job or regenerated snapshot. Browser failure diagnostics are separate from acceptance evidence and do not authorize a release.
 

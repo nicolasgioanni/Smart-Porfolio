@@ -22,7 +22,7 @@ Smart Portfolio changes safely when each update follows the full path from sourc
 | Add a collection field | matching template, types, normalizer | Validation, selector, component, tests, schema, workbook header |
 | Add a site setting | `site_settings` key row, strict key allowlist, types, normalizer | Default, validation, consumer, tests, schema, workbook row |
 | Add or rename a sheet column | template header and row conversion | Exact workbook header, tests, docs, migration plan |
-| Add a route | `src/app/`, route registry | Navigation or footer, metadata, loading state, tests, smoke scope |
+| Add a route | `src/app/`, route registry | Navigation or footer, indexing classification, metadata, no-script fallback, loading state, tests, smoke scope |
 | Add a Home section | `HomeOverview.tsx`, selector, component | Skeleton, styles, tests, content mapping, accessibility |
 | Add a card variant | `PortfolioCard`, glass and portfolio CSS | Semantics, responsive behavior, tests, design system |
 | Add a theme token | `tokens.css` | All themes, component usage, contrast and focus review, tests |
@@ -100,15 +100,13 @@ Do not make strict mode accept arbitrary extra sheets. Every accepted sheet beco
 
 ## Add a route
 
-1. Create `src/app/<route>/page.tsx` with route metadata.
-2. Use `PageContainer` or a deliberate equivalent with one H1.
-3. Add `loading.tsx` only when a route-level loading shape provides value.
-4. Register the path in `siteRoutes.ts` if `SmartLink` should treat it as internal.
-5. Add it to primary navigation, footer resources, or neither according to product hierarchy.
-6. Add component and navigation tests.
-7. Confirm static export creates the expected directory and HTML file.
-8. Add the route to local smoke verification and deployment smoke coverage when operationally important.
-9. Update the route map in the root README and [Project structure](../architecture/PROJECT_STRUCTURE.md).
+1. Create `src/app/<route>/page.tsx` with route metadata and one H1 using `PageContainer` or a deliberate equivalent.
+2. Register every visitor route in `src/lib/routing/siteRoutes.ts` and explicitly classify it for indexing. Update the static sitemap and its parity tests for indexable routes; keep crawler policy aligned with [Search indexing](../operations/SEARCH_INDEXING.md#route-policy).
+3. Supply a segment layout with `RouteNoScriptFallback` outside the loading boundary and compose the complete server-rendered page there. Follow existing route layouts and the Research adapter where a feature-specific fallback is needed.
+4. Provide the route loading composition and align it with the resolved layout. Follow [Skeleton loading guidelines](../design/SKELETON_LOADING_GUIDELINES.md) and the skeleton specialist for geometry and regression contracts.
+5. Add the route to primary navigation, footer resources, or neither according to product hierarchy. Update component, navigation, metadata, fallback, and route-registry tests.
+6. Confirm the static export contains the expected HTML and test the exported route with JavaScript disabled. Add operational smoke coverage only when warranted by its defined scope.
+7. Update the route maps in the root README and [Project structure](../architecture/PROJECT_STRUCTURE.md).
 
 A route that needs request-time server behavior does not belong under a Next.js route handler while `output: "export"` remains active. Review the runtime-endpoint pattern instead.
 
