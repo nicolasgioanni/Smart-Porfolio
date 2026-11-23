@@ -6,10 +6,11 @@ import JSZip from "jszip";
 import { describe, expect, it, vi } from "vitest";
 import { extractArtifact } from "./artifactTransport.mjs";
 import { artifactName } from "./githubEvidence.mjs";
-import { applicationJobs, chromiumShards, createPlan, recordDigest, repository, requiredJobs, sealedReleaseValidators, securityJobs, workflowPath } from "./plan.mjs";
+import { applicationJobs, delegatedJobs, chromiumShards, createPlan, recordDigest, repository, requiredJobs, sealedReleaseValidators, securityJobs, workflowPath } from "./plan.mjs";
 import { createSourceReceipt, createValidationReceipt } from "./validationEvidence.mjs";
 import { allowedBrowserSkips } from "./browserSkips.mjs";
 import { testIdentity } from "./receipts.mjs";
+import { createSnapshot } from "./snapshot.mjs";
 import { verifyCompleteEvidence } from "./gate.mjs";
 
 const sha = "a".repeat(40);
@@ -85,10 +86,14 @@ function allResults(plan) {
 }
 
 async function fixture({
-  event = "push", mode = "full", currentAttempt = 2, receiptPatch = {}, candidateOverrides = {}
+  event = "push", mode = "full", currentAttempt = 2, receiptPatch = {}, candidateOverrides = {}, delegated = false
 } = {}) {
   const inputCandidate = candidate(event, candidateOverrides);
-  const snapshotRecordDigest = mode === "obsolete" ? null : recordDigest({ kind: "accepted-snapshot" });
+  const contentBytes = Buffer.from(JSON.stringify({ metadata: { contentHash: "c".repeat(64) } }));
+  const snapshotRecord = delegated ? createSnapshot({ bytes: contentBytes, candidate: inputCandidate,
+    producer: { runId: inputCandidate.runId, runNumber: inputCandidate.runNumber, attempt: 1, job: "prepare-content" },
+    lockfileDigest: "d".repeat(64), publicBuildInputDigest: "e".repeat(64) }) : null;
+  const snapshotRecordDigest = mode === "obsolete" ? null : delegated ? recordDigest(snapshotRecord) : recordDigest({ kind: "accepted-snapshot" });
   let plan;
   if (mode === "unchanged") {
     plan = createPlan(candidate("schedule", candidateOverrides), {
@@ -100,7 +105,8 @@ async function fixture({
   } else {
     plan = createPlan(inputCandidate, { snapshotDigest: snapshotRecordDigest });
   }
-  const input = { plan, results: allResults(plan), currentAttempt, references: null };
+  const input = { plan, results: allResults(plan), currentAttempt, references: null, provider: delegated ? "circleci" : "native" };
+  if (delegated) for (const job of delegatedJobs) input.results[job].result = "skipped";
   const jobs = [], artifacts = [], archives = new Map(), downloaded = [];
   let nextId = 1;
   const nextSeconds = new Map();
@@ -142,8 +148,11 @@ async function fixture({
   addJob("prepare-content");
   const references = { snapshot: null, discovery: null, release: null };
   if (mode !== "obsolete") {
+    const zip = new JSZip();
+    if (delegated) { zip.file("portfolio.generated.json", contentBytes); zip.file("snapshot.json", JSON.stringify(snapshotRecord)); }
     references.snapshot = addMetadata({
-      role: "snapshot", validator: "content", producer: preparation, recordDigest: plan.snapshotDigest
+      role: "snapshot", validator: "content", producer: preparation, recordDigest: plan.snapshotDigest,
+      bytes: delegated ? await zip.generateAsync({ type: "nodebuffer", compression: "STORE" }) : null
     });
   }
 
@@ -219,6 +228,7 @@ async function fixture({
   const calls = { run: [], attempts: [], collections: [], download: [] };
   const providers = {
     token: "read-only-test-token",
+    readExternal: async () => ({ provider: "circleci", mergeSha: plan.candidate.sourceSha, headSha: plan.candidate.runHeadSha, snapshotByteDigest: hash(contentBytes) }),
     readRun: async (value, options) => {
       calls.run.push({ value, options });
       return run;
@@ -367,6 +377,27 @@ describe("complete CI evidence gate", () => {
     const value = await fixture();
     value.providers.readAttempt = async () => ({ ...value.runAttempts.get(1), run_started_at: "2026-02-30T00:00:01Z" });
     await expect(verify(value)).rejects.toThrow("malformed");
+  });
+
+  it("accepts delegated PR evidence only with exact immutable snapshot and retained native receipts", async () => {
+    const value = await fixture({ event: "pull_request", delegated: true });
+    const accepted = await verify(value);
+    expect(accepted).toMatchObject({ accepted: true, deploy: false, externalEvidence: { provider: "circleci" } });
+    expect(Object.keys(accepted.receiptDigests)).toEqual(expect.arrayContaining(["built-output-scan", "build-and-package", "export-check", "history-secrets", "workflow-security", "dependency-audit", "dependency-review"]));
+    expect(accepted.receiptDigests).not.toHaveProperty("quality");
+    value.providers.readExternal = async () => ({ provider: "circleci", mergeSha: sha, headSha: sha, snapshotByteDigest: "f".repeat(64) });
+    await expect(verify(value)).rejects.toThrow("immutable snapshot");
+    value.input.results.quality.result = "success";
+    await expect(verify(value)).rejects.toThrow("Required validation results");
+  });
+  it("rejects delegated trusted events and unknown providers", async () => {
+    const value = await fixture();
+    value.input.provider = "circleci";
+    await expect(verify(value)).rejects.toThrow("Invalid test provider");
+    value.input.provider = undefined;
+    await expect(verify(value)).rejects.toThrow("Missing or invalid test provider");
+    value.input.provider = "other";
+    await expect(verify(value)).rejects.toThrow("Missing or invalid test provider");
   });
 
   it("performs source-only checks for unchanged and obsolete plans", async () => {

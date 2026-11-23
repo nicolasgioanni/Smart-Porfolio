@@ -5,13 +5,13 @@ description: Change Smart Portfolio endpoints, security boundaries, deployment c
 
 # Portfolio release security
 
-Use for Functions, contact security, configuration, CI/CD, migrations, deployment, and verification.
-
-For endpoint or runtime changes read [Security](../../../docs/security/SECURITY.md) and [Contact system](../../../docs/security/CONTACT_SYSTEM.md). For deployment read [Deployment](../../../docs/operations/DEPLOYMENT.md#single-snapshot-exact-artifact-pipeline) and [Operations](../../../docs/operations/OPERATIONS.md). Repository and external controls are distinct.
+For endpoint or runtime changes read [Security](../../../docs/security/SECURITY.md) and [Contact system](../../../docs/security/CONTACT_SYSTEM.md). For deployment read [Deployment](../../../docs/operations/DEPLOYMENT.md#single-snapshot-exact-artifact-pipeline) and [Operations](../../../docs/operations/OPERATIONS.md).
 
 For every endpoint, define and test methods, media types, schema, body and time limits, origins, authentication or verification, privacy, abuse controls, errors, headers, and release checks. Keep secrets server-only and retain the existing environment separation.
 
 When this baseline has no configured Queue or R2 audit binding, keep contact delivery functional without those bindings. Do not add an audit requirement, skip-security switch, or cloud activation to an endpoint change; document any later audit adoption as a separate release and migration decision.
+
+Admit [CircleCI PR evidence](../../../docs/quality/CIRCLECI.md) alongside native security, sealed-build and export checks.
 
 Preserve exact-candidate deployment: restore and verify the sealed release and producer, attest it, serialize the target without cancellation, recheck branch freshness around D1 migration, then admit pinned Wrangler output and smoke the unique and stable hosts. Do not infer external controls from repository configuration.
 

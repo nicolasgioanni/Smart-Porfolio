@@ -33,14 +33,15 @@ export async function run(command, environment = process.env) {
     case "verify": {
       const needs = jsonEnvironment("CI_NEEDS", environment);
       const plan = parsePlan(JSON.parse(needs["prepare-content"]?.outputs?.plan));
+      if (!["native", "circleci"].includes(needs["prepare-content"]?.outputs?.test_provider)) throw new Error("Missing or invalid prepared test provider.");
       if (recordDigest(checkedCandidate(environment)) !== recordDigest(plan.candidate)) throw new Error("Aggregate candidate differs from the prepared plan.");
       const reference = (value) => value === "" ? null : parseArtifactReference(JSON.parse(value));
-      const result = await (await import("./gate.mjs")).verifyCompleteEvidence({ plan, results: needs,
+      const result = await (await import("./gate.mjs")).verifyCompleteEvidence({ plan, results: needs, provider: needs["prepare-content"].outputs.test_provider,
         currentAttempt: currentProducer("verify", environment).attempt, references: {
           snapshot: reference(needs["prepare-content"].outputs.snapshot_reference),
           discovery: reference(needs["prepare-content"].outputs.discovery_reference),
           release: reference(needs["build-and-package"].outputs.release_reference ?? "")
-        } }, { token: environment.GH_TOKEN });
+        } }, { token: environment.GH_TOKEN, environment });
       console.log(JSON.stringify({ mode: result.mode, accepted: result.accepted, deploy: result.deploy, summaries: result.summaries }));
       return { accepted: String(result.accepted), deploy: String(result.deploy), plan: JSON.stringify(plan),
         acceptance: JSON.stringify(result) };

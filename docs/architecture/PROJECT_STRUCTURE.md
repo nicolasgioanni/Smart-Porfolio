@@ -80,7 +80,9 @@ Smart-Porfolio/
 
 | Location | Responsibility |
 | --- | --- |
+| `.circleci/config.yml`, `scripts/circleci/` | PR test selection, browser assignments and receipt acceptance. GitHub independently validates eligible CircleCI runs against the merge candidate and expected pipeline configuration. See [CircleCI validation](../quality/CIRCLECI.md). |
 | `.github/workflows/ci.yml` | Candidate selection, content generation, verification, artifact transfer, Cloudflare Direct Upload, smoke tests, and schedule heartbeat. |
+| `.github/workflows/circleci-verification.yml` | Manual diagnostic check of an exact CircleCI workflow and commit. |
 | `.agents/` | Six repository specialists and compact system decisions; select the relevant skill in the [agent workflow](../development/AGENT_WORKFLOW.md#select-the-smallest-relevant-guidance). |
 | `.github/rulesets/` | Tracked permanent-branch ruleset intent; live GitHub state requires separate verification. |
 | `infra/` | Inactive Terraform ownership preparation, mock plans, and saved-plan review; see [infrastructure ownership](../../infra/README.md). |

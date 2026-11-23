@@ -1,22 +1,22 @@
 import { mkdtemp, realpath, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { applicationJobs, evaluateResults, exactKeys, parsePlan, positiveInteger, recordDigest, sealedReleaseValidators, securityJobs } from "./plan.mjs";
+import { applicationJobs, delegatedJobs, evaluateResults, exactKeys, parsePlan, positiveInteger, recordDigest, sealedReleaseValidators, securityJobs } from "./plan.mjs";
 import { artifactName, readRunAttemptEvidence, readRunCollection, readRunEvidence, transferForCompletedJob, verifyReceiptProducer } from "./githubEvidence.mjs";
 import { downloadArtifact, extractArtifact } from "./artifactTransport.mjs";
-import { parseArtifactReference, verifyArtifactReference } from "./snapshot.mjs";
+import { parseArtifactReference, readSnapshotArtifact, verifySnapshotBytes, verifyArtifactReference } from "./snapshot.mjs";
 import { allowedBrowserSkips } from "./browserSkips.mjs";
 import { parseChromiumDiscovery, readEvidenceArtifact, verifySourceReceipt } from "./validationEvidence.mjs";
 import { parseTestIdentity, selectCompletedJob, verifyReceipt } from "./receipts.mjs";
 import { collectAttemptHistory, normalizeEffectiveExecutions } from "./effectiveExecution.mjs";
 
-function evidenceJobs(plan) {
+function evidenceJobs(plan, provider) {
   return [
     "resolve-candidate",
     "prepare-content",
     ...securityJobs,
     ...(plan.candidate.event === "pull_request" ? ["dependency-review"] : []),
-    ...(plan.mode === "full" ? applicationJobs.flatMap((job) => job === "browser-e2e"
+    ...(plan.mode === "full" ? applicationJobs.filter((job) => provider !== "circleci" || !delegatedJobs.includes(job)).flatMap((job) => job === "browser-e2e"
       ? ["chromium-1-of-2", "chromium-2-of-2"]
       : [job]) : [])
   ];
@@ -50,14 +50,16 @@ export function parseDiscoveryEnvelope(value) {
 // One lightweight admission path. Runtime injection is for local provider-
 // failure tests; the CLI uses these fixed read-only implementations. No npm
 // installation, application test rerun or cloud mutation occurs in this gate.
-export async function verifyCompleteEvidence({ plan: input, results, currentAttempt, references }, {
+export async function verifyCompleteEvidence({ plan: input, results, currentAttempt, references, provider }, {
   token, fetchImplementation = fetch, temporaryRoot = os.tmpdir(),
   readRun = readRunEvidence, readAttempt = readRunAttemptEvidence, readCollection = readRunCollection,
-  download = downloadArtifact, extract = extractArtifact
+  download = downloadArtifact, extract = extractArtifact, environment = process.env, projectRoot = process.cwd(),
+  readExternal = async (args) => (await import("../circleci/prGate.mjs")).readPullRequestEvidence(args)
 } = {}) {
   const plan = parsePlan(input), candidate = plan.candidate;
+  if (!["native", "circleci"].includes(provider)) throw new Error("Missing or invalid test provider.");
   positiveInteger(currentAttempt, "Aggregate attempt");
-  const decision = evaluateResults(plan, results);
+  const decision = evaluateResults(plan, results, provider);
   if (!decision.accepted) throw new Error("Required validation results are incomplete or unsuccessful.");
   exactKeys(references, ["snapshot", "discovery", "release"], "Producer references");
   const options = { token, fetchImplementation };
@@ -79,7 +81,7 @@ export async function verifyCompleteEvidence({ plan: input, results, currentAtte
     startAttempt: candidate.producerAttempt,
     attempts,
     jobs,
-    names: evidenceJobs(plan)
+    names: evidenceJobs(plan, provider)
   });
   const expected = { candidate, currentAttempt, jobs: normalized.jobs, artifacts };
   let snapshot = null, release = null;
@@ -106,6 +108,20 @@ export async function verifyCompleteEvidence({ plan: input, results, currentAtte
       await extract(bytes, destination);
       return readEvidenceArtifact(destination, file);
     };
+    let externalEvidence = null;
+    if (provider === "circleci") {
+      const bytes = await download(snapshot, candidate, options);
+      const destination = path.join(root, "snapshot");
+      await extract(bytes, destination);
+      const artifact = await readSnapshotArtifact(destination);
+      const acceptedSnapshot = verifySnapshotBytes(artifact.bytes, artifact.record, { candidate, snapshotDigest: plan.snapshotDigest,
+        lockfileDigest: artifact.record.lockfileDigest, publicBuildInputDigest: artifact.record.publicBuildInputDigest });
+      externalEvidence = await readExternal({ candidate, environment, projectRoot });
+      if (!externalEvidence || externalEvidence.provider !== "circleci" || externalEvidence.mergeSha !== candidate.sourceSha ||
+          externalEvidence.headSha !== candidate.runHeadSha || externalEvidence.snapshotByteDigest !== acceptedSnapshot.byteDigest) {
+        throw new Error("CircleCI evidence differs from the accepted candidate or immutable snapshot.");
+      }
+    }
     let discovery = null;
     if (plan.mode === "full") {
       const reference = exactProducerReference(references.discovery, { ...expected, role: "discovery", validator: "browsers", producerJob: "prepare-content" });
@@ -118,7 +134,7 @@ export async function verifyCompleteEvidence({ plan: input, results, currentAtte
       ...(candidate.event === "pull_request" ? [{ name: "dependency-review", job: "dependency-review", sourceOnly: true }] : []),
       ...(plan.mode === "full" ? [
         ...sealedReleaseValidators.map((name) => ({ name, job: "build-and-package", completedJob: "build-and-package" })),
-        ...applicationJobs.flatMap((job) => job === "browser-e2e" ? [
+        ...applicationJobs.filter((job) => provider !== "circleci" || !delegatedJobs.includes(job)).flatMap((job) => job === "browser-e2e" ? [
         { name: "chromium-1-of-2", job }, { name: "chromium-2-of-2", job }
         ] : [{ name: job, job }])
       ] : [])
@@ -143,7 +159,8 @@ export async function verifyCompleteEvidence({ plan: input, results, currentAtte
     const rejected = validationResults.find((result) => result.status === "rejected");
     if (rejected) throw rejected.reason;
     return { schemaVersion: 1, accepted: true, deploy: decision.deploy, mode: plan.mode,
-      candidateDigest: recordDigest(candidate), planDigest: recordDigest(plan), snapshot, release, receiptDigests, summaries };
+      candidateDigest: recordDigest(candidate), planDigest: recordDigest(plan), snapshot, release, receiptDigests, summaries,
+      ...(provider === "circleci" ? { externalEvidence } : {}) };
   } finally {
     await rm(root, { recursive: true, force: true });
   }

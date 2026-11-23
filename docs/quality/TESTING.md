@@ -222,17 +222,19 @@ These tests execute local contracts and injected provider boundaries. They do no
 
 ## CI quality gates
 
+The [CircleCI validation pipeline](CIRCLECI.md) provides change-aware tests for eligible PRs. Run `npm run test:circleci` for its provider and selection contracts. GitHub runs full native application tests for changes to CI, dependencies, shared modules, tests, content or other paths outside the allowlist.
+
 `resolve-candidate` rejects ineligible event and workflow references before checkout, then resolves one immutable candidate. `prepare-content` produces either an obsolete, unchanged, or full plan. Full plans restore the same snapshot in every application job. `security-tools`, `history-secrets`, `workflow-security`, `dependency-audit`, `codeql`, and `infrastructure` are source-only jobs with independent receipts; they run even when application work is skipped. `dependency-review` is source-only and applies to pull requests.
 
-### Pull requests: complete validation without deployment
+### Pull requests
 
 Pull requests targeting `main` or `develop`:
 
 1. Generate validated template content without workbook or Cloudflare credentials.
-2. Run documentation integrity, lint, typecheck, and the bounded dependency audit; run the complete Vitest suite.
-3. Discover browser identities and run two assigned Chromium functional shards, the Linux visual suite, Firefox critical, WebKit critical, and WebKit mobile Research/Projects coverage.
+2. Run documentation integrity, lint and type checking through the selected provider. Native and feature plans also run the complete Vitest suite. GitHub audits locked dependencies for every PR.
+3. Run the assigned browser coverage. Full native plans include both functional Chromium shards, Linux visuals, Firefox critical, WebKit critical and mobile WebKit. Targeted CircleCI plans include affected Chromium specs and Linux visuals, with cross-browser coverage for Projects and Research. Documentation-only plans omit browser execution.
 4. Build once from the accepted template snapshot, seal the candidate with configuration, migrations, manifest, and SBOM, scan that exact sealed directory with the pinned Gitleaks binary before artifact upload, then validate the exact static export and compiled runtime. The sealed Pages check verifies visible route content and footer links without JavaScript, native Projects disclosures and Research media, and, after hydration, a theme change, client navigation, and absence of CSP errors.
-5. Run actionlint, Git-history/workflow scans, CodeQL security-extended analysis, and dependency review; `verify` accepts their exact receipts together with the application receipts.
+5. Run actionlint, Git-history/workflow scans, CodeQL security-extended analysis, and dependency review; `verify` checks the exact native receipts and any selected CircleCI evidence.
 6. Stop before deployment, signing, migration, or provider access.
 
 ### Pushes, schedules, and manual runs

@@ -1,0 +1,39 @@
+name: CircleCI completion evidence
+
+on:
+  workflow_dispatch:
+    inputs:
+      workflow_id:
+        description: CircleCI portfolio-validation workflow UUID
+        required: true
+        type: string
+      expected_sha:
+        description: Exact 40-character candidate commit SHA
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  circleci-completion:
+    if: >-
+      github.repository == 'nicolasgioanni/Smart-Porfolio' &&
+      github.event_name == 'workflow_dispatch' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out trusted default branch
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22.23.3
+      - name: Verify CircleCI completion as additive evidence
+        env:
+          CIRCLECI_WORKFLOW_ID: ${{ inputs.workflow_id }}
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          CIRCLECI_API_TOKEN: ${{ secrets.CIRCLECI_API_TOKEN }}
+        run: node scripts/circleci/verify.mjs

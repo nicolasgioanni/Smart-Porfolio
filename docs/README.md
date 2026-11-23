@@ -72,6 +72,7 @@ This is an npm repository: `package.json`, `package-lock.json`, and `.nvmrc` are
 | [CI input and evidence contracts](quality/CI_CONTRACTS.md) | Candidate, snapshot, receipt, rerun, and deployment contracts. |
 | [Agent workflow](development/AGENT_WORKFLOW.md) | Portable repository-local guidance, focused skills, durable decisions, and model routing. |
 | [Testing](quality/TESTING.md) | Test layers, focused commands, Playwright navigation, recommendation, and footer coverage, the full quality gate, CI behavior, and test-extension guidance. |
+| [CircleCI validation](quality/CIRCLECI.md) | Change-aware PR testing, verification by the required GitHub check, and the production release boundary. |
 | [Engineering standards](development/ENGINEERING_STANDARDS.md) | Concise architecture, component, styling, test, and dependency rules. |
 | [Quality checklist](quality/QUALITY_CHECKLIST.md) | General pre-merge verification checklist. |
 | [Repository reachability audit](quality/UNUSED_CODE_AUDIT.md) | Evidence, retention decisions, and the removal standard for unused-code reviews. |

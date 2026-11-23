@@ -8,6 +8,7 @@ const vitestEntryPoint = path.join(projectRoot, "node_modules", "vitest", "vites
 
 export const priorityTestDirectories = [
   "scripts/ci",
+  "scripts/circleci",
   "scripts/security",
   "src/components/overlay",
   "src/features/home",
@@ -73,6 +74,7 @@ export const priorityTestTargets = [
 
 export const requiredPriorityFiles = [...new Set([
   ...priorityTestTargets.filter((target) => /\.test\.(?:[cm]?[jt]sx?)$/.test(target)),
+  "scripts/circleci/impact.test.mjs",
   "scripts/ci/plan.test.mjs",
   "scripts/ci/infrastructure.test.mjs",
   "scripts/ci/resolve.test.mjs",

@@ -823,6 +823,9 @@
       "responsibility": "Workflow orchestration, candidate snapshots and rerun evidence",
       "ownerPatterns": [
         ".github/workflows/ci.yml",
+        ".github/workflows/circleci-verification.yml",
+        ".circleci/config.yml",
+        "scripts/circleci/**",
         "scripts/candidateAdmissionWorkflow.test.mjs",
         "scripts/ci/**",
         "scripts/heartbeatWorkflow.test.mjs"
