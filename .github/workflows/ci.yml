@@ -141,7 +141,7 @@ jobs:
             && secrets.PORTFOLIO_WORKBOOK_URL || '' }}
       - name: Upload immutable snapshot
         id: snapshot
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: ${{ steps.prepare.outputs.snapshot_name }}
           path: ${{ steps.prepare.outputs.snapshot_path }}
@@ -160,7 +160,7 @@ jobs:
         if: ${{ steps.prepare.outputs.mode != 'obsolete' }}
       - name: Upload immutable discovery
         id: discovery
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: ${{ steps.prepare.outputs.discovery_name }}
           path: ${{ steps.prepare.outputs.discovery_path }}
@@ -225,7 +225,7 @@ jobs:
         run: node scripts/ci/run.mjs receipt
       - name: Upload immutable receipt
         id: receipt
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: ${{ steps.evidence.outputs.receipt_name }}
           path: ${{ steps.evidence.outputs.receipt_path }}
@@ -263,7 +263,7 @@ jobs:
       - *a4
       - name: Upload immutable receipt
         id: receipt
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: ${{ steps.evidence.outputs.receipt_name }}
           path: ${{ steps.evidence.outputs.receipt_path }}
@@ -307,7 +307,7 @@ jobs:
           CI_SHARD: ${{ matrix.shard }}
       - name: Upload immutable receipt
         id: receipt
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: ${{ steps.evidence.outputs.receipt_name }}
           path: ${{ steps.evidence.outputs.receipt_path }}
@@ -316,7 +316,7 @@ jobs:
           include-hidden-files: false
       - name: Upload bounded browser failure diagnostics
         if: ${{ failure() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: browser-failure-browser-e2e-${{ strategy.job-index }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: test-results/playwright/
@@ -364,7 +364,7 @@ jobs:
           CI_DISCOVERY_REFERENCE: ${{ needs['prepare-content'].outputs.discovery_reference }}
       - name: Upload immutable receipt
         id: receipt
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: ${{ steps.evidence.outputs.receipt_name }}
           path: ${{ steps.evidence.outputs.receipt_path }}
@@ -373,7 +373,7 @@ jobs:
           include-hidden-files: false
       - name: Upload bounded browser failure diagnostics
         if: ${{ failure() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: browser-failure-visual-regression-${{ github.run_id }}-${{ github.run_attempt }}
           path: test-results/playwright/
@@ -415,7 +415,7 @@ jobs:
           CI_DISCOVERY_REFERENCE: ${{ needs['prepare-content'].outputs.discovery_reference }}
       - name: Upload immutable receipt
         id: receipt
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: ${{ steps.evidence.outputs.receipt_name }}
           path: ${{ steps.evidence.outputs.receipt_path }}
@@ -424,7 +424,7 @@ jobs:
           include-hidden-files: false
       - name: Upload bounded browser failure diagnostics
         if: ${{ failure() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: browser-failure-cross-browser-${{ github.run_id }}-${{ github.run_attempt }}
           path: test-results/playwright/
@@ -469,7 +469,7 @@ jobs:
         env:
           CI_GITLEAKS: ${{ runner.temp }}/smart-portfolio-tools/gitleaks/gitleaks
       - name: Upload immutable built-output scanner receipt
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: ${{ steps.evidence.outputs.scan_receipt_name }}
           path: ${{ steps.evidence.outputs.scan_receipt_path }}
@@ -478,7 +478,7 @@ jobs:
           include-hidden-files: false
       - name: Upload immutable release
         id: release
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: ${{ steps.evidence.outputs.release_name }}
           path: ${{ steps.evidence.outputs.release_path }}
@@ -495,7 +495,7 @@ jobs:
           CI_RECORD_DIGEST: ${{ steps.evidence.outputs.release_digest }}
       - name: Upload immutable receipt
         id: receipt
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: ${{ steps.evidence.outputs.receipt_name }}
           path: ${{ steps.evidence.outputs.receipt_path }}
@@ -546,7 +546,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
       - name: Upload immutable receipt
         id: receipt
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: ${{ steps.evidence.outputs.receipt_name }}
           path: ${{ steps.evidence.outputs.receipt_path }}
@@ -592,7 +592,7 @@ jobs:
         run: node scripts/ci/run.mjs source-receipt
       - name: Upload immutable receipt
         id: receipt
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: ${{ steps.evidence.outputs.receipt_name }}
           path: ${{ steps.evidence.outputs.receipt_path }}
@@ -637,7 +637,7 @@ jobs:
         run: node scripts/ci/run.mjs source-receipt
       - name: Upload immutable receipt
         id: receipt
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: ${{ steps.evidence.outputs.receipt_name }}
           path: ${{ steps.evidence.outputs.receipt_path }}
@@ -679,7 +679,7 @@ jobs:
         run: node scripts/ci/run.mjs source-receipt
       - name: Upload immutable receipt
         id: receipt
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: ${{ steps.evidence.outputs.receipt_name }}
           path: ${{ steps.evidence.outputs.receipt_path }}
@@ -710,7 +710,7 @@ jobs:
         run: node scripts/ci/run.mjs source-receipt
       - name: Upload immutable receipt
         id: receipt
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: ${{ steps.evidence.outputs.receipt_name }}
           path: ${{ steps.evidence.outputs.receipt_path }}
@@ -754,7 +754,7 @@ jobs:
         run: node scripts/ci/run.mjs source-receipt
       - name: Upload immutable receipt
         id: receipt
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: ${{ steps.evidence.outputs.receipt_name }}
           path: ${{ steps.evidence.outputs.receipt_path }}
@@ -808,7 +808,7 @@ jobs:
         run: node scripts/ci/run.mjs source-receipt
       - name: Upload immutable receipt
         id: receipt
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: ${{ steps.evidence.outputs.receipt_name }}
           path: ${{ steps.evidence.outputs.receipt_path }}
@@ -837,7 +837,7 @@ jobs:
         with:
           node-version: 22.23.3
       - name: Block newly introduced high-severity dependency vulnerabilities
-        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294
+        uses: actions/dependency-review-action@bbc44d14a204704ccc493733616cd1e93a0321ec
         with:
           fail-on-severity: high
           comment-summary-in-pr: never
@@ -846,7 +846,7 @@ jobs:
         run: node scripts/ci/run.mjs source-receipt
       - name: Upload immutable receipt
         id: receipt
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: ${{ steps.evidence.outputs.receipt_name }}
           path: ${{ steps.evidence.outputs.receipt_path }}
