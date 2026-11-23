@@ -21,6 +21,8 @@ Narrow selection requires a GitHub App push or pull-request event with a same-re
 
 The targeted browser selection includes shared navigation, accessibility, and progressive-enhancement checks. Changes to Projects or Research also select the cross-browser job, including their mobile WebKit tests. Full validation retains two functional Chromium shards, the 25 existing Linux visual baselines, Firefox critical, WebKit critical, and mobile WebKit Research/Projects coverage. No baseline bytes, screenshot thresholds, or skeleton specifications change.
 
+Weekly Dependabot patch groups combine candidate revisions before CI. Dependency, workflow and provider updates select full native validation. GitHub checks the applicable pins during preparation before starting the build and browsers. CircleCI finishes after planning on these verified full-tier PRs. A new commit or an updated merge base can require fresh validation.
+
 `prepare` generates one local-template snapshot and discovers browser assignments. Jobs restore that snapshot and verify the source revision and input hashes. Each selected validator must produce a matching successful receipt. `acceptance` rejects missing, extra, stale, or unsuccessful evidence and records the selected and intentionally unselected checks. An unselected check is not represented as an executed passing test.
 
 CircleCI runs existing source scanners and full-plan dependency audits, plus credential-free infrastructure checks for full plans. GitHub CodeQL, dependency review, native producer receipts, release attestations, and deployment admission remain in GitHub Actions. GitHub also audits the locked dependencies on every candidate.

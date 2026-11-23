@@ -7,6 +7,8 @@ description: Select and run Smart Portfolio unit, integration, browser, document
 
 For PR routing, keep [CircleCI selection and evidence](../../../docs/quality/CIRCLECI.md) aligned with GitHub’s verified merge tree, snapshot, discovery and receipts. Full native validation owns CI, security and shared changes.
 
+For dependency groups, test path-selected pin checks, failed preparation diagnostics, and full validation of the combined revision.
+
 Follow [CI input and evidence contracts](../../../docs/quality/CI_CONTRACTS.md). Preserve independent security receipts on no-ops. Rerun tests distinguish provider copies from new executions, which need new evidence. Ambiguous histories fail closed.
 
 Preserve [CI source-integrity checkpoints](../../../docs/quality/CI_CONTRACTS.md#source-integrity-checkpoints): initial and source-only phases allow no source changes, while the content phase allows only snapshot-verified generated content JSON working-tree bytes. Checkpoints observe persistent changes, not continuous subprocess isolation. Validate the sealed export with visible no-JavaScript route content, footer links, native Projects disclosures and Research media, plus hydrated theme change, client navigation, and CSP errors.

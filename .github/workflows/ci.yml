@@ -100,6 +100,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     outputs:
+      preflight_result: ${{ steps.preflight.outcome || 'skipped' }}
       plan: ${{ steps.prepare.outputs.plan }}
       mode: ${{ steps.prepare.outputs.mode }}
       test_provider: ${{ steps.prepare.outputs.test_provider }}
@@ -128,6 +129,10 @@ jobs:
       - name: Install locked dependencies
         run: npm ci
         if: ${{ needs['resolve-candidate'].outputs.obsolete != 'true' }}
+      - name: Check dependency updates before preparation
+        id: preflight
+        if: ${{ github.event_name == 'pull_request' && needs['resolve-candidate'].outputs.obsolete != 'true' }}
+        run: node scripts/ci/dependencyPreflight.mjs
       - name: Prepare one accepted content snapshot and validated execution plan
         id: prepare
         run: node scripts/ci/run.mjs prepare
