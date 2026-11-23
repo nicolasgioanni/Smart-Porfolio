@@ -58,7 +58,7 @@ describe("package and CI deployment automation", () => {
     );
     expect(packageJson.dependencies.next).toBe("^16.4.6");
     expect(packageJson.devDependencies["@next/eslint-plugin-next"]).toBe("^16.4.6");
-    expect(packageJson.devDependencies["@testing-library/dom"]).toBe("10.4.1");
+    expect(packageJson.devDependencies["@testing-library/dom"]).toBe("10.4.2");
     expect(packageJson.devDependencies.wrangler).toBe("4.160.1");
     expect(packageJson.devDependencies.miniflare).toBe("5.20261110.1-beta");
     expect(packageJson.devDependencies.yaml).toBe("2.9.1");
