@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { GlassButton } from "@/components/glass/GlassButton";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { siteRoutes } from "@/lib/routing/siteRoutes";
-import { ResumePanel } from "@/components/portfolio/resume/ResumePanel";
+import { ResumePanel } from "@/features/resume/components/ResumePanel";
 import { createPageMetadata } from "@/lib/content/createPageMetadata";
 import { getPortfolioContent } from "@/lib/content/getPortfolioContent";
 import { routeHeaderContent } from "@/lib/content/routeHeaderContent";

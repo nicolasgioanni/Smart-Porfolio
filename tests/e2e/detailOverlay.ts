@@ -21,6 +21,7 @@ type DetailPanelMotionSample = {
   borderLeftWidth: number;
   clipHeight: number;
   elapsedMs: number | null;
+  gridTransitionDurationMs: number | null;
   opacity: number;
   panelHeight: number;
   panelWidth: number;
@@ -137,6 +138,7 @@ export async function getDetailPanelMotionSample(panel: Locator): Promise<Detail
       borderLeftWidth: Number.parseFloat(styles.borderLeftWidth),
       clipHeight: clip?.getBoundingClientRect().height ?? 0,
       elapsedMs: 0,
+      gridTransitionDurationMs: null,
       opacity: Number.parseFloat(styles.opacity),
       panelHeight: panelRect.height,
       panelWidth: panelRect.width,
@@ -159,12 +161,18 @@ export async function sampleDetailPanelMotion(panel: Locator, durationMs = 620):
           const panelRect = element.getBoundingClientRect();
           const styles = getComputedStyle(element);
           const visualState = section?.getAttribute("data-visual-state") ?? null;
+          const gridTransitionDuration = visualState === "closing"
+            ? element.getAnimations().find(
+              (animation) => animation instanceof CSSTransition && animation.transitionProperty === "grid-template-rows"
+            )?.effect?.getTiming().duration
+            : null;
           if (visualState === "closing" && closeStartedAt === undefined) closeStartedAt = now;
           samples.push({
             borderBottomWidth: Number.parseFloat(styles.borderBottomWidth),
             borderLeftWidth: Number.parseFloat(styles.borderLeftWidth),
             clipHeight: clip?.getBoundingClientRect().height ?? 0,
             elapsedMs: closeStartedAt === undefined ? null : now - closeStartedAt,
+            gridTransitionDurationMs: typeof gridTransitionDuration === "number" ? gridTransitionDuration : null,
             opacity: Number.parseFloat(styles.opacity),
             panelHeight: panelRect.height,
             panelWidth: panelRect.width,
@@ -296,7 +304,13 @@ export function expectDetailPanelClosingMotion(
     (sample) => sample.elapsedMs !== null && sample.elapsedMs >= 120 && sample.elapsedMs <= 220
   );
   const sustainedCloseSample = samples.find((sample) => sample.elapsedMs !== null && sample.elapsedMs >= 400);
-  const completedCloseSample = samples.find((sample) => sample.visualState === "closed" && sample.elapsedMs !== null);
+  const observedGridTransitionDuration = closingSamples.find((sample) => sample.gridTransitionDurationMs !== null)?.gridTransitionDurationMs;
+  const lastClosingSampleIndex = samples.reduce(
+    (lastIndex, sample, index) => sample.visualState === "closing" ? index : lastIndex,
+    -1
+  );
+  const firstClosedSample = samples[lastClosingSampleIndex + 1];
+  const remainingClosedSamples = samples.slice(lastClosingSampleIndex + 1);
 
   expect(firstClosingSample).toBeDefined();
   expect(firstClosingSample!.clipHeight).toBeGreaterThan(0);
@@ -305,13 +319,17 @@ export function expectDetailPanelClosingMotion(
   expect(firstClosingSample!.borderLeftWidth).toBe(opened.borderLeftWidth);
   expect(firstClosingSample!.borderBottomWidth).toBe(opened.borderBottomWidth);
   expect(intermediateSample).toBeDefined();
+  expect(observedGridTransitionDuration).toBe(520);
   expect(readableCollapseSample).toBeDefined();
   expect(readableCollapseSample!.clipHeight).toBeGreaterThanOrEqual(opened.clipHeight * 0.35);
   expect(readableCollapseSample!.opacity).toBeGreaterThanOrEqual(0.2);
   expect(sustainedCloseSample).toBeDefined();
   expect(sustainedCloseSample!.visualState).toBe("closing");
-  expect(completedCloseSample).toBeDefined();
-  expect(completedCloseSample!.elapsedMs).toBeLessThanOrEqual(580);
+  expect(firstClosedSample).toBeDefined();
+  expect(firstClosedSample!.visualState).toBe("closed");
+  expect(firstClosedSample!.clipHeight).toBe(0);
+  expect(firstClosedSample!.opacity).toBe(0);
+  expect(remainingClosedSamples.every((sample) => sample.visualState === "closed")).toBe(true);
 }
 
 export function expectDetailPanelRapidReopen(samples: DetailPanelMotionSample[]) {

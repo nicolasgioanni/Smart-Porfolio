@@ -8,7 +8,7 @@ import {
   createContactTicket,
   createEmailMessages,
   parseContactPayload,
-  reserveContactSubmission,
+  reserveContactSubmission as reserveWithIp,
   validateEmailDomain,
   type ContactEnv,
   type ContactPayload,
@@ -17,6 +17,8 @@ import {
   type ContactRateLimitResult
 } from "../_shared/contact";
 import { oversizedJsonResponse, stalledJsonResponse } from "../testSupport/streams";
+import { createDeadline, type Deadline } from "../_shared/contact/transport";
+import { canonicalizeIp } from "../_shared/contact/reservation";
 import { onRequest } from "./contact";
 
 const privateRecipient = "private-owner@example.net";
@@ -30,7 +32,10 @@ const validStartedAt = Date.now() - 5_000;
 interface ReservationRow {
   submission_id: string;
   email_hash: string;
+  ip_hash: string | null;
   payload_hash: string | null;
+  delivery_config_hash: string | null;
+  render_version: number | null;
   reserved_at: number;
   expires_at: number;
 }
@@ -91,22 +96,31 @@ class FakeContactDatabase implements ContactRateLimitDatabase {
     }
 
     if (query.startsWith("INSERT INTO contact_rate_reservations")) {
-      const [id, emailHash, payloadHash, reservedAt, expiresAt] = statement.values as [
+      const [id, emailHash, payloadHash, deliveryConfigHash, renderVersion, reservedAt, expiresAt, ipHash] = statement.values as [
+        string,
         string,
         string,
         string,
         number,
-        number
+        number,
+        number,
+        string
       ];
       const existing = this.rows.get(id);
       const activeCount = [...this.rows.values()].filter(
         (row) => row.email_hash === emailHash && row.expires_at > reservedAt
       ).length;
-      if (!existing && activeCount < CONTACT_RATE_LIMIT_MAX_SUBMISSIONS) {
+      const rows = [...this.rows.values()];
+      const ipCount = rows.filter((row) => row.ip_hash === ipHash && row.reserved_at > reservedAt - 3600 && row.expires_at > reservedAt).length;
+      const globalCount = rows.filter((row) => row.expires_at > reservedAt).length;
+      if (!existing && activeCount < CONTACT_RATE_LIMIT_MAX_SUBMISSIONS && ipCount < 10 && globalCount < 100) {
         this.rows.set(id, {
           submission_id: id,
           email_hash: emailHash,
+          ip_hash: ipHash,
           payload_hash: payloadHash,
+          delivery_config_hash: deliveryConfigHash,
+          render_version: renderVersion,
           reserved_at: reservedAt,
           expires_at: expiresAt
         });
@@ -120,20 +134,13 @@ class FakeContactDatabase implements ContactRateLimitDatabase {
       return { success: true, results: row ? [{ ...row }] : [] };
     }
 
-    if (query.startsWith("SELECT COUNT(*) AS reservation_count")) {
-      const [emailHash, now] = statement.values as [string, number];
-      const active = [...this.rows.values()].filter(
-        (row) => row.email_hash === emailHash && row.expires_at > now
-      );
-      return {
-        success: true,
-        results: [
-          {
-            reservation_count: active.length,
-            next_expiry: active.length ? Math.min(...active.map((row) => row.expires_at)) : null
-          }
-        ]
-      };
+    if (query.startsWith("SELECT\n")) {
+      const [emailHash, ipHash, now] = statement.values as [string, string, number];
+      const rows = [...this.rows.values()].filter((row) => row.expires_at > now);
+      const email = rows.filter((row) => row.email_hash === emailHash).map((row) => row.expires_at).sort((a, b) => b - a);
+      const ip = rows.filter((row) => row.ip_hash === ipHash && row.reserved_at > now - 3600).map((row) => row.reserved_at + 3600).sort((a, b) => b - a);
+      const global = rows.map((row) => row.expires_at).sort((a, b) => b - a);
+      return { success: true, results: [{ email_count: email.length, email_release: email[1] ?? null, ip_count: ip.length, ip_release: ip[9] ?? null, global_count: global.length, global_release: global[99] ?? null }] };
     }
 
     throw new Error(`Unexpected query: ${query}`);
@@ -158,9 +165,14 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
+
+function reserveContactSubmission(payload: ContactPayload, environment: ContactEnv, now?: number, deadline?: Deadline) {
+  return reserveWithIp(payload, environment, "203.0.113.10", now, deadline);
+}
 
 function validPayload(overrides: Record<string, unknown> = {}): ContactPayload {
   return {
@@ -186,6 +198,7 @@ function requestFor(
     method: init.method ?? "POST",
     headers: {
       "Content-Type": "application/json",
+      "CF-Connecting-IP": "203.0.113.10",
       Origin: init.origin ?? "https://nicolasmgioanni.dev",
       ...(init.cookie ? { Cookie: init.cookie } : {}),
       ...init.headers
@@ -277,6 +290,39 @@ describe("contact payload validation", () => {
 });
 
 describe("Cloudflare contact function security boundary", () => {
+  it("stops after the forty-second delivery deadline when ticket verification stalls", async () => {
+    const cookie = await ticketCookie();
+    vi.useFakeTimers();
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const batch = vi.spyOn(rateLimitDatabase, "batch");
+    let resolveDerivation!: (key: CryptoKey) => void;
+    const deriveKey = vi.spyOn(crypto.subtle, "deriveKey").mockImplementation(
+      () => new Promise<CryptoKey>((resolve) => { resolveDerivation = resolve; })
+    );
+    const sign = vi.spyOn(crypto.subtle, "sign");
+
+    const responsePromise = invoke(requestFor(validPayload(), { cookie }));
+    for (let attempt = 0; attempt < 20 && !deriveKey.mock.calls.length; attempt += 1) {
+      await vi.advanceTimersByTimeAsync(0);
+    }
+    expect(deriveKey).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(40_000);
+
+    const response = await responsePromise;
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ ok: false, error: "service_unavailable" });
+    expect(response.headers.get("Set-Cookie")).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(batch).not.toHaveBeenCalled();
+
+    resolveDerivation({} as CryptoKey);
+    await Promise.resolve();
+    expect(sign).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(batch).not.toHaveBeenCalled();
+  });
+
   it.each(["person@gmail.con", "person@test.gomm"])("rejects unknown endings in %s before DNS, quota, or email providers", async (email) => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
@@ -295,8 +341,48 @@ describe("Cloudflare contact function security boundary", () => {
     expect(response.status).toBe(405);
     expect(response.headers.get("Allow")).toBe("POST");
     expect(response.headers.get("Cache-Control")).toContain("no-store");
+    expect(response.headers.get("Content-Security-Policy")).toBe(
+      "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+    );
+    expect(response.headers.get("Permissions-Policy")).toBe(
+      "camera=(), geolocation=(), microphone=(), payment=(), usb=()"
+    );
+    expect(response.headers.get("Referrer-Policy")).toBe("no-referrer");
+    expect(response.headers.get("Strict-Transport-Security")).toBe("max-age=31536000");
     expect(response.headers.get("X-Content-Type-Options")).toBe("nosniff");
+    expect(response.headers.get("X-Frame-Options")).toBe("DENY");
     expect(await response.json()).toEqual({ ok: false, error: "method_not_allowed" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("preserves method checks on the identity-only Pages host", async () => {
+    for (const method of ["GET", "HEAD"]) {
+      const response = await invoke(new Request("https://smart-portfolio-bds.pages.dev/api/contact", { method }));
+      expect(response.status).toBe(405);
+      expect(response.headers.get("Allow")).toBe("POST");
+      expect(response.headers.get("Cache-Control")).toContain("no-store");
+    }
+  });
+
+  it("admits only configured request URL origins regardless of forwarded host headers", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const cases = [
+      ["https://nicolasmgioanni.dev", "https://nicolasmgioanni.dev", "https://nicolasmgioanni.dev", 400],
+      ["https://develop.smart-portfolio-bds.pages.dev", "https://develop.smart-portfolio-bds.pages.dev", "https://develop.smart-portfolio-bds.pages.dev", 400],
+      ["http://localhost:8788", "http://localhost:8788", "http://localhost:8788", 400],
+      ["http://127.0.0.1:8788", "http://127.0.0.1:8788", "http://127.0.0.1:8788", 400],
+      ["https://smart-portfolio-bds.pages.dev", "https://smart-portfolio-bds.pages.dev", "https://nicolasmgioanni.dev", 403],
+      ["https://smart-portfolio-bds.pages.dev", "https://nicolasmgioanni.dev", "https://nicolasmgioanni.dev", 403],
+      ["https://nicolasmgioanni.dev", "https://smart-portfolio-bds.pages.dev", "https://nicolasmgioanni.dev", 403],
+      ["https://www.nicolasmgioanni.dev", "https://www.nicolasmgioanni.dev", "https://nicolasmgioanni.dev", 403]
+    ] as const;
+    for (const [target, origin, allowed, status] of cases) {
+      const request = new Request(`${target}/api/contact`, {
+        method: "POST", headers: { Origin: origin, Host: "nicolasmgioanni.dev", "X-Forwarded-Host": "nicolasmgioanni.dev", "Content-Type": "application/json" }, body: "{}"
+      });
+      expect((await invoke(request, { ...env, CONTACT_ALLOWED_ORIGINS: allowed })).status).toBe(status);
+    }
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -305,6 +391,28 @@ describe("Cloudflare contact function security boundary", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     expect((await invoke(requestFor(validPayload(), { origin: "https://attacker.example" }))).status).toBe(403);
+    expect(
+      (
+        await invoke(
+          new Request("https://attacker.example/api/contact", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Origin: "https://nicolasmgioanni.dev" },
+            body: JSON.stringify(validPayload())
+          })
+        )
+      ).status
+    ).toBe(403);
+    expect(
+      (
+        await invoke(
+          new Request("https://nicolasmgioanni.dev/api/contact", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(validPayload())
+          })
+        )
+      ).status
+    ).toBe(403);
     expect(
       (
         await invoke(
@@ -447,7 +555,7 @@ describe("Cloudflare contact function security boundary", () => {
 
 describe("email-domain validation", () => {
   it("accepts a non-null MX without requesting fallback records", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(mxResponse());
+    const fetchMock = vi.fn().mockImplementation(async () => mxResponse());
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(validateEmailDomain("Avery@Example.co")).resolves.toEqual({ kind: "valid" });
@@ -567,6 +675,81 @@ describe("email-domain validation", () => {
 });
 
 describe("pseudonymous rolling quota", () => {
+  it.each([
+    ["203.0.113.10", "203.0.113.10"], ["2001:0DB8:0:0::1", "2001:db8::1"],
+    ["::ffff:192.0.2.1", "192.0.2.1"], ["127.1", undefined], ["01.2.3.4", undefined],
+    ["256.1.1.1", undefined], ["2001:db8::1%en0", undefined], ["1.2.3.4, 5.6.7.8", undefined],
+    ["[::1]", undefined], [" ::1", undefined], ["", undefined]
+  ])("canonicalizes or rejects trusted IP %s", (input, expected) => {
+    expect(canonicalizeIp(input)).toBe(expected);
+  });
+
+  it("fails closed when required IP is missing or malformed even with forwarding headers", async () => {
+    const fetchMock = vi.fn().mockImplementation(async () => mxResponse());
+    vi.stubGlobal("fetch", fetchMock);
+    for (const ip of ["", "malformed"]) {
+      const response = await invoke(requestFor(validPayload(), { cookie: await ticketCookie(), headers: { "CF-Connecting-IP": ip, "X-Forwarded-For": "203.0.113.10" } }));
+      expect(response.status).toBe(503);
+      expect(await response.json()).toEqual({ ok: false, error: "service_unavailable" });
+    }
+    expect(rateLimitDatabase.rows.size).toBe(0);
+    expect(fetchMock.mock.calls.every(([url]) => url !== "https://api.resend.com/emails")).toBe(true);
+  });
+
+  it.each([2, 3])("fails closed if D1 result %i is absent even after a successful insertion", async (index) => {
+    const original = rateLimitDatabase.batch.bind(rateLimitDatabase);
+    vi.spyOn(rateLimitDatabase, "batch").mockImplementation(async (statements) => {
+      const result = await original(statements);
+      result[index].results = undefined;
+      return result;
+    });
+    expect(await reserveContactSubmission(validPayload(), env)).toEqual({ kind: "unavailable" });
+  });
+
+  it("fails closed when a D1 batch reaches its three-second deadline", async () => {
+    const cookie = await ticketCookie();
+    const startedAt = Date.now();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(startedAt));
+    const originalBatch = rateLimitDatabase.batch.bind(rateLimitDatabase);
+    let resolveBatch!: () => void;
+    const batch = vi.spyOn(rateLimitDatabase, "batch").mockImplementation((statements) => {
+      return new Promise((resolve, reject) => {
+        resolveBatch = () => {
+          void originalBatch(statements).then(resolve, reject);
+        };
+      });
+    });
+    const fetchMock = vi.fn().mockResolvedValueOnce(mxResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    const responsePromise = invoke(requestFor(validPayload(), { cookie }));
+    for (let attempt = 0; attempt < 20 && !batch.mock.calls.length; attempt += 1) {
+      await vi.advanceTimersByTimeAsync(0);
+    }
+    expect(batch).toHaveBeenCalledTimes(1);
+
+    vi.setSystemTime(new Date(startedAt + 3_000));
+    resolveBatch();
+    await vi.advanceTimersByTimeAsync(0);
+
+    const response = await responsePromise;
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ ok: false, error: "service_unavailable" });
+    expect(fetchMock.mock.calls.some(([url]) => url === "https://api.resend.com/emails")).toBe(false);
+  });
+
+  it("does not start a batch after a standalone reservation deadline expires", async () => {
+    vi.useFakeTimers();
+    const batch = vi.spyOn(rateLimitDatabase, "batch");
+    const deadline = createDeadline(1);
+    await vi.advanceTimersByTimeAsync(1);
+
+    await expect(reserveContactSubmission(validPayload(), env, Date.now(), deadline)).resolves.toEqual({ kind: "unavailable" });
+    expect(batch).not.toHaveBeenCalled();
+    deadline.clear();
+  });
+
   it("allows exactly two active IDs, normalizes email case/whitespace, and returns the earliest retry time", async () => {
     const now = Date.UTC(2026, 7, 30, 12, 0, 0);
     const first = await reserveContactSubmission(
@@ -585,7 +768,7 @@ describe("pseudonymous rolling quota", () => {
       now + 2_000
     );
 
-    expect(first).toEqual({ kind: "reserved", reservedAt: Math.floor(now / 1_000) });
+    expect(first).toEqual({ kind: "reserved", reservedAt: Math.floor(now / 1_000), renderVersion: 2 });
     expect(second.kind).toBe("reserved");
     expect(third).toEqual({
       kind: "rate-limited",
@@ -645,6 +828,20 @@ describe("pseudonymous rolling quota", () => {
     await expect(reserveContactSubmission(payload, env, now + 1_000)).resolves.toEqual({ kind: "mismatch" });
   });
 
+  it("fails closed for a retry when delivery configuration or renderer identity changed", async () => {
+    const payload = validPayload();
+    await expect(reserveContactSubmission(payload, env)).resolves.toMatchObject({ kind: "reserved" });
+
+    await expect(
+      reserveContactSubmission(payload, { ...env, CONTACT_REPLY_TO_EMAIL: "changed-reply@example.com" })
+    ).resolves.toEqual({ kind: "retry-unavailable" });
+
+    const row = rateLimitDatabase.rows.get(submissionId);
+    if (!row) throw new Error("Expected test reservation.");
+    row.render_version = null;
+    await expect(reserveContactSubmission(payload, env)).resolves.toEqual({ kind: "retry-unavailable" });
+  });
+
   it("removes expired reservations and permits a fresh rolling-window submission", async () => {
     const now = Date.UTC(2026, 7, 30, 12, 0, 0);
     await reserveContactSubmission(validPayload(), env, now);
@@ -676,6 +873,32 @@ describe("pseudonymous rolling quota", () => {
 });
 
 describe("sequential contact delivery", () => {
+  it("aborts a stalled Resend request at the bounded provider deadline", async () => {
+    const cookie = await ticketCookie();
+    vi.useFakeTimers();
+    let providerSignal: AbortSignal | undefined;
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(mxResponse())
+      .mockImplementationOnce((_url: string, init: RequestInit) => {
+        providerSignal = init.signal ?? undefined;
+        return new Promise<Response>(() => undefined);
+      });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const responsePromise = invoke(requestFor(validPayload(), { cookie }));
+    for (let attempt = 0; attempt < 20 && fetchMock.mock.calls.length < 2; attempt += 1) {
+      await vi.advanceTimersByTimeAsync(0);
+    }
+    expect(providerSignal?.aborted).toBe(false);
+    await vi.advanceTimersByTimeAsync(8_000);
+
+    const response = await responsePromise;
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({ ok: false, error: "delivery_failed" });
+    expect(providerSignal?.aborted).toBe(true);
+  });
+
   it("sends the visitor first, then the owner with stable distinct idempotency keys", async () => {
     const payload = validPayload({
       firstName: "Avery <script>",
@@ -779,6 +1002,8 @@ describe("sequential contact delivery", () => {
     expect(retry.status).toBe(200);
     expect(rateLimitDatabase.rows).toHaveLength(1);
     const resendCalls = fetchMock.mock.calls.filter(([url]) => url === "https://api.resend.com/emails");
+    expect((resendCalls[0]?.[1] as RequestInit).body).toBe((resendCalls[2]?.[1] as RequestInit).body);
+    expect((resendCalls[1]?.[1] as RequestInit).body).toBe((resendCalls[3]?.[1] as RequestInit).body);
     expect(
       resendCalls.map(([, init]) => new Headers((init as RequestInit).headers).get("Idempotency-Key"))
     ).toEqual([
@@ -787,6 +1012,22 @@ describe("sequential contact delivery", () => {
       `portfolio-contact/visitor/${submissionId}`,
       `portfolio-contact/owner/${submissionId}`
     ]);
+  });
+
+  it("rejects an old-render reservation without sending provider email", async () => {
+    const payload = validPayload();
+    await reserveContactSubmission(payload, env);
+    const row = rateLimitDatabase.rows.get(submissionId);
+    if (!row) throw new Error("Expected test reservation.");
+    row.render_version = 1;
+    const fetchMock = vi.fn().mockResolvedValueOnce(mxResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await invoke(requestFor(payload, { cookie: await ticketCookie() }));
+
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({ ok: false, error: "delivery_failed" });
+    expect(fetchMock.mock.calls.filter(([url]) => url === "https://api.resend.com/emails")).toHaveLength(0);
   });
 
   it("rejects a changed payload after a partial delivery without making another Resend request", async () => {
@@ -866,7 +1107,9 @@ describe("contact email templates", () => {
       validPayload({
         firstName: "Avery <script>",
         lastName: "Nguyen & Co.",
-        message: "Hello <img src=x onerror=alert(1)>\nSecond line"
+        email: "hostile-marker@example.com",
+        phone: "+1 425 555 0199",
+        message: "Hello <img src=x onerror=alert(1)> https://attacker.example/path\nSecond line"
       }),
       privateRecipient,
       configuredFromEmail,
@@ -876,28 +1119,34 @@ describe("contact email templates", () => {
 
     expect(visitor).toMatchObject({
       from: configuredFromEmail,
-      to: ["avery@example.com"],
+      to: ["hostile-marker@example.com"],
       reply_to: configuredReplyToEmail,
       subject: "I received your message!"
     });
-    expect(visitor.text).toContain("Information you submitted");
+    expect(visitor.text).toContain("Thank you for reaching out.");
     expect(visitor.text).toContain("https://nicolasmgioanni.dev/privacy");
     expect(visitor.text).toContain("https://nicolasmgioanni.dev/terms");
     expect(visitor.text).toContain("© 2026 Nicolas Gioanni. All rights reserved.");
     expect(visitor.html).toContain("Privacy Notice");
     expect(visitor.html).toContain("Site Terms &amp; Accuracy Notice");
-    expect(visitor.html).toContain("Avery &lt;script&gt;");
-    expect(visitor.html).toContain("&lt;img src=x onerror=alert(1)&gt;<br>Second line");
+    for (const value of ["Avery", "Nguyen", "hostile-marker@example.com", "+1 425 555 0199", "https://attacker.example/path", "<script>", "&lt;script&gt;", "<img", "&lt;img", "Second line"]) {
+      expect(visitor.subject).not.toContain(value);
+      expect(visitor.text).not.toContain(value);
+      expect(visitor.html).not.toContain(value);
+    }
+    expect(owner.html).toContain("Avery &lt;script&gt;");
+    expect(owner.html).toContain("&lt;img src=x onerror=alert(1)&gt; https://attacker.example/path<br>Second line");
     expect(visitor.html).not.toContain("<script>");
     expect(visitor.html).not.toContain("<img");
 
     expect(owner).toMatchObject({
       from: configuredFromEmail,
       to: [privateRecipient],
-      reply_to: "avery@example.com",
+      reply_to: "hostile-marker@example.com",
       subject: "New contact request from Avery <script> Nguyen & Co."
     });
-    expect(owner.html).toContain('href="mailto:avery@example.com"');
+    expect(owner.html).toContain('href="mailto:hostile-marker%40example.com"');
+    expect(owner.text).toContain("+1 425 555 0199");
     expect(owner.html).not.toContain("Privacy Notice");
     expect(owner.html).not.toContain("Site Terms");
     expect(owner.text).not.toContain("Acknowledgments");

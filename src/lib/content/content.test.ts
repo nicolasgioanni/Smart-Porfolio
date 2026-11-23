@@ -12,32 +12,15 @@ import {
   normalizePortfolioContent,
   type RawPortfolioSheets
 } from "@/lib/content/normalizePortfolioContent";
-import { getResearchGraphicalAbstract } from "@/lib/content/researchGraphicalAbstracts";
-import {
-  groupSkillsByCategory,
-  selectHeaderLinks,
-  selectHomeContent
-} from "@/lib/content/selectHomeContent";
-import {
-  createRecommendationExcerpt,
-  hasRecommendations,
-  selectHomeRecommendations,
-  shouldShowRecommendationsRoute
-} from "@/lib/content/selectRecommendationContent";
-import {
-  createProfileOverviewContent,
-  createShortAboutText,
-  formatCompactGraduationDate,
-  getCurrentExperience,
-  getCurrentWorkLabel,
-  getEducationDisplayLabel,
-  getPrimaryEducation,
-  getProfileIdentityItems,
-  getProfileContactLinks,
-  getSelectedResearch
-} from "@/lib/content/profileOverview";
+import { groupSkillsByCategory, selectHomeContent } from "@/features/home/content/selectHomeContent";
+import { selectHeaderLinks } from "@/lib/content/selectHeaderLinks";
+import { createRecommendationExcerpt, selectHomeRecommendations } from "@/features/recommendations/content/selectRecommendationContent";
+import { hasRecommendations, shouldShowRecommendationsRoute } from "@/lib/content/shouldShowRecommendationsRoute";
+import { getRecommendationVerificationUrl, linkedInRecommendationsUrl } from "@/features/recommendations/content/recommendationVerification";
+import { createProfileOverviewContent, createShortAboutText, getCurrentExperience, getCurrentWorkLabel, getEducationDisplayLabel, getPrimaryEducation, getProfileIdentityItems, getProfileContactLinks, getSelectedResearch } from "@/features/home/content/profileOverview";
+import { formatCompactGraduationDate } from "@/lib/formatting/profileContent";
 import { sortForDetail, sortForHome, sortRecommendationsForDetail } from "@/lib/content/sortPortfolioContent";
-import { isHttpsUrl, isIsoDate, isSupportedUrl } from "@/lib/content/validatePortfolioContent";
+import { isHttpsUrl, isIsoDate, isSupportedUrl, validatePortfolioContent } from "@/lib/content/validatePortfolioContent";
 import { formatDateRange } from "@/lib/formatting/formatDateRange";
 
 const metadata: GeneratedContentMetadata = {
@@ -60,6 +43,9 @@ const metadata: GeneratedContentMetadata = {
 
 const brentFullQuote =
   "Nicolas has worked with me on an open source project, CytoCV, in collaboration with biologists at the University of Utah. He has excelled in many critical areas on this project including software engineering, web development, UX, computer vision, and the ability to work with biologists and translate their needs into software. Nicolas is proactive in identifying and solving issues and has demonstrated excellent skills in writing, documentation, and collaboration.";
+
+const billyFullQuote =
+  "Nicolas was already a highly skilled engineer when I met him, clearly immersed in the latest agentic coding practices and enthusiastic about learning more. He exhibited a great passion for building useful software and taking an active interest in stakeholders' needs. I highly recommend him for software engineering roles, especially any for which clear communication is a necessity.";
 
 function createSheets(overrides: Partial<RawPortfolioSheets> = {}): RawPortfolioSheets {
   return {
@@ -170,6 +156,7 @@ function createSheets(overrides: Partial<RawPortfolioSheets> = {}): RawPortfolio
         detail_summary: "Detail experience.",
         bullets: "Built feature|Wrote tests",
         skills: "React|Testing",
+        links: "Docs=https://example.com/docs",
         featured: "true",
         show_on_home: "true",
         home_order: "1",
@@ -403,6 +390,30 @@ describe("portfolio normalization", () => {
     expect(content.siteSettings.legalEffectiveDate).toBe("2026-08-07");
     expect(content.siteSettings.hostingProviderName).toBe("Vercel");
     expect(content.siteSettings.hostingPrivacyUrl).toBe("https://vercel.com/legal/privacy-notice");
+  });
+
+  it("rejects unknown keys and aliases that normalize to an already authored key", () => {
+    const unknownProfileKey = createSheets();
+    unknownProfileKey.profile.push({ key: "__proto__", value: "unsafe" });
+    expect(() => normalizePortfolioContent(unknownProfileKey, metadata)).toThrow(/profile contains an unknown key/);
+
+    const duplicateProfileAlias = createSheets();
+    duplicateProfileAlias.profile.push(
+      { key: "timezone", value: "Pacific" },
+      { key: "time_zone", value: "PT" }
+    );
+    expect(() => normalizePortfolioContent(duplicateProfileAlias, metadata)).toThrow(
+      /duplicate key after alias normalization: timezone/
+    );
+  });
+
+  it("treats generated content as unknown data before applying semantic validation", () => {
+    const malformed = structuredClone(normalizePortfolioContent(createSheets(), metadata)) as unknown as Record<string, unknown>;
+    (malformed.links as Array<Record<string, unknown>>)[0]!.showOnHome = "true";
+    (malformed.profile as Record<string, unknown>).unexpected = "field";
+
+    expect(() => validatePortfolioContent(malformed)).toThrow(/links\[0\]\.showOnHome must be a boolean/);
+    expect(() => validatePortfolioContent(malformed)).toThrow(/profile\.unexpected must be a supported field/);
   });
 
   it("normalizes a paired recommendation quote label and HTTPS URL", () => {
@@ -682,6 +693,12 @@ describe("portfolio normalization", () => {
     expect(() => normalizePortfolioContent(createSheets({ links: [{ id: "bad", label: "Bad", url: "not valid", kind: "external" }] }), metadata)).toThrow(/invalid url/);
     expect(() =>
       normalizePortfolioContent(
+        createSheets({ experience: [{ ...(createSheets().experience[0] as Record<string, string>), links: "Bad=https://example.com/ bad" }] }),
+        metadata
+      )
+    ).toThrow(/Invalid link URL for experience row 2\.links/);
+    expect(() =>
+      normalizePortfolioContent(
         createSheets({
           recommendations: [
             { id: "recommendation-a", recommender_name: "Alex Manager", full_quote: "Good work.", featured: "true", show_on_home: "true" },
@@ -849,10 +866,6 @@ describe("portfolio normalization", () => {
     expect(content.research[0]?.graphicalAbstract).toBeUndefined();
     expect(content.research[0]?.graphicalAbstractAlt).toBeUndefined();
     expect(content.research[0]?.video).toBeUndefined();
-    expect(getResearchGraphicalAbstract(content.research[0]!)).toMatchObject({
-      source: "curated",
-      src: "/images/research/cytocv-graphical-abstract.png"
-    });
   });
 
   it("requires complete popup copy when a skill provides any popup field", () => {
@@ -971,10 +984,11 @@ describe("portfolio normalization", () => {
     );
   });
 
-  it("publishes Treasury as current work and closes the prior research role in August 2026", () => {
+  it("publishes CDAO as current work and preserves Treasury as the prior link-only role", () => {
     const content = normalizePortfolioContent(readTemplateSheets(), metadata);
     const overview = createProfileOverviewContent(content);
     const homeContent = selectHomeContent(content);
+    const cdaoRole = content.experience.find((item) => item.id === "cdao-some-kinda-engineer");
     const treasuryRole = content.experience.find((item) => item.id === "us-treasury-ai-engineer");
     const priorResearchRole = content.experience.find(
       (item) => item.id === "research-assistant-software-engineering"
@@ -982,10 +996,24 @@ describe("portfolio normalization", () => {
     const cytocvResearch = content.research.find((item) => item.id === "cytocv-miller-lab");
 
     expect(content.profile).toMatchObject({
-      currentTitle: "AI Engineer",
-      currentCompany: "U.S. Department of the Treasury",
-      currentExperienceId: "us-treasury-ai-engineer",
-      previousExperienceId: "research-assistant-software-engineering"
+      currentTitle: "Member of Technical Staff",
+      currentCompany: "DoW Chief Digital & Artificial Intelligence Office (CDAO)",
+      currentExperienceId: "cdao-some-kinda-engineer",
+      previousExperienceId: "us-treasury-ai-engineer",
+      experienceSummary:
+        "My experience spans engineering with the DoW Chief Digital & Artificial Intelligence Office (CDAO) and the U.S. Treasury, research software and machine learning at the University of Washington, and teaching core computer science courses."
+    });
+    expect(cdaoRole).toMatchObject({
+      title: "Member of Technical Staff",
+      organization: "DoW Chief Digital & Artificial Intelligence Office (CDAO)",
+      organizationLogo: "/images/organizations/cdao_logo.webp",
+      organizationLogoAlt: "DoW Chief Digital & Artificial Intelligence Office (CDAO) emblem",
+      location: "Washington, District of Columbia, United States",
+      startDate: "2026-10",
+      endDate: "Present",
+      homeOrder: 1,
+      detailOrder: 1,
+      links: []
     });
     expect(treasuryRole).toMatchObject({
       title: "AI Engineer",
@@ -993,33 +1021,52 @@ describe("portfolio normalization", () => {
       organizationLogo: "/images/organizations/us_treasury_logo.webp",
       organizationLogoAlt: "U.S. Department of the Treasury logo",
       startDate: "2026-08",
-      endDate: "Present",
-      homeOrder: 1,
-      detailOrder: 1
+      location: "Washington, District of Columbia, United States",
+      endDate: "2026-10",
+      homeOrder: 2,
+      detailOrder: 2,
+      links: [{ label: "Tech.Treasury.Gov", url: "https://tech.treasury.gov" }]
     });
     expect(treasuryRole?.homeSummary).toBeUndefined();
-    expect(homeContent.experience[0]?.id).toBe("us-treasury-ai-engineer");
+    expect(homeContent.experience[0]?.id).toBe("cdao-some-kinda-engineer");
     expect(overview.currentWork).toMatchObject({
-      id: "us-treasury-ai-engineer",
-      title: "AI Engineer",
-      organization: "U.S. Department of the Treasury",
-      startDate: "2026-08",
+      id: "cdao-some-kinda-engineer",
+      title: "Member of Technical Staff",
+      organization: "DoW Chief Digital & Artificial Intelligence Office (CDAO)",
+      startDate: "2026-10",
       endDate: "Present",
-      dateLabel: "Aug 2026 – Present",
+      dateLabel: "Oct 2026 – Present",
+      location: "Washington, District of Columbia, United States",
       logo: {
-        src: "/images/organizations/us_treasury_logo.webp",
-        alt: "U.S. Department of the Treasury logo"
+        src: "/images/organizations/cdao_logo.webp",
+        alt: "DoW Chief Digital & Artificial Intelligence Office (CDAO) emblem"
       }
     });
     expect(overview.currentWork?.summary).toBeUndefined();
+    expect(treasuryRole?.endDate).toBe("2026-10");
     expect(priorResearchRole?.endDate).toBe("2026-08");
     expect(formatDateRange(priorResearchRole?.startDate, priorResearchRole?.endDate)).toBe(
       "Aug 2024 to Aug 2026"
     );
     expect(cytocvResearch?.endDate).toBe("2026-08");
+    expect(
+      content.experience
+        .filter((item) => [
+          "research-assistant-software-engineering",
+          "teaching-assistant",
+          "undergraduate-researcher-adversarial-ml",
+          "research-assistant-ai-ml"
+        ].includes(item.id))
+        .map((item) => item.location)
+    ).toEqual([
+      "Bothell, Washington, United States",
+      "Bothell, Washington, United States",
+      "Bothell, Washington, United States",
+      "Bothell, Washington, United States"
+    ]);
   });
 
-  it("associates the approved university logos through template content", () => {
+  it("associates the approved organization and university marks through template content", () => {
     const content = normalizePortfolioContent(readTemplateSheets(), metadata);
     const expectedOrganizationLogos = new Map([
       [
@@ -1035,6 +1082,13 @@ describe("portfolio normalization", () => {
         {
           organizationLogo: "/images/organizations/us_treasury_logo.webp",
           organizationLogoAlt: "U.S. Department of the Treasury logo"
+        }
+      ],
+      [
+        "DoW Chief Digital & Artificial Intelligence Office (CDAO)",
+        {
+          organizationLogo: "/images/organizations/cdao_logo.webp",
+          organizationLogoAlt: "DoW Chief Digital & Artificial Intelligence Office (CDAO) emblem"
         }
       ]
     ]);
@@ -1126,7 +1180,7 @@ describe("portfolio normalization", () => {
     ]);
   });
 
-  it("maps the three Home projects, three focused skill groups, and four recommendations from template content", () => {
+  it("maps five template projects into the ranked Home three, three focused skill groups, and five recommendations", () => {
     const content = normalizePortfolioContent(readTemplateSheets(), metadata);
     const homeProjects = content.projects.filter((item) => item.showOnHome);
     const skillCounts = new Map<string, number>();
@@ -1140,17 +1194,43 @@ describe("portfolio normalization", () => {
       maxHomeRecommendationItems: 3,
       maxHomeSkillItems: 12
     });
-    expect(homeProjects.map((item) => item.title)).toEqual(["NotePal", "Clair", "LeetNotes"]);
+    expect(content.projects.map((item) => item.id)).toEqual([
+      "compliance-label-assistant",
+      "notepal",
+      "tergion-technologies",
+      "leetnotes",
+      "clair"
+    ]);
+    expect(content.projects.map((item) => item.homeOrder)).toEqual([1, 2, 3, 4, 5]);
+    expect(content.projects.map((item) => item.detailOrder)).toEqual([1, 2, 3, 4, 5]);
+    expect(homeProjects.map((item) => item.id)).toEqual([
+      "compliance-label-assistant",
+      "notepal",
+      "tergion-technologies"
+    ]);
+    expect(selectHomeContent(content).projects.map((item) => item.id)).toEqual([
+      "compliance-label-assistant",
+      "notepal",
+      "tergion-technologies"
+    ]);
+    expect(content.projects.filter((item) => !item.showOnHome).map((item) => item.id)).toEqual([
+      "leetnotes",
+      "clair"
+    ]);
+    expect(content.projects.filter((item) => !item.links.some((link) => link.label === "Live demo")).map((item) => item.id)).toEqual([
+      "leetnotes",
+      "clair"
+    ]);
     expect(homeProjects.every((item) => item.homeSkills.length === 3)).toBe(true);
     expect(content.projects.find((item) => item.id === "notepal")).toMatchObject({
-      subtitle: "Multimodal study workspace",
+      subtitle: "Co-developed AI study workspace",
       homeSkills: [
         {
           name: "Next.js",
           icon: "nextdotjs",
           summary: "Next.js powers NotePal's web interface and routing.",
           details:
-            "The Next.js frontend provides the application interface, route structure, and authenticated study workflow while sending uploaded content to the separate Flask processing API."
+            "The Next.js frontend provides the application routes, authenticated study workspace, rich-text editing, quizzes, and document-aware chat. A separate Flask/Python module processes document and media inputs."
         },
         {
           name: "TypeScript",
@@ -1164,7 +1244,7 @@ describe("portfolio normalization", () => {
           icon: "openai",
           summary: "OpenAI API generates NotePal's language-based study features.",
           details:
-            "Backend requests use OpenAI models for text summarization, multiple-choice and short-answer quiz generation, and chatbot answers based on content extracted from uploaded documents and media."
+            "OpenAI requests generate summaries and quizzes. The chat route uses a history-aware LangChain retriever with document-scoped Pinecone embeddings to ground streamed responses in study notes."
         }
       ]
     });
@@ -1197,7 +1277,7 @@ describe("portfolio normalization", () => {
         icon: "python",
         summary: "Python implements the LeetNotes synchronization CLI.",
         details:
-          "The package reads published sheet CSVs, normalizes problem titles and LeetCode slugs, generates Markdown study notes, writes solution.py variants, and maintains the repository's indexed problem structure."
+          "The Python package fetches published sheet CSVs, normalizes problem titles and LeetCode metadata, generates Markdown notes, detects solution languages, writes language-specific files, and maintains an indexed problem structure."
       },
       {
         name: "GitHub Actions",
@@ -1211,7 +1291,7 @@ describe("portfolio normalization", () => {
         icon: "googlesheets",
         summary: "Google Sheets serves as LeetNotes' editable content source.",
         details:
-          "Each list uses paired Notes and Solutions sheets published as CSV: one stores problem metadata, approaches, complexity, and study notes; the other stores plain-text Python solutions."
+          "Paired Notes and Solutions sheets published as CSV hold problem metadata, approaches, complexity, study notes, and source-code snippets. Language hints and detection support multiple solution languages."
       }
     ]);
     expect(Array.from(skillCounts.entries())).toEqual([
@@ -1224,11 +1304,25 @@ describe("portfolio normalization", () => {
       content.skills.every((skill) => Boolean(skill.proficiency && skill.summary && skill.whereUsed))
     ).toBe(true);
     expect(content.recommendations.map((item) => item.recommenderName)).toEqual([
+      "Billy Gardner McIntyre",
       "Brent Lagesse",
       "Annuska Zolyomi, PhD",
       "Anoop Prasad",
       "Minh Nhat Huynh"
     ]);
+    expect(content.recommendations.find((item) => item.id === "billy-gardner-mcintyre")).toMatchObject({
+      recommenderTitle: "AI Engineer",
+      recommenderOrganization: "U.S. Department of the Treasury",
+      relationship: "Mentored Nicolas",
+      recommendationDate: "2026-10-05",
+      source: "LinkedIn",
+      sourceUrl: "https://www.linkedin.com/in/nicolas-gioanni/details/recommendations/",
+      linkedinUrl: "https://www.linkedin.com/in/bgmcintyre",
+      fullQuote: billyFullQuote,
+      homeOrder: 1,
+      detailOrder: 1,
+      showOnHome: true
+    });
     expect(content.recommendations.find((item) => item.id === "brent-lagesse")).toMatchObject({
       fullQuote: brentFullQuote,
       fullQuoteLink: {
@@ -1238,7 +1332,19 @@ describe("portfolio normalization", () => {
     });
     expect(content.recommendations.find((item) => item.id === "brent-lagesse")?.fullQuote).not.toContain("https://");
     expect(content.recommendations.find((item) => item.id === "brent-lagesse")?.fullQuote.match(/CytoCV/g)).toHaveLength(1);
-    expect(content.recommendations.filter((item) => item.showOnHome)).toHaveLength(3);
+    expect(content.recommendations.filter((item) => item.showOnHome)).toHaveLength(4);
+    expect(selectHomeRecommendations(content.recommendations, 3).map((item) => item.id)).toEqual([
+      "billy-gardner-mcintyre",
+      "brent-lagesse",
+      "annuska-zolyomi"
+    ]);
+    expect(sortRecommendationsForDetail(content.recommendations).map((item) => item.id)).toEqual([
+      "billy-gardner-mcintyre",
+      "brent-lagesse",
+      "annuska-zolyomi",
+      "anoop-prasad",
+      "minh-nhat-huynh"
+    ]);
   });
 
   it("rejects mail links used as organization logos", () => {
@@ -1303,6 +1409,7 @@ describe("profile overview helpers", () => {
     endDate: "Present",
     bullets: [],
     skills: [],
+    links: [],
     featured: true,
     showOnHome: true
   };
@@ -1316,20 +1423,27 @@ describe("profile overview helpers", () => {
   it("maps spreadsheet rows into the compact identity overview without Previous Work", () => {
     const sheets = createSheets();
     sheets.research = sheets.research.map((row) => ({ ...row, featured: "false", show_on_home: "false" }));
-    sheets.profile.push(
-      { key: "headline", value: "CSV Headline Sentinel." },
-      { key: "short_bio", value: "CSV About Sentinel." },
-      { key: "current_title", value: "CSV Current Role Sentinel" },
-      { key: "current_company", value: "CSV Current Organization Sentinel" },
-      { key: "current_experience_id", value: "experience-current-sentinel" },
-      { key: "previous_experience_id", value: "experience-previous-sentinel" },
-      { key: "featured_research_id", value: "research-sentinel" },
-      { key: "primary_education_id", value: "education-sentinel" },
-      { key: "university", value: "CSV Education Institution Sentinel" },
-      { key: "degree", value: "CSV Degree Sentinel" },
-      { key: "field_of_study", value: "CSV Field Sentinel" },
-      { key: "graduation", value: "2031-06" }
-    );
+    const profileUpdates = new Map([
+      ["headline", "CSV Headline Sentinel."],
+      ["short_bio", "CSV About Sentinel."],
+      ["current_title", "CSV Current Role Sentinel"],
+      ["current_company", "CSV Current Organization Sentinel"],
+      ["current_experience_id", "experience-current-sentinel"],
+      ["previous_experience_id", "experience-previous-sentinel"],
+      ["featured_research_id", "research-sentinel"],
+      ["primary_education_id", "education-sentinel"],
+      ["university", "CSV Education Institution Sentinel"],
+      ["degree", "CSV Degree Sentinel"],
+      ["field_of_study", "CSV Field Sentinel"],
+      ["graduation", "2031-06"]
+    ]);
+    sheets.profile = sheets.profile.map((row) => {
+      const value = profileUpdates.get(row.key);
+      if (value === undefined) return row;
+      profileUpdates.delete(row.key);
+      return { ...row, value };
+    });
+    sheets.profile.push(...[...profileUpdates].map(([key, value]) => ({ key, value })));
     sheets.experience.push(
       {
         id: "experience-current-sentinel",
@@ -1538,6 +1652,7 @@ describe("profile overview helpers", () => {
       startDate: baseExperience.startDate,
       endDate: "Present",
       dateLabel: "Jun 2025 \u2013 Present",
+      location: "Remote",
       summary: baseExperience.homeSummary,
       logo: { src: "/images/experience/company.svg", alt: "Company mark" }
     });
@@ -1958,6 +2073,46 @@ describe("content selection and sorting", () => {
         74
       )
     ).toBe("This is a long recommendation that should be shortened for the Home page w...");
+  });
+
+  it.each([
+    "billy-gardner-mcintyre",
+    "brent-lagesse",
+    "annuska-zolyomi",
+    "anoop-prasad",
+    "minh-nhat-huynh"
+  ])("resolves the approved LinkedIn verification fallback for %s", (id) => {
+    const profileUrl = `https://www.linkedin.com/in/${id}/`;
+    const explicitSourceUrl = `https://www.linkedin.com/posts/${id}/`;
+
+    expect(
+      getRecommendationVerificationUrl({ id, linkedinUrl: profileUrl, sourceUrl: explicitSourceUrl })
+    ).toBe(explicitSourceUrl);
+    expect(getRecommendationVerificationUrl({ id, linkedinUrl: profileUrl })).toBe(linkedInRecommendationsUrl);
+    expect(
+      getRecommendationVerificationUrl({ id, linkedinUrl: profileUrl, sourceUrl: profileUrl })
+    ).toBe(linkedInRecommendationsUrl);
+  });
+
+  it("requires unknown recommendations to supply a distinct source URL", () => {
+    const profileUrl = "https://www.linkedin.com/in/future-recommender/";
+    const explicitSourceUrl = "https://www.linkedin.com/posts/future-recommender/";
+
+    expect(
+      getRecommendationVerificationUrl({
+        id: "future-recommender",
+        linkedinUrl: profileUrl,
+        sourceUrl: explicitSourceUrl
+      })
+    ).toBe(explicitSourceUrl);
+    expect(getRecommendationVerificationUrl({ id: "future-recommender", linkedinUrl: profileUrl })).toBeUndefined();
+    expect(
+      getRecommendationVerificationUrl({
+        id: "future-recommender",
+        linkedinUrl: profileUrl,
+        sourceUrl: profileUrl
+      })
+    ).toBeUndefined();
   });
 
   it("hides the Recommendations route when empty unless empty display is enabled", () => {

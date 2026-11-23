@@ -26,6 +26,7 @@ import {
 import { expectDetailOutlineMotion, expectReducedMotionDetailOutline } from "./detailOutline";
 import { settleLayout, settlePageEntryMotion } from "./settleLayout";
 import { reloadWithStoredTheme } from "./themePreference";
+import { expectSettingsActiveViewFit, expectSettingsFocusGutter } from "./videoSettings";
 
 
 test.beforeEach(async ({ page }) => {
@@ -130,420 +131,27 @@ async function expectNoHorizontalOverflow(page: Page) {
     .toBe(true);
 }
 
-async function getRenderedResearchExplainers(page: Page): Promise<Locator[]> {
-  const explainers = page.locator("[data-research-explainer]");
-  return Array.from({ length: await explainers.count() }, (_, index) =>
-    explainers.nth(index),
-  );
-}
-
-type ExplainerCinematicContract = {
-  labels: readonly string[];
-  phaseSubjects: readonly string[];
-  title: string;
-};
-
-const explainerCinematicContracts = {
-  aml: {
-    labels: [
-      "Clean image",
-      "Altered copy",
-      "Train with both",
-      "Binary detector",
-      "Test image",
-      "Clean or manipulated?",
-    ],
-    phaseSubjects: [
-      ".research-explainer__pixel-patches",
-      ".research-explainer__data-token",
-      ".research-explainer__detector-ring",
-      ".research-explainer__test-token",
-    ],
-    title: "Can AI spot an altered image?",
-  },
-  "guide-donor": {
-    labels: [
-      "Target DNA",
-      "A → G",
-      "Guide site",
-      "Donor design",
-      "Export designs",
-      "Guide",
-      "Donor",
-    ],
-    phaseSubjects: [
-      ".research-explainer__change-marker--requested",
-      ".research-explainer__guide-bracket",
-      ".research-explainer__donor-token",
-      ".research-explainer__export-token",
-    ],
-    title: "Design a DNA change",
-  },
-} as const satisfies Record<string, ExplainerCinematicContract>;
-
-function getExplainerCinematicContract(
-  variant: string | null,
-): ExplainerCinematicContract {
-  const contract = variant
-    ? explainerCinematicContracts[
-        variant as keyof typeof explainerCinematicContracts
-      ]
-    : undefined;
-  if (!contract) {
-    throw new Error(`Unexpected Research explainer variant: ${variant}`);
-  }
-  return contract;
-}
-
-async function expectResearchExplainerStaticContent(
-  explainer: Locator,
-): Promise<ExplainerCinematicContract> {
-  const variant = await explainer.getAttribute("data-research-explainer");
-  const contract = getExplainerCinematicContract(variant);
-  await expect(explainer).toHaveAttribute("data-research-explainer", variant!);
-  await expect(explainer.locator(".research-explainer__title")).toHaveText(
-    contract.title,
-  );
-  await expect(explainer.locator(".research-explainer__scene")).toHaveCount(1);
-  await expect(explainer.locator(".research-explainer__scene")).toBeVisible();
-  await expect(
-    explainer.locator("svg.research-explainer__diagram"),
-  ).toHaveCount(1);
-  await expect(
-    explainer.locator("svg.research-explainer__diagram"),
-  ).toBeVisible();
-  await expect(explainer.locator(".research-explainer__caption")).toBeVisible();
-  await expect(
-    explainer.locator(".research-explainer__caption"),
-  ).not.toBeEmpty();
-  const sceneLabels = explainer.locator(
-    ".research-explainer__scene-labels",
-  );
-  await expect(
-    sceneLabels.locator(".research-explainer__scene-label"),
-  ).toHaveCount(contract.labels.length);
-  const labelText = await sceneLabels
-    .locator(".research-explainer__scene-label")
-    .evaluateAll((labels) =>
-      labels.map((label) =>
-        (label instanceof HTMLElement ? label.innerText : label.textContent ?? "")
-          .replace(/\s+/g, " ")
-          .trim(),
-      ),
-    );
-  expect(labelText).toEqual(contract.labels);
-
-  const phases = await explainer
-    .locator(".research-explainer__phase")
-    .evaluateAll((elements) =>
-      elements.map((element) => ({
-        className: element.getAttribute("class") ?? "",
-        opacity: Number.parseFloat(getComputedStyle(element).opacity),
-        visibility: getComputedStyle(element).visibility,
-      })),
-    );
-  expect(phases).toHaveLength(4);
-  expect(phases.map((phase) => phase.className)).toEqual(
-    expect.arrayContaining([
-      expect.stringContaining("research-explainer__phase--one"),
-      expect.stringContaining("research-explainer__phase--two"),
-      expect.stringContaining("research-explainer__phase--three"),
-      expect.stringContaining("research-explainer__phase--four"),
-    ]),
-  );
-  for (const phase of phases) {
-    expect(phase.visibility).toBe("visible");
-    expect(phase.opacity).toBeGreaterThan(0);
-  }
-
-  return contract;
-}
-
-async function expectExplainerSceneVisibleAtEveryPhase(
-  explainer: Locator,
-  contract: ExplainerCinematicContract,
-) {
-  const samples = await explainer.evaluate((root, options) => {
-    const phases = Array.from(
-      root.querySelectorAll<HTMLElement>(".research-explainer__phase"),
-    );
-    const labels = Array.from(
-      root.querySelectorAll<HTMLElement>(".research-explainer__scene-label"),
-    );
-    const scene = root.querySelector<HTMLElement>(".research-explainer__scene");
-    const animations = root
-      .getAnimations({ subtree: true })
-      .filter((animation) => {
-        const target = (animation.effect as KeyframeEffect | null)?.target;
-        return (
-          target instanceof Element &&
-          (target.matches(options.subjectSelector) ||
-            Boolean(target.closest(options.subjectSelector)))
-        );
-      });
-    const animationsByPhase = options.phaseSubjects.map((selector) =>
-      animations.filter((animation) => {
-        const target = (animation.effect as KeyframeEffect | null)?.target;
-        return (
-          target instanceof Element &&
-          (target.matches(selector) || Boolean(target.closest(selector)))
-        );
-      }),
-    );
-    if (
-      phases.length !== 4 ||
-      !scene ||
-      labels.length !== options.labelCount ||
-      animationsByPhase.some((phaseAnimations) => phaseAnimations.length === 0)
-    ) {
-      throw new Error(
-        "Research explainer must keep four persistent phases, its connected scene, visible HTML labels, and an animated subject for each phase.",
-      );
-    }
-
-    const snapshots = [1_500, 4_600, 7_500, 10_200, 11_500].map((time) => {
-      for (const animation of animations) {
-        animation.pause();
-        animation.currentTime = time;
-      }
-      return {
-        animationCounts: animationsByPhase.map(
-          (phaseAnimations) => phaseAnimations.length,
-        ),
-        animationDurations: animations.map((animation) => {
-          const target = (animation.effect as KeyframeEffect).target as Element;
-          return getComputedStyle(target).animationDuration;
-        }),
-        animationTimes: animations.map((animation) =>
-          Number(animation.currentTime ?? -1),
-        ),
-        labels: labels.map((label) => {
-          const style = getComputedStyle(label);
-          const box = label.getBoundingClientRect();
-          return {
-            height: box.height,
-            opacity: Number.parseFloat(style.opacity),
-            visibility: style.visibility,
-            width: box.width,
-          };
-        }),
-        phases: phases.map((phase) => {
-          const style = getComputedStyle(phase);
-          return {
-            opacity: Number.parseFloat(style.opacity),
-            visibility: style.visibility,
-          };
-        }),
-        subjects: options.phaseSubjects.map((selector) =>
-          Array.from(root.querySelectorAll<HTMLElement>(selector)).map(
-            (subject) => {
-              const style = getComputedStyle(subject);
-              const box = subject.getBoundingClientRect();
-              return {
-                height: box.height,
-                opacity: Number.parseFloat(style.opacity),
-                transform: style.transform,
-                visibility: style.visibility,
-                width: box.width,
-              };
-            },
-          ),
-        ),
-      };
+async function wakeVideoControlsWithPointer(player: Locator) {
+  await player.scrollIntoViewIfNeeded();
+  await player.hover({ position: { x: 12, y: 12 } });
+  await player.hover({ position: { x: 28, y: 12 } });
+  await expect(player).toHaveAttribute("data-controls-visible", "true");
+  await player.evaluate(async (playerElement) => {
+    await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+    const finiteAnimations = playerElement.getAnimations({ subtree: true }).filter((animation) => {
+      const iterations = animation.effect?.getTiming().iterations;
+      return typeof iterations === "number" && Number.isFinite(iterations);
     });
-    let guideExportPathSample: {
-      closestPathDistance: number;
-      opacity: number;
-      visibility: string;
-    } | undefined;
-    if (options.variant === "guide-donor") {
-      for (const animation of animations) {
-        animation.pause();
-        animation.currentTime = 9_720;
-      }
-      const svg = root.querySelector<SVGSVGElement>(
-        "svg.research-explainer__diagram",
-      );
-      const guideToken = root.querySelector<SVGCircleElement>(
-        ".research-explainer__export-token--guide",
-      );
-      const guidePath = root.querySelector<SVGPathElement>(
-        ".research-explainer__export-path",
-      );
-      if (!svg || !guideToken || !guidePath) {
-        throw new Error(
-          "GuideDonorScheduler needs a guide export token and visible path.",
-        );
-      }
-      const svgBox = svg.getBoundingClientRect();
-      const tokenBox = guideToken.getBoundingClientRect();
-      const viewBox = svg.viewBox.baseVal;
-      const tokenCenter = {
-        x:
-          viewBox.x +
-          ((tokenBox.left + tokenBox.width / 2 - svgBox.left) / svgBox.width) *
-            viewBox.width,
-        y:
-          viewBox.y +
-          ((tokenBox.top + tokenBox.height / 2 - svgBox.top) / svgBox.height) *
-            viewBox.height,
-      };
-      const totalLength = guidePath.getTotalLength();
-      let closestPathDistance = Number.POSITIVE_INFINITY;
-      for (let step = 0; step <= 200; step += 1) {
-        const point = guidePath.getPointAtLength((totalLength * step) / 200);
-        closestPathDistance = Math.min(
-          closestPathDistance,
-          Math.hypot(point.x - tokenCenter.x, point.y - tokenCenter.y),
-        );
-      }
-      const style = getComputedStyle(guideToken);
-      guideExportPathSample = {
-        closestPathDistance,
-        opacity: Number.parseFloat(style.opacity),
-        visibility: style.visibility,
-      };
-    }
-    for (const animation of animations) animation.play();
-    return { guideExportPathSample, snapshots };
-  }, {
-    labelCount: contract.labels.length,
-    phaseSubjects: contract.phaseSubjects,
-    subjectSelector: contract.phaseSubjects.join(", "),
-    variant: await explainer.getAttribute("data-research-explainer"),
+    await Promise.all(finiteAnimations.map((animation) => animation.finished.catch(() => undefined)));
   });
-
-  expect(samples.snapshots).toHaveLength(5);
-  for (const [sampleIndex, sample] of samples.snapshots.entries()) {
-    expect(sample.phases).toHaveLength(4);
-    expect(sample.labels).toHaveLength(contract.labels.length);
-    expect(sample.animationCounts).toHaveLength(4);
-    expect(sample.animationCounts.every((count) => count > 0)).toBe(true);
-    expect(sample.animationDurations.every((duration) => duration === "12s")).toBe(
-      true,
-    );
-    expect(
-      sample.animationTimes.every(
-        (time) => Math.abs(time - [1_500, 4_600, 7_500, 10_200, 11_500][sampleIndex]!) <= 1,
-      ),
-    ).toBe(true);
-    for (const phase of sample.phases) {
-      expect(phase.visibility).toBe("visible");
-      expect(phase.opacity).toBeGreaterThan(0);
-    }
-    for (const label of sample.labels) {
-      expect(label.visibility).toBe("visible");
-      expect(label.opacity).toBeGreaterThan(0);
-      expect(label.width).toBeGreaterThan(0);
-      expect(label.height).toBeGreaterThan(0);
-    }
-    for (const phaseSubjects of sample.subjects) {
-      expect(phaseSubjects.length).toBeGreaterThan(0);
-      for (const subject of phaseSubjects) {
-        expect(subject.visibility).toBe("visible");
-        expect(subject.width).toBeGreaterThan(0);
-        expect(subject.height).toBeGreaterThan(0);
-      }
-    }
-    if (sampleIndex < 4) {
-      const emphasizedSubject = sample.subjects[sampleIndex]!;
-      expect(
-        emphasizedSubject.some(
-          (subject) => subject.opacity > 0,
-        ),
-      ).toBe(true);
-      expect(
-        emphasizedSubject.some(
-          (subject) => subject.transform !== "none" || subject.opacity < 0.99,
-        ),
-      ).toBe(true);
-    }
-  }
-  if (samples.guideExportPathSample) {
-    expect(samples.guideExportPathSample.visibility).toBe("visible");
-    expect(samples.guideExportPathSample.opacity).toBeGreaterThan(0);
-    expect(samples.guideExportPathSample.closestPathDistance).toBeLessThanOrEqual(
-      6,
-    );
-  }
-}
-
-async function sampleExplainerTimeline(
-  explainer: Locator,
-  selector: string,
-  frames = 0,
-): Promise<number[]> {
-  return explainer.evaluate(async (root, options) => {
-    for (let frame = 0; frame < options.frames; frame += 1) {
-      await new Promise<void>((resolve) =>
-        window.requestAnimationFrame(() => resolve()),
-      );
-    }
-    return root
-      .getAnimations({ subtree: true })
-      .filter((animation) => {
-        const target = (animation.effect as KeyframeEffect | null)?.target;
-        return (
-          target instanceof Element &&
-          (target.matches(options.selector) ||
-            Boolean(target.closest(options.selector)))
-        );
-      })
-      .map((animation) => Number.parseFloat(String(animation.currentTime ?? -1)));
-  }, { frames, selector });
-}
-
-async function getExplainerAnimationStyles(
-  explainer: Locator,
-  selector: string,
-) {
-  return explainer.evaluate((root, targetSelector) =>
-    root
-      .getAnimations({ subtree: true })
-      .filter((animation) => {
-        const target = (animation.effect as KeyframeEffect | null)?.target;
-        return (
-          target instanceof Element &&
-          (target.matches(targetSelector) ||
-            Boolean(target.closest(targetSelector)))
-        );
-      })
-      .map((animation) => {
-        const target = (animation.effect as KeyframeEffect).target as Element;
-        const style = getComputedStyle(target);
-        return {
-          animationDuration: style.animationDuration,
-          animationName: style.animationName,
-          playState: style.animationPlayState,
-        };
-      }),
-  selector);
-}
-
-async function waitForExplainerTimelineToFreeze(explainer: Locator, selector: string) {
-  await expect.poll(async () => {
-    const start = await sampleExplainerTimeline(explainer, selector);
-    const next = await sampleExplainerTimeline(explainer, selector, 2);
-    return next.every((time, index) => Math.abs(time - start[index]!) <= 1);
-  }).toBe(true);
-}
-
-async function setDocumentVisibilityForTest(page: Page, hidden: boolean) {
-  await page.evaluate((nextHidden) => {
-    Object.defineProperty(document, "hidden", {
-      configurable: true,
-      get: () => nextHidden,
-    });
-    document.dispatchEvent(new Event("visibilitychange"));
-  }, hidden);
 }
 
 async function expectAbstractFrameGeometry(trigger: Locator) {
   await trigger.scrollIntoViewIfNeeded();
   const geometry = await trigger.evaluate((triggerElement) => {
     const abstract = triggerElement.closest<HTMLElement>(".research-abstract");
-    const row = abstract?.closest<HTMLElement>(
-      ".research-project__media-row--abstract",
+    const mediaWrapper = abstract?.closest<HTMLElement>(
+      ".research-project__media-row--abstract, .research-project__single-media",
     );
     const title = abstract?.querySelector<HTMLElement>(
       ".research-abstract__title",
@@ -551,13 +159,13 @@ async function expectAbstractFrameGeometry(trigger: Locator) {
     const thumbnail = triggerElement.querySelector<HTMLImageElement>(
       ".research-abstract__thumbnail",
     );
-    if (!abstract || !row || !title || !thumbnail)
+    if (!abstract || !mediaWrapper || !title || !thumbnail)
       throw new Error(
-        "The graphical abstract is missing its titled frame, media row, or thumbnail.",
+        "The graphical abstract is missing its titled frame, media wrapper, or thumbnail.",
       );
 
     const abstractBox = abstract.getBoundingClientRect();
-    const rowBox = row.getBoundingClientRect();
+    const mediaWrapperBox = mediaWrapper.getBoundingClientRect();
     const triggerBox = triggerElement.getBoundingClientRect();
     const thumbnailBox = thumbnail.getBoundingClientRect();
     const thumbnailStyles = getComputedStyle(thumbnail);
@@ -566,13 +174,21 @@ async function expectAbstractFrameGeometry(trigger: Locator) {
     return {
       abstract: {
         clientWidth: abstract.clientWidth,
+        height: abstractBox.height,
         scrollWidth: abstract.scrollWidth,
       },
-      row: {
-        left: abstractBox.left - rowBox.left,
-        paddingLeft: getComputedStyle(row).paddingLeft,
-        paddingRight: getComputedStyle(row).paddingRight,
-        right: rowBox.right - abstractBox.right,
+      mediaWrapper: {
+        alignContent: getComputedStyle(mediaWrapper).alignContent,
+        bottom: mediaWrapperBox.bottom - abstractBox.bottom,
+        height: mediaWrapperBox.height,
+        isSingle: mediaWrapper.classList.contains("research-project__single-media"),
+        left: abstractBox.left - mediaWrapperBox.left,
+        paddingBottom: getComputedStyle(mediaWrapper).paddingBottom,
+        paddingLeft: getComputedStyle(mediaWrapper).paddingLeft,
+        paddingRight: getComputedStyle(mediaWrapper).paddingRight,
+        paddingTop: getComputedStyle(mediaWrapper).paddingTop,
+        right: mediaWrapperBox.right - abstractBox.right,
+        top: abstractBox.top - mediaWrapperBox.top,
       },
       title: { triggerTopAfterTitle: triggerBox.top - titleBox.bottom },
       rowGap: Number.parseFloat(getComputedStyle(abstract).rowGap),
@@ -593,11 +209,25 @@ async function expectAbstractFrameGeometry(trigger: Locator) {
     };
   });
 
-  expect(geometry.row.paddingLeft).toBe("16px");
-  expect(geometry.row.paddingRight).toBe("16px");
-  expect(Math.abs(geometry.row.left - geometry.row.right)).toBeLessThanOrEqual(
+  expect(geometry.mediaWrapper.paddingTop).toBe("16px");
+  expect(geometry.mediaWrapper.paddingRight).toBe("16px");
+  expect(geometry.mediaWrapper.paddingBottom).toBe("16px");
+  expect(geometry.mediaWrapper.paddingLeft).toBe("16px");
+  expect(Math.abs(geometry.mediaWrapper.left - geometry.mediaWrapper.right)).toBeLessThanOrEqual(
     1,
   );
+  expect(geometry.abstract.clientWidth).toBeLessThanOrEqual(512);
+  if (geometry.mediaWrapper.isSingle) {
+    if (await trigger.evaluate(() => window.innerWidth > 920)) {
+      expect(geometry.mediaWrapper.alignContent).toBe("center");
+      expect(Math.abs(geometry.mediaWrapper.top - geometry.mediaWrapper.bottom)).toBeLessThanOrEqual(1);
+    } else {
+      expect(geometry.mediaWrapper.alignContent).toBe("start");
+      expect(geometry.mediaWrapper.top).toBeCloseTo(16, 0);
+      expect(geometry.mediaWrapper.bottom).toBeCloseTo(16, 0);
+      expect(geometry.mediaWrapper.height).toBeCloseTo(geometry.abstract.height + 32, 0);
+    }
+  }
   expect(geometry.trigger.height).toBeGreaterThan(0);
   expect(geometry.title.triggerTopAfterTitle).toBeCloseTo(geometry.rowGap, 0);
   expect(geometry.trigger.width).toBeCloseTo(geometry.abstract.clientWidth, 0);
@@ -1088,301 +718,159 @@ test.describe("Research showcase", () => {
     }
   });
 
-  test("keeps each rendered media stack abstract-first in two centered desktop rows", async ({
-    page,
-  }) => {
-    test.slow();
+  test("keeps CytoCV abstract-first in two rows and vertically centers abstract-only projects", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto("/research");
     await settleLayout(page);
 
-    for (const theme of ["navy", "light", "dark"] as const) {
-      await reloadWithStoredTheme(page, theme);
+    const projects = await expectResearchProjectsOrEmptyState(page);
+    if (!projects) return;
+
+    const cytocv = page.locator('article.research-project[id="cytocv-miller-lab"]');
+    const stack = page.locator('#cytocv-miller-lab .research-media-stack');
+    await expect(page.locator(".research-media-stack")).toHaveCount(1);
+    await expect(stack).toHaveCount(1);
+    const rows = stack.locator(":scope > .research-project__media-row");
+    await expect(rows).toHaveCount(2);
+    await expect(stack.locator(":scope > .research-project__media-divider")).toHaveCount(1);
+    await expect(rows.nth(0)).toHaveClass(/research-project__media-row--abstract/);
+    await expect(rows.nth(1)).toHaveClass(/research-project__media-row--video/);
+    await expect(rows.nth(0).locator(":scope > .research-abstract")).toHaveCount(1);
+    await expect(rows.nth(1).locator(":scope > .research-video")).toHaveCount(1);
+    await expect(cytocv.locator(".research-media-title")).toHaveCount(2);
+
+    const stackGeometry = await stack.evaluate((stackElement) => {
+      const rows = Array.from(stackElement.querySelectorAll<HTMLElement>(":scope > .research-project__media-row"));
+      const divider = stackElement.querySelector<HTMLElement>(":scope > .research-project__media-divider");
+      if (rows.length !== 2 || !divider) throw new Error("CytoCV is missing its abstract, divider, or video row.");
+      const stackBox = stackElement.getBoundingClientRect();
+      const dividerBox = divider.getBoundingClientRect();
+      return {
+        divider: {
+          height: dividerBox.height,
+          left: dividerBox.left - stackBox.left,
+          right: stackBox.right - dividerBox.right,
+        },
+        rows: rows.map((row) => {
+          const rowBox = row.getBoundingClientRect();
+          const medium = row.querySelector<HTMLElement>(":scope > .research-abstract, :scope > .research-video");
+          if (!medium) throw new Error("CytoCV media row is empty.");
+          const mediumBox = medium.getBoundingClientRect();
+          const style = getComputedStyle(row);
+          return {
+            alignContent: style.alignContent,
+            height: rowBox.height,
+            left: mediumBox.left - rowBox.left,
+            paddingLeft: style.paddingLeft,
+            paddingRight: style.paddingRight,
+            right: rowBox.right - mediumBox.right,
+            width: mediumBox.width,
+          };
+        }),
+      };
+    });
+    expect(stackGeometry.divider.height).toBeCloseTo(1, 0);
+    expect(stackGeometry.divider.left).toBeCloseTo(24, 0);
+    expect(stackGeometry.divider.right).toBeCloseTo(24, 0);
+    expect(stackGeometry.rows[0]!.height).toBeCloseTo(stackGeometry.rows[1]!.height, 0);
+    for (const row of stackGeometry.rows) {
+      expect(row.alignContent).toBe("center");
+      expect(row.paddingLeft).toBe("16px");
+      expect(row.paddingRight).toBe("16px");
+      expect(row.width).toBeLessThanOrEqual(512);
+      expect(Math.abs(row.left - row.right)).toBeLessThanOrEqual(1);
+    }
+
+    const abstractOnlyProjects = projects.filter({ has: page.locator(".research-project__single-media") });
+    const abstractOnlyProjectCount = await abstractOnlyProjects.count();
+    expect(abstractOnlyProjectCount).toBeGreaterThan(0);
+    expect(abstractOnlyProjectCount).toBe((await projects.count()) - 1);
+    for (let index = 0; index < abstractOnlyProjectCount; index += 1) {
+      const project = abstractOnlyProjects.nth(index);
+      const wrapper = project.locator(".research-project__single-media");
+      await expect(wrapper).toHaveCount(1);
+      await expect(project.locator(".research-abstract")).toHaveCount(1);
+      await expect(project.locator(".research-media-title")).toHaveCount(1);
+      await expect(project.locator(".research-media-stack, .research-project__media-row, .research-project__media-divider, .research-video")).toHaveCount(0);
+
+      const geometry = await wrapper.evaluate((wrapperElement) => {
+        const abstract = wrapperElement.querySelector<HTMLElement>(":scope > .research-abstract");
+        const visual = wrapperElement.closest<HTMLElement>(".research-project__visual");
+        if (!abstract || !visual) throw new Error("Abstract-only project is missing its media group or visual column.");
+        const wrapperBox = wrapperElement.getBoundingClientRect();
+        const abstractBox = abstract.getBoundingClientRect();
+        const visualBox = visual.getBoundingClientRect();
+        const style = getComputedStyle(wrapperElement);
+        return {
+          alignContent: style.alignContent,
+          bottom: wrapperBox.bottom - abstractBox.bottom,
+          height: wrapperBox.height,
+          left: abstractBox.left - wrapperBox.left,
+          padding: [style.paddingTop, style.paddingRight, style.paddingBottom, style.paddingLeft],
+          right: wrapperBox.right - abstractBox.right,
+          top: abstractBox.top - wrapperBox.top,
+          visualHeight: visualBox.height,
+          width: abstractBox.width,
+        };
+      });
+      expect(geometry.alignContent).toBe("center");
+      expect(geometry.padding).toEqual(["16px", "16px", "16px", "16px"]);
+      expect(geometry.height).toBeCloseTo(geometry.visualHeight, 0);
+      expect(geometry.width).toBeLessThanOrEqual(512);
+      expect(Math.abs(geometry.left - geometry.right)).toBeLessThanOrEqual(1);
+      expect(Math.abs(geometry.top - geometry.bottom)).toBeLessThanOrEqual(1);
+      await expectAbstractFrameGeometry(project.locator(".research-abstract__trigger"));
+    }
+
+    await expect(page.locator("[data-research-explainer], .research-explainer__playback-control, svg.research-explainer__diagram")).toHaveCount(0);
+    await expectNoHorizontalOverflow(page);
+  });
+
+  test("uses natural abstract-only height on narrow layouts without removed media controls", async ({ page }) => {
+    for (const viewport of [{ width: 920, height: 900 }, { width: 390, height: 844 }]) {
+      await page.setViewportSize(viewport);
+      await page.goto("/research");
       await settleLayout(page);
+
       const projects = await expectResearchProjectsOrEmptyState(page);
       if (!projects) continue;
+      await expect(page.locator("[data-research-explainer], .research-explainer__playback-control, svg.research-explainer__diagram")).toHaveCount(0);
+      await expect(page.getByRole("link", { name: "Read transcript" })).toHaveCount(0);
+      await expect(page.getByText(/read the transcript|transcript for the narrated workflow/i)).toHaveCount(0);
 
-      const stacks = projects.locator(".research-media-stack");
-      for (let index = 0; index < (await stacks.count()); index += 1) {
-        const stack = stacks.nth(index);
-        const rows = stack.locator(":scope > .research-project__media-row");
-        const divider = stack.locator(
-          ":scope > .research-project__media-divider",
-        );
-        await expect(rows).toHaveCount(2);
-        await expect(divider).toHaveCount(1);
-        await expect(rows.nth(0)).toHaveClass(
-          /research-project__media-row--abstract/,
-        );
-        await expect(rows.nth(1)).toHaveClass(
-          /research-project__media-row--explainer/,
-        );
-        await expect(rows.nth(0).locator(".research-abstract")).toHaveCount(1);
-        await expect(
-          rows
-            .nth(1)
-            .locator(":is(.research-video, [data-research-explainer])"),
-        ).toHaveCount(1);
-
-        const geometry = await stack.evaluate((stackElement) => {
-          const rows = Array.from(
-            stackElement.querySelectorAll<HTMLElement>(
-              ":scope > .research-project__media-row",
-            ),
-          );
-          const divider = stackElement.querySelector<HTMLElement>(
-            ":scope > .research-project__media-divider",
-          );
-          if (rows.length !== 2 || !divider)
-            throw new Error(
-              "Research media stack is missing its rows or divider.",
-            );
-
-          const stackBox = stackElement.getBoundingClientRect();
-          const dividerBox = divider.getBoundingClientRect();
+      const abstractOnlyProjects = projects.filter({ has: page.locator(".research-project__single-media") });
+      const abstractOnlyProjectCount = await abstractOnlyProjects.count();
+      expect(abstractOnlyProjectCount).toBeGreaterThan(0);
+      expect(abstractOnlyProjectCount).toBe((await projects.count()) - 1);
+      for (let index = 0; index < abstractOnlyProjectCount; index += 1) {
+        const project = abstractOnlyProjects.nth(index);
+        const wrapper = project.locator(".research-project__single-media");
+        await expect(wrapper).toHaveCount(1);
+        const geometry = await wrapper.evaluate((wrapperElement) => {
+          const abstract = wrapperElement.querySelector<HTMLElement>(":scope > .research-abstract");
+          if (!abstract) throw new Error("Abstract-only wrapper has no graphical abstract.");
+          const wrapperBox = wrapperElement.getBoundingClientRect();
+          const abstractBox = abstract.getBoundingClientRect();
+          const style = getComputedStyle(wrapperElement);
           return {
-            backgroundColor: getComputedStyle(stackElement).backgroundColor,
-            backgroundImage: getComputedStyle(stackElement).backgroundImage,
-            divider: {
-              height: dividerBox.height,
-              left: dividerBox.left - stackBox.left,
-              right: stackBox.right - dividerBox.right,
-            },
-            rows: rows.map((row) => {
-              const box = row.getBoundingClientRect();
-              const medium = row.querySelector<HTMLElement>(
-                ":scope > .research-abstract, :scope > .research-video, :scope > .research-explainer",
-              );
-              const mediumBox = medium?.getBoundingClientRect();
-              const style = getComputedStyle(row);
-              return {
-                alignContent: style.alignContent,
-                height: box.height,
-                mediumLeft: mediumBox ? mediumBox.left - box.left : undefined,
-                mediumRight: mediumBox
-                  ? box.right - mediumBox.right
-                  : undefined,
-                mediumWidth: mediumBox?.width,
-                paddingLeft: style.paddingLeft,
-                paddingRight: style.paddingRight,
-                width: box.width,
-              };
-            }),
+            alignContent: style.alignContent,
+            bottom: wrapperBox.bottom - abstractBox.bottom,
+            height: wrapperBox.height,
+            mediaHeight: abstractBox.height,
+            padding: [style.paddingTop, style.paddingRight, style.paddingBottom, style.paddingLeft],
+            top: abstractBox.top - wrapperBox.top,
           };
         });
-
-        expect(geometry.backgroundColor).toMatch(/^rgb\(\d+,\s*\d+,\s*\d+\)$/);
-        expect(geometry.backgroundImage).toBe("none");
-        expect(geometry.divider.height).toBeCloseTo(1, 0);
-        expect(geometry.divider.left).toBeCloseTo(24, 0);
-        expect(geometry.divider.right).toBeCloseTo(24, 0);
-        expect(geometry.rows[0]!.height).toBeCloseTo(
-          geometry.rows[1]!.height,
-          0,
-        );
-        for (const row of geometry.rows) {
-          expect(row.alignContent).toBe("center");
-          expect(row.paddingLeft).toBe("16px");
-          expect(row.paddingRight).toBe("16px");
-          expect(row.mediumWidth).toBeDefined();
-          expect(row.mediumWidth!).toBeLessThanOrEqual(512);
-          expect(
-            Math.abs((row.mediumLeft ?? 0) - (row.mediumRight ?? 0)),
-          ).toBeLessThanOrEqual(1);
-        }
+        expect(geometry.alignContent).toBe("start");
+        expect(geometry.padding).toEqual(["16px", "16px", "16px", "16px"]);
+        expect(geometry.top).toBeCloseTo(16, 0);
+        expect(geometry.bottom).toBeCloseTo(16, 0);
+        expect(geometry.height).toBeCloseTo(geometry.mediaHeight + 32, 0);
+        await expectAbstractFrameGeometry(project.locator(".research-abstract__trigger"));
       }
 
       await expectNoHorizontalOverflow(page);
     }
-  });
-
-  test("keeps complete connected explainer scenes visible through every cinematic phase", async ({ page }) => {
-    await page.setViewportSize({ width: 1280, height: 900 });
-    await page.goto("/research");
-    await settleLayout(page);
-
-    for (const explainer of await getRenderedResearchExplainers(page)) {
-      await explainer.scrollIntoViewIfNeeded();
-      const contract = await expectResearchExplainerStaticContent(explainer);
-      await expectExplainerSceneVisibleAtEveryPhase(explainer, contract);
-    }
-  });
-
-  test("runs rendered diagram explainers only while eligible and retains a manual pause", async ({
-    page,
-  }) => {
-    test.slow();
-    await page.setViewportSize({ width: 1280, height: 900 });
-    await page.goto("/research");
-    await settleLayout(page);
-
-    const explainers = await getRenderedResearchExplainers(page);
-    if (explainers.length === 0) return;
-
-    for (const explainer of explainers) {
-      await explainer.scrollIntoViewIfNeeded();
-      const contract = await expectResearchExplainerStaticContent(explainer);
-      const subjectSelector = contract.phaseSubjects.join(", ");
-      const control = explainer.locator(
-        "button.research-explainer__playback-control",
-      );
-      await expect(control).toHaveCount(1);
-      await expect(explainer).toHaveAttribute("data-playback", "playing");
-      await expect(control).toHaveAccessibleName(/^Pause\b/);
-
-      const controlBox = await control.boundingBox();
-      expect(controlBox).not.toBeNull();
-      expect(controlBox!.width).toBeGreaterThanOrEqual(44);
-      expect(controlBox!.height).toBeGreaterThanOrEqual(44);
-      const subjectAnimations = await getExplainerAnimationStyles(
-        explainer,
-        subjectSelector,
-      );
-      expect(subjectAnimations.length).toBeGreaterThanOrEqual(4);
-      for (const animation of subjectAnimations) {
-        expect(animation.animationName).not.toBe("none");
-        expect(animation.animationDuration).toBe("12s");
-        expect(animation.playState).toBe("running");
-      }
-
-      const runningSubjectStart = await sampleExplainerTimeline(explainer, subjectSelector);
-      const runningSubjectNextFrame = await sampleExplainerTimeline(explainer, subjectSelector, 2);
-      expect(runningSubjectNextFrame.some((time, index) => time > runningSubjectStart[index]!)).toBe(true);
-
-      await page.evaluate(() => window.scrollTo(0, 0));
-      await expect(explainer).toHaveAttribute("data-playback", "waiting");
-      await expect(control).toHaveAccessibleName(/^Pause\b/);
-      await expect
-        .poll(async () =>
-          (await getExplainerAnimationStyles(explainer, subjectSelector)).every(
-            (animation) => animation.playState === "paused",
-          ),
-        )
-        .toBe(true);
-      await waitForExplainerTimelineToFreeze(explainer, subjectSelector);
-      const heldSubjectStart = await sampleExplainerTimeline(explainer, subjectSelector);
-      const heldSubjectNextFrame = await sampleExplainerTimeline(explainer, subjectSelector, 2);
-      for (const [index, time] of heldSubjectNextFrame.entries()) {
-        expect(Math.abs(time - heldSubjectStart[index]!)).toBeLessThanOrEqual(1);
-      }
-
-      await explainer.scrollIntoViewIfNeeded();
-      await expect(explainer).toHaveAttribute("data-playback", "playing");
-      const resumedTimeline = await sampleExplainerTimeline(explainer, subjectSelector, 2);
-      expect(
-        resumedTimeline.some(
-          (time, index) => time > heldSubjectNextFrame[index]!,
-        ),
-      ).toBe(true);
-
-      await setDocumentVisibilityForTest(page, true);
-      await expect(explainer).toHaveAttribute("data-playback", "waiting");
-      await expect(control).toHaveAccessibleName(/^Pause\b/);
-      await setDocumentVisibilityForTest(page, false);
-      await expect(explainer).toHaveAttribute("data-playback", "playing");
-
-      await control.click();
-      await expect(explainer).toHaveAttribute("data-playback", "paused");
-      await expect(control).toHaveAccessibleName(/^Resume\b/);
-      await page.evaluate(() => window.scrollTo(0, 0));
-      await expect(explainer).toHaveAttribute("data-playback", "paused");
-      await explainer.scrollIntoViewIfNeeded();
-      await expect(explainer).toHaveAttribute("data-playback", "paused");
-      await setDocumentVisibilityForTest(page, true);
-      await setDocumentVisibilityForTest(page, false);
-      await expect(explainer).toHaveAttribute("data-playback", "paused");
-      await expect(control).toHaveAccessibleName(/^Resume\b/);
-
-      await control.click();
-      await expect(explainer).toHaveAttribute("data-playback", "playing");
-      await expect(control).toHaveAccessibleName(/^Pause\b/);
-    }
-  });
-
-  test("keeps cinematic scene labels readable inside each scene at 320px in every palette", async ({
-    page,
-  }) => {
-    test.slow();
-    await page.setViewportSize({ width: 320, height: 844 });
-    await page.goto("/research");
-    await settleLayout(page);
-
-    for (const theme of ["navy", "light", "dark"] as const) {
-      await reloadWithStoredTheme(page, theme);
-      const explainers = await getRenderedResearchExplainers(page);
-      for (const explainer of explainers) {
-        await explainer.scrollIntoViewIfNeeded();
-        const contract = await expectResearchExplainerStaticContent(explainer);
-        const labelGeometry = await explainer
-          .locator(".research-explainer__scene-label")
-          .evaluateAll((labels) =>
-            labels.map((label) => {
-              const scene = label.closest<HTMLElement>(
-                ".research-explainer__scene",
-              );
-              if (!scene) {
-                throw new Error("Research explainer label is outside its scene.");
-              }
-              const labelBox = label.getBoundingClientRect();
-              const sceneBox = scene.getBoundingClientRect();
-              const style = getComputedStyle(label);
-              return {
-                bottom: labelBox.bottom,
-                fontSize: Number.parseFloat(style.fontSize),
-                height: labelBox.height,
-                left: labelBox.left,
-                right: labelBox.right,
-                sceneBottom: sceneBox.bottom,
-                sceneLeft: sceneBox.left,
-                sceneRight: sceneBox.right,
-                sceneTop: sceneBox.top,
-                top: labelBox.top,
-                visibility: style.visibility,
-                width: labelBox.width,
-              };
-            }),
-          );
-        expect(labelGeometry).toHaveLength(contract.labels.length);
-        for (const label of labelGeometry) {
-          expect(label.visibility).toBe("visible");
-          expect(label.fontSize).toBeGreaterThanOrEqual(13);
-          expect(label.width).toBeGreaterThan(0);
-          expect(label.height).toBeGreaterThan(0);
-          expect(label.left).toBeGreaterThanOrEqual(label.sceneLeft - 1);
-          expect(label.right).toBeLessThanOrEqual(label.sceneRight + 1);
-          expect(label.top).toBeGreaterThanOrEqual(label.sceneTop - 1);
-          expect(label.bottom).toBeLessThanOrEqual(label.sceneBottom + 1);
-        }
-      }
-      await expectNoHorizontalOverflow(page);
-    }
-  });
-
-  test("keeps diagram explainers complete and noninteractive when reduced motion is requested", async ({ page }) => {
-    await page.emulateMedia({ reducedMotion: "reduce" });
-    await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto("/research");
-    await settleLayout(page);
-
-    const reducedExplainers = await getRenderedResearchExplainers(page);
-    for (const explainer of reducedExplainers) {
-      await explainer.scrollIntoViewIfNeeded();
-      const contract = await expectResearchExplainerStaticContent(explainer);
-      await expect(explainer).toHaveAttribute("data-playback", "complete");
-      await expect(
-        explainer.locator("button.research-explainer__playback-control"),
-      ).toHaveCount(0);
-      await expect(
-        explainer.locator(".research-explainer__control-slot"),
-      ).toBeEmpty();
-      expect(
-        await getExplainerAnimationStyles(
-          explainer,
-          contract.phaseSubjects.join(", "),
-        ),
-      ).toHaveLength(0);
-    }
-    await expectNoHorizontalOverflow(page);
   });
 
   test("keeps a long desktop evidence body keyboard-scrollable before Escape restores its summary", async ({ page }) => {
@@ -1690,7 +1178,7 @@ test.describe("Research showcase", () => {
       if (!themedProjects) throw new Error("Research projects disappeared after selecting a stored palette.");
 
       const visualSurfaces = await themedProjects
-        .locator(".research-project__visual > :is(.research-visual, .research-abstract, .research-media-stack)")
+        .locator(".research-project__visual > :is(.research-visual, .research-media-stack, .research-project__single-media)")
         .evaluateAll((visuals) => {
         return visuals.map((visual) => {
           const styles = getComputedStyle(visual);
@@ -2096,10 +1584,8 @@ test.describe("Research showcase", () => {
     await expect(video).toHaveAttribute("playsinline", "");
     await expect(video).not.toHaveAttribute("autoplay");
     await expect(video).not.toHaveAttribute("controls");
-    await expect(project.getByRole("link", { name: "Read transcript" })).toHaveAttribute(
-      "href",
-      "/images/research/cytocv-supplementary-video-s1-transcript.txt"
-    );
+    await expect(project.getByRole("link", { name: "Read transcript" })).toHaveCount(0);
+    await expect(project.getByText(/read the transcript|transcript for the narrated workflow/i)).toHaveCount(0);
     await expect(project.getByRole("link", { name: "Download MP4" })).toHaveCount(0);
     await expect
       .poll(() => video.evaluate((element) => (element as HTMLVideoElement).readyState >= HTMLMediaElement.HAVE_METADATA))
@@ -2112,16 +1598,14 @@ test.describe("Research showcase", () => {
     await expect(bottomControls).toHaveAttribute("aria-hidden", "true");
     await expect(centerControl).toHaveCSS("opacity", "0");
     await expect(centerControl).toHaveCSS("pointer-events", "none");
-    await player.hover();
-    await expect(player).toHaveAttribute("data-controls-visible", "true");
+    await wakeVideoControlsWithPointer(player);
     await expect(bottomControls).toHaveCSS("opacity", "1");
     await expect(centerControl).toHaveCSS("opacity", "1");
     await page.waitForTimeout(4_150);
     await expect(player).toHaveAttribute("data-controls-visible", "false");
     await expect(bottomControls).toHaveCSS("opacity", "0");
     await expect(centerControl).toHaveCSS("opacity", "0");
-    await player.hover();
-    await expect(player).toHaveAttribute("data-controls-visible", "true");
+    await wakeVideoControlsWithPointer(player);
     await expect(bottomControls).toHaveCSS("opacity", "1");
     await expect(centerControl).toHaveCSS("opacity", "1");
     await page.mouse.move(0, 0);
@@ -2138,7 +1622,7 @@ test.describe("Research showcase", () => {
     const volumeRange = player.getByTestId("video-volume-range");
     await soundButton.click();
     await expect(volumeRange).toHaveAttribute("data-open", "true");
-    await expect(volumeRange).toHaveCSS("width", "68px");
+    await expect(volumeRange).toHaveCSS("width", "100px");
     const [inlinePlayerBox, inlineSoundBox, inlineVolumeBox] = await Promise.all([
       player.boundingBox(),
       soundButton.boundingBox(),
@@ -2147,8 +1631,8 @@ test.describe("Research showcase", () => {
     expect(inlinePlayerBox).not.toBeNull();
     expect(inlineSoundBox).not.toBeNull();
     expect(inlineVolumeBox).not.toBeNull();
-    expect(inlineVolumeBox!.width).toBeGreaterThanOrEqual(56);
-    expect(inlineVolumeBox!.width).toBeLessThanOrEqual(72);
+    expect(inlineVolumeBox!.width).toBeGreaterThanOrEqual(96);
+    expect(inlineVolumeBox!.width).toBeLessThanOrEqual(104);
     expect(inlineVolumeBox!.x).toBeGreaterThanOrEqual(inlineSoundBox!.x + inlineSoundBox!.width - 1);
     expect(inlineVolumeBox!.x + inlineVolumeBox!.width).toBeLessThanOrEqual(inlinePlayerBox!.x + inlinePlayerBox!.width + 1);
     await volumeRange.locator('input[aria-label="Volume"]').fill("0.5");
@@ -2165,8 +1649,7 @@ test.describe("Research showcase", () => {
     const raisedCaptions = player.getByTestId("research-video-captions");
     const lowerCaptions = player.locator(".research-video-player__captions--lower");
     await expect(raisedCaptions).toBeVisible();
-    await player.hover();
-    await expect(player).toHaveAttribute("data-controls-visible", "true");
+    await wakeVideoControlsWithPointer(player);
     await expect(raisedCaptions).toHaveCSS("opacity", "1");
     await expect(lowerCaptions).toHaveCSS("opacity", "0");
     const raisedCaptionGeometry = await player.evaluate((playerElement) => {
@@ -2225,34 +1708,87 @@ test.describe("Research showcase", () => {
     await expect.poll(() => video.evaluate((element) => (element as HTMLVideoElement).currentTime)).toBeCloseTo(5, 0);
     await expect(player.getByTestId("research-video-time")).toContainText("0:05");
 
-    await player.hover();
+    await wakeVideoControlsWithPointer(player);
     await player.getByRole("button", { name: "Disable captions" }).click();
-    await expect(player.getByTestId("research-video-captions")).toHaveCount(0);
-    await expect(player.getByRole("button", { name: "Enable captions" })).toHaveAttribute("aria-pressed", "false");
-    await player.getByRole("button", { name: "Enable captions" }).click();
-    await expect(player.getByTestId("research-video-captions")).toBeVisible();
+    await expect(player).toHaveAttribute("data-caption-exiting", "true");
+    await expect(player).toHaveAttribute("data-caption-exiting", "false");
+    await expect(player).toHaveAttribute("data-caption-visible", "false");
+    await expect(player.getByTestId("research-video-captions")).toHaveCSS("opacity", "0");
+    const enableCaptionsButton = player.locator('button[aria-label="Enable captions"]');
+    await expect(enableCaptionsButton).toHaveAttribute("aria-pressed", "false");
+    await wakeVideoControlsWithPointer(player);
+    await enableCaptionsButton.focus();
+    await page.keyboard.press("Enter");
+    await expect(player).toHaveAttribute("data-caption-visible", "true");
+    await expect.poll(() => player.evaluate((playerElement) => {
+      const lower = playerElement.querySelector<HTMLElement>(".research-video-player__captions--lower");
+      const raised = playerElement.querySelector<HTMLElement>("[data-testid='research-video-captions']");
+      if (!lower || !raised) return false;
+
+      const controlsVisible = playerElement.getAttribute("data-controls-visible") === "true";
+      const lowerOpacity = getComputedStyle(lower).opacity;
+      const raisedOpacity = getComputedStyle(raised).opacity;
+      return controlsVisible ? raisedOpacity === "1" && lowerOpacity === "0" : lowerOpacity === "1" && raisedOpacity === "0";
+    })).toBe(true);
     await player.scrollIntoViewIfNeeded();
-    await player.hover();
+    await video.evaluate((element) => {
+      const media = element as HTMLVideoElement;
+      media.playbackRate = 1.75;
+      media.dispatchEvent(new Event("ratechange"));
+    });
     const expandButton = player.getByRole("button", { name: "Open video settings" });
     const settings = player.getByTestId("video-settings");
-    const speedRow = settings.getByRole("button", { name: /Playback speed/ });
+    const speedRow = settings.getByRole("button", { name: /^Playback speed:/ });
 
+    await wakeVideoControlsWithPointer(player);
     await expandButton.click();
     await expect(settings).toHaveAttribute("data-open", "true");
     await settings.evaluate(async (menu) => {
       await Promise.all(menu.getAnimations().map((animation) => animation.finished.catch(() => undefined)));
     });
     await expect(speedRow).toBeVisible();
+    await expect(speedRow).toHaveAccessibleName("Playback speed: 1.75x");
     const [gearBox, speedRowBox] = await Promise.all([expandButton.boundingBox(), speedRow.boundingBox()]);
     expect(gearBox).not.toBeNull();
     expect(speedRowBox).not.toBeNull();
     await page.mouse.move(gearBox!.x + gearBox!.width / 2, gearBox!.y + gearBox!.height / 2);
     await page.mouse.move(speedRowBox!.x + speedRowBox!.width / 2, speedRowBox!.y + speedRowBox!.height / 2, { steps: 10 });
     await expect(settings).toHaveAttribute("data-open", "true");
-    await speedRow.click();
+    const rootSettingsBox = await settings.boundingBox();
+    expect(rootSettingsBox).not.toBeNull();
+    await expectSettingsActiveViewFit(player);
+    await expectSettingsFocusGutter(speedRow);
+    await speedRow.press("Enter");
+    await expect(settings).toHaveAttribute("data-view", "speeds");
+    await expect(settings.getByRole("button", { name: "Back to video settings" })).toBeVisible();
+    const speedRange = settings.getByRole("slider", { name: "Playback speed" });
+    await expect(speedRange).toHaveAttribute("min", "0");
+    await expect(speedRange).toHaveAttribute("max", "5");
+    await expect(speedRange).toHaveAttribute("step", "1");
+    await expect(speedRange).toHaveValue("4");
+    await expect(speedRange).toHaveAttribute("aria-valuetext", "1.75x");
+    await expect(settings.locator(".research-video-player__speed-rate")).toHaveText("1.75x");
+    await expect(speedRange).toBeFocused();
+    const speedSettingsBox = await settings.boundingBox();
+    expect(speedSettingsBox).not.toBeNull();
+    expect(speedSettingsBox!.width).toBeCloseTo(rootSettingsBox!.width, 3);
+    await expectSettingsActiveViewFit(player);
+    await expectSettingsFocusGutter(speedRange);
+    await speedRange.press("Home");
+    await expect(speedRange).toHaveAttribute("aria-valuetext", "0.5x");
+    await expect.poll(() => video.evaluate((element) => (element as HTMLVideoElement).playbackRate)).toBe(0.5);
+    await speedRange.press("ArrowRight");
+    await expect(speedRange).toHaveAttribute("aria-valuetext", "0.75x");
+    await speedRange.press("End");
+    await expect(speedRange).toHaveAttribute("aria-valuetext", "2x");
+    await expect(settings).toHaveAttribute("data-open", "true");
     await expect(settings).toHaveAttribute("data-view", "speeds");
     await page.keyboard.press("Escape");
     await expect(settings).toHaveAttribute("data-view", "root");
+    await expect(speedRow).toHaveAccessibleName("Playback speed: 2x");
+    await expect(speedRow).toBeFocused();
+    await expectSettingsActiveViewFit(player);
+    await expectSettingsFocusGutter(speedRow);
     await page.keyboard.press("Escape");
     await expect(settings).toHaveAttribute("data-open", "false");
 
@@ -2264,8 +1800,8 @@ test.describe("Research showcase", () => {
     await speedRow.focus();
     await page.keyboard.press("Enter");
     await expect(settings).toHaveAttribute("data-view", "speeds");
-    const selectedRate = settings.locator('button[aria-pressed="true"]');
-    await expect.poll(() => selectedRate.evaluate((element) => document.activeElement === element)).toBe(true);
+    const focusedSpeedRange = settings.getByRole("slider", { name: "Playback speed" });
+    await expect(focusedSpeedRange).toBeFocused();
     await page.keyboard.press("Escape");
     await expect(settings).toHaveAttribute("data-view", "root");
     await expect(speedRow).toBeFocused();
@@ -2284,7 +1820,7 @@ test.describe("Research showcase", () => {
     await settings.evaluate((menu) => menu.scrollTo({ top: menu.scrollHeight }));
     await expandFromSettings.focus();
     await page.keyboard.press("Enter");
-    const dialog = page.getByRole("dialog", { name: "CytoCV supplementary workflow video" });
+    const dialog = page.getByRole("dialog", { exact: true, name: "CytoCV supplementary workflow video" });
     const dialogRoot = page.getByTestId("research-media-dialog");
     const dialogPlayer = dialog.getByTestId("research-video-player");
     const dialogVideo = dialogPlayer.locator("video.research-video-player__media");
@@ -2314,7 +1850,7 @@ test.describe("Research showcase", () => {
     expect(playerBox!.x + playerBox!.width).toBeLessThanOrEqual(dialogBox!.x + dialogBox!.width + 1);
     expect(playerBox!.y).toBeGreaterThanOrEqual(closeBox!.y + closeBox!.height - 1);
     expect(playerBox!.y + playerBox!.height).toBeLessThanOrEqual(dialogBox!.y + dialogBox!.height + 1);
-    expect(Math.abs(dialogBarBox!.width - playerBox!.width / 3)).toBeLessThanOrEqual(1);
+    expect(dialogBarBox!.width).toBeCloseTo(Math.max(352, playerBox!.width / 3), 0);
     expect(dialogBarBox!.x + dialogBarBox!.width / 2).toBeCloseTo(playerBox!.x + playerBox!.width / 2, 0);
 
     await dialogPlayer.scrollIntoViewIfNeeded();
@@ -2402,14 +1938,17 @@ test.describe("Research showcase", () => {
       expect(centerBox!.y + centerBox!.height / 2).toBeCloseTo(playerBox!.y + playerBox!.height / 2, 0);
       expect(centerBox!.y + centerBox!.height).toBeLessThanOrEqual(bottomBarBox!.y + 1);
       expect(seekBox!.y + seekBox!.height).toBeLessThanOrEqual(firstActionBox!.y + 1);
-      await player.getByRole("button", { name: "Mute video" }).click();
+      await player.getByRole("button", { name: "Mute video" }).tap();
       const volumeRange = player.getByTestId("video-volume-range");
       await expect(volumeRange).toHaveAttribute("data-open", "true");
-      await expect(volumeRange).toHaveCSS("width", "68px");
+      await volumeRange.evaluate(async (range) => {
+        await Promise.all(range.getAnimations().map((animation) => animation.finished.catch(() => undefined)));
+      });
+      await expect(volumeRange).toHaveCSS("width", "100px");
       const soundBox = await volumeRange.boundingBox();
       expect(soundBox).not.toBeNull();
-      expect(soundBox!.width).toBeGreaterThanOrEqual(56);
-      expect(soundBox!.width).toBeLessThanOrEqual(72);
+      expect(soundBox!.width).toBeGreaterThanOrEqual(96);
+      expect(soundBox!.width).toBeLessThanOrEqual(104);
       expect(soundBox!.x).toBeGreaterThanOrEqual(playerBox!.x - 1);
       expect(soundBox!.x + soundBox!.width).toBeLessThanOrEqual(playerBox!.x + playerBox!.width + 1);
       const [expandedCenterBox, expandedBottomBarBox] = await Promise.all([
@@ -2445,8 +1984,11 @@ test.describe("Research showcase", () => {
       expect(captionBox!.y).toBeGreaterThanOrEqual(activePlayerBox!.y + 4);
       expect(captionBox!.y + captionBox!.height).toBeLessThanOrEqual(activeCenterBox!.y + 1);
       expect(captionBox!.y + captionBox!.height).toBeLessThanOrEqual(activeBottomBarBox!.y + 1);
-      await player.getByRole("button", { name: "Mute video" }).click();
+      await player.getByRole("button", { name: "Mute video" }).tap();
       await expect(volumeRange).toHaveAttribute("data-open", "true");
+      await volumeRange.evaluate(async (range) => {
+        await Promise.all(range.getAnimations().map((animation) => animation.finished.catch(() => undefined)));
+      });
       const [captionWithVolumeBox, volumeCenterBox, volumePlayerBox] = await Promise.all([
         captions.boundingBox(),
         player.locator("button.research-video-player__center-control").boundingBox(),
@@ -2471,17 +2013,25 @@ test.describe("Research showcase", () => {
           const element = playerElement.querySelector<HTMLElement>(selector);
           if (!element) throw new Error(`Missing ${selector}`);
           const box = element.getBoundingClientRect();
-          return { bottom: box.bottom, top: box.top };
+          return { bottom: box.bottom, left: box.left, right: box.right, top: box.top };
         };
+        const player = playerElement.getBoundingClientRect();
+        const media = playerElement.querySelector("video") as HTMLVideoElement;
+        const ratio = (media.videoWidth || 1710) / (media.videoHeight || 1108);
+        const paintedHeight = Math.min(player.height, player.width / ratio);
+        const paintedTop = player.top + (player.height - paintedHeight) / 2;
         return {
-          center: rect(".research-video-player__center-control"),
-          lower: rect(".research-video-player__captions--lower")
+          lower: rect(".research-video-player__captions--lower"),
+          paintedBottom: paintedTop + paintedHeight,
+          player
         };
       });
-      expect(
-        lowerCaptionGeometry.lower.bottom <= lowerCaptionGeometry.center.top + 1 ||
-          lowerCaptionGeometry.lower.top >= lowerCaptionGeometry.center.bottom - 1
-      ).toBe(true);
+      expect(lowerCaptionGeometry.lower.left).toBeGreaterThanOrEqual(lowerCaptionGeometry.player.left - 1);
+      expect(lowerCaptionGeometry.lower.right).toBeLessThanOrEqual(lowerCaptionGeometry.player.right + 1);
+      expect(lowerCaptionGeometry.lower.top).toBeGreaterThanOrEqual(lowerCaptionGeometry.player.top - 1);
+      expect(lowerCaptionGeometry.lower.bottom).toBeLessThanOrEqual(lowerCaptionGeometry.player.bottom + 1);
+      expect(lowerCaptionGeometry.lower.bottom).toBeLessThanOrEqual(lowerCaptionGeometry.paintedBottom + 1);
+      expect(lowerCaptionGeometry.lower.bottom).toBeGreaterThanOrEqual(lowerCaptionGeometry.paintedBottom - 16);
       await player.locator("video.research-video-player__media").tap({ position: { x: 12, y: 12 } });
       await expect(player).toHaveAttribute("data-controls-visible", "true");
       await expect(bottomControls).toHaveCSS("opacity", "1");
@@ -2492,11 +2042,11 @@ test.describe("Research showcase", () => {
     }
   });
 
-  test("wraps the expanded inline volume controls before grouped actions collide at the 321–350px player boundary", async ({ browser }) => {
+  test("wraps the expanded inline volume controls before grouped actions collide at the 351–384px player boundary", async ({ browser }) => {
     const context = await browser.newContext({
       hasTouch: true,
       isMobile: true,
-      viewport: { height: 568, width: 390 }
+      viewport: { height: 568, width: 430 }
     });
 
     try {
@@ -2505,9 +2055,13 @@ test.describe("Research showcase", () => {
       await settleLayout(page);
       const player = page.locator('article.research-project[id="cytocv-miller-lab"]').getByTestId("research-video-player");
       await player.locator("video.research-video-player__media").tap({ position: { x: 12, y: 12 } });
-      await player.getByRole("button", { name: "Mute video" }).click();
+      await player.getByRole("button", { name: "Mute video" }).tap();
       const volumeRange = player.getByTestId("video-volume-range");
-      await expect(volumeRange).toHaveCSS("width", "68px");
+      await expect(volumeRange).toHaveAttribute("data-open", "true");
+      await volumeRange.evaluate(async (range) => {
+        await Promise.all(range.getAnimations().map((animation) => animation.finished.catch(() => undefined)));
+      });
+      await expect(volumeRange).toHaveCSS("width", "100px");
       const geometry = await player.evaluate((playerElement) => {
         const rect = (selector: string) => {
           const element = playerElement.querySelector<HTMLElement>(selector);
@@ -2526,8 +2080,8 @@ test.describe("Research showcase", () => {
         };
       });
 
-      expect(geometry.player.width).toBeGreaterThanOrEqual(321);
-      expect(geometry.player.width).toBeLessThanOrEqual(350);
+      expect(geometry.player.width).toBeGreaterThanOrEqual(351);
+      expect(geometry.player.width).toBeLessThanOrEqual(384);
       expect(geometry.actionsRight.top).toBeGreaterThanOrEqual(geometry.actionsLeft.top + 43);
       expect(geometry.actionsLeft.left).toBeGreaterThanOrEqual(geometry.player.left - 1);
       expect(geometry.actionsRight.right).toBeLessThanOrEqual(geometry.player.right + 1);
@@ -2558,7 +2112,7 @@ test.describe("Research showcase", () => {
         await expect(player).toHaveAttribute("data-controls-visible", "false");
         const centerControl = player.locator("button.research-video-player__center-control");
         await expect(centerControl).toHaveCSS("opacity", "0");
-        await player.hover();
+        await wakeVideoControlsWithPointer(player);
         const bottomControls = player.getByTestId("research-video-bottom-controls");
         await expect(bottomControls).toHaveCSS("opacity", "1");
         await expect(centerControl).toHaveCSS("opacity", "1");
@@ -2574,14 +2128,20 @@ test.describe("Research showcase", () => {
           return {
             barBackdrop: getComputedStyle(bar).backdropFilter,
             barBackground: getComputedStyle(bar).backgroundColor,
+            barBorder: getComputedStyle(bar).borderTopWidth,
+            barRadius: getComputedStyle(bar).borderTopLeftRadius,
+            barShadow: getComputedStyle(bar).boxShadow,
             barColor: getComputedStyle(bar).color,
             controlBackground: getComputedStyle(control, "::before").backgroundColor,
             controlColor: getComputedStyle(control).color,
             iconColor: getComputedStyle(icon).color
           };
         });
-        expect(glassSurface.barBackdrop).toContain("blur");
-        expect(glassSurface.barBackground).toMatch(/rgba\([^)]*,\s*0\.\d+\)|\/\s*0\.\d+\)/);
+        expect(glassSurface.barBackdrop).toBe("none");
+        expect(glassSurface.barBackground).toMatch(/transparent|rgba\(0,\s*0,\s*0,\s*0\)/);
+        expect(glassSurface.barBorder).toBe("0px");
+        expect(glassSurface.barRadius).toBe("0px");
+        expect(glassSurface.barShadow).toBe("none");
         expect(glassSurface.controlBackground).toMatch(/rgba\([^)]*,\s*0\.\d+\)|\/\s*0\.\d+\)/);
         expect(glassSurface.barColor).toMatch(/^rgb\(/);
         expect(glassSurface.controlColor).toMatch(/^rgb\(/);
@@ -2590,11 +2150,15 @@ test.describe("Research showcase", () => {
         const settings = player.getByTestId("video-settings");
         const expandFromSettings = settings.getByRole("button", { name: "Open enlarged player" });
         await expect(settings).toHaveCSS("opacity", "1");
+        await settings.getByRole("button", { name: /Playback speed:/ }).click();
+        await expect(settings.locator('.research-video-player__settings-speeds[data-open="true"]')).toHaveCSS("transition-duration", "0s");
+        await page.keyboard.press("Escape");
+        await expect(settings).toHaveAttribute("data-view", "root");
         await settings.evaluate((menu) => menu.scrollTo({ top: menu.scrollHeight }));
         await expect(expandFromSettings).toBeVisible();
         await expandFromSettings.click();
 
-        const dialog = page.getByRole("dialog", { name: "CytoCV supplementary workflow video" });
+        const dialog = page.getByRole("dialog", { exact: true, name: "CytoCV supplementary workflow video" });
         const dialogPlayer = dialog.getByTestId("research-video-player");
         const close = dialog.getByRole("button", { name: /Close video for CytoCV/ });
         await expect(dialog).toBeVisible();
@@ -2626,6 +2190,316 @@ test.describe("Research showcase", () => {
         await expect(dialog).toHaveCount(0);
         await expectNoHorizontalOverflow(page);
       }
+    }
+  });
+
+  test("@mobile-video keeps popup captions and same-node fullscreen usable across phone widths and rotation", async ({ browser }) => {
+    test.slow();
+    const context = await browser.newContext({ hasTouch: true, isMobile: true, viewport: { height: 844, width: 390 } });
+
+    try {
+      const page = await context.newPage();
+      for (const viewport of [{ height: 956, width: 440 }]) {
+        await page.setViewportSize(viewport);
+        await page.goto("/research");
+        await settleLayout(page);
+        const inlinePlayer = page.locator('article.research-project[id="cytocv-miller-lab"]').getByTestId("research-video-player");
+        await inlinePlayer.scrollIntoViewIfNeeded();
+        await inlinePlayer.locator("video.research-video-player__media").tap({ position: { x: 12, y: 12 } });
+        await expect(inlinePlayer).toHaveAttribute("data-controls-visible", "true");
+        await inlinePlayer.getByRole("button", { name: "Open video settings" }).tap();
+        const inlineSettings = inlinePlayer.getByTestId("video-settings");
+        await expect(inlineSettings).toHaveAttribute("data-open", "true");
+        await inlineSettings.getByRole("button", { name: "Open enlarged player" }).tap();
+
+        const popup = page.getByRole("dialog", { exact: true, name: "CytoCV supplementary workflow video" });
+        const popupPlayer = popup.getByTestId("research-video-player");
+        const popupVideo = popupPlayer.locator("video.research-video-player__media");
+        await expect(popup).toBeVisible();
+        await expect(popupPlayer).toHaveAttribute("data-caption-adaptive", "true");
+        await expect(popupPlayer).toHaveAttribute("data-caption-handoff", "true");
+        await popupVideo.tap({ position: { x: 12, y: 12 } });
+        await expect(popupPlayer).toHaveAttribute("data-controls-visible", "true");
+        await popupVideo.evaluate((element) => {
+          const media = element as HTMLVideoElement;
+          media.currentTime = 19;
+          media.dispatchEvent(new Event("timeupdate"));
+          media.dispatchEvent(new Event("seeked"));
+        });
+        const captions = popupPlayer.getByTestId("research-video-captions");
+        await expect(captions).toContainText("This red image shows the cell contour");
+        await expect(captions).toHaveCSS("opacity", "1");
+        await expect(captions).toHaveCSS("font-family", /Space Grotesk|sans-serif/);
+        await expect(captions).toHaveCSS("font-weight", "400");
+        const readCaptionGeometry = (layer: "raised" | "lower" = "raised") => popupPlayer.evaluate((playerElement, captionLayer) => {
+          const player = playerElement.getBoundingClientRect();
+          const media = playerElement.querySelector("video") as HTMLVideoElement;
+          const captions = playerElement.querySelector<HTMLElement>(
+            captionLayer === "raised" ? "[data-testid='research-video-captions']" : ".research-video-player__captions--lower"
+          )!;
+          const bar = playerElement.querySelector<HTMLElement>("[data-testid='research-video-bottom-controls']")!;
+          const center = playerElement.querySelector<HTMLElement>(".research-video-player__center-control")!;
+          const settings = playerElement.querySelector<HTMLElement>("[data-testid='video-settings']")!;
+          const caption = captions.getBoundingClientRect();
+          const ratio = (media.videoWidth || 1710) / (media.videoHeight || 1108);
+          const paintedWidth = Math.min(player.width, player.height * ratio);
+          const paintedHeight = Math.min(player.height, player.width / ratio);
+          const paintedLeft = player.left + (player.width - paintedWidth) / 2;
+          const paintedRight = paintedLeft + paintedWidth;
+          const paintedTop = player.top + (player.height - paintedHeight) / 2;
+          const paintedBottom = paintedTop + paintedHeight;
+          const overlaps = (a: DOMRect, b: DOMRect) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+          return {
+            bar: bar.getBoundingClientRect(),
+            caption,
+            center: center.getBoundingClientRect(),
+            clipped: captions.scrollHeight - captions.clientHeight,
+            player,
+            paintedLeft,
+            paintedRight,
+            paintedBottom,
+            paintedTop,
+            raisedPosition: playerElement.getAttribute("data-caption-raised-position"),
+            barOverlap: overlaps(caption, bar.getBoundingClientRect()),
+            centerOverlap: overlaps(caption, center.getBoundingClientRect()),
+            centerVisible: getComputedStyle(center).visibility !== "hidden",
+            settingsOverlap: settings.getAttribute("data-open") === "true" && overlaps(caption, settings.getBoundingClientRect())
+          };
+        }, layer);
+        const expectRaisedCaptionWithinPlayerAndNearPicture = (geometry: Awaited<ReturnType<typeof readCaptionGeometry>>) => {
+          expect(geometry.caption.left).toBeGreaterThanOrEqual(geometry.paintedLeft - 1);
+          expect(geometry.caption.right).toBeLessThanOrEqual(geometry.paintedRight + 1);
+          expect(geometry.caption.top).toBeGreaterThanOrEqual(geometry.player.top - 1);
+          expect(geometry.caption.bottom).toBeLessThanOrEqual(geometry.player.bottom + 1);
+
+          const isInsidePaintedPicture =
+            geometry.caption.top >= geometry.paintedTop - 1 && geometry.caption.bottom <= geometry.paintedBottom + 1;
+          if (!isInsidePaintedPicture) {
+            expect(geometry.raisedPosition).toBe("upper");
+          }
+        };
+        const shownCaptionGeometry = await readCaptionGeometry();
+        expect(shownCaptionGeometry.clipped).toBeLessThanOrEqual(1);
+        expectRaisedCaptionWithinPlayerAndNearPicture(shownCaptionGeometry);
+        expect(
+          !shownCaptionGeometry.barOverlap && !shownCaptionGeometry.centerOverlap && !shownCaptionGeometry.settingsOverlap
+        ).toBe(true);
+        await popupVideo.tap({ position: { x: 12, y: 12 } });
+        await expect(popupPlayer).toHaveAttribute("data-controls-visible", "false");
+        await expect(popupPlayer.locator(".research-video-player__captions--lower")).toHaveCSS("opacity", "1");
+        await expect(captions).toHaveCSS("opacity", "0");
+        await popupVideo.tap({ position: { x: 12, y: 12 } });
+        await expect(popupPlayer).toHaveAttribute("data-controls-visible", "true");
+        await expect(captions).toHaveCSS("opacity", "1");
+        await popupPlayer.getByRole("button", { name: "Open video settings" }).tap();
+        await expect(popupPlayer.getByTestId("video-settings")).toHaveAttribute("data-open", "true");
+        for (const width of [320, 390, 420, 421, 440]) {
+          await page.setViewportSize({ height: 956, width });
+          await expect(popup).toBeVisible();
+          await expect(captions).toContainText("This red image shows the cell contour");
+          if ((await popupPlayer.getByTestId("video-settings").getAttribute("data-open")) !== "true") {
+            await popupPlayer.getByRole("button", { name: "Open video settings" }).tap();
+          }
+          await expect.poll(() => popupPlayer.evaluate((element) => Number.parseFloat(element.style.getPropertyValue("--research-video-caption-inline-end")))).toBeGreaterThan(12);
+          const geometry = await readCaptionGeometry();
+          expect(geometry.clipped).toBeLessThanOrEqual(1);
+          expectRaisedCaptionWithinPlayerAndNearPicture(geometry);
+          expect(!geometry.barOverlap && !geometry.settingsOverlap && (!geometry.centerVisible || !geometry.centerOverlap), JSON.stringify(geometry)).toBe(true);
+          const layerFonts = await popupPlayer.evaluate((playerElement) => {
+            const [raised, lower] = Array.from(playerElement.querySelectorAll<HTMLElement>(".research-video-player__captions"));
+            return [getComputedStyle(raised).font, getComputedStyle(lower).font];
+          });
+          expect(layerFonts[0]).toBe(layerFonts[1]);
+          await popupVideo.tap({ position: { x: 12, y: 12 } });
+          await expect(popupPlayer.locator(".research-video-player__captions--lower")).toHaveCSS("opacity", "1");
+          const hiddenCaptionGeometry = await readCaptionGeometry("lower");
+          expect(hiddenCaptionGeometry.caption.left).toBeGreaterThanOrEqual(hiddenCaptionGeometry.paintedLeft - 1);
+          expect(hiddenCaptionGeometry.caption.right).toBeLessThanOrEqual(hiddenCaptionGeometry.paintedRight + 1);
+          expect(hiddenCaptionGeometry.caption.bottom).toBeLessThanOrEqual(hiddenCaptionGeometry.paintedBottom + 1);
+          expect(hiddenCaptionGeometry.caption.bottom).toBeGreaterThanOrEqual(hiddenCaptionGeometry.paintedBottom - 16);
+          await popupVideo.tap({ position: { x: 12, y: 12 } });
+          await expect(captions).toHaveCSS("opacity", "1");
+          await expectNoHorizontalOverflow(page);
+        }
+        await popupPlayer.getByRole("button", { name: "Mute video" }).tap();
+        await expect(popupPlayer.getByTestId("video-volume-range")).toHaveAttribute("data-open", "true");
+        await page.keyboard.press("Escape");
+        await popupPlayer.getByRole("button", { name: "Open video settings" }).tap();
+        await expect(popupPlayer.getByTestId("video-settings")).toHaveAttribute("data-open", "true");
+        await expect(captions).toBeVisible();
+        await page.keyboard.press("Escape");
+        await expectCustomPlayerContained(popupPlayer);
+
+        await page.setViewportSize({ height: 956, width: 320 });
+        await popupVideo.evaluate((element) => {
+          const media = element as HTMLVideoElement;
+          media.currentTime = 19;
+          media.dispatchEvent(new Event("timeupdate"));
+          media.dispatchEvent(new Event("seeked"));
+        });
+        await expect(captions).toContainText("This red image shows the cell contour, which was obtained from the DIC image, and the outline");
+        await popupVideo.tap({ position: { x: 12, y: 12 } });
+        await expect(popupPlayer).toHaveAttribute("data-controls-visible", "false");
+        const popupCenterControl = popupPlayer.locator(".research-video-player__center-control");
+        await expect(popupCenterControl).toHaveCSS("visibility", "visible");
+        await popup.getByRole("button", { name: /Close video for CytoCV/ }).focus();
+        const webkitMobile = browser.browserType().name() === "webkit";
+        if (webkitMobile) {
+          await popupCenterControl.focus();
+          await page.keyboard.press("ArrowRight");
+        } else {
+          await page.keyboard.press("Tab");
+        }
+        await expect
+          .poll(() =>
+            popupPlayer.evaluate((playerElement) => {
+              const focused = document.activeElement;
+              if (!(focused instanceof HTMLElement) || !playerElement.contains(focused)) return false;
+              if (focused === playerElement) return true;
+
+              const isTransport = focused.matches(
+                ".research-video-player__center-control, .research-video-player__seek, .research-video-player__actions-left button"
+              );
+              const style = getComputedStyle(focused);
+              return isTransport && style.visibility !== "hidden" && style.display !== "none";
+            })
+          )
+          .toBe(true);
+        await expect(popupPlayer).toHaveAttribute("data-controls-visible", "true");
+        const seek = popupPlayer.getByRole("slider", { name: "Seek video" });
+        if (webkitMobile) {
+          await seek.focus();
+        } else {
+          await page.keyboard.press("Tab");
+        }
+        await expect
+          .poll(() =>
+            popupPlayer.evaluate((playerElement) => {
+              const focused = document.activeElement;
+              if (!(focused instanceof HTMLElement) || !playerElement.contains(focused)) return false;
+              const isTransport = focused.matches(
+                ".research-video-player__center-control, .research-video-player__seek, .research-video-player__actions-left button"
+              );
+              const style = getComputedStyle(focused);
+              return isTransport && style.visibility !== "hidden" && style.display !== "none";
+            })
+          )
+          .toBe(true);
+        await page.setViewportSize(viewport);
+        await expectNoHorizontalOverflow(page);
+
+        await popupPlayer.evaluate((element) => {
+          const player = element as HTMLElement;
+          const video = player.querySelector("video") as HTMLVideoElement;
+          (window as Window & { __researchVideoNode?: HTMLVideoElement }).__researchVideoNode = video;
+          Object.defineProperty(player, "requestFullscreen", {
+            configurable: true,
+            value: () => Promise.reject(new DOMException("blocked", "NotAllowedError"))
+          });
+        });
+        await popupVideo.evaluate(async (element) => {
+          await (element as HTMLVideoElement).play();
+        });
+        await expect.poll(() => popupVideo.evaluate((element) => (element as HTMLVideoElement).paused)).toBe(false);
+        const entryPlaybackTime = await popupVideo.evaluate((element) => (element as HTMLVideoElement).currentTime);
+        await popupPlayer.getByRole("button", { name: "Enter fullscreen" }).tap();
+        const fullscreen = page.getByRole("dialog", { exact: true, name: "CytoCV supplementary workflow video enlarged fullscreen" });
+        await expect(fullscreen).toBeVisible();
+        const waitForFullscreenCaptionGeometry = async () => {
+          await expect(fullscreen).toHaveAttribute("data-state", "open");
+          await expect
+            .poll(() =>
+              popupPlayer.evaluate(async (playerElement) => {
+                const snapshot = () => {
+                  const caption = playerElement.querySelector<HTMLElement>("[data-testid='research-video-captions']")!;
+                  const player = playerElement.getBoundingClientRect();
+                  const captionBox = caption.getBoundingClientRect();
+                  return [player.width, player.height, captionBox.left, captionBox.top, captionBox.right, captionBox.bottom];
+                };
+                const before = snapshot();
+                await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+                const after = snapshot();
+                return before.every((value, index) => Math.abs(value - after[index]!) <= 0.5);
+              })
+            )
+            .toBe(true);
+        };
+        await expect(popupPlayer).toHaveAttribute("data-fullscreen-fallback", "true");
+        const [portraitFullscreenBox, portraitFullscreenPlayerBox] = await Promise.all([fullscreen.boundingBox(), popupPlayer.boundingBox()]);
+        expect(portraitFullscreenBox).not.toBeNull();
+        expect(portraitFullscreenPlayerBox).not.toBeNull();
+        expect(portraitFullscreenBox!.width).toBeGreaterThanOrEqual(viewport.width - 1);
+        expect(portraitFullscreenBox!.height).toBeGreaterThanOrEqual(viewport.height - 1);
+        expect(portraitFullscreenPlayerBox!.width).toBeGreaterThanOrEqual(portraitFullscreenBox!.width - 32);
+        expect(portraitFullscreenPlayerBox!.height).toBeGreaterThanOrEqual(portraitFullscreenBox!.height - 32);
+        await expect.poll(() => popupPlayer.evaluate((element) => {
+          const video = element.querySelector("video");
+          return video === (window as Window & { __researchVideoNode?: HTMLVideoElement }).__researchVideoNode;
+        })).toBe(true);
+        await expect.poll(() => popupVideo.evaluate((element) => (element as HTMLVideoElement).paused)).toBe(false);
+        await expect.poll(() => popupVideo.evaluate((element) => (element as HTMLVideoElement).currentTime)).toBeGreaterThan(entryPlaybackTime + 0.1);
+        await popupVideo.evaluate((element) => {
+          const media = element as HTMLVideoElement;
+          media.pause();
+          media.currentTime = 19;
+          media.dispatchEvent(new Event("timeupdate"));
+          media.dispatchEvent(new Event("seeked"));
+        });
+        await expect.poll(() => popupVideo.evaluate((element) => (element as HTMLVideoElement).paused)).toBe(true);
+        await expect(captions).toContainText("This red image shows the cell contour");
+        await expect.poll(() => popupVideo.evaluate((element) => (element as HTMLVideoElement).currentTime)).toBeCloseTo(19, 0);
+        for (const fallbackViewport of [
+          { height: 956, width: 320 },
+          { height: 956, width: 390 },
+          { height: 956, width: 420 },
+          { height: 956, width: 421 },
+          { height: 956, width: 440 },
+          { height: 390, width: 844 }
+        ]) {
+          await page.setViewportSize(fallbackViewport);
+          await expect(fullscreen).toBeVisible();
+          await waitForFullscreenCaptionGeometry();
+          await expect(captions).toContainText("This red image shows the cell contour");
+          const geometry = await readCaptionGeometry();
+          expect(geometry.clipped).toBeLessThanOrEqual(1);
+          expectRaisedCaptionWithinPlayerAndNearPicture(geometry);
+          expect(geometry.barOverlap, JSON.stringify(geometry)).toBe(false);
+          expect(geometry.settingsOverlap, JSON.stringify(geometry)).toBe(false);
+          if (geometry.centerVisible) expect(geometry.centerOverlap, JSON.stringify(geometry)).toBe(false);
+          await expectNoHorizontalOverflow(page);
+        }
+        const [fullscreenBox, fullscreenPlayerBox] = await Promise.all([fullscreen.boundingBox(), popupPlayer.boundingBox()]);
+        expect(fullscreenBox).not.toBeNull();
+        expect(fullscreenPlayerBox).not.toBeNull();
+        expect(fullscreenPlayerBox!.width).toBeGreaterThanOrEqual(fullscreenBox!.width - 32);
+        expect(fullscreenPlayerBox!.height).toBeGreaterThanOrEqual(fullscreenBox!.height - 32);
+        await popupVideo.evaluate(async (element) => {
+          await (element as HTMLVideoElement).play();
+        });
+        await expect.poll(() => popupVideo.evaluate((element) => (element as HTMLVideoElement).paused)).toBe(false);
+        const exitPlaybackTime = await popupVideo.evaluate((element) => (element as HTMLVideoElement).currentTime);
+        if ((await popupPlayer.getAttribute("data-controls-visible")) !== "false") {
+          await popupVideo.tap({ position: { x: 12, y: 12 } });
+        }
+        await expect(popupPlayer).toHaveAttribute("data-controls-visible", "false");
+        await expect(popupPlayer.getByTestId("research-video-bottom-controls")).toHaveAttribute("inert", "");
+        const fullscreenExit = fullscreen.getByRole("button", { name: "Exit fullscreen" });
+        await fullscreenExit.click();
+        await expect(fullscreen).not.toBeVisible();
+        await expect(popup).toBeVisible();
+        await expect(popupPlayer).toHaveAttribute("data-fullscreen-fallback", "false");
+        await expect(popupPlayer.getByRole("button", { name: "Enter fullscreen" })).toBeFocused();
+        await expect(popupPlayer).toHaveAttribute("data-controls-visible", "true");
+        await expect(popupPlayer.getByTestId("research-video-bottom-controls")).not.toHaveAttribute("inert");
+        await expect.poll(() => popupVideo.evaluate((element) => (element as HTMLVideoElement).paused)).toBe(false);
+        await expect.poll(() => popupVideo.evaluate((element) => (element as HTMLVideoElement).currentTime)).toBeGreaterThan(exitPlaybackTime + 0.1);
+        await popupVideo.evaluate((element) => (element as HTMLVideoElement).pause());
+        await popup.getByRole("button", { name: /Close video for CytoCV/ }).tap();
+        await page.setViewportSize(viewport);
+        await expectNoHorizontalOverflow(page);
+      }
+    } finally {
+      await context.close();
     }
   });
 

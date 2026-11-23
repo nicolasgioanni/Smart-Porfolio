@@ -28,6 +28,11 @@ export function hasUnsafeControlCharacters(value: string): boolean {
   return false;
 }
 
+/** Normalizes the only multiline field exactly as the delivery boundary does. */
+export function normalizeContactMultilineText(value: string): string {
+  return value.replace(/\r\n?/g, "\n").trim();
+}
+
 export function isValidEmail(value: string): boolean {
   return getEmailValidationIssue(value) === undefined;
 }

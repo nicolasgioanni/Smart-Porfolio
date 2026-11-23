@@ -22,6 +22,15 @@ describe("page entry motion styles", () => {
     );
   });
 
+  it("keeps scroll-motion content readable until client enhancement is ready", () => {
+    expect(motionStyles).toMatch(
+      /\.motion-reveal,\s*\.motion-compress\s*\{\s*opacity: 1;\s*transform: none;/
+    );
+    expect(motionStyles).toMatch(
+      /\.motion-reveal\.motion-ready:not\(\.is-visible\),\s*\.motion-compress\.motion-ready:not\(\.is-visible\)\s*\{\s*opacity: 0;/
+    );
+  });
+
   it("uses only an opacity snapshot fade for hydrated palette changes when motion is allowed", () => {
     const themeTransitionStyles = motionStyles.match(
       /@media \(prefers-reduced-motion: no-preference\)\s*\{([\s\S]*?)\}\s*@keyframes theme-palette-fade\s*\{([\s\S]*?)\n\}/

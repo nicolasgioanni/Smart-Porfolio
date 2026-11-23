@@ -17,11 +17,9 @@ Experience is the only generated header override. Pass validated content through
 
 ## Preserve the visual harness
 
-`tests/e2e/standaloneSkeletonDocument.ts` is the shared document and asset-readiness contract for `skeleton-alignment.spec.ts` and `skeletons.visual.spec.ts`. The live page may supply resolved HTML and body attributes, the generated body font class, and absolute compiled stylesheet URLs; each suite fulfills a separate same-origin fixture route with canonical server-rendered skeleton markup.
+Use `tests/e2e/standaloneSkeletonDocument.ts` for an inert same-origin fixture route; never mutate React-owned DOM. Preserve stylesheet and font readiness, diagnostic rejection, two-frame settling, static-animation assertions, and zero-difference screenshots. Research visual snapshots use canonical local-template detail items only in the visual renderer; normal loading and alignment use generated-workbook data. See [visual and transition coverage](../../../docs/design/SKELETON_LOADING_GUIDELINES.md#visual-and-transition-regression-coverage).
 
-Keep that fixture inert: no application scripts, development portal, or mutation of React-owned DOM. Do not use `replaceChildren`, remove mounted nodes, or inject a fixture into the hydrated application tree. Preserve stylesheet and font readiness checks, browser-diagnostic rejection, two-frame layout settling, static-animation assertions, and zero-difference screenshots.
-
-Research visual snapshots receive controlled canonical local-template detail items only through `tests/e2e/renderRouteSkeleton.tsx`. Keep that injection isolated to the visual renderer. Normal loading boundaries and component or alignment coverage must resolve generated-workbook data so their resource geometry follows validated content.
+Research and Projects loaders retain shape-aware media and generated-record geometry, including the Projects gallery breakpoint and footprint. See [layout matching](../../../docs/design/SKELETON_LOADING_GUIDELINES.md#layout-matching).
 
 ## Review Linux baselines
 
@@ -31,7 +29,7 @@ If route coverage or the viewport matrix changes intentionally, update the visua
 
 ## Keep CI and transition semantics accurate
 
-The full release tier of the stable `verify` job runs on Ubuntu 24.04, installs Chromium once, and runs `npm run test:e2e:full`. Its complete browser selection must retain all three `npm run test:e2e:skeletons` parts: direct resolved-versus-loader alignment, held-navigation transition semantics, and the Linux visual matrix. The pull-request priority command runs alignment and transitions without visual snapshots; the Ubuntu priority job adds the Linux visual comparison as its separate step. Preserve the failure-only diagnostics artifact as separate from the deployable static artifact.
+The CI aggregate retains alignment, held-navigation transitions, and the Linux visual matrix, with receipts for each assignment. Keep failure diagnostics separate from the deployable artifact. See [CI contracts](../../../docs/quality/CI_CONTRACTS.md#browser-discovery-and-terminal-evidence).
 
 The transition suite suppresses viewport prefetch and holds the first non-prefetch RSC request. With synchronous route rendering, holding that response preserves the source body rather than mounting a streamable fallback. Static export does not provide loading streaming; do not change this into a fallback-visibility claim.
 

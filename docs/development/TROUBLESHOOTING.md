@@ -2,6 +2,8 @@
 
 Use this guide to diagnose local setup, content generation, quality-gate, Cloudflare Pages, and contact-flow failures. Start with the exact failing command or workflow step. Do not print environment values, workbook URLs, provider responses containing user data, or contact request bodies while investigating.
 
+Classify evidence before acting: source and local commands can establish implemented behavior, while a dashboard, provider, or live deployment needs an operator observation. [Implementation inventory](../architecture/IMPLEMENTATION_INVENTORY.md) defines these boundaries and links each failure class to its owning implementation.
+
 ## Fast diagnostic sequence
 
 From the repository root, run:
@@ -18,7 +20,7 @@ npm run test
 npm run build
 ```
 
-Stop at the first failure and use the matching section below. `npm run verify` runs the same documentation, lint, typecheck, test, and normal-build sequence after dependencies are ready.
+Stop at the first failure and use the matching section below. `npm run verify` uses one accepted content snapshot, then runs documentation checks, the audited dependency gate, lint, type checking, tests, and `build:generated` without another workbook fetch after dependencies are ready. See [CI input and evidence contracts](../quality/CI_CONTRACTS.md) for the workflow graph.
 
 ## Local setup
 
@@ -46,7 +48,7 @@ Run:
 npm run setup:local
 ```
 
-The helper compares package and setup hashes, validates an existing install, and runs `npm ci` when the lockfile is available. Use the force option only when a clean locked reinstall is intentional:
+The helper compares package and setup hashes, validates the installed Node.js and npm identities, and runs `npm ci` when the lockfile is available. Generated-content freshness uses recorded source, schema, environment-selection, and toolchain hashes rather than file timestamps. Use the force option only when a clean locked reinstall is intentional:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup-local.ps1 -ForceInstall
@@ -170,9 +172,9 @@ Use the full suite after the focused failure passes:
 npm run test
 ```
 
-Tests use jsdom and mocks. A behavior that passes unit tests can still fail in Wrangler, a browser, or an external provider, so reproduce at the narrowest real boundary when necessary.
+Component tests use jsdom and mocks; selected integration tests also run local Workers and D1 fixtures. A behavior that passes local tests can still fail in a deployed runtime, a browser, or an external provider, so reproduce at the narrowest real boundary when necessary.
 
-### Footer tests fail only in the focused CI step
+### Focused footer tests differ from the full suite
 
 Run:
 
@@ -180,7 +182,7 @@ Run:
 npm run test:footer
 ```
 
-The focused step and full suite execute the same footer files. A difference usually indicates timing, cleanup, shared global state, or an incomplete concurrent change rather than different test code.
+The local focused command and full suite execute the same footer files. A difference usually indicates timing, cleanup, shared global state, or an incomplete concurrent change rather than different test code.
 
 ## Build and static export
 

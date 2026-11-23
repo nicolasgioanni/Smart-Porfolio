@@ -17,18 +17,21 @@ export function useIntersectionMotion<TElement extends HTMLElement>({
   const ref = useRef<TElement | null>(null);
   const hasRevealedRef = useRef(false);
   const [visible, setVisible] = useState(false);
+  const [ready, setReady] = useState(false);
   const prefersReducedMotion = useReducedMotionPreference();
 
   useEffect(() => {
     const element = ref.current;
     if (!element) return;
 
-    if (!enabled || prefersReducedMotion) {
+    if (!enabled || prefersReducedMotion || typeof IntersectionObserver === "undefined") {
       hasRevealedRef.current = true;
       setVisible(true);
+      setReady(false);
       return;
     }
 
+    setReady(true);
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (hasRevealedRef.current) return;
@@ -48,6 +51,7 @@ export function useIntersectionMotion<TElement extends HTMLElement>({
 
   return {
     ref,
+    ready,
     visible,
     prefersReducedMotion
   };

@@ -25,7 +25,7 @@ export const routeHeaderContent = {
   [siteRoutes.experience]: {
     accessory: "detail-level",
     description:
-      "My experience spans AI engineering at the U.S. Treasury, research software and machine learning at the University of Washington, and teaching core computer science courses.",
+      "My experience spans engineering with the DoW Chief Digital & Artificial Intelligence Office (CDAO) and the U.S. Treasury, research software and machine learning at the University of Washington, and teaching core computer science courses.",
     placement: "embedded",
     title: "Experience"
   },
@@ -38,7 +38,7 @@ export const routeHeaderContent = {
   },
   [siteRoutes.projects]: {
     accessory: "none",
-    description: "I build practical tools for learning, file organization, and developer automation—explore the projects below.",
+    description: "Applied AI, full-stack, automation, and desktop projects—each with a real preview and implementation flow.",
     placement: "page",
     title: "Projects"
   },

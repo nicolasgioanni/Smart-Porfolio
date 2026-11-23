@@ -59,6 +59,7 @@ Deep dives:
 - [Architecture](docs/architecture/ARCHITECTURE.md)
 - [Content pipeline](docs/content/CONTENT_PIPELINE.md)
 - [Deployment](docs/operations/DEPLOYMENT.md)
+- [Terraform ownership preparation](docs/infrastructure/TERRAFORM_OWNERSHIP.md)
 - [Search indexing](docs/operations/SEARCH_INDEXING.md)
 - [Contact system](docs/security/CONTACT_SYSTEM.md)
 
@@ -126,6 +127,7 @@ Page routes are statically exported. This table covers the visitor flows documen
 | `/recommendations` | Complete recommendation collection | Static cards with expandable long quotes; navigation is content-dependent. |
 | `/resume` | Private resume request instructions | Static request page with contact and email actions; no resume file or workbook sheet is published. |
 | `/contact` | Prioritized contact workflow | Static form shell that calls the two same-origin Pages Functions; marked `noindex`. |
+| `/contact-terms` | Contact and communication terms | Static footer-only legal route. |
 | `/privacy` | Privacy notice | Static footer-only legal route. |
 | `/terms` | Terms and accuracy notice | Static footer-only legal route. |
 | `/security` | Security and disclosure notice | Static footer-only legal route. |
@@ -294,7 +296,7 @@ Deployment credentials and immutable Cloudflare target variables are documented 
 
 Use `verify:priority` for routine pull-request work after installing Chromium. Use `verify:full` for a release candidate on Ubuntu 24.04; it includes the complete Playwright suite and Linux-only zero-difference skeleton visual comparison. The compatibility `verify` command does not install or launch a browser.
 
-Pull requests generate from checked-in templates without deployment credentials, then run the priority verification path and static build. Deployable branch candidates use one strict remote snapshot and the full verification path. Artifact checks and live smoke tests run as deployment-specific stages.
+Pull requests generate from checked-in templates. Eligible changes run selected tests on CircleCI. GitHub checks the provider evidence, source security, sealed build and export. Other PRs run the full native suite. [CircleCI selection rules](docs/quality/CIRCLECI.md) Deployable branch candidates use one strict remote snapshot and the full verification path. Artifact checks and live smoke tests run as deployment-specific stages.
 
 See [Testing](docs/quality/TESTING.md), [Quality checklist](docs/quality/QUALITY_CHECKLIST.md), and [Performance checklist](docs/quality/PERFORMANCE_CHECKLIST.md).
 
@@ -339,15 +341,18 @@ See [Contact system](docs/security/CONTACT_SYSTEM.md), [Security](docs/security/
 ## Project structure
 
 ```text
-.github/             GitHub Actions workflow
+.agents/             Six focused specialists and durable system decisions
+.github/             GitHub Actions workflows and permanent-branch ruleset
 docs/                Guides, references, and checklists
 functions/           Cloudflare contact verification and delivery
+infra/               Inactive Terraform ownership preparation
 migrations/          Versioned Cloudflare D1 contact-rate schema
 public/              Static assets, headers, and Function route allowlist
-scripts/             Content, local automation, manifests, smoke checks, tests
-tests/e2e/            Playwright browser regressions
+scripts/             Content, CI, release, security, local automation, tests
+tests/e2e/           Playwright browser regressions
 src/app/             Static Next.js routes and loading files
-src/components/      Layout, navigation, theme, glass, portfolio, and contact UI
+src/components/      Shared layout, navigation, overlay, theme, and UI primitives
+src/features/        Domain UI, selectors, loaders, and styles
 src/content/         Types, local templates, and generated snapshot
 src/lib/             Content, CSV, formatting, and theme helpers
 src/styles/          Semantic tokens and focused CSS layers

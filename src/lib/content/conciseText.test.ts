@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { splitFirstSentence } from "@/lib/content/conciseText";
-import { getHomeMobileSummary } from "@/lib/content/homeMobileSummaries";
+import { getHomeMobileSummary } from "@/features/home/content/homeMobileSummaries";
 
 describe("concise presentation copy", () => {
   it.each([

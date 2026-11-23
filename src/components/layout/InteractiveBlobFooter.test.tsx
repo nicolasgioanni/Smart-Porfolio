@@ -218,15 +218,16 @@ describe("InteractiveBlobFooter", () => {
     vi.unstubAllGlobals();
   });
 
-  it("server-renders the compact accessible fallback with a parser-time inert initializer", () => {
+  it("server-renders the compact accessible fallback with native navigation", () => {
     const serverMarkup = renderToString(<InteractiveBlobFooter {...footerProps} />);
     expect(serverMarkup).toContain('data-footer-state="compact"');
     expect(serverMarkup).toContain('aria-expanded="false"');
     expect(serverMarkup).toContain('aria-hidden="true"');
-    expect(serverMarkup).not.toContain('inert=""');
-    expect(serverMarkup).toContain('setAttribute("inert", "")');
+    expect(serverMarkup).toContain('inert=""');
     expect(serverMarkup).toContain('class="blob-footer__runway"');
     expect(serverMarkup).toContain('class="blob-footer__runway-sentinel"');
+    expect(serverMarkup).toContain('aria-label="Footer notices"');
+    expect(serverMarkup).toContain('aria-label="Footer resources"');
 
     const { container } = renderFooter();
     const toggle = screen.getByRole("button", { name: "Details" });
@@ -241,20 +242,13 @@ describe("InteractiveBlobFooter", () => {
     expect(container.querySelector(".glass-icon-link")).not.toBeInTheDocument();
   });
 
-  it("initializes inert before hydration and synchronizes it with disclosure state without hydration warnings", async () => {
+  it("synchronizes server-rendered inert state with disclosure without hydration warnings", async () => {
     const staticContainer = document.createElement("div");
     staticContainer.innerHTML = renderToString(<InteractiveBlobFooter {...footerProps} />);
     document.body.append(staticContainer);
 
     const staticDetails = staticContainer.querySelector<HTMLElement>(".blob-footer__details");
-    const initialScript = staticDetails?.nextElementSibling;
-    if (!(initialScript instanceof HTMLScriptElement) || !initialScript.textContent) {
-      throw new Error("The footer inert initializer is missing from the server markup.");
-    }
-
     expect(staticDetails).toHaveAttribute("aria-hidden", "true");
-    expect(staticDetails).not.toHaveAttribute("inert");
-    Function(initialScript.textContent)();
     expect(staticDetails).toHaveAttribute("inert");
 
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);

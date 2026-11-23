@@ -84,6 +84,11 @@ function DetailDisclosure({
       if (cancelled || closeGenerationRef.current !== closeGeneration) return;
       setVisualState((current) => (current === "closing" ? "closed" : current));
     };
+    const settleFromGridTransition = (event: TransitionEvent) => {
+      if (event.target !== panel || event.propertyName !== "grid-template-rows") return;
+      settleWhenFinished();
+    };
+    panel.addEventListener("transitionend", settleFromGridTransition);
     const frame = window.requestAnimationFrame(() => {
       if (typeof panel.getAnimations !== "function") {
         settleWhenFinished();
@@ -108,6 +113,7 @@ function DetailDisclosure({
     return () => {
       cancelled = true;
       window.cancelAnimationFrame(frame);
+      panel.removeEventListener("transitionend", settleFromGridTransition);
     };
   }, [open, visualState]);
 

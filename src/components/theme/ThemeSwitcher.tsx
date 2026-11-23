@@ -218,6 +218,22 @@ export function ThemeSwitcher({
   }
 
   function handleKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
+    if (
+      event.key === "Tab" &&
+      !event.shiftKey &&
+      portalPopover &&
+      openRef.current &&
+      event.currentTarget === rootRef.current &&
+      event.target === triggerRef.current
+    ) {
+      const firstOption = popoverRef.current?.querySelector<HTMLButtonElement>('button[tabindex="0"]');
+      if (!firstOption) return;
+
+      event.preventDefault();
+      firstOption.focus();
+      return;
+    }
+
     if (event.key !== "Escape" || !openRef.current) return;
 
     event.preventDefault();

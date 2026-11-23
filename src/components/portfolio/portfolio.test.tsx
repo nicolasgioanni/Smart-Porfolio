@@ -16,16 +16,16 @@ import { PageIntro } from "@/components/layout/PageIntro";
 import { SectionHeader } from "@/components/layout/SectionHeader";
 import { EmptyState } from "@/components/portfolio/shared/EmptyState";
 import { FeaturedGrid } from "@/components/portfolio/shared/FeaturedGrid";
-import { HomeEducationSummary } from "@/components/portfolio/home/HomeEducationSummary";
-import { HomeFeaturedExperience } from "@/components/portfolio/home/HomeFeaturedExperience";
-import { HomeFeaturedProjects } from "@/components/portfolio/home/HomeFeaturedProjects";
-import { HomeFeaturedResearch } from "@/components/portfolio/home/HomeFeaturedResearch";
-import { HomeOverview } from "@/components/portfolio/home/HomeOverview";
-import { HomeRecommendations } from "@/components/portfolio/home/HomeRecommendations";
-import { PortfolioHero } from "@/components/portfolio/home/PortfolioHero";
-import { RecommendationsList } from "@/components/portfolio/recommendations/RecommendationsList";
-import { ResearchList } from "@/components/portfolio/research/ResearchList";
-import { createProfileOverviewContent } from "@/lib/content/profileOverview";
+import { HomeEducationSummary } from "@/features/home/components/HomeEducationSummary";
+import { HomeFeaturedExperience } from "@/features/home/components/HomeFeaturedExperience";
+import { HomeFeaturedProjects } from "@/features/home/components/HomeFeaturedProjects";
+import { HomeFeaturedResearch } from "@/features/home/components/HomeFeaturedResearch";
+import { HomeOverview } from "@/features/home/components/HomeOverview";
+import { HomeRecommendations } from "@/features/home/components/HomeRecommendations";
+import { PortfolioHero } from "@/features/home/components/PortfolioHero";
+import { RecommendationsList } from "@/features/recommendations/components/RecommendationsList";
+import { ResearchList } from "@/features/research/components/ResearchList";
+import { createProfileOverviewContent } from "@/features/home/content/profileOverview";
 
 const linkedInRecommendationsUrl =
   "https://www.linkedin.com/in/nicolas-gioanni/details/recommendations/";
@@ -329,13 +329,24 @@ describe("portfolio UI helpers", () => {
       "home-education-item__concentration",
       "home-education-item__dates",
       "home-education-item__location",
-      "home-education-item__details"
+      "home-education-item__disclosure"
     ]);
 
-    const educationDetails = screen.getByRole("list", { name: "Example University education details" });
+    const educationDisclosure = container.querySelector<HTMLDetailsElement>(".home-education-item__disclosure");
+    expect(educationDisclosure).not.toHaveAttribute("open");
+    expect(within(educationDisclosure!).getByText("Show more")).toBeInTheDocument();
+    expect(within(educationDisclosure!).getByText("Show less")).toHaveClass("home-education-item__disclosure-label-less");
+    const educationDetails = screen.getByRole("list", { hidden: true, name: "Example University education details" });
     expect(within(educationDetails).getByText("GPA: 3.9/4.0")).toBeInTheDocument();
     expect(within(educationDetails).getByText("Dean's List: 2022–2026")).toBeInTheDocument();
     expect(within(educationDetails).getByText("Relevant coursework: Algorithms")).toBeInTheDocument();
+    expect(container.querySelectorAll(".home-education-item__disclosure")).toHaveLength(1);
+
+    fireEvent.click(educationDisclosure!.querySelector("summary")!);
+    expect(educationDisclosure).toHaveAttribute("open");
+
+    fireEvent.click(educationDisclosure!.querySelector("summary")!);
+    expect(educationDisclosure).not.toHaveAttribute("open");
     expect(container.querySelector(".portfolio-card")).not.toBeInTheDocument();
     expect(container.querySelector(".glass-chip")).not.toBeInTheDocument();
   });
@@ -355,6 +366,7 @@ describe("portfolio UI helpers", () => {
         homeSummary: "Summary that should stay hidden.",
         bullets: ["Bullet that should stay hidden."],
         skills: ["Python"],
+        links: [],
         featured: true,
         showOnHome: true
       },
@@ -367,6 +379,7 @@ describe("portfolio UI helpers", () => {
         endDate: "2024-12",
         bullets: [],
         skills: [],
+        links: [],
         featured: false,
         showOnHome: true
       },
@@ -379,6 +392,7 @@ describe("portfolio UI helpers", () => {
         endDate: "2024-06",
         bullets: [],
         skills: [],
+        links: [],
         featured: false,
         showOnHome: true
       }
@@ -408,6 +422,13 @@ describe("portfolio UI helpers", () => {
     expect(screen.getByText("Jan 2025 \u2013 Present")).toBeInTheDocument();
     expect(screen.getByText("Sep 2024 \u2013 Dec 2024")).toBeInTheDocument();
     expect(screen.getAllByText("Bothell, WA")).toHaveLength(2);
+    const firstRole = screen.getByRole("heading", { level: 4, name: "Research Assistant" }).closest("article");
+    expect(firstRole).not.toBeNull();
+    const firstRoleMetadata = Array.from(
+      firstRole!.querySelectorAll(".home-experience-role__dates, .home-experience-role__location")
+    ).map((element) => element.textContent);
+    expect(firstRoleMetadata[0]).toMatch(/^Jan 2025 – Present/);
+    expect(firstRoleMetadata[1]).toBe("Seattle, WA");
     expect(screen.queryByText("research", { exact: true })).not.toBeInTheDocument();
     expect(screen.queryByText("Featured", { exact: true })).not.toBeInTheDocument();
     expect(screen.queryByText("Summary that should stay hidden.")).not.toBeInTheDocument();
@@ -693,7 +714,8 @@ describe("portfolio UI helpers", () => {
   });
 
   it("renders Home major sections without repetitive card eyebrows", () => {
-    const { container } = render(<HomeOverview content={createHomeContent([], [skillGroup])} />);
+    const content = createHomeContent([], [skillGroup]);
+    const { container } = render(<HomeOverview content={content} projectHighlights={<HomeFeaturedProjects items={content.projects} />} />);
     const overviewGrid = container.querySelector<HTMLElement>(".home-overview-grid");
     const skillsSection = container.querySelector<HTMLElement>(".home-section--skills");
     const recommendationsSection = container.querySelector<HTMLElement>(".home-section--recommendations");
@@ -734,7 +756,8 @@ describe("portfolio UI helpers", () => {
   });
 
   it("renders each Home section in the requested order even when recommendations exist", () => {
-    const { container } = render(<HomeOverview content={createHomeContent([recommendation])} />);
+    const content = createHomeContent([recommendation]);
+    const { container } = render(<HomeOverview content={content} projectHighlights={<HomeFeaturedProjects items={content.projects} />} />);
 
     expect(Array.from(container.querySelectorAll(".home-overview-grid h2")).map((heading) => heading.textContent)).toEqual([
       "Experience",
@@ -829,6 +852,7 @@ describe("portfolio UI helpers", () => {
         startDate: "2024-08",
         endDate: "Present",
         dateLabel: "Aug 2024 \u2013 Present",
+        location: "Current Work Location Sentinel",
         summary: "Current work summary supplied through the overview prop.",
         logo: { src: "/images/organizations/current-sentinel.svg", alt: "Current Organization Sentinel mark" }
       },
@@ -929,6 +953,12 @@ describe("portfolio UI helpers", () => {
     expect(currentWork.getByRole("heading", { level: 3, name: "Current Organization Sentinel" })).toBeInTheDocument();
     expect(currentWork.getByText("Current Role Sentinel")).toBeInTheDocument();
     expect(currentWork.getByText("Aug 2024 \u2013 Present")).toBeInTheDocument();
+    expect(currentWork.getByText("Current Work Location Sentinel")).toBeInTheDocument();
+    const currentWorkMetadata = Array.from(
+      currentWorkSection!.querySelectorAll(".profile-overview__metadata")
+    ).map((element) => element.textContent);
+    expect(currentWorkMetadata[0]).toMatch(/^Aug 2024 – Present/);
+    expect(currentWorkMetadata[1]).toBe("Current Work Location Sentinel");
     expect(currentWork.getByText("Current work summary supplied through the overview prop.")).toBeInTheDocument();
     const experienceLink = currentWork.getByRole("link", { name: "View experience" });
     expect(experienceLink).toHaveAttribute("href", "/experience");

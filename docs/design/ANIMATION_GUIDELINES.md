@@ -4,7 +4,7 @@ Motion is restrained, legible, and tied to comprehension or state. It must not d
 
 ## Preferred properties
 
-Animate `transform` and `opacity` first. Experience disclosure, recommendation disclosure, footer grid rows, the small header island, and the measured Contact data-entry frame are explicit bounded exceptions. Do not introduce layout animation elsewhere without documenting why it communicates state better than an immediate change.
+Animate `transform` and `opacity` first. Experience disclosure, recommendation disclosure, Home Education disclosure, footer grid rows, the small header island, and the measured Contact data-entry frame are explicit bounded exceptions. Do not introduce layout animation elsewhere without documenting why it communicates state better than an immediate change.
 
 ## Reduced motion
 
@@ -30,6 +30,10 @@ The verification gate and its reserved Turnstile well do not participate. Reduce
 
 The contact body portal enters from 8 pixels above with a 200ms opacity/transform animation. Cards use 10-pixel peeks and small 1.00/0.98/0.96 scales, expanding into measured separate rows through 200ms transforms. Dismissal fades and travels up 8 pixels over 200ms. Reserve stack geometry immediately; do not animate the contact form or surrounding page to accommodate notifications. Reduced motion disables these animations and removes dismissed cards immediately. Independent notification countdowns pause during hover, focus, touch-expanded reading, and document hiding. The verification well separately reserves widget/status/recovery space so provider lifecycle changes never move the surrounding gate. Its loading and server-confirmation label is the narrow text-only exception to the no-gradient rule: a 2.4-second blue highlight travels inside clipped glyphs, with no surface treatment, JavaScript loop, or animation outside pending states. Reduced motion uses static blue and forced colors use system text.
 
+## Project visuals
+
+Project previews and Architecture diagrams are static. Their fixed media footprint contains a perspective scene whose unflattened rotor turns from `rotateY(0deg)` to `rotateY(-180deg)` over `520ms cubic-bezier(.65, 0, .35, 1)`; returning to the preview reverses from the current transform. Each rounded, clipped face hides its reverse side, so the hover wrapper, perspective scene, and rotor remain separate. The labels in the centered switcher crossfade over `180ms` with opacity only; no label change alters button width or surrounding geometry. A fine-pointer hover can lift only the complete media wrapper by `3px` over `280ms`, while its restrained semantic outline appears through opacity. Reduced motion makes the rotor and labels immediate and removes that lift while preserving independent per-card selection, focus, and normal document scrolling.
+
 ## Home role rotation
 
 The desktop Home role uses a fixed-height, overflow-hidden window sized for the widest configured role so neither the line nor surrounding layout shifts. Server rendering and initial hydration show the first configured engineer role. Its hard clipping edge keeps text sharp. Do not animate `filter` or text blur.
@@ -41,6 +45,12 @@ For the configured engineer sequence, animate only the right-aligned prefix whil
 Above the collapsed-navigation breakpoint, this approved prefix and 3D whole-line behavior remains unchanged. At `max-width: 980px`, CSS selects a mobile-safe visual branch with exactly one sharp role-label layer. It fades the current label out for `320ms`, swaps text only while fully transparent, and fades the same label node back in for `320ms`. The mobile label uses no mask, perspective, 3D transform, backface composition, or persistent `will-change`.
 
 Do not substitute typing, letter-by-letter, bounce, large-scale, spinning-carousel, bright-pill, or blur effects. A static-headline fallback never schedules rotation. Reduced motion schedules no timers and shows the first role statically. Role rotation is independent of the scroll-reveal setting.
+
+## Home Education disclosure
+
+The native academic-history disclosure gains a measured content-height transition using `--disclosure-height-duration`, with opacity using `--disclosure-opacity-duration` and the shared `--disclosure-easing`. The summary stays above the content while the card grows in normal flow on desktop and mobile. This bounded layout animation communicates that optional academic details belong to the same entry; it does not overlay subsequent sections.
+
+Rapid reversal starts from the current visible height and opacity, and stale animation completion must not overwrite the latest requested state. Release measured height after settlement so wrapping and resizing retain natural layout. Reduced motion, unavailable animation support, and unenhanced native interaction apply state immediately. Clean up active animations on unmount.
 
 ## Recommendation expansion
 
@@ -80,15 +90,9 @@ Reduced motion removes the transition and entry transform while preserving porta
 
 ## Research video controls
 
-The centered play/pause module and bottom video bar use short opacity and transform fades on pointer activity. They fade out when the pointer leaves or after four seconds without pointer movement inside the player, including while paused; new movement resets that delay. Keyboard-visible focus, scrubbing, open control surfaces, media feedback, and touch reveal keep them reachable. Its semantic hover and focus treatment changes surface and border without translating the already centered button.
+The centered play/pause module and transparent bottom video layout bar use short opacity and transform fades on pointer activity. They fade out when the pointer leaves or after four seconds without pointer movement inside the player, including while paused; new movement resets that delay. Keyboard-visible focus, scrubbing, open control surfaces, media feedback, and touch reveal keep them reachable. Its semantic hover and focus treatment changes surface and border without translating the already centered button. Caption toggling holds the outgoing custom cue for a 180-millisecond fade and cancels that exit if captions return. Inline and mobile enlarged/fullscreen lower and raised cue layers exchange over 200 milliseconds, with the lower layer leaving down and the raised layer entering from above; native and picture-in-picture handoffs apply immediately. The settings popover fades and moves vertically over 180 milliseconds. Its stable-width root and speed views share a clipped grid viewport and crossfade with six-pixel forward or reverse horizontal movement over the same duration; the active view determines the panel height, and width and height do not animate. Reduced motion removes all of these transitions while preserving the resulting state and focus order.
 
-The volume range expands horizontally beside the sound button through width and opacity and keeps the surrounding left action group stable. Settings and its playback-speed submenu use the same restrained fade treatment, with pointer travel and keyboard focus supported inside each surface. In inline non-fullscreen playback, two aria-hidden caption layers make a fast handoff: the lower cue fades and slides down as controls appear while the raised cue fades and slides in from above, then reverse when controls hide. Reduced motion removes bar, slider, menu, and caption transitions while preserving every state. Shared modal entry, exit, focus, and scroll locking remain owned by `ModalDialog`.
-
-## Research diagram explainers
-
-The Adversarial Machine Learning and GuideDonorScheduler Research rows use CSS animation on static inline SVG scenes. Each explainer has a complete visible scene, persistent HTML labels, and caption before motion begins, and the same complete scene remains visible while paused. A twelve-second loop has four three-second emphasis phases, with seconds eleven through twelve holding the complete scene: AML emphasizes changed pixels, clean and manipulated sample travel, detector-ring rotation, then the neutral check; GuideDonorScheduler emphasizes the requested target change, guide bracket, donor marks, then guide and donor spreadsheet rows. Motion may animate opacity and transform while labels, paths, scene frame, and caption remain legible throughout. The implementation must not schedule per-frame React updates, fetch content, or depend on a media runtime.
-
-Each explainer observes viewport visibility and `document.visibilityState`: it suspends when offscreen or hidden, resumes only when its conditions become eligible, and preserves a manual pause across those automatic changes. Its native control has a 44px target: it remains `Pause` while automatic conditions temporarily hold an otherwise active animation and changes to `Resume` only for a manual pause. Initial reduced-motion or unsupported-observer rendering shows the complete static diagram and caption, omits playback controls, and schedules no animation work. A live preference change retains a focused control as disabled static content only until focus leaves, then removes it.
+The volume range expands horizontally beside the sound button through width and opacity and keeps the surrounding left action group stable. Settings and its playback-speed submenu use the same restrained fade treatment, with pointer travel and keyboard focus supported inside each surface. In inline playback and mobile enlarged/fullscreen playback, two aria-hidden caption layers make a fast handoff: the lower cue fades and slides down as controls appear while the raised cue fades and slides in from above, then reverse when controls hide. Reduced motion removes bar, slider, menu, and caption transitions while preserving every state. Caption anchors update from measured media and control geometry on cue, layout, and presentation changes; no continuous measurement loop is used. Shared modal entry, exit, focus, and scroll locking remain owned by `ModalDialog`, including its persistent in-place fullscreen presentation.
 
 ## Mobile navigation rail
 
@@ -130,3 +134,5 @@ Use layered solid tiers, fine borders, and restrained neutral shadows. Accent co
 - [Accessibility](ACCESSIBILITY.md)
 - [Skeleton loading guidelines](SKELETON_LOADING_GUIDELINES.md)
 - [Testing](../quality/TESTING.md)
+
+Scroll-reveal and compression content is visible in server output. Client code adds the motion-ready class only when IntersectionObserver is available and motion is permitted. Without that enhancement, including no-JavaScript and reduced-motion visits, the content retains its readable static presentation.

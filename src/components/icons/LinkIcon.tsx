@@ -15,6 +15,14 @@ function BaseIcon({ children, ...props }: SVGProps<SVGSVGElement>) {
 export function LinkIcon({ kind = "external", ...props }: IconProps) {
   const normalizedKind = kind.toLowerCase();
 
+  if (normalizedKind === "arrow-northeast-filled") {
+    return (
+      <BaseIcon {...props}>
+        <path d="M5 16.9 14.9 7H8V4h12v12h-3V9.1L7.1 19 5 16.9Z" fill="currentColor" />
+      </BaseIcon>
+    );
+  }
+
   if (normalizedKind === "github") {
     return (
       <BaseIcon {...props}>
@@ -73,6 +81,14 @@ export function LinkIcon({ kind = "external", ...props }: IconProps) {
       <BaseIcon {...props}>
         <path d="M12 3.5v11m0 0 4-4m-4 4-4-4" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
         <path d="M5 16.5v3h14v-3" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+      </BaseIcon>
+    );
+  }
+
+  if (normalizedKind === "back") {
+    return (
+      <BaseIcon {...props}>
+        <path d="m14.5 5.5-6.5 6.5 6.5 6.5M8.5 12h8" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
       </BaseIcon>
     );
   }

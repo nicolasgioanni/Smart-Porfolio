@@ -1,6 +1,7 @@
 import { act, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { CompressOnScrollSection } from "@/components/motion/CompressOnScrollSection";
+import { ScrollReveal } from "@/components/motion/ScrollReveal";
 
 type ObserverRecord = {
   callback: IntersectionObserverCallback;
@@ -62,6 +63,7 @@ describe("motion reveal behavior", () => {
     const section = screen.getByText("Skills snapshot").closest("section");
 
     expect(section).toHaveClass("motion-compress");
+    expect(section).toHaveClass("motion-ready");
     expect(section).not.toHaveClass("is-visible");
 
     emitIntersection(true);
@@ -69,5 +71,19 @@ describe("motion reveal behavior", () => {
 
     emitIntersection(false);
     expect(section).toHaveClass("is-visible");
+  });
+
+  it("leaves content readable when IntersectionObserver is unavailable", () => {
+    vi.stubGlobal("IntersectionObserver", undefined);
+
+    render(
+      <ScrollReveal>
+        <span>Static fallback</span>
+      </ScrollReveal>
+    );
+
+    const reveal = screen.getByText("Static fallback").parentElement;
+    expect(reveal).toHaveClass("motion-reveal", "is-visible");
+    expect(reveal).not.toHaveClass("motion-ready");
   });
 });

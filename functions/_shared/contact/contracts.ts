@@ -2,22 +2,31 @@ export const CONTACT_ACTION = "portfolio_contact";
 export const MAX_REQUEST_BYTES = 16_384;
 export const CONTACT_RATE_LIMIT_WINDOW_SECONDS = 24 * 60 * 60;
 export const CONTACT_RATE_LIMIT_MAX_SUBMISSIONS = 2;
-export const CONTACT_RESERVATION_INSERT_SQL = `INSERT INTO contact_rate_reservations (submission_id, email_hash, payload_hash, reserved_at, expires_at)
-  SELECT ?1, ?2, ?3, ?4, ?5
+export const CONTACT_IP_LIMIT_WINDOW_SECONDS = 60 * 60;
+export const CONTACT_IP_LIMIT_MAX_SUBMISSIONS = 10;
+export const CONTACT_GLOBAL_LIMIT_MAX_SUBMISSIONS = 100;
+export const CONTACT_EMAIL_RENDER_VERSION = 2;
+export const CONTACT_RESERVATION_INSERT_SQL = `INSERT INTO contact_rate_reservations (submission_id, email_hash, payload_hash, delivery_config_hash, render_version, reserved_at, expires_at, ip_hash)
+  SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8
   WHERE NOT EXISTS (
     SELECT 1 FROM contact_rate_reservations
     WHERE submission_id = ?1
-      AND (email_hash <> ?2 OR payload_hash IS NULL OR payload_hash <> ?3)
+      AND (email_hash <> ?2 OR payload_hash IS NULL OR payload_hash <> ?3 OR delivery_config_hash IS NULL OR delivery_config_hash <> ?4 OR render_version IS NULL OR render_version <> ?5)
   )
   AND (
     EXISTS (
       SELECT 1 FROM contact_rate_reservations
-      WHERE submission_id = ?1 AND email_hash = ?2 AND payload_hash = ?3
+      WHERE submission_id = ?1 AND email_hash = ?2 AND payload_hash = ?3 AND delivery_config_hash = ?4 AND render_version = ?5
     )
     OR (
       SELECT COUNT(*) FROM contact_rate_reservations
-      WHERE email_hash = ?2 AND expires_at > ?4
+      WHERE email_hash = ?2 AND expires_at > ?6
     ) < ${CONTACT_RATE_LIMIT_MAX_SUBMISSIONS}
+    AND (SELECT COUNT(*) FROM contact_rate_reservations
+      WHERE ip_hash = ?8 AND reserved_at > ?6 - ${CONTACT_IP_LIMIT_WINDOW_SECONDS}
+        AND expires_at > ?6) < ${CONTACT_IP_LIMIT_MAX_SUBMISSIONS}
+    AND (SELECT COUNT(*) FROM contact_rate_reservations
+      WHERE expires_at > ?6) < ${CONTACT_GLOBAL_LIMIT_MAX_SUBMISSIONS}
   )
   ON CONFLICT(submission_id) DO NOTHING`;
 
@@ -89,10 +98,16 @@ export type TurnstileVerificationResult =
 export type EmailDomainValidationResult = { kind: "valid" } | { kind: "invalid" } | { kind: "unavailable" };
 
 export type ContactReservationResult =
-  | { kind: "reserved"; reservedAt: number }
+  | { kind: "reserved"; reservedAt: number; renderVersion: typeof CONTACT_EMAIL_RENDER_VERSION }
   | { kind: "rate-limited"; retryAfterSeconds: number }
   | { kind: "mismatch" }
+  | { kind: "retry-unavailable" }
   | { kind: "unavailable" };
+
+export type ContactDeliveryResult =
+  | { kind: "accepted" }
+  | { kind: "rejected"; stage: "visitor" | "owner" }
+  | { kind: "unknown"; stage: "visitor" | "owner" };
 
 export interface EmailMessage {
   from: string;

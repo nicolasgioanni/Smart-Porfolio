@@ -4,8 +4,8 @@ import { describe, expect, it } from "vitest";
 
 const skeletonStyles = readFileSync(path.join(process.cwd(), "src", "styles", "skeletons.css"), "utf8");
 const motionStyles = readFileSync(path.join(process.cwd(), "src", "styles", "motion.css"), "utf8");
-const experienceStyles = readFileSync(path.join(process.cwd(), "src", "styles", "experience.css"), "utf8");
-const researchStyles = readFileSync(path.join(process.cwd(), "src", "styles", "research.css"), "utf8");
+const experienceStyles = readFileSync(path.join(process.cwd(), "src", "features", "experience", "experience.css"), "utf8");
+const researchStyles = readFileSync(path.join(process.cwd(), "src", "features", "research", "research.css"), "utf8");
 
 describe("skeleton style contracts", () => {
   it("keeps loading roots outside resolved page-entry animation and matches page container spacing", () => {
@@ -80,6 +80,15 @@ describe("skeleton style contracts", () => {
       /@media \(max-width: 720px\)[\s\S]*?\.home-skeleton__card-grid--recommendations,\s*\.home-skeleton__skill-grid\s*\{[^}]*grid-template-columns: minmax\(0, 1fr\)/s
     );
     expect(skeletonStyles).toMatch(
+      /@media \(min-width: 721px\) and \(max-width: 980px\)[\s\S]*?\.home-skeleton__hero\s*\{[^}]*grid-template-areas:\s*"introduction"\s*"profile"\s*"details"[^}]*gap: var\(--space-6\)/s
+    );
+    expect(skeletonStyles).toMatch(
+      /@media \(min-width: 721px\) and \(max-width: 980px\)[\s\S]*?\.home-skeleton__profile\s*\{[^}]*grid-template-columns: minmax\(160px, 0\.8fr\) minmax\(280px, 1\.2fr\)[^}]*margin-bottom: 0/s
+    );
+    expect(skeletonStyles).toMatch(
+      /@media \(min-width: 721px\) and \(max-width: 980px\)[\s\S]*?\.home-skeleton__portrait\s*\{[^}]*width: clamp\(150px, 20vw, 184px\) !important[^}]*height: clamp\(150px, 20vw, 184px\) !important/s
+    );
+    expect(skeletonStyles).toMatch(
       /@media \(max-width: 620px\)[\s\S]*?\.resume-skeleton\s*\{[^}]*grid-template-columns: minmax\(0, 1fr\)[^}]*align-items: start[^}]*padding: var\(--space-6\)/s
     );
     expect(skeletonStyles).toMatch(
@@ -87,7 +96,7 @@ describe("skeleton style contracts", () => {
     );
     const tabletRules = skeletonStyles.slice(
       skeletonStyles.indexOf("@media (max-width: 980px)"),
-      skeletonStyles.indexOf("@media (max-width: 860px)")
+      skeletonStyles.indexOf("@media (min-width: 721px) and (max-width: 980px)")
     );
     expect(tabletRules).not.toContain(".home-skeleton__academic-grid");
     const phoneRules = skeletonStyles.slice(
@@ -112,7 +121,7 @@ describe("skeleton style contracts", () => {
     );
   });
 
-  it("models the published research media stacks with natural aspect-ratio geometry", () => {
+  it("models the CytoCV stack and centered abstract-only media with natural aspect-ratio geometry", () => {
     expect(researchStyles).toMatch(
       /\.research-skeleton__video-viewport\s*\{[^}]*aspect-ratio: 1710 \/ 1108[^}]*overflow: hidden/s
     );
@@ -133,7 +142,7 @@ describe("skeleton style contracts", () => {
       /\.research-skeleton__abstract-frame\s*\{[^}]*width: 100%[^}]*max-width: none[^}]*aspect-ratio: 16 \/ 9/s
     );
     expect(researchStyles).toMatch(
-      /\.research-skeleton__media-row > \.research-skeleton__abstract,[\s\S]*?\.research-skeleton__media-row > \.research-skeleton__explainer\s*\{[^}]*width: min\(100%, 32rem\)/s
+      /\.research-skeleton__media-row > \.research-skeleton__abstract,[\s\S]*?\.research-skeleton__single-media > \.research-skeleton__abstract\s*\{[^}]*width: min\(100%, 32rem\)/s
     );
     expect(researchStyles).toMatch(
       /\.research-skeleton__abstract-title\s*\{[^}]*max-width:\s*44rem[^}]*justify-self:\s*center/s
@@ -142,11 +151,12 @@ describe("skeleton style contracts", () => {
       /\.research-skeleton__video-header\s*\{[^}]*justify-items:\s*center/s
     );
     expect(researchStyles).toMatch(
-      /\.research-skeleton__explainer-title\s*\{[^}]*justify-self:\s*center/s
+      /\.research-skeleton__single-media\s*\{[^}]*align-content: center[^}]*justify-items: center[^}]*height: 100%[^}]*padding: var\(--space-4\)/s
     );
     expect(researchStyles).toMatch(
-      /@media \(max-width: 920px\)[\s\S]*?\.research-skeleton__media-stack\s*\{[^}]*grid-template-rows: auto 1px auto[^}]*}[\s\S]*?\.research-skeleton__media-divider\s*\{[^}]*margin-inline: var\(--space-4\)/s
+      /@media \(max-width: 920px\)[\s\S]*?\.research-skeleton__media-stack\s*\{[^}]*grid-template-rows: auto 1px auto[^}]*}[\s\S]*?\.research-skeleton__single-media\s*\{[^}]*align-content: start[^}]*height: auto[^}]*min-height: 0[^}]*}[\s\S]*?\.research-skeleton__media-divider\s*\{[^}]*margin-inline: var\(--space-4\)/s
     );
+    expect(researchStyles).not.toContain("research-skeleton__explainer");
     expect(researchStyles).toMatch(/\.research-skeleton__details\s*\{[^}]*gap: 1px/s);
     expect(researchStyles).toMatch(/\.research-skeleton__resources\s*\{[^}]*flex-wrap: wrap/s);
     expect(researchStyles).toMatch(

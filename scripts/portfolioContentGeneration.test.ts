@@ -18,6 +18,7 @@ import {
   createPortfolioContentHash,
   finalizeGeneratedPortfolioContent,
   parsePortfolioWorkbook,
+  parsePortfolioWorkbookInChild,
   portfolioWorkbookSheetNames,
   validatePortfolioWorkbookUrl,
   type PortfolioWorkbookSheetName
@@ -112,6 +113,11 @@ function setLegacyResearchHeaders(worksheet: Worksheet): void {
   const graphicalAbstractColumn = findColumn(worksheet, "graphical_abstract");
   worksheet.spliceColumns(graphicalAbstractColumn + 1, 2);
   worksheet.getCell(1, graphicalAbstractColumn).value = "image";
+}
+
+function setLegacyExperienceHeaders(worksheet: Worksheet): void {
+  const linksColumn = findColumn(worksheet, "links");
+  worksheet.spliceColumns(linksColumn, 1);
 }
 
 function findKeyValueCell(worksheet: Worksheet, key: string) {
@@ -267,7 +273,7 @@ describe("workbook dependency boundary", () => {
     expect(devDependencies.exceljs).toBe("4.4.0");
     expect(devDependencies.jszip).toBe("3.10.1");
     expect(dependencies.exceljs).toBeUndefined();
-    expect(packageJson.overrides).toEqual({ exceljs: { uuid: "11.1.1" } });
+    expect(packageJson.overrides?.exceljs).toEqual({ uuid: "11.1.1" });
     expect(
       directPackageNames.filter((name) =>
         /google.*(?:api|auth|oauth|drive|sheet)|(?:api|auth|oauth|drive|sheet).*google/i.test(name)
@@ -369,18 +375,76 @@ describe("strict XLSX download boundary", () => {
     expect(calls).toHaveLength(1);
     expect(calls[0]!.url).toBe(workbookUrl);
     expect(calls[0]!.init.credentials).toBe("omit");
-    expect(calls[0]!.init.redirect).toBe("follow");
+    expect(calls[0]!.init.redirect).toBe("manual");
     expect(calls[0]!.init.signal).toBeInstanceOf(AbortSignal);
     const requestHeaders = new Headers(calls[0]!.init.headers);
     expect(requestHeaders.has("authorization")).toBe(false);
     expect(requestHeaders.has("cookie")).toBe(false);
     expect(generated.metadata.sourceMode).toBe("remote");
     expect(generated.profile.experienceSummary).toBe(
-      "My experience spans AI engineering at the U.S. Treasury, research software and machine learning at the University of Washington, and teaching core computer science courses."
+      "My experience spans engineering with the DoW Chief Digital & Artificial Intelligence Office (CDAO) and the U.S. Treasury, research software and machine learning at the University of Washington, and teaching core computer science courses."
     );
     expect(generated.metadata.sources.resume).toBe("template");
     expect(logs.join("\n")).not.toContain(workbookUrl);
     expect(logs.join("\n")).not.toContain("private-test-id");
+  });
+
+  it("follows only validated redirects and cancels each redirect body", async () => {
+    const bytes = await createWorkbookBytes();
+    const { outputFile } = await createTemporaryPaths();
+    const redirects = [
+      "https://mirror-one.example.test/portfolio.xlsx",
+      "https://mirror-two.example.test/portfolio.xlsx"
+    ];
+    const calls: Array<{ url: string; init: RequestInit }> = [];
+    let cancelledRedirectBodies = 0;
+
+    await generatePortfolioContent({
+      environment: { PORTFOLIO_WORKBOOK_URL: workbookUrl, PORTFOLIO_REQUIRE_REMOTE_CONTENT: "true" },
+      fetchImplementation: async (url, init) => {
+        calls.push({ url, init });
+        const location = redirects[calls.length - 1];
+        if (!location) return responseFromBytes(bytes, { contentType: xlsxContentType });
+
+        return new Response(
+          new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(new Uint8Array([0x72, 0x65, 0x64, 0x69, 0x72, 0x65, 0x63, 0x74]));
+            },
+            cancel() {
+              cancelledRedirectBodies += 1;
+            }
+          }),
+          { status: 302, headers: { location } }
+        );
+      },
+      outputFile,
+      templatesDirectory,
+      log: () => undefined
+    });
+
+    expect(calls.map((call) => call.url)).toEqual([workbookUrl, ...redirects]);
+    expect(calls.every((call) => call.init.redirect === "manual" && call.init.credentials === "omit")).toBe(true);
+    expect(cancelledRedirectBodies).toBe(redirects.length);
+  });
+
+  it("fails closed for a redirect to an unsafe destination without exposing its URL", async () => {
+    const { outputFile } = await createTemporaryPaths();
+    const unsafeRedirect = "https://127.0.0.1/private-test-id.xlsx";
+
+    await expect(
+      generatePortfolioContent({
+        environment: { PORTFOLIO_WORKBOOK_URL: workbookUrl, PORTFOLIO_REQUIRE_REMOTE_CONTENT: "true" },
+        fetchImplementation: async () => responseFromBytes(new Uint8Array(), {
+          status: 302,
+          headers: { location: unsafeRedirect }
+        }),
+        outputFile,
+        templatesDirectory,
+        log: () => undefined
+      })
+    ).rejects.toThrow("Failed to download the public XLSX workbook");
+    await expect(readFile(outputFile, "utf8")).rejects.toMatchObject({ code: "ENOENT" });
   });
 
   it("uses templates only when strict mode is false and no workbook URL is configured", async () => {
@@ -657,7 +721,7 @@ describe("XLSX workbook structure and cells", () => {
     const bytes = Uint8Array.from(await archive.generateAsync({ type: "uint8array", compression: "DEFLATE" }));
     const xlsxGetter = vi.spyOn(ExcelJS.Workbook.prototype, "xlsx", "get");
 
-    await expect(parsePortfolioWorkbook(bytes)).rejects.toThrow(/archive contains too many entries/);
+    await expect(parsePortfolioWorkbookInChild(bytes)).rejects.toThrow(/archive contains too many entries/);
     expect(xlsxGetter).not.toHaveBeenCalled();
   });
 
@@ -673,7 +737,7 @@ describe("XLSX workbook structure and cells", () => {
     const xlsxGetter = vi.spyOn(ExcelJS.Workbook.prototype, "xlsx", "get");
 
     expect(bytes.byteLength).toBeLessThan(portfolioWorkbookMaxBytes);
-    await expect(parsePortfolioWorkbook(bytesWithFalsifiedSize)).rejects.toThrow(
+    await expect(parsePortfolioWorkbookInChild(bytesWithFalsifiedSize)).rejects.toThrow(
       /archive exceeds the allowed decoded size limit/
     );
     expect(xlsxGetter).not.toHaveBeenCalled();
@@ -704,8 +768,20 @@ describe("XLSX workbook structure and cells", () => {
     expect(atLimitBytes.byteLength).toBeLessThan(portfolioWorkbookMaxBytes);
     await expect(parsePortfolioWorkbook(atLimitBytes)).resolves.toHaveProperty("profile");
     const xlsxGetter = vi.spyOn(ExcelJS.Workbook.prototype, "xlsx", "get");
-    await expect(parsePortfolioWorkbook(oneByteOverLimit)).rejects.toThrow(/archive exceeds the allowed decoded size limit/);
+    await expect(parsePortfolioWorkbookInChild(oneByteOverLimit)).rejects.toThrow(/archive exceeds the allowed decoded size limit/);
     expect(xlsxGetter).not.toHaveBeenCalled();
+  });
+
+  it("rejects excessive worksheet expansion before ExcelJS in the isolated parser", async () => {
+    const archive = await JSZip.loadAsync(await createWorkbookBytes());
+    const entry = archive.file("xl/worksheets/sheet1.xml")!;
+    const xml = await entry.async("string");
+    archive.file("xl/worksheets/sheet1.xml", xml.replace("</worksheet>", '<mergeCells><mergeCell ref="A1:DX5000"/></mergeCells></worksheet>'));
+    const bytes = await archive.generateAsync({ type: "uint8array", compression: "DEFLATE" });
+    const xlsxGetter = vi.spyOn(ExcelJS.Workbook.prototype, "xlsx", "get");
+    await expect(parsePortfolioWorkbookInChild(bytes)).rejects.toThrow(/dimensions/);
+    expect(xlsxGetter).not.toHaveBeenCalled();
+    await expect(parsePortfolioWorkbook(bytes)).rejects.toThrow(/dimensions/);
   });
 
   it("writes and reads a data-bar workbook through ExcelJS's UUID-backed extension path", async () => {
@@ -794,6 +870,16 @@ describe("XLSX workbook structure and cells", () => {
     }
   });
 
+  it("preserves content from workbooks with ignored presentation rules", async () => {
+    const bytes = await createWorkbookBytes({ mutate: (workbook) => {
+      getWorksheet(workbook, "profile").addConditionalFormatting({
+        ref: "B2:B4", rules: [{ type: "expression", priority: 1, formulae: ["TRUE"], style: { font: { bold: true } } }]
+      });
+    } });
+    const sheets = await parsePortfolioWorkbook(bytes);
+    expect(sheets.profile.some((row) => row.key === "full_name" && Boolean(row.value))).toBe(true);
+  });
+
   it("uses cached displayed formula text and rejects formulas without a cache", async () => {
     const displayedBio = "Rich  text stays together";
     const cachedBytes = await createWorkbookBytes({
@@ -835,6 +921,19 @@ describe("XLSX workbook structure and cells", () => {
       /formula .* is missing a cached value/
     );
     expect(await fileDoesNotExist(failure.outputFile)).toBe(true);
+  });
+
+  it("does not expose remote cell contents in validation errors", async () => {
+    const secret = "private-payload-value";
+    const bytes = await createWorkbookBytes({ mutate: (workbook) => {
+      const sheet = getWorksheet(workbook, "skills");
+      sheet.getCell(2, findColumn(sheet, "featured")).value = secret;
+    } });
+    const { outputFile } = await createTemporaryPaths();
+    const error = await generateFromWorkbook(bytes, { outputFile }).catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toBe("Invalid boolean in remote workbook content");
+    expect((error as Error).message).not.toContain(secret);
   });
 
   it("normalizes line endings and trailing blank rows/columns while preserving internal whitespace", async () => {
@@ -985,6 +1084,45 @@ describe("XLSX workbook structure and cells", () => {
     );
     expect(sheets.research[0]).toHaveProperty("video", "");
     expect(sheets.research[0]).not.toHaveProperty("image");
+  });
+
+  it("accepts the canonical Experience schema with validated links", async () => {
+    const sheets = await parsePortfolioWorkbook(await createWorkbookBytes());
+
+    expect(sheets.experience[1]).toHaveProperty("links", "Tech.Treasury.Gov=https://tech.treasury.gov");
+  });
+
+  it("accepts the temporary exact legacy Experience schema without links", async () => {
+    const bytes = await createWorkbookBytes({
+      mutate: (workbook) => setLegacyExperienceHeaders(getWorksheet(workbook, "experience"))
+    });
+
+    const sheets = await parsePortfolioWorkbook(bytes);
+
+    expect(sheets.experience[0]).not.toHaveProperty("links");
+  });
+
+  it("normalizes legacy Experience rows to an empty links list", async () => {
+    const bytes = await createWorkbookBytes({
+      mutate: (workbook) => setLegacyExperienceHeaders(getWorksheet(workbook, "experience"))
+    });
+    const { outputFile } = await createTemporaryPaths();
+
+    await generateFromWorkbook(bytes, { outputFile });
+
+    const generated = JSON.parse(await readFile(outputFile, "utf8")) as GeneratedPortfolioContent;
+    expect(generated.experience.every((item) => item.links.length === 0)).toBe(true);
+  });
+
+  it("rejects hybrid Experience header schemas during the temporary compatibility window", async () => {
+    const bytes = await createWorkbookBytes({
+      mutate: (workbook) => {
+        const worksheet = getWorksheet(workbook, "experience");
+        worksheet.getCell(1, findColumn(worksheet, "links")).value = "legacy_links";
+      }
+    });
+
+    await expect(parsePortfolioWorkbook(bytes)).rejects.toThrow(/invalid header schema/);
   });
 
   it("accepts the temporary exact legacy research schema without inventing staged media", async () => {

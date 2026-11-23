@@ -78,8 +78,48 @@ describe("Cloudflare contact verification function", () => {
     expect(response.status).toBe(405);
     expect(response.headers.get("Allow")).toBe("POST");
     expect(response.headers.get("Cache-Control")).toContain("no-store");
+    expect(response.headers.get("Content-Security-Policy")).toBe(
+      "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+    );
+    expect(response.headers.get("Permissions-Policy")).toBe(
+      "camera=(), geolocation=(), microphone=(), payment=(), usb=()"
+    );
+    expect(response.headers.get("Referrer-Policy")).toBe("no-referrer");
+    expect(response.headers.get("Strict-Transport-Security")).toBe("max-age=31536000");
     expect(response.headers.get("X-Content-Type-Options")).toBe("nosniff");
+    expect(response.headers.get("X-Frame-Options")).toBe("DENY");
     expect(await response.json()).toEqual({ ok: false, error: "method_not_allowed" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("preserves method checks on the identity-only Pages host", async () => {
+    for (const method of ["GET", "HEAD"]) {
+      const response = await invoke(new Request("https://smart-portfolio-bds.pages.dev/api/contact/verify", { method }));
+      expect(response.status).toBe(405);
+      expect(response.headers.get("Allow")).toBe("POST");
+      expect(response.headers.get("Cache-Control")).toContain("no-store");
+    }
+  });
+
+  it("admits only configured request URL origins regardless of forwarded host headers", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const cases = [
+      ["https://nicolasmgioanni.dev", "https://nicolasmgioanni.dev", "https://nicolasmgioanni.dev", 400],
+      ["https://develop.smart-portfolio-bds.pages.dev", "https://develop.smart-portfolio-bds.pages.dev", "https://develop.smart-portfolio-bds.pages.dev", 400],
+      ["http://localhost:8788", "http://localhost:8788", "http://localhost:8788", 400],
+      ["http://127.0.0.1:8788", "http://127.0.0.1:8788", "http://127.0.0.1:8788", 400],
+      ["https://smart-portfolio-bds.pages.dev", "https://smart-portfolio-bds.pages.dev", "https://nicolasmgioanni.dev", 403],
+      ["https://smart-portfolio-bds.pages.dev", "https://nicolasmgioanni.dev", "https://nicolasmgioanni.dev", 403],
+      ["https://nicolasmgioanni.dev", "https://smart-portfolio-bds.pages.dev", "https://nicolasmgioanni.dev", 403],
+      ["https://www.nicolasmgioanni.dev", "https://www.nicolasmgioanni.dev", "https://nicolasmgioanni.dev", 403]
+    ] as const;
+    for (const [target, origin, allowed, status] of cases) {
+      const request = new Request(`${target}/api/contact/verify`, {
+        method: "POST", headers: { Origin: origin, Host: "nicolasmgioanni.dev", "X-Forwarded-Host": "nicolasmgioanni.dev", "Content-Type": "application/json" }, body: "{}"
+      });
+      expect((await invoke(request, { ...env, CONTACT_ALLOWED_ORIGINS: allowed })).status).toBe(status);
+    }
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -89,6 +129,22 @@ describe("Cloudflare contact verification function", () => {
 
     const crossOrigin = await invoke(requestFor(validPayload(), { origin: "https://attacker.example" }));
     expect(crossOrigin.status).toBe(403);
+    const mismatchedTarget = await invoke(
+      new Request("https://attacker.example/api/contact/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Origin: "https://nicolasmgioanni.dev" },
+        body: JSON.stringify(validPayload())
+      })
+    );
+    expect(mismatchedTarget.status).toBe(403);
+    const missingOrigin = await invoke(
+      new Request("https://nicolasmgioanni.dev/api/contact/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(validPayload())
+      })
+    );
+    expect(missingOrigin.status).toBe(403);
 
     const nonJson = await invoke(
       new Request("https://nicolasmgioanni.dev/api/contact/verify", {

@@ -2,6 +2,8 @@
 
 Smart Portfolio uses Node.js, npm, Next.js App Router, a build-time CSV or XLSX content generator, and Cloudflare Pages Functions. The core portfolio routes render as a static export. The complete contact flow requires Wrangler because Next.js development mode does not run Pages Functions.
 
+Local commands validate repository behavior and local emulation only. They do not establish current Cloudflare, GitHub, DNS, WAF, Turnstile, Resend, or mailbox state; [Implementation inventory](../architecture/IMPLEMENTATION_INVENTORY.md) maps those operator-managed boundaries.
+
 ## Prerequisites
 
 - Git, to clone the repository and create focused branches or worktrees.
@@ -81,9 +83,9 @@ Setup performs the following work:
 1. Finds the project root and checks Node.js and npm.
 2. Stops when Node.js is older than 22.13.
 3. Creates `.env` from `.env.example` only when `.env` does not exist.
-4. Reuses a valid dependency installation when the package and setup hashes match.
+4. Reuses a valid dependency installation when package, setup, Node.js, and npm identities match.
 5. Runs `npm ci` when the lockfile exists and installation is required.
-6. Generates content when the generated JSON is missing or older than a template.
+6. Generates content when its recorded source, schema, environment selection, or toolchain hashes no longer match the generated snapshot.
 
 An existing `.env` is never overwritten. The [fresh-clone path](#fresh-clone-path) shows how to force an initial generation when a local source must be selected explicitly.
 
@@ -108,7 +110,9 @@ The Node entry point accepts the equivalent `--force-install` and `--force-gener
 | Turnstile runtime | `TURNSTILE_SECRET_KEY`, `TURNSTILE_ALLOWED_HOSTNAMES` | Verification Function |
 | Delivery runtime | `RESEND_API_KEY`, `CONTACT_RECIPIENT_EMAIL`, `CONTACT_FROM_EMAIL`, `CONTACT_REPLY_TO_EMAIL` | Delivery Function |
 | Origin control | `CONTACT_ALLOWED_ORIGINS` | Both contact Functions |
-| Address quota | `CONTACT_RATE_LIMIT_DB` from `wrangler.jsonc` | Local D1 emulation; no environment variable |
+| Delivery quotas | `CONTACT_RATE_LIMIT_DB` from `wrangler.jsonc` | Local D1 emulation; no environment variable |
+
+Local delivery requests require a valid `CF-Connecting-IP` fixture at the Functions boundary; a missing or invalid value fails closed, and forwarding headers are not substitutes. The production boundary trusts the Cloudflare-supplied header and has no local-bypass switch.
 
 Leave `PORTFOLIO_WORKBOOK_URL` blank and `PORTFOLIO_REQUIRE_REMOTE_CONTENT=false` to use checked-in templates. A configured workbook URL is still an anonymous public download. Do not place production provider credentials or production contact secrets in the local file.
 
@@ -214,9 +218,9 @@ npx playwright install chromium
 npm run verify:priority
 ```
 
-`verify:priority` runs documentation integrity, lint, typecheck, selected Vitest and browser regressions, and a production build. Its browser selection includes skeleton alignment and held-navigation transitions, Recommendations, Experience, and Research, but omits the Linux-only skeleton visual comparison. The build regenerates content through `prebuild`.
+`verify:priority` generates one content snapshot, then runs documentation integrity, the audited dependency gate, lint, typecheck, selected Vitest and browser regressions, and `build:generated`. Its browser selection includes skeleton alignment and held-navigation transitions, Recommendations, Experience, and Research, but omits the Linux-only skeleton visual comparison. The build consumes that same snapshot without another content fetch.
 
-Install Chromium and run `npm run verify:full` on Ubuntu 24.04 for a release candidate. Its screenshot comparison is Linux-only. Pull-request CI runs that same visual check separately after the portable priority browser suite; keep it out of local Windows priority runs. Each Playwright command starts an owned Next.js server on port `3100` by default. It does not reuse a running server, so set `PLAYWRIGHT_PORT` to an unused port when another worktree is active. Browser artifacts are written to ignored `test-results/` and `playwright-report/` directories.
+Install Chromium and run `npm run verify:full` on Ubuntu 24.04 for a release candidate. Its screenshot comparison is Linux-only. Full CI derives its browser assignments from one complete discovery set: two Ubuntu Chromium functional shards, a separate Linux visual selection, and narrow Firefox/WebKit selections. The visual selection is separate from the functional shards; keep it out of local Windows priority runs. See [CI input and evidence contracts](../quality/CI_CONTRACTS.md) for the authoritative graph. Each Playwright command starts an owned Next.js server on port `3100` by default. It does not reuse a running server, so set `PLAYWRIGHT_PORT` to an unused port when another worktree is active. Browser artifacts are written to ignored `test-results/` and `playwright-report/` directories.
 
 The compatibility local gate remains available:
 
@@ -224,9 +228,9 @@ The compatibility local gate remains available:
 npm run verify
 ```
 
-`verify` runs documentation integrity, lint, typecheck, the full Vitest suite, and a production build. It does not install Chromium or run Playwright.
+`verify` generates one content snapshot, then runs documentation integrity, the audited dependency gate, lint, typecheck, the full Vitest suite, and `build:generated`. It does not install Chromium or run Playwright.
 
-The smart local wrapper prepares dependencies when needed, explicitly regenerates content, and then runs the same gate:
+The smart local wrapper prepares dependencies when needed, then runs the same gate:
 
 ```powershell
 npm run verify:local
@@ -238,7 +242,7 @@ Cross-platform:
 npm run verify:local:node
 ```
 
-Because `verify` ends with the normal build, the wrapper's explicit generation is followed by the build lifecycle generation. CI avoids a second remote fetch by using `build:generated` instead.
+The shared runner records the snapshot inputs and builds with `build:generated`, so verification does not fetch content again after its initial generation.
 
 Use [Testing](../quality/TESTING.md) for the command matrix, test inventory, and CI coverage.
 

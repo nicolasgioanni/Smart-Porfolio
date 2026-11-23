@@ -13,6 +13,27 @@
   transition: opacity var(--modal-dialog-timing);
 }
 
+/* An in-place dialog keeps its media child in normal document flow until the
+ * native showModal() call promotes this same node into the top layer. */
+:where(dialog.modal-dialog--in-place[open]) {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+dialog.modal-dialog--in-place:not([open]) {
+  display: contents;
+}
+
+.modal-dialog--in-place[data-state="inactive"] .modal-dialog__frame {
+  opacity: 1;
+  pointer-events: auto;
+  transform: none;
+  transition: none;
+}
+
 .modal-dialog[data-topmost="true"] {
   z-index: 101;
 }

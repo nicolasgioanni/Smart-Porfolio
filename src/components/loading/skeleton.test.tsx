@@ -1,24 +1,26 @@
 ﻿import { render, screen } from "@testing-library/react";
 import type { ComponentType } from "react";
-import type { ResearchItem } from "@/content/types";
+import type { ProjectItem, ResearchItem } from "@/content/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { canonicalResearchSkeletonItems, researchSkeletonFixtures } from "../../../tests/fixtures/researchSkeletonContent";
 
 const researchContentFixture = vi.hoisted(() => ({
-  items: [] as ResearchItem[]
+  items: [] as ResearchItem[],
+  projects: [] as ProjectItem[]
 }));
 
 vi.mock("@/lib/content/getPortfolioContent", () => ({
   getPortfolioContent: () => ({
     profile: {},
     research: researchContentFixture.items,
+    projects: researchContentFixture.projects,
     siteSettings: { enableSkeletons: true }
   })
 }));
 import LoadingContact from "@/app/contact/loading";
 import LoadingContactTerms from "@/app/contact-terms/loading";
 import LoadingExperience from "@/app/experience/loading";
-import LoadingHome from "@/app/loading";
+import LoadingHome from "@/app/(home)/loading";
 import LoadingPrivacy from "@/app/privacy/loading";
 import LoadingProjects from "@/app/projects/loading";
 import LoadingRecommendations from "@/app/recommendations/loading";
@@ -26,19 +28,19 @@ import LoadingResearch from "@/app/research/loading";
 import LoadingResume from "@/app/resume/loading";
 import LoadingSecurity from "@/app/security/loading";
 import LoadingTerms from "@/app/terms/loading";
-import { experienceSkeletonProfiles } from "@/components/loading/ExperiencePageSkeleton";
-import { HomePageSkeleton } from "@/components/loading/HomePageSkeleton";
-import { legalSkeletonProfiles } from "@/components/loading/LegalPageSkeleton";
+import { experienceSkeletonProfiles } from "@/features/experience/loading/ExperiencePageSkeleton";
+import { HomePageSkeleton } from "@/features/home/loading/HomePageSkeleton";
+import { legalSkeletonProfiles } from "@/features/legal/loading/LegalPageSkeleton";
 import { PageSkeleton } from "@/components/loading/PageSkeleton";
 import { SectionHeader } from "@/components/layout/SectionHeader";
-import { projectSkeletonProfiles } from "@/components/loading/projectSkeletonProfiles";
-import { researchSkeletonProfiles } from "@/components/loading/ResearchPageSkeleton";
+import { getProjectSkeletonProfiles } from "@/features/projects/loading/projectSkeletonProfiles";
+import { researchSkeletonProfiles } from "@/features/research/loading/ResearchPageSkeleton";
 import { RouteHeaderSkeleton } from "@/components/loading/RouteHeaderSkeleton";
-import { RouteSkeleton, routeSkeletons, skeletonRoutePaths } from "@/components/loading/RouteSkeleton";
+import { RouteSkeleton, routeSkeletons, skeletonRoutePaths } from "@/app/RouteSkeleton";
 import { SkeletonBlock } from "@/components/loading/SkeletonBlock";
 import { SkeletonText } from "@/components/loading/SkeletonText";
 import { siteRoutePaths, type SiteRoutePath } from "@/lib/routing/siteRoutes";
-import { getResearchVisibleResources } from "@/lib/content/researchNarratives";
+import { getResearchVisibleResources } from "@/features/research/content/researchNarratives";
 import { routeHeaderContent } from "@/lib/content/routeHeaderContent";
 
 const routeLoadingComponents = {
@@ -64,6 +66,7 @@ function getResearchResourceCounts(container: HTMLElement): number[] {
 describe("skeleton components", () => {
   afterEach(() => {
     researchContentFixture.items = [];
+    researchContentFixture.projects = [];
   });
 
   it("renders block shapes without content text", () => {
@@ -91,7 +94,7 @@ describe("skeleton components", () => {
   });
 
   it("renders Home page skeleton without real content text", () => {
-    const { container } = render(<HomePageSkeleton />);
+    const { container } = render(<HomePageSkeleton projectProfiles={[]} />);
 
     expect(container.textContent).toBe("");
     expect(container.querySelectorAll(".home-skeleton__skill-group")).toHaveLength(3);
@@ -107,12 +110,13 @@ describe("skeleton components", () => {
       "recommendations"
     ]);
     expect(container.querySelectorAll('[data-skeleton-section="education"] .home-skeleton__row')).toHaveLength(1);
+    expect(container.querySelectorAll('[data-skeleton-section="recommendations"] .home-skeleton__card')).toHaveLength(3);
     expect(container.querySelectorAll(".home-skeleton__identity-list > .skeleton-block")).toHaveLength(5);
     expect(
       Array.from(container.querySelectorAll(".home-skeleton__experience-group")).map(
         (group) => group.querySelectorAll(".home-skeleton__experience-role").length
       )
-    ).toEqual([1, 2, 2]);
+    ).toEqual([1, 1, 2, 2]);
   });
 
   it("renders one combined Experience intro skeleton without a separate page header", () => {
@@ -122,14 +126,21 @@ describe("skeleton components", () => {
     expect(container.querySelector(".experience-skeleton__intro-copy")).toBeInTheDocument();
     expect(container.querySelector(".experience-skeleton__intro-control")).toBeInTheDocument();
     expect(container.querySelector(".experience-skeleton__intro-copy .route-header-skeleton__title")).toBeInTheDocument();
-    expect(container.querySelectorAll(".experience-skeleton__card")).toHaveLength(5);
-    expect(container.querySelectorAll(".experience-skeleton__chapters")).toHaveLength(5);
+    expect(container.querySelectorAll(".experience-skeleton__card")).toHaveLength(6);
+    expect(container.querySelectorAll(".experience-skeleton__chapters")).toHaveLength(6);
     expect(
       Array.from(container.querySelectorAll(".experience-skeleton__chapters")).map(
         (chapters) => chapters.querySelectorAll(":scope > .skeleton-block").length
       )
-    ).toEqual([0, 4, 4, 4, 4]);
-    expect(experienceSkeletonProfiles.map((profile) => profile.overviewRows)).toEqual([0, 4, 4, 4, 4]);
+    ).toEqual([0, 0, 4, 4, 4, 4]);
+    expect(experienceSkeletonProfiles.map((profile) => profile.overviewRows)).toEqual([0, 0, 4, 4, 4, 4]);
+    expect(experienceSkeletonProfiles.map((profile) => profile.metadataLines)).toEqual([2, 2, 2, 2, 2, 2]);
+    expect(experienceSkeletonProfiles.map((profile) => profile.summaryLines)).toEqual([1, 0, 2, 2, 2, 2]);
+    expect(experienceSkeletonProfiles.map((profile) => profile.resourceCount)).toEqual([0, 1, 0, 0, 0, 0]);
+    expect(container.querySelectorAll(".experience-skeleton__resources > .skeleton-block")).toHaveLength(1);
+    expect(container.querySelector<HTMLElement>(".experience-skeleton__resources > .skeleton-block")).toHaveStyle({
+      height: "44px"
+    });
     expect(container.querySelector(".skeleton-page__header")).not.toBeInTheDocument();
   });
 
@@ -152,12 +163,12 @@ describe("skeleton components", () => {
         )
       ).toEqual([4, 3, 3]);
       expect(container.querySelectorAll(".research-skeleton__video-toolbar > .skeleton-block")).toHaveLength(3);
-      expect(container.querySelectorAll(".research-skeleton__media-stack")).toHaveLength(3);
-      expect(container.querySelectorAll(".research-skeleton__media-row--abstract")).toHaveLength(3);
-      expect(container.querySelectorAll(".research-skeleton__media-row--explainer")).toHaveLength(3);
-      expect(container.querySelectorAll(".research-skeleton__media-divider")).toHaveLength(3);
-      expect(container.querySelectorAll(".research-skeleton__explainer")).toHaveLength(2);
-      expect(container.querySelectorAll(".research-project-skeleton__media-control")).toHaveLength(2);
+      expect(container.querySelectorAll(".research-skeleton__media-stack")).toHaveLength(1);
+      expect(container.querySelectorAll(".research-skeleton__media-row--abstract")).toHaveLength(1);
+      expect(container.querySelectorAll(".research-skeleton__media-row--video")).toHaveLength(1);
+      expect(container.querySelectorAll(".research-skeleton__media-divider")).toHaveLength(1);
+      expect(container.querySelectorAll(".research-skeleton__single-media")).toHaveLength(2);
+      expect(container.querySelectorAll('[class*="research-skeleton__explainer"]')).toHaveLength(0);
       expect(container.querySelectorAll(".research-skeleton__abstract-frame")).toHaveLength(3);
       expect(resolvedResourceCounts).toEqual(resourceCounts);
       expect(renderedResourceCounts).toEqual(resolvedResourceCounts);
@@ -210,13 +221,89 @@ describe("skeleton components", () => {
     );
   });
 
-  it("renders project and research cards from their typed literal profiles", () => {
-    expect(projectSkeletonProfiles.map((profile) => profile.chipWidths)).toEqual([
-      [60, 78, 59, 54, 90, 82, 70, 70, 86, 62],
-      [66, 59, 82, 40, 54, 82],
-      [59, 102, 100, 44, 54]
+  it("keeps Home project skeleton profiles app-composed for generated, explicit, and empty content", () => {
+    const generatedProjects: ProjectItem[] = [
+      {
+        id: "generated-project",
+        title: "Generated project",
+        homeSkills: [],
+        stack: [],
+        links: [
+          { label: "Live demo", url: "https://example.com/generated" },
+          { label: "Source code", url: "https://github.com/example/generated" }
+        ],
+        featured: false,
+        showOnHome: true
+      }
+    ];
+    const explicitProjects: ProjectItem[] = [
+      {
+        id: "explicit-project",
+        title: "Explicit project",
+        homeSkills: [],
+        stack: [],
+        links: [
+          { label: "Source code", url: "https://github.com/example/explicit" },
+          { label: "Download", url: "https://github.com/example/explicit/releases/latest" }
+        ],
+        featured: false,
+        showOnHome: false
+      }
+    ];
+    researchContentFixture.projects = generatedProjects;
+    const { container, rerender } = render(<RouteSkeleton pathname="/" />);
+    const projectCards = () => Array.from(container.querySelectorAll<HTMLElement>('[data-skeleton-section="projects"] .home-skeleton__card'));
+    const actionWidths = () => projectCards().flatMap((card) =>
+      Array.from(card.querySelectorAll<HTMLElement>(".home-skeleton__card-actions > .skeleton-block")).map((block) => block.style.width)
+    );
+
+    expect(projectCards()).toHaveLength(1);
+    expect(actionWidths()).toEqual(["92px", "84px"]);
+
+    rerender(<RouteSkeleton homeProjectItems={explicitProjects} pathname="/" />);
+    expect(projectCards()).toHaveLength(1);
+    expect(actionWidths()).toEqual(["92px", "88px"]);
+
+    rerender(<RouteSkeleton homeProjectItems={[]} pathname="/" />);
+    expect(projectCards()).toHaveLength(0);
+  });
+
+  it("derives project loader actions from selected content", () => {
+    const profiles = getProjectSkeletonProfiles([
+      {
+        id: "with-demo",
+        title: "With demo",
+        homeSkills: [],
+        stack: [],
+        links: [
+          { label: "Live demo", url: "https://example.com/demo" },
+          { label: "Source code", url: "https://github.com/example/source" }
+        ],
+        featured: false,
+        showOnHome: false
+      },
+      {
+        id: "source-only",
+        title: "Source only",
+        homeSkills: [],
+        stack: [],
+        links: [{ label: "Source code", url: "https://github.com/example/source-only" }],
+        featured: false,
+        showOnHome: false
+      }
     ]);
-    expect(projectSkeletonProfiles.map((profile) => profile.actionWidths)).toEqual([[112, 96], [112], [112]]);
+
+    expect(profiles.map((profile) => profile.actionWidths)).toEqual([[112, 96], [112]]);
+    expect(profiles.map((profile) => profile.summaryWidths)).toEqual([[100, 86], [100, 72]]);
+    expect(getProjectSkeletonProfiles([{
+      id: "notepal",
+      title: "NotePal",
+      homeSkills: [],
+      stack: [],
+      links: [],
+      featured: false,
+      showOnHome: false
+    }]).at(0)).toMatchObject({ hasAttribution: true });
     expect(researchSkeletonProfiles.map((profile) => profile.formalTitle)).toEqual([true, false, true]);
   });
 
@@ -348,10 +435,10 @@ describe("skeleton components", () => {
     expect(container.querySelector(".contact-skeleton__fallback")).toBeInTheDocument();
 
     rerender(<RouteSkeleton pathname="/projects" />);
-    expect(container.querySelectorAll(".detail-card-skeleton--project")).toHaveLength(3);
+    expect(container.querySelectorAll(".detail-card-skeleton--project")).toHaveLength(researchContentFixture.projects.length);
 
     rerender(<RouteSkeleton pathname="/recommendations" />);
-    expect(container.querySelectorAll(".detail-card-skeleton--recommendation")).toHaveLength(4);
+    expect(container.querySelectorAll(".detail-card-skeleton--recommendation")).toHaveLength(5);
 
     rerender(<RouteSkeleton pathname="/resume" />);
     expect(container.querySelector(".resume-skeleton__actions")).toBeInTheDocument();

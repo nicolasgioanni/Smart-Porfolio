@@ -1,7 +1,7 @@
 {
   "metadata": {
-    "generatedAt": "2026-09-11T04:14:38.940Z",
-    "contentHash": "8d7c1eb828fd6e1ae7bf1e0228389effe040f060e845020fd724eb65ade67d62",
+    "generatedAt": "2026-10-09T18:01:53.393Z",
+    "contentHash": "9c962d161d863c3d81fc89d754070036fa8b5622c1caf267df525439a52f1780",
     "sourceMode": "templates",
     "sources": {
       "profile": "template",
@@ -23,10 +23,10 @@
     "roleEngineerPrefixes": "Software|AI|Security",
     "roleEngineerSuffix": "Engineer",
     "roleAlternate": "Research Scientist",
-    "currentTitle": "AI Engineer",
-    "currentCompany": "U.S. Department of the Treasury",
-    "currentExperienceId": "us-treasury-ai-engineer",
-    "previousExperienceId": "research-assistant-software-engineering",
+    "currentTitle": "Member of Technical Staff",
+    "currentCompany": "DoW Chief Digital & Artificial Intelligence Office (CDAO)",
+    "currentExperienceId": "cdao-some-kinda-engineer",
+    "previousExperienceId": "us-treasury-ai-engineer",
     "featuredResearchId": "cytocv-miller-lab",
     "primaryEducationId": "uw-bscsse",
     "location": "Greater Seattle Area",
@@ -38,7 +38,7 @@
     "graduation": "Jun 2025",
     "shortBio": "I’m ambitious, relentlessly curious, and always looking for the next hard problem to learn from. I care about moving with urgency, doing things well, and getting better with every project.",
     "longBio": "I build practical software systems at the intersection of full-stack engineering, AI/ML, computer vision, and security. My work includes research software for microscopy analysis, adversarial machine learning pipelines, teaching support for core CS courses, and production-style projects using Next.js, Flask, Django, Firebase, and cloud deployment tooling.",
-    "experienceSummary": "My experience spans AI engineering at the U.S. Treasury, research software and machine learning at the University of Washington, and teaching core computer science courses.",
+    "experienceSummary": "My experience spans engineering with the DoW Chief Digital & Artificial Intelligence Office (CDAO) and the U.S. Treasury, research software and machine learning at the University of Washington, and teaching core computer science courses.",
     "portraitImage": "/favicon/favicon.png",
     "faviconImage": "/favicon/favicon.png",
     "primaryCtaLabel": "View projects",
@@ -247,16 +247,71 @@
   ],
   "projects": [
     {
+      "id": "compliance-label-assistant",
+      "title": "Compliance Label Assistant",
+      "subtitle": "Explainable AI label review",
+      "homeSummary": "Turns alcohol-label images into explainable field checks with AI extraction and deterministic verification.",
+      "homeSkills": [
+        {
+          "name": "React",
+          "icon": "react",
+          "summary": "React coordinates the label-review workspace.",
+          "details": "A React and Vite frontend manages image queues, expected field values, field-level results, stale-result handling, and CSV or XLSX exports. Each queued label retains its own expected values."
+        },
+        {
+          "name": "FastAPI",
+          "icon": "fastapi",
+          "summary": "FastAPI separates extraction from explainable field verification.",
+          "details": "Thin Python endpoints delegate upload validation, image preprocessing, provider-backed extraction, and deterministic comparison to separate modules. Pydantic models define the public API contract, while pytest covers boundary and verification behavior."
+        },
+        {
+          "name": "OpenAI API",
+          "icon": "openai",
+          "summary": "Vision models extract visible label fields for deterministic review.",
+          "details": "The backend-only OpenAI integration extracts text from validated label images. Python rules compare those fields against reviewer-provided expectations, returning statuses and reasons; the model does not make final compliance decisions."
+        }
+      ],
+      "detailSummary": "Turns alcohol-label images into explainable field checks with AI extraction and deterministic verification.",
+      "problem": "Reviewing label artwork against expected application values requires repeated field-by-field comparison.",
+      "solution": "Separates vision-based field extraction from deterministic verification, then presents reviewable evidence and exportable results. This prototype assists human review and does not make official compliance determinations.",
+      "stack": [
+        "React",
+        "JavaScript",
+        "FastAPI",
+        "Python",
+        "OpenAI API",
+        "Pydantic",
+        "Pillow",
+        "Vitest",
+        "pytest"
+      ],
+      "links": [
+        {
+          "label": "Source code",
+          "url": "https://github.com/nicolasgioanni/Compliance-Label-Assistant"
+        },
+        {
+          "label": "Live demo",
+          "url": "https://compliance-label-assistant.nicolasmgioanni.dev/"
+        }
+      ],
+      "image": "/images/projects/compliance-label-assistant-concept.webp",
+      "featured": false,
+      "showOnHome": true,
+      "homeOrder": 1,
+      "detailOrder": 1
+    },
+    {
       "id": "notepal",
       "title": "NotePal",
-      "subtitle": "Multimodal study workspace",
-      "homeSummary": "Turns documents, images, audio, and video into structured notes, generated quizzes, and content-aware chat support.",
+      "subtitle": "Co-developed AI study workspace",
+      "homeSummary": "Transforms study materials into structured notes, practice quizzes, and context-aware AI chat.",
       "homeSkills": [
         {
           "name": "Next.js",
           "icon": "nextdotjs",
           "summary": "Next.js powers NotePal's web interface and routing.",
-          "details": "The Next.js frontend provides the application interface, route structure, and authenticated study workflow while sending uploaded content to the separate Flask processing API."
+          "details": "The Next.js frontend provides the application routes, authenticated study workspace, rich-text editing, quizzes, and document-aware chat. A separate Flask/Python module processes document and media inputs."
         },
         {
           "name": "TypeScript",
@@ -268,12 +323,12 @@
           "name": "OpenAI API",
           "icon": "openai",
           "summary": "OpenAI API generates NotePal's language-based study features.",
-          "details": "Backend requests use OpenAI models for text summarization, multiple-choice and short-answer quiz generation, and chatbot answers based on content extracted from uploaded documents and media."
+          "details": "OpenAI requests generate summaries and quizzes. The chat route uses a history-aware LangChain retriever with document-scoped Pinecone embeddings to ground streamed responses in study notes."
         }
       ],
-      "detailSummary": "A full-stack learning platform that combines multimodal content processing with note generation, practice quizzes, and retrieval-backed chat.",
+      "detailSummary": "Transforms study materials into structured notes, practice quizzes, and context-aware AI chat.",
       "problem": "Study material arrives in many formats, making it difficult to organize and review in one place.",
-      "solution": "Combines a Next.js interface with Python services for document parsing, transcription, visual analysis, and LLM-assisted study tools.",
+      "solution": "Co-developed by Nicolas Gioanni and Parth Gupta. Combines a Next.js study workspace with Python media-processing code, generated study tools, and retrieval-backed chat.",
       "stack": [
         "Next.js",
         "TypeScript",
@@ -296,16 +351,119 @@
           "url": "https://www.mynotepal.ai/"
         }
       ],
-      "featured": true,
+      "image": "/images/projects/notepal-concept.webp",
+      "featured": false,
       "showOnHome": true,
-      "homeOrder": 1,
-      "detailOrder": 1
+      "homeOrder": 2,
+      "detailOrder": 2
+    },
+    {
+      "id": "tergion-technologies",
+      "title": "Tergion Technologies",
+      "subtitle": "Business intake and CRM integrations",
+      "homeSummary": "Connects business inquiries and automation assessments to CRM records and confirmation emails.",
+      "homeSkills": [
+        {
+          "name": "Next.js",
+          "icon": "nextdotjs",
+          "summary": "Next.js connects the public site to a validated server-side intake route.",
+          "details": "The App Router site provides a four-step Quick Request and an eight-step Business Automation Assessment. Both submit to a shared lead endpoint with schema validation and server-side provider boundaries."
+        },
+        {
+          "name": "TypeScript",
+          "icon": "typescript",
+          "summary": "TypeScript models the forms and integration boundaries.",
+          "details": "Typed lead and assessment models work with Zod validation, contact resolution, submission identity, and provider-specific mapping. Tests cover request guards, duplicate handling, CRM behavior, and confirmation emails."
+        },
+        {
+          "name": "Cloudflare",
+          "icon": "cloudflare",
+          "summary": "Cloudflare Workers hosts the site and protected intake workflow.",
+          "details": "The OpenNext adapter targets Cloudflare Workers. Turnstile verification protects production submissions, while configured Upstash Redis supports rate limiting and duplicate suppression. CRM delivery and customer email remain separate provider operations."
+        }
+      ],
+      "detailSummary": "Connects business inquiries and automation assessments to CRM records and confirmation emails.",
+      "problem": "Business inquiries need a consistent handoff from public forms to operational contact records.",
+      "solution": "Validates intake, reserves submission identities, resolves CRM contacts, records assessment details, and sends confirmation emails. Broader marketing workflow examples remain illustrative rather than claims of implemented automation.",
+      "stack": [
+        "Next.js",
+        "TypeScript",
+        "React",
+        "Zod",
+        "GoHighLevel",
+        "Upstash Redis",
+        "Cloudflare Workers",
+        "Resend",
+        "Postmark"
+      ],
+      "links": [
+        {
+          "label": "Source code",
+          "url": "https://github.com/Tergion/Tergion-Technologies"
+        },
+        {
+          "label": "Live demo",
+          "url": "https://tergion.com/"
+        }
+      ],
+      "image": "/images/projects/tergion-technologies-concept.webp",
+      "featured": false,
+      "showOnHome": true,
+      "homeOrder": 3,
+      "detailOrder": 3
+    },
+    {
+      "id": "leetnotes",
+      "title": "LeetNotes",
+      "subtitle": "Automated LeetCode study system",
+      "homeSummary": "Transforms spreadsheet study notes into an automatically maintained, searchable coding-practice repository.",
+      "homeSkills": [
+        {
+          "name": "Python",
+          "icon": "python",
+          "summary": "Python implements the LeetNotes synchronization CLI.",
+          "details": "The Python package fetches published sheet CSVs, normalizes problem titles and LeetCode metadata, generates Markdown notes, detects solution languages, writes language-specific files, and maintains an indexed problem structure."
+        },
+        {
+          "name": "GitHub Actions",
+          "icon": "githubactions",
+          "summary": "GitHub Actions keeps generated study material synchronized.",
+          "details": "The scheduled notes.yml workflow runs the CLI, rebuilds notes and solution files from published sheet data, and commits any repository changes for review."
+        },
+        {
+          "name": "Google Sheets",
+          "icon": "googlesheets",
+          "summary": "Google Sheets serves as LeetNotes' editable content source.",
+          "details": "Paired Notes and Solutions sheets published as CSV hold problem metadata, approaches, complexity, study notes, and source-code snippets. Language hints and detection support multiple solution languages."
+        }
+      ],
+      "detailSummary": "Transforms spreadsheet study notes into an automatically maintained, searchable coding-practice repository.",
+      "problem": "Daily problem-solving notes and solution files become difficult to keep consistent across spreadsheets and folders.",
+      "solution": "Normalizes problem metadata, generates Markdown and Python files, and uses GitHub Actions to keep the repository synchronized on a schedule.",
+      "stack": [
+        "Python",
+        "GitHub Actions",
+        "Google Sheets",
+        "CSV",
+        "pytest"
+      ],
+      "links": [
+        {
+          "label": "Source code",
+          "url": "https://github.com/nicolasgioanni/LeetNotes"
+        }
+      ],
+      "image": "/images/projects/leetnotes-concept.webp",
+      "featured": false,
+      "showOnHome": false,
+      "homeOrder": 4,
+      "detailOrder": 4
     },
     {
       "id": "clair",
       "title": "Clair",
       "subtitle": "Customizable desktop file organizer",
-      "homeSummary": "Sorts files into folders by type with customizable categories, reusable presets, recursive scanning, and optional empty-folder cleanup.",
+      "homeSummary": "Organizes cluttered folders with customizable file rules, reusable presets, and a native desktop interface.",
       "homeSkills": [
         {
           "name": "Python",
@@ -326,7 +484,7 @@
           "details": "Qt for Python renders the dark-mode controls for folder selection, category and extension management, reusable presets, recursive scanning, optional cleanup, and the one-click organization workflow."
         }
       ],
-      "detailSummary": "A cross-platform desktop utility for organizing folders through a polished Qt interface and user-defined file rules.",
+      "detailSummary": "Organizes cluttered folders with customizable file rules, reusable presets, and a native desktop interface.",
       "problem": "Downloads and working folders quickly become difficult to navigate when files use inconsistent naming and locations.",
       "solution": "Maps extensions to editable categories, applies reusable presets, and packages the workflow as a standalone desktop application.",
       "stack": [
@@ -341,75 +499,58 @@
         {
           "label": "Source code",
           "url": "https://github.com/nicolasgioanni/Clair"
-        }
-      ],
-      "featured": false,
-      "showOnHome": true,
-      "homeOrder": 2,
-      "detailOrder": 2
-    },
-    {
-      "id": "leetnotes",
-      "title": "LeetNotes",
-      "subtitle": "Automated LeetCode study system",
-      "homeSummary": "Keeps Google Sheets study data synchronized with structured notes, generated Python solutions, indexed problem folders, and scheduled repository updates.",
-      "homeSkills": [
-        {
-          "name": "Python",
-          "icon": "python",
-          "summary": "Python implements the LeetNotes synchronization CLI.",
-          "details": "The package reads published sheet CSVs, normalizes problem titles and LeetCode slugs, generates Markdown study notes, writes solution.py variants, and maintains the repository's indexed problem structure."
         },
         {
-          "name": "GitHub Actions",
-          "icon": "githubactions",
-          "summary": "GitHub Actions keeps generated study material synchronized.",
-          "details": "The scheduled notes.yml workflow runs the CLI, rebuilds notes and solution files from published sheet data, and commits any repository changes for review."
-        },
-        {
-          "name": "Google Sheets",
-          "icon": "googlesheets",
-          "summary": "Google Sheets serves as LeetNotes' editable content source.",
-          "details": "Each list uses paired Notes and Solutions sheets published as CSV: one stores problem metadata, approaches, complexity, and study notes; the other stores plain-text Python solutions."
+          "label": "Download",
+          "url": "https://github.com/nicolasgioanni/Clair/releases/latest"
         }
       ],
-      "detailSummary": "A Python CLI and scheduled automation workflow that turns spreadsheet-authored problem notes and solutions into a consistent interview-preparation repository.",
-      "problem": "Daily problem-solving notes and solution files become difficult to keep consistent across spreadsheets and folders.",
-      "solution": "Normalizes problem metadata, generates Markdown and Python files, and uses GitHub Actions to keep the repository synchronized on a schedule.",
-      "stack": [
-        "Python",
-        "GitHub Actions",
-        "Google Sheets",
-        "CSV",
-        "pytest"
-      ],
-      "links": [
-        {
-          "label": "Source code",
-          "url": "https://github.com/nicolasgioanni/LeetNotes"
-        }
-      ],
+      "image": "/images/projects/clair-concept.webp",
       "featured": false,
-      "showOnHome": true,
-      "homeOrder": 3,
-      "detailOrder": 3
+      "showOnHome": false,
+      "homeOrder": 5,
+      "detailOrder": 5
     }
   ],
   "experience": [
+    {
+      "id": "cdao-some-kinda-engineer",
+      "title": "Member of Technical Staff",
+      "organization": "DoW Chief Digital & Artificial Intelligence Office (CDAO)",
+      "organizationLogo": "/images/organizations/cdao_logo.webp",
+      "organizationLogoAlt": "DoW Chief Digital & Artificial Intelligence Office (CDAO) emblem",
+      "location": "Washington, District of Columbia, United States",
+      "startDate": "2026-10",
+      "endDate": "Present",
+      "bullets": [],
+      "skills": [],
+      "links": [],
+      "featured": true,
+      "showOnHome": true,
+      "homeOrder": 1,
+      "detailOrder": 1
+    },
     {
       "id": "us-treasury-ai-engineer",
       "title": "AI Engineer",
       "organization": "U.S. Department of the Treasury",
       "organizationLogo": "/images/organizations/us_treasury_logo.webp",
       "organizationLogoAlt": "U.S. Department of the Treasury logo",
+      "location": "Washington, District of Columbia, United States",
       "startDate": "2026-08",
-      "endDate": "Present",
+      "endDate": "2026-10",
       "bullets": [],
       "skills": [],
+      "links": [
+        {
+          "label": "Tech.Treasury.Gov",
+          "url": "https://tech.treasury.gov"
+        }
+      ],
       "featured": true,
       "showOnHome": true,
-      "homeOrder": 1,
-      "detailOrder": 1
+      "homeOrder": 2,
+      "detailOrder": 2
     },
     {
       "id": "research-assistant-software-engineering",
@@ -418,7 +559,7 @@
       "organizationLogo": "/images/organizations/uwb_stem_logo.png",
       "organizationLogoAlt": "UW Bothell School of STEM logo",
       "type": "research",
-      "location": "Bothell, WA",
+      "location": "Bothell, Washington, United States",
       "startDate": "2024-08",
       "endDate": "2026-08",
       "homeSummary": "Built and deployed CytoCV, an open-source platform for reviewable yeast microscopy analysis.",
@@ -445,10 +586,11 @@
         "Gunicorn",
         "GitHub Actions"
       ],
+      "links": [],
       "featured": true,
       "showOnHome": true,
-      "homeOrder": 2,
-      "detailOrder": 2
+      "homeOrder": 3,
+      "detailOrder": 3
     },
     {
       "id": "teaching-assistant",
@@ -457,7 +599,7 @@
       "organizationLogo": "/images/organizations/uw_logo.png",
       "organizationLogoAlt": "University of Washington logo",
       "type": "teaching",
-      "location": "Bothell, WA",
+      "location": "Bothell, Washington, United States",
       "startDate": "2025-01",
       "endDate": "2025-06",
       "homeSummary": "Supported core CS courses through office hours, quiz sections, tutoring, grading, and project review.",
@@ -476,10 +618,11 @@
         "Teaching",
         "Code Review"
       ],
+      "links": [],
       "featured": true,
       "showOnHome": true,
-      "homeOrder": 3,
-      "detailOrder": 3
+      "homeOrder": 4,
+      "detailOrder": 4
     },
     {
       "id": "undergraduate-researcher-adversarial-ml",
@@ -488,7 +631,7 @@
       "organizationLogo": "/images/organizations/uw_logo.png",
       "organizationLogoAlt": "University of Washington logo",
       "type": "research",
-      "location": "Bothell, WA",
+      "location": "Bothell, Washington, United States",
       "startDate": "2024-09",
       "endDate": "2024-12",
       "homeSummary": "Built four adversarial attack prototypes and four defensive strategies for image-classification models.",
@@ -508,10 +651,11 @@
         "Matplotlib",
         "Adversarial ML"
       ],
+      "links": [],
       "featured": false,
       "showOnHome": true,
-      "homeOrder": 4,
-      "detailOrder": 4
+      "homeOrder": 5,
+      "detailOrder": 5
     },
     {
       "id": "research-assistant-ai-ml",
@@ -520,7 +664,7 @@
       "organizationLogo": "/images/organizations/uwb_stem_logo.png",
       "organizationLogoAlt": "UW Bothell School of STEM logo",
       "type": "research",
-      "location": "Bothell, WA",
+      "location": "Bothell, Washington, United States",
       "startDate": "2024-03",
       "endDate": "2024-08",
       "homeSummary": "Automated yeast CRISPR guide and donor-sequence design for researchers.",
@@ -543,13 +687,31 @@
         "unittest",
         "GitHub Actions"
       ],
+      "links": [],
       "featured": false,
       "showOnHome": true,
-      "homeOrder": 5,
-      "detailOrder": 5
+      "homeOrder": 6,
+      "detailOrder": 6
     }
   ],
   "recommendations": [
+    {
+      "id": "billy-gardner-mcintyre",
+      "recommenderName": "Billy Gardner McIntyre",
+      "recommenderTitle": "AI Engineer",
+      "recommenderOrganization": "U.S. Department of the Treasury",
+      "relationship": "Mentored Nicolas",
+      "recommendationDate": "2026-10-05",
+      "source": "LinkedIn",
+      "sourceUrl": "https://www.linkedin.com/in/nicolas-gioanni/details/recommendations/",
+      "linkedinUrl": "https://www.linkedin.com/in/bgmcintyre",
+      "fullQuote": "Nicolas was already a highly skilled engineer when I met him, clearly immersed in the latest agentic coding practices and enthusiastic about learning more. He exhibited a great passion for building useful software and taking an active interest in stakeholders' needs. I highly recommend him for software engineering roles, especially any for which clear communication is a necessity.",
+      "skills": [],
+      "featured": false,
+      "showOnHome": true,
+      "homeOrder": 1,
+      "detailOrder": 1
+    },
     {
       "id": "brent-lagesse",
       "recommenderName": "Brent Lagesse",
@@ -568,8 +730,8 @@
       "skills": [],
       "featured": false,
       "showOnHome": true,
-      "homeOrder": 1,
-      "detailOrder": 1
+      "homeOrder": 2,
+      "detailOrder": 2
     },
     {
       "id": "annuska-zolyomi",
@@ -585,8 +747,8 @@
       "skills": [],
       "featured": false,
       "showOnHome": true,
-      "homeOrder": 2,
-      "detailOrder": 2
+      "homeOrder": 3,
+      "detailOrder": 3
     },
     {
       "id": "anoop-prasad",
@@ -602,8 +764,8 @@
       "skills": [],
       "featured": false,
       "showOnHome": true,
-      "homeOrder": 3,
-      "detailOrder": 3
+      "homeOrder": 4,
+      "detailOrder": 4
     },
     {
       "id": "minh-nhat-huynh",
@@ -619,8 +781,8 @@
       "skills": [],
       "featured": false,
       "showOnHome": false,
-      "homeOrder": 4,
-      "detailOrder": 4
+      "homeOrder": 5,
+      "detailOrder": 5
     }
   ],
   "education": [

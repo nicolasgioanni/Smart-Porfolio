@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { LegalDocument, resolveLegalContactEmail, resolveLegalEffectiveDate } from "@/components/legal/LegalDocument";
+import { LegalDocument, resolveLegalContactEmail, resolveLegalEffectiveDate } from "@/features/legal/components/LegalDocument";
 import { SmartLink } from "@/components/navigation/SmartLink";
 import { createPageMetadata } from "@/lib/content/createPageMetadata";
 import { getPortfolioContent } from "@/lib/content/getPortfolioContent";

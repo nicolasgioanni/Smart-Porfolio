@@ -1,0 +1,14 @@
+.terraform/
+*.tfstate*
+*.tfplan*
+crash.log
+crash.*.log
+backend.hcl
+*.backend.hcl
+*.tfvars
+*.tfvars.json
+*.auto.tfvars
+*.auto.tfvars.json
+.terraformrc
+terraform.rc
+credentials.tfrc.json

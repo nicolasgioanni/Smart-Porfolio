@@ -6,6 +6,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   copyEnvExampleIfMissing,
+  createGeneratedContentState,
   createPackageState,
   findAvailablePort,
   findProjectRoot,
@@ -13,6 +14,7 @@ import {
   isDependencyInstallCurrent,
   isGeneratedContentStale,
   setupStateRelativePath,
+  writeGeneratedContentState,
   writeSetupState
 } from "./lib/localAutomation.mjs";
 
@@ -54,8 +56,11 @@ describe("local automation helpers", () => {
 
   it("marks dependencies current only when node_modules and setup hashes match", async () => {
     const projectRoot = await createTemporaryProject();
-    await mkdir(path.join(projectRoot, "node_modules", "next"), { recursive: true });
-    const state = await createPackageState(projectRoot, "20.0.0", "10.0.0");
+    await mkdir(path.join(projectRoot, "node_modules", "next", "dist", "bin"), { recursive: true });
+    await writeFile(path.join(projectRoot, "node_modules", ".package-lock.json"), "{}", "utf8");
+    await writeFile(path.join(projectRoot, "node_modules", "next", "package.json"), "{}", "utf8");
+    await writeFile(path.join(projectRoot, "node_modules", "next", "dist", "bin", "next"), "", "utf8");
+    const state = await createPackageState(projectRoot);
     await writeSetupState(projectRoot, state);
 
     expect(await isDependencyInstallCurrent(projectRoot)).toBe(true);
@@ -65,21 +70,60 @@ describe("local automation helpers", () => {
     expect(existsSync(path.join(projectRoot, setupStateRelativePath))).toBe(true);
   });
 
-  it("detects stale generated content when templates are newer", async () => {
+  it("rejects an empty dependency directory and changed runtime identity", async () => {
+    const projectRoot = await createTemporaryProject();
+    await mkdir(path.join(projectRoot, "node_modules", "next"), { recursive: true });
+    await writeSetupState(projectRoot, await createPackageState(projectRoot));
+    expect(await isDependencyInstallCurrent(projectRoot)).toBe(false);
+  });
+
+  it("detects stale generated content from deterministic input hashes", async () => {
     const projectRoot = await createTemporaryProject();
     const generatedPath = path.join(projectRoot, generatedContentRelativePath);
     const templateDirectory = path.join(projectRoot, "src", "content", "templates");
     await mkdir(path.dirname(generatedPath), { recursive: true });
     await mkdir(templateDirectory, { recursive: true });
-    await writeFile(generatedPath, "{}", "utf8");
+    await writeFile(
+      generatedPath,
+      JSON.stringify({ metadata: { contentHash: "a".repeat(64), generatedAt: "2025-01-01T00:00:00.000Z" } }),
+      "utf8"
+    );
     const templatePath = path.join(templateDirectory, "profile.csv");
     await writeFile(templatePath, "key,value\nfull_name,Demo\n", "utf8");
 
-    const oldDate = new Date("2024-01-01T00:00:00Z");
-    const newDate = new Date("2025-01-01T00:00:00Z");
-    await utimes(generatedPath, oldDate, oldDate);
-    await utimes(templatePath, newDate, newDate);
+    await writeGeneratedContentState(projectRoot, await createGeneratedContentState(projectRoot));
+    expect(await isGeneratedContentStale(projectRoot)).toBe(false);
 
+    const fixedDate = new Date("2025-01-01T00:00:00Z");
+    await writeFile(templatePath, "key,value\nfull_name,Changed\n", "utf8");
+    await utimes(generatedPath, fixedDate, fixedDate);
+    await utimes(templatePath, fixedDate, fixedDate);
+
+    expect(await isGeneratedContentStale(projectRoot)).toBe(true);
+  });
+
+  it("treats a changed content toolchain as stale even when source files are unchanged", async () => {
+    const projectRoot = await createTemporaryProject();
+    const generatedPath = path.join(projectRoot, generatedContentRelativePath);
+    await mkdir(path.dirname(generatedPath), { recursive: true });
+    await writeFile(
+      generatedPath,
+      JSON.stringify({ metadata: { contentHash: "a".repeat(64), generatedAt: "2025-01-01T00:00:00.000Z" } }),
+      "utf8"
+    );
+    await writeGeneratedContentState(projectRoot, await createGeneratedContentState(projectRoot));
+
+    await writeFile(path.join(projectRoot, "package-lock.json"), JSON.stringify({ lockfileVersion: 3, changed: true }), "utf8");
+    expect(await isGeneratedContentStale(projectRoot)).toBe(true);
+  });
+
+  it("treats changed generated output as stale", async () => {
+    const projectRoot = await createTemporaryProject();
+    const generatedPath = path.join(projectRoot, generatedContentRelativePath);
+    await mkdir(path.dirname(generatedPath), { recursive: true });
+    await writeFile(generatedPath, JSON.stringify({ metadata: { contentHash: "a".repeat(64), generatedAt: "2025-01-01T00:00:00.000Z" } }), "utf8");
+    await writeGeneratedContentState(projectRoot, await createGeneratedContentState(projectRoot));
+    await writeFile(generatedPath, JSON.stringify({ metadata: { contentHash: "b".repeat(64), generatedAt: "2025-01-01T00:00:00.000Z" } }), "utf8");
     expect(await isGeneratedContentStale(projectRoot)).toBe(true);
   });
 

@@ -399,6 +399,8 @@ test("preserves semantic colors, hover reading, and long success messages in eve
   await expect(challenge).toBeVisible();
   await triggerContactChallenge(page, "error");
   await page.getByRole("button", { name: "Run check again" }).press("Enter");
+  // Retry restores focus to this status on the next frame before keyboard activation can continue.
+  await expect(page.locator(".contact-turnstile__status-row [role=status]")).toBeFocused();
   await challenge.press("Enter");
   await expect(page.getByRole("heading", { name: "Tell me your name" })).toBeFocused();
   await page.getByLabel("First name").fill("Avery");

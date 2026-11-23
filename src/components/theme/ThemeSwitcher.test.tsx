@@ -641,6 +641,10 @@ describe("ThemeSwitcher", () => {
     act(() => vi.advanceTimersByTime(themeMenuCloseDelayMs));
     expect(trigger).toHaveAttribute("aria-expanded", "true");
 
+    fireEvent.focus(trigger);
+    fireEvent.keyDown(trigger, { key: "Tab" });
+    expect(screen.getByRole("button", { name: /^System, follows device setting/ })).toHaveFocus();
+
     fireEvent.pointerDown(lightOption);
     fireEvent.click(lightOption);
     expect(document.documentElement.dataset.theme).toBe("light");

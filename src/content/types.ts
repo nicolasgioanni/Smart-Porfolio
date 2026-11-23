@@ -121,6 +121,7 @@ export type ExperienceItem = {
   detailSummary?: string;
   bullets: string[];
   skills: string[];
+  links: PortfolioContentLink[];
   featured: boolean;
   showOnHome: boolean;
   homeOrder?: number;
@@ -255,6 +256,7 @@ export type ProfileOverviewWork = {
   startDate?: string;
   endDate?: string;
   dateLabel?: string;
+  location?: string;
   summary?: string;
   logo?: ProfileOverviewLogo;
 };

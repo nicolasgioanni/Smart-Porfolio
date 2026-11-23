@@ -1,18 +1,16 @@
 import type { ExperienceItem, GeneratedPortfolioContent, PortfolioLink, ProfileContent, ProjectItem } from "@/content/types";
 import { describe, expect, it } from "vitest";
-import { experienceSkeletonProfiles } from "@/components/loading/ExperiencePageSkeleton";
-import { projectSkeletonProfiles } from "@/components/loading/projectSkeletonProfiles";
-import { researchSkeletonProfiles } from "@/components/loading/ResearchPageSkeleton";
-import { getExperienceModeContent } from "@/lib/content/experienceNarratives";
-import { getResearchFormalTitle, getResearchModeContent, getResearchVisibleResources } from "@/lib/content/researchNarratives";
-import { getProfileIdentityItems } from "@/lib/content/profileOverview";
+import { experienceSkeletonProfiles } from "@/features/experience/loading/ExperiencePageSkeleton";
+import { getProjectSkeletonProfiles } from "@/features/projects/loading/projectSkeletonProfiles";
+import { researchSkeletonProfiles } from "@/features/research/loading/ResearchPageSkeleton";
+import { selectResearchDetailContent } from "@/features/research/content/selectResearchDetailContent";
+import { getExperienceModeContent } from "@/features/experience/content/experienceNarratives";
+import { getResearchFormalTitle, getResearchModeContent, getResearchVisibleResources } from "@/features/research/content/researchNarratives";
+import { getProfileIdentityItems } from "@/features/home/content/profileOverview";
 import { resolveRouteHeaderContent, routeHeaderContent } from "@/lib/content/routeHeaderContent";
 import { siteRoutePaths, siteRoutes } from "@/lib/routing/siteRoutes";
-import {
-  selectExperienceDetailContent,
-  selectProjectDetailContent,
-  selectResearchDetailContent
-} from "@/lib/content/selectDetailContent";
+import { selectExperienceDetailContent } from "@/features/experience/content/selectExperienceDetailContent";
+import { selectProjectDetailContent } from "@/features/projects/content/selectProjectDetailContent";
 import { researchSkeletonFixtures } from "../../../tests/fixtures/researchSkeletonContent";
 
 const projectContentFixture: ProjectItem[] = [
@@ -58,6 +56,7 @@ const projectContentFixture: ProjectItem[] = [
 ];
 
 const experienceContentFixture: ExperienceItem[] = [
+  "cdao-some-kinda-engineer",
   "us-treasury-ai-engineer",
   "research-assistant-software-engineering",
   "teaching-assistant",
@@ -66,9 +65,17 @@ const experienceContentFixture: ExperienceItem[] = [
 ].map((id, index) => ({
   id,
   title: `Experience ${index + 1}`,
-  organization: index === 0 ? "Treasury" : index < 3 ? "University" : "Research lab",
+  organization:
+    index === 0
+      ? "DoW Chief Digital & Artificial Intelligence Office (CDAO)"
+      : index === 1
+        ? "Treasury"
+        : index < 4
+          ? "University"
+          : "Research lab",
   bullets: [],
   skills: [],
+  links: index === 1 ? [{ label: "Tech.Treasury.Gov", url: "https://tech.treasury.gov" }] : [],
   featured: true,
   showOnHome: true,
   detailOrder: index + 1
@@ -124,6 +131,9 @@ describe("skeleton source contracts", () => {
     const generatedSummary = "A valid Experience summary from supported generated content.";
 
     expect(experienceFallback).not.toBeNull();
+    expect(experienceFallback?.description).toBe(
+      "My experience spans engineering with the DoW Chief Digital & Artificial Intelligence Office (CDAO) and the U.S. Treasury, research software and machine learning at the University of Washington, and teaching core computer science courses."
+    );
     expect(resolveRouteHeaderContent(siteRoutes.experience, { profile: { experienceSummary: generatedSummary } })?.description).toBe(
       generatedSummary
     );
@@ -145,32 +155,29 @@ describe("skeleton source contracts", () => {
     expect(siteRoutePaths.slice(1).every((pathname) => Boolean(routeHeaderContent[pathname]?.description))).toBe(true);
   });
 
-  it("keeps literal project loader profiles in the fixture detail order without ambient generated content", () => {
+  it("derives project loader profiles from the selected detail content", () => {
     const projects = selectProjectDetailContent({ projects: projectContentFixture } as GeneratedPortfolioContent);
+    const projectSkeletonProfiles = getProjectSkeletonProfiles(projects);
 
     expect(projects.map((project) => project.id)).toEqual(["notepal", "clair", "leetnotes"]);
     expect(projectSkeletonProfiles.map((profile) => profile.id)).toEqual(projects.map((project) => project.id));
-    expect(projectSkeletonProfiles.map((profile) => profile.chipWidths.length)).toEqual([10, 6, 5]);
     expect(projectSkeletonProfiles.map((profile) => profile.actionWidths.length)).toEqual([2, 1, 1]);
-    expect(projectSkeletonProfiles.map((profile) => profile.deepDiveLines)).toEqual([
-      [[100, 84], [100, 88]],
-      [[100, 86], [100, 84]],
-      [[100, 86], [100, 90]]
-    ]);
-    expect(projects.map((project) => project.stack.length)).toEqual([10, 6, 5]);
-    expect(projects.every((project) => Boolean(project.problem) && Boolean(project.solution))).toBe(true);
-    expect(projects.every((project) => !project.impact)).toBe(true);
+    expect(projectSkeletonProfiles.map((profile) => profile.summaryWidths)).toEqual([[100, 86], [100, 72], [100, 86]]);
+    expect(projectSkeletonProfiles.map((profile) => profile.hasAttribution)).toEqual([true, false, false]);
     expect(projects.map((project) => project.links.length)).toEqual([2, 1, 1]);
   });
 
-  it("keeps the five Experience card silhouettes aligned with fixture overview rows", () => {
+  it("keeps the six Experience card silhouettes aligned with fixture overview rows", () => {
     const experience = selectExperienceDetailContent({ experience: experienceContentFixture } as GeneratedPortfolioContent);
 
-    expect(experience).toHaveLength(5);
+    expect(experience).toHaveLength(6);
     expect(experienceSkeletonProfiles.map((profile) => profile.id)).toEqual(experience.map((item) => item.id));
     expect(experienceSkeletonProfiles.map((profile) => profile.overviewRows)).toEqual(
       experience.map((item) => getExperienceModeContent(item, "overview").sections.length)
     );
+    expect(experienceSkeletonProfiles.map((profile) => profile.metadataLines)).toEqual([2, 2, 2, 2, 2, 2]);
+    expect(experienceSkeletonProfiles.map((profile) => profile.summaryLines)).toEqual([1, 0, 2, 2, 2, 2]);
+    expect(experienceSkeletonProfiles.map((profile) => profile.resourceCount)).toEqual([0, 1, 0, 0, 0, 0]);
   });
 
   it("matches the visible Home identity rows and organization-group role silhouettes from fixture content", () => {
@@ -184,7 +191,7 @@ describe("skeleton source contracts", () => {
     );
 
     expect(identityItems.map((item) => item.id)).toEqual(["location", "timezone", "email", "linkedin", "github"]);
-    expect(organizationCounts).toEqual([1, 2, 2]);
+    expect(organizationCounts).toEqual([1, 1, 2, 2]);
   });
 
   it("keeps research card geometry literal while resolving supported resource fixtures", () => {
@@ -193,8 +200,7 @@ describe("skeleton source contracts", () => {
       "adversarial-machine-learning",
       "yeast-dna-target-selection"
     ]);
-    expect(researchSkeletonProfiles.map((profile) => profile.media)).toEqual(["video", "explainer", "explainer"]);
-    expect(researchSkeletonProfiles.map((profile) => profile.legend)).toEqual([false, false, true]);
+    expect(researchSkeletonProfiles.map((profile) => profile.media)).toEqual(["video", "abstract", "abstract"]);
     expect(researchSkeletonProfiles.map((profile) => profile.resourceWidths.length)).toEqual([4, 3, 1]);
     expect(researchSkeletonProfiles.every((profile) => profile.organizationLogo && profile.impact)).toBe(true);
 

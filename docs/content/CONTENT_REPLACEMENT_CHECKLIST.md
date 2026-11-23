@@ -44,11 +44,12 @@ Use this checklist when replacing local sample content or preparing a public wor
 - [ ] Use blank, `Present`, or `Current` as an experience end date only when the role should qualify for the Current Work selector.
 - [ ] Set `show_on_home`, `featured`, and `home_order` to make Home selection deterministic.
 - [ ] Check organization spelling and capitalization. Home groups experience with `organization.trim().toLowerCase()`.
-- [ ] Verify titles, organizations, dates, locations, summaries, bullets, and skills against the underlying evidence.
+- [ ] Verify titles, organizations, dates, locations, summaries, bullets, skills, and `links` against the underlying evidence. Check that Experience link labels are meaningful and destinations pass the safe URL policy.
 - [ ] Keep education `degree`, `field`, and `concentration` semantically separate.
 - [ ] Confirm education bullets are concise enough for Home because all selected bullets render there.
 - [ ] Do not expect education summaries or `detail_order` to render; those fields have no current UI consumer.
 - [ ] Supply real logo paths and useful alt text where a visible list logo needs it, or leave the logo blank to use the initials fallback.
+- [ ] Record an externally sourced logo or emblem in [Asset provenance](ASSET_PROVENANCE.md), including its publication status and transformations.
 
 ## Research
 
@@ -68,8 +69,8 @@ Use this checklist when replacing local sample content or preparing a public wor
 - [ ] Keep `home_skills` at three or fewer ordered `name=icon` entries with valid lowercase icon keys.
 - [ ] Populate each numbered skill summary/details pair together and only for an existing skill position.
 - [ ] Verify project skill dialog copy describes the actual role of that technology.
-- [ ] Confirm link inference produces the intended `Source code` and optional `Live demo` actions on Home.
-- [ ] Verify problem, solution, impact, image, stack, and full links on the Projects route.
+- [ ] Confirm link inference produces the intended source-first `Source code` and optional `Live demo` actions on Home and Projects.
+- [ ] Verify concise summaries, both visual views, ordering, attribution, and native no-JavaScript disclosures on the Projects route. Follow the [five-row workbook handoff](PROJECT_SHOWCASE.md) when publishing the reviewed lineup.
 
 ## Skills
 

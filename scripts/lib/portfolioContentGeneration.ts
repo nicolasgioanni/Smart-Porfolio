@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { isIP } from "node:net";
 import ExcelJS, {
   type Cell,
   type CellFormulaValue,
@@ -9,8 +10,12 @@ import ExcelJS, {
 import { parse } from "csv-parse/sync";
 import type { GeneratedPortfolioContent } from "../../src/content/types";
 import { parseCsv, type CsvRow } from "../../src/lib/csv/parseCsv";
+import { validateContentKeyRows } from "../../src/lib/content/contentSheetKeys";
 import type { PortfolioSheetName } from "../../src/lib/content/normalizePortfolioContent";
 import { invalidXlsxWorkbookError, validatePortfolioWorkbookArchive } from "./workbookArchive";
+import { portfolioWorkbookMaxRowsPerSheet, portfolioWorkbookMaxColumnsPerSheet, portfolioWorkbookMaxCellsPerSheet, validateWorkbookSemantics } from "./workbookSemanticPreflight";
+import { runWorkbookParser } from "./workbookParserProcess";
+export { portfolioWorkbookMaxRowsPerSheet, portfolioWorkbookMaxColumnsPerSheet, portfolioWorkbookMaxCellsPerSheet } from "./workbookSemanticPreflight";
 
 export const portfolioWorkbookSheetNames = [
   "profile",
@@ -26,68 +31,6 @@ export const portfolioWorkbookSheetNames = [
 
 export type PortfolioWorkbookSheetName = (typeof portfolioWorkbookSheetNames)[number];
 export type PortfolioWorkbookSheets = Record<PortfolioWorkbookSheetName, CsvRow[]>;
-
-export const portfolioWorkbookMaxRowsPerSheet = 5_000;
-export const portfolioWorkbookMaxColumnsPerSheet = 128;
-export const portfolioWorkbookMaxCellsPerSheet = 250_000;
-
-const allowedProfileKeys = new Set([
-  "full_name",
-  "preferred_name",
-  "headline",
-  "role_engineer_prefixes",
-  "role_engineer_suffix",
-  "role_alternate",
-  "current_title",
-  "current_company",
-  "current_experience_id",
-  "previous_experience_id",
-  "featured_research_id",
-  "primary_education_id",
-  "location",
-  "timezone",
-  "time_zone",
-  "email",
-  "pronouns",
-  "university",
-  "degree",
-  "field_of_study",
-  "graduation",
-  "short_bio",
-  "long_bio",
-  "experience_summary",
-  "portrait_image",
-  "favicon_image",
-  "resume_url",
-  "resume_download_label",
-  "primary_cta_label",
-  "secondary_cta_label"
-]);
-
-const allowedSiteSettingKeys = new Set([
-  "site_title",
-  "site_description",
-  "default_theme",
-  "enable_skeletons",
-  "enable_scroll_motion",
-  "enable_glass_effects",
-  "enable_recommendations",
-  "show_empty_recommendations",
-  "max_home_research_items",
-  "max_home_project_items",
-  "max_home_experience_items",
-  "max_home_recommendation_items",
-  "max_home_skill_items",
-  "recommendations_nav_label",
-  "license_name",
-  "license_url",
-  "copyright_owner",
-  "repository_url",
-  "legal_contact_email",
-  "legal_effective_date",
-  "hosting_provider_name",
-  "hosting_privacy_url"
-]);
 
 const expectedHeaders: Record<PortfolioSheetName, readonly string[]> = {
   profile: ["key", "value"],
@@ -106,7 +49,7 @@ const expectedHeaders: Record<PortfolioSheetName, readonly string[]> = {
   ],
   experience: [
     "id", "title", "organization", "organization_logo", "organization_logo_alt", "type", "location", "start_date",
-    "end_date", "home_summary", "detail_summary", "bullets", "skills", "featured", "show_on_home", "home_order",
+    "end_date", "home_summary", "detail_summary", "bullets", "skills", "links", "featured", "show_on_home", "home_order",
     "detail_order"
   ],
   recommendations: [
@@ -135,10 +78,16 @@ const legacyResearchHeaders = [
   "show_on_home", "home_order", "detail_order"
 ] as const;
 
+const legacyExperienceHeaders = [
+  "id", "title", "organization", "organization_logo", "organization_logo_alt", "type", "location", "start_date",
+  "end_date", "home_summary", "detail_summary", "bullets", "skills", "featured", "show_on_home", "home_order",
+  "detail_order"
+] as const;
+
 function acceptedHeaderSets(sheetName: PortfolioSheetName): readonly (readonly string[])[] {
-  return sheetName === "research"
-    ? [expectedHeaders.research, legacyResearchHeaders]
-    : [expectedHeaders[sheetName]];
+  if (sheetName === "research") return [expectedHeaders.research, legacyResearchHeaders];
+  if (sheetName === "experience") return [expectedHeaders.experience, legacyExperienceHeaders];
+  return [expectedHeaders[sheetName]];
 }
 
 function matchesExactHeaderSet(headers: readonly string[], expected: readonly string[]): boolean {
@@ -154,6 +103,21 @@ const requiredKeyRows: Partial<Record<PortfolioWorkbookSheetName, readonly strin
   site_settings: ["site_title", "site_description", "default_theme"]
 };
 
+const workbookHostnamePattern = /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
+
+function isSafeWorkbookHostname(hostname: string): boolean {
+  const normalizedHost = hostname.replace(/^\[|\]$/g, "").toLowerCase();
+
+  return (
+    isIP(normalizedHost) === 0 &&
+    workbookHostnamePattern.test(normalizedHost) &&
+    normalizedHost !== "localhost" &&
+    !normalizedHost.endsWith(".localhost") &&
+    !normalizedHost.endsWith(".local") &&
+    !normalizedHost.endsWith(".internal")
+  );
+}
+
 export function validatePortfolioWorkbookUrl(value: string): string {
   let parsedUrl: URL;
 
@@ -163,8 +127,14 @@ export function validatePortfolioWorkbookUrl(value: string): string {
     throw new Error("PORTFOLIO_WORKBOOK_URL must be an anonymous HTTPS URL");
   }
 
-  if (parsedUrl.protocol !== "https:" || parsedUrl.username || parsedUrl.password) {
-    throw new Error("PORTFOLIO_WORKBOOK_URL must be an anonymous HTTPS URL");
+  if (
+    parsedUrl.protocol !== "https:" ||
+    parsedUrl.username ||
+    parsedUrl.password ||
+    parsedUrl.port ||
+    !isSafeWorkbookHostname(parsedUrl.hostname)
+  ) {
+    throw new Error("PORTFOLIO_WORKBOOK_URL must be an anonymous HTTPS URL with a safe public hostname");
   }
 
   return parsedUrl.href;
@@ -238,30 +208,15 @@ export function parseAndValidatePortfolioCsv(csvText: string, sheetName: Portfol
   }
 
   validateRequiredKeyRows(rows, sheetName);
-  return rows;
-}
-
-function validateKnownKeyRows(rows: CsvRow[], sheetName: "profile" | "site_settings", allowedKeys: Set<string>): void {
-  const seenKeys = new Set<string>();
-
-  for (const row of rows) {
-    const key = row.key?.trim() ?? "";
-
-    if (!allowedKeys.has(key)) {
-      throw new Error(`The workbook ${sheetName} tab contains an unknown key`);
-    }
-
-    if (seenKeys.has(key)) {
-      throw new Error(`The workbook ${sheetName} tab contains a duplicate key: ${key}`);
-    }
-
-    seenKeys.add(key);
+  if (sheetName === "profile" || sheetName === "site_settings") {
+    validateContentKeyRows(rows, sheetName, `The ${sheetName} template`);
   }
+  return rows;
 }
 
 export function validateWorkbookPortfolioRows(rows: CsvRow[], sheetName: PortfolioWorkbookSheetName): void {
   if (sheetName === "profile") {
-    validateKnownKeyRows(rows, sheetName, allowedProfileKeys);
+    validateContentKeyRows(rows, sheetName, `The workbook ${sheetName} tab`);
 
     for (const row of rows) {
       const key = row.key?.trim();
@@ -272,7 +227,7 @@ export function validateWorkbookPortfolioRows(rows: CsvRow[], sheetName: Portfol
   }
 
   if (sheetName === "site_settings") {
-    validateKnownKeyRows(rows, sheetName, allowedSiteSettingKeys);
+    validateContentKeyRows(rows, sheetName, `The workbook ${sheetName} tab`);
   }
 
   if (
@@ -363,13 +318,18 @@ function normalizeWorksheetTitle(title: string): string {
 }
 
 export async function parsePortfolioWorkbook(bytes: Uint8Array): Promise<PortfolioWorkbookSheets> {
+  return runWorkbookParser(bytes);
+}
+
+export async function parsePortfolioWorkbookInChild(bytes: Uint8Array): Promise<PortfolioWorkbookSheets> {
   await validatePortfolioWorkbookArchive(bytes);
+  await validateWorkbookSemantics(bytes);
 
   const workbook = new ExcelJS.Workbook();
   const arrayBuffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
 
   try {
-    await workbook.xlsx.load(arrayBuffer);
+    await workbook.xlsx.load(arrayBuffer, { ignoreNodes: ["dataValidations", "conditionalFormatting", "extLst", "drawing", "picture", "tableParts", "sheetViews", "pageMargins", "pageSetup", "printOptions", "headerFooter", "rowBreaks", "sheetProtection", "autoFilter"] });
   } catch {
     throw invalidXlsxWorkbookError();
   }

@@ -6,7 +6,7 @@ import { siteRoutePaths, type SiteRoutePath } from "../../src/lib/routing/siteRo
 // server renderer uses the classic runtime through tsx.
 (globalThis as typeof globalThis & { React: typeof React }).React = React;
 
-const { RouteSkeleton } = await import("../../src/components/loading/RouteSkeleton");
+const { RouteSkeleton } = await import("../../src/app/RouteSkeleton");
 
 const markupByRoute = Object.fromEntries(
   siteRoutePaths.map((pathname) => [pathname, renderToStaticMarkup(createElement(RouteSkeleton, { pathname }))])
