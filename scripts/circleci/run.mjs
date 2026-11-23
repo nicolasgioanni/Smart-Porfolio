@@ -52,13 +52,14 @@ export function verifyBrowser(assignment, report) {
   }
   if (parsed.identities.some((id) => !seen.has(id))) throw new Error('Browser identities differ from execution.');
 }
-export function verifyInputEnvelope({ envelope, planBytes, snapshot, assignmentBytes, pipelinePlan, currentHead, candidateSha }) {
+export function verifyInputEnvelope({ envelope, planBytes, snapshot, assignmentBytes, pipelinePlan, currentHead, candidateSha, committedSnapshot }) {
   const expectedKeys = ['assignmentDigest', 'headSha', 'planDigest', 'snapshotDigest'];
   if (!envelope || Object.keys(envelope).sort().join(',') !== expectedKeys.join(',')) throw new Error('Invalid input manifest.');
   const plan = parseImpactPlan(JSON.parse(planBytes));
   const expectedPlan = parseImpactPlan(pipelinePlan);
   if (JSON.stringify(plan) !== JSON.stringify(expectedPlan) || currentHead !== candidateSha || currentHead !== envelope.headSha ||
       plan.headSha !== envelope.headSha || hash(planBytes) !== envelope.planDigest || hash(snapshot) !== envelope.snapshotDigest || hash(assignmentBytes) !== envelope.assignmentDigest) throw new Error('Candidate, plan, or content snapshot mismatch.');
+  if (plan.tier !== 'full' && (!Buffer.isBuffer(committedSnapshot) || !snapshot.equals(committedSnapshot))) throw new Error('Narrow-plan snapshot differs from committed content.');
   validateGeneratedSource(JSON.parse(snapshot), 'local');
   return plan;
 }
@@ -66,15 +67,26 @@ export function verifyReceiptSet(validators, filenames) {
   const expected = validators.map((name) => `${name}.json`).sort();
   if (JSON.stringify([...filenames].sort()) !== JSON.stringify(expected)) throw new Error('Receipt set is missing or contains unexpected entries.');
 }
+const inputFiles = ['manifest.json', 'plan.json', 'content.json', 'assignments.json'];
+async function readInputBytes() {
+  return Object.fromEntries(await Promise.all(inputFiles.map(async (name) => [name, await readFile(path.join(workspace, 'input', name))])));
+}
+export function verifyUnchangedInputs(before, after, generatedBytes) {
+  if (inputFiles.some((name) => !Buffer.isBuffer(before[name]) || !Buffer.isBuffer(after[name]) || !before[name].equals(after[name])) || !Buffer.isBuffer(generatedBytes) || !generatedBytes.equals(before['content.json'])) throw new Error('Validation changed the snapshot or input evidence.');
+}
+const committedContent = () => execFileSync('git', ['show', `HEAD:${generated}`], { cwd: root, timeout: 30_000, maxBuffer: 10_000_000 });
 async function inputs() {
-  const envelope = await json(path.join(workspace, 'input/manifest.json'));
-  const planBytes = await readFile(path.join(workspace, 'input/plan.json'));
-  const snapshot = await readFile(path.join(workspace, 'input/content.json'));
-  const assignmentBytes = await readFile(path.join(workspace, 'input/assignments.json'));
+  const initial = await readInputBytes();
+  const envelope = JSON.parse(initial['manifest.json']);
   const pipelinePlan = JSON.parse(Buffer.from(process.env.CIRCLECI_PLAN ?? '', 'base64').toString('utf8'));
-  const plan = verifyInputEnvelope({ envelope, planBytes, snapshot, assignmentBytes, pipelinePlan, currentHead: head(), candidateSha: process.env.CIRCLE_SHA1 });
+  const plan = verifyInputEnvelope({ envelope, planBytes: initial['plan.json'], snapshot: initial['content.json'], assignmentBytes: initial['assignments.json'], pipelinePlan, currentHead: head(), candidateSha: process.env.CIRCLE_SHA1, committedSnapshot: committedContent() });
   await copyFile(path.join(workspace, 'input/content.json'), generated);
-  return { plan, envelope };
+  return { plan, envelope, initial };
+}
+async function verifyInputsAfter(initial, plan) {
+  verifyUnchangedInputs(initial, await readInputBytes(), await readFile(generated));
+  if (head() !== plan.headSha || head() !== process.env.CIRCLE_SHA1) throw new Error('Validation changed the candidate revision.');
+  if (plan.tier !== 'full' && !initial['content.json'].equals(committedContent())) throw new Error('Narrow-plan snapshot differs from committed content.');
 }
 async function prepare() {
   const plan = parseImpactPlan(JSON.parse(Buffer.from(process.env.CIRCLECI_PLAN ?? '', 'base64').toString('utf8')));
@@ -83,6 +95,7 @@ async function prepare() {
   run('npm', ['run', 'generate:content'], { env: cleanEnv() });
   const content = await readFile(generated);
   validateGeneratedSource(JSON.parse(content), 'local');
+  if (plan.tier !== 'full' && !content.equals(committedContent())) throw new Error('Narrow-plan snapshot differs from committed content.');
   const planBytes = Buffer.from(JSON.stringify(plan));
   await writeFile(path.join(workspace, 'input/plan.json'), planBytes);
   await writeFile(path.join(workspace, 'input/content.json'), content);
@@ -114,7 +127,7 @@ async function prepare() {
   await writeFile(path.join(workspace, 'input/manifest.json'), JSON.stringify({ headSha: head(), planDigest: hash(planBytes), snapshotDigest: hash(content), assignmentDigest: hash(assignmentBytes) }));
 }
 async function validate() {
-  const { plan, envelope } = await inputs();
+  const { plan, envelope, initial } = await inputs();
   const validator = process.env.VALIDATOR;
   if (!plan.validators.includes(validator)) throw new Error('Validator was not selected.');
   const npm = (...args) => run('npm', ['run', ...args], { env: cleanEnv() });
@@ -154,17 +167,19 @@ async function validate() {
       run(process.execPath, ['scripts/ci/infrastructure.mjs', path.join(toolRoot, 'terraform/terraform'), path.join(toolRoot, 'opa/opa')], { env: cleanEnv() });
     }
   } else throw new Error('Unknown validator.');
+  await verifyInputsAfter(initial, plan);
   await mkdir(path.join(workspace, 'receipts'), { recursive: true });
   await writeFile(path.join(workspace, `receipts/${validator}.json`), JSON.stringify({ validator, ...envelope, outcome: 'success' }), { flag: 'wx' });
 }
 async function accept() {
-  const { plan, envelope } = await inputs();
+  const { plan, envelope, initial } = await inputs();
   verifyReceiptSet(plan.validators, await readdir(path.join(workspace, 'receipts')));
   for (const validator of plan.validators) {
     const receipt = await json(path.join(workspace, `receipts/${validator}.json`));
     if (Object.keys(receipt).sort().join(',') !== [...Object.keys(envelope), 'validator', 'outcome'].sort().join(',') || receipt.validator !== validator || receipt.outcome !== 'success' || Object.entries(envelope).some(([k, v]) => receipt[k] !== v)) throw new Error('Missing or stale validation receipt.');
   }
-  await writeFile(path.join(workspace, 'summary.json'), JSON.stringify({ headSha: plan.headSha, tier: plan.tier, selected: plan.validators, unselected: ['quality','unit','chromium-1','chromium-2','visual','cross-browser','build-export','security','infrastructure'].filter((v) => !plan.validators.includes(v)), reasons: plan.reasons }, null, 2));
+  await verifyInputsAfter(initial, plan);
+  await writeFile(path.join(workspace, 'summary.json'), JSON.stringify({ snapshotDigest: envelope.snapshotDigest, assignmentDigest: envelope.assignmentDigest, planDigest: envelope.planDigest, headSha: plan.headSha, tier: plan.tier, selected: plan.validators, unselected: ['quality','unit','chromium-1','chromium-2','visual','cross-browser','build-export','security','infrastructure'].filter((v) => !plan.validators.includes(v)), reasons: plan.reasons }, null, 2));
   console.log(`Accepted ${plan.tier} validation for ${plan.headSha}.`);
 }
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

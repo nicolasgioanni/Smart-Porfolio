@@ -1,5 +1,6 @@
+// @vitest-environment node
 import { describe, expect, it, vi } from 'vitest';
-import { eventInputs, verifyCircleCI } from './verify.mjs';
+import { verifyCircleCI } from './verify.mjs';
 
 const workflowId = '11111111-1111-4111-8111-111111111111';
 const pipelineId = '22222222-2222-4222-8222-222222222222';
@@ -73,7 +74,7 @@ describe('authenticated CircleCI completion', () => {
     ['empty graph', { pages: [{ items: [], next_page_token: null }] }],
     ['prepare is not a validator', { pages: [{ items: [{ name: 'prepare', type: 'build', status: 'success' }, jobs()[1]], next_page_token: null }] }],
     ['no validator', { pages: [{ items: [jobs()[1]], next_page_token: null }] }],
-    ['malformed page', { pages: [{ items: jobs() }] }],
+    ['malformed page', { pages: [{ items: jobs(), next_page_token: 1 }] }],
     ['repeated token', { pages: [{ items: [], next_page_token: 'x' }, { items: [], next_page_token: 'x' }] }],
     ['missing security', { pages: [{ items: jobs().filter((job) => job.name !== 'security'), next_page_token: null }] }],
     ['missing dependencies', { pages: [{ items: jobs().map((job) => ({ ...job, dependencies: undefined })), next_page_token: null }] }],
@@ -123,26 +124,82 @@ describe('authenticated CircleCI completion', () => {
   });
 });
 
-const currentStatusUrl = `https://app.circleci.com/workflow/${workflowId}/job/22222222-2222-4222-8222-222222222222`;
-const statusUrl = `https://app.circleci.com/pipelines/circleci/KQ3AcKmoBm6ME2ewoJjyBd/D2FVgecxDxnu3fC6LxpR1h/123/workflows/${workflowId}/jobs/456`;
-describe('status event inputs', () => {
-  const env = { GITHUB_EVENT_NAME: 'status', STATUS_STATE: 'success', STATUS_CONTEXT: 'ci/circleci: acceptance', STATUS_SHA: sha, STATUS_TARGET_URL: statusUrl };
-  it('extracts only a strictly shaped CircleCI workflow URL', () => {
-    expect(eventInputs(env)).toEqual({ workflowId, expectedSha: sha });
-    expect(eventInputs({ ...env, STATUS_TARGET_URL: currentStatusUrl })).toEqual({ workflowId, expectedSha: sha });
-    expect(eventInputs({ GITHUB_EVENT_NAME: 'workflow_dispatch', CIRCLECI_WORKFLOW_ID: workflowId, EXPECTED_SHA: sha })).toEqual({ workflowId, expectedSha: sha });
+describe('strict pull request evidence', () => {
+  it('checks the trusted plan, provider configuration, PR head and exact DAG', async () => {
+    const { createImpactPlan } = await import('./impact.mjs');
+    const { continuationConfig } = await import('./setup.mjs');
+    const { readFile } = await import('node:fs/promises');
+    const { verifyPullRequestWorkflow } = await import('./verify.mjs');
+    const plan = createImpactPlan({ changedPaths: ['docs/README.md'], baseSha: 'b'.repeat(40), headSha: sha });
+    const headRef = 'codex/example';
+    const app = appPipeline();
+    app.trigger_parameters.git = { ...app.trigger_parameters.git, branch: headRef, ref: `refs/heads/${headRef}` };
+    app.trigger_parameters.github_app = { ...app.trigger_parameters.github_app, branch: headRef, ref: headRef, full_ref: headRef };
+    const config = { setup_config: await readFile(new URL('../../.circleci/config.yml', import.meta.url), 'utf8'), source: continuationConfig(plan.validators, plan) };
+    async function run({ p = app, c = config, j = jobs(), expectedPlan = plan, expectedRef = headRef, workflowValue = workflow(), pageOmitted = false } = {}) {
+      const fetchImpl = async (url) => {
+        let payload;
+        if (url.endsWith('/config')) payload = c;
+        else if (url.includes('/job')) payload = pageOmitted ? { items: j } : { items: j, next_page_token: null };
+        else if (url.endsWith(workflowId)) payload = workflowValue;
+        else payload = p;
+        return new Response(JSON.stringify(payload), { status: 200 });
+      };
+      return verifyPullRequestWorkflow({ workflowId, plan: expectedPlan, pullNumber: 144, headRef: expectedRef, baseRef: 'main', token: '', fetchImpl });
+    }
+    expect((await run({ pageOmitted: true })).jobCount).toBe(4);
+    const cases = [
+      { c: { ...config, source: config.source + '# altered' } },
+      { c: { ...config, setup_config: config.setup_config + '# altered' } },
+      { p: { ...app, trigger_parameters: { ...app.trigger_parameters, git: { ...app.trigger_parameters.git, ref: 'refs/heads/other' } } } },
+      { p: { ...app, trigger_parameters: { ...app.trigger_parameters, circleci: { ...app.trigger_parameters.circleci, event_type: 'schedule' } } } },
+      { j: jobs().filter((job) => job.name !== 'security') },
+      { j: [...jobs(), { id: id(5), name: 'unit', type: 'build', status: 'success', dependencies: [id(1)] }] },
+      { j: jobs().map((job) => job.name === 'quality' ? { ...job, dependencies: [] } : job) },
+      { expectedPlan: { ...plan, validators: ['quality'] } },
+      { expectedRef: 'other' },
+    ];
+    for (const input of cases) await expect(run(input)).rejects.toThrow('CircleCI verification failed');
   });
-  it.each([
-    statusUrl + '?x=1', statusUrl + '#x', statusUrl.replace('app.circleci.com', 'app.circleci.com.evil.test'),
-    statusUrl.replace('https://', 'https://user@'), statusUrl.replace('D2FVgecxDxnu3fC6LxpR1h', 'other'),
-    statusUrl.replace('/123/', '/0/'), statusUrl.replace('/jobs/456', ''),
-    currentStatusUrl + '?x=1', currentStatusUrl + '#x',
-    currentStatusUrl.replace('app.circleci.com', 'app.circleci.com.evil.test'),
-    currentStatusUrl.replace('https://', 'https://user@'),
-    currentStatusUrl.replace('/job/', '/jobs/'), currentStatusUrl.replace('22222222-2222-4222-8222-222222222222', 'invalid'),
-  ])('rejects untrusted target %s', (url) => { expect(() => eventInputs({ ...env, STATUS_TARGET_URL: url })).toThrow(); });
-  it('rejects a mismatched status context or state', () => {
-    expect(() => eventInputs({ ...env, STATUS_CONTEXT: 'other' })).toThrow();
-    expect(() => eventInputs({ ...env, STATUS_STATE: 'pending' })).toThrow();
+});
+
+describe('latest public pipeline discovery', () => {
+  it('selects newest current pipeline and rejects ambiguous or superseded execution', async () => {
+    const { createImpactPlan } = await import('./impact.mjs');
+    const { continuationConfig } = await import('./setup.mjs');
+    const { readFile } = await import('node:fs/promises');
+    const { verifyLatestPullRequestWorkflow } = await import('./verify.mjs');
+    const plan = createImpactPlan({ changedPaths: ['docs/README.md'], baseSha: 'b'.repeat(40), headSha: sha });
+    const headRef = 'codex/example';
+    const app = appPipeline();
+    app.number = 2;
+    app.trigger_parameters.git = { ...app.trigger_parameters.git, branch: headRef, ref: `refs/heads/${headRef}` };
+    app.trigger_parameters.github_app = { ...app.trigger_parameters.github_app, branch: headRef, ref: headRef, full_ref: headRef };
+    const config = { setup_config: await readFile(new URL('../../.circleci/config.yml', import.meta.url), 'utf8'), source: continuationConfig(plan.validators, plan) };
+    const setup = { ...workflow(), id: id(5), name: 'portfolio-setup', status: 'success' };
+    const validation = workflow();
+    async function run({ supersede = false, ambiguous = false, failed = false, stale = false } = {}) {
+      let lists = 0; let time = 0;
+      const fetchImpl = async (url, options) => {
+        expect(options.headers).not.toHaveProperty('Circle-Token');
+        let payload;
+        if (url.includes('/project/')) {
+          lists += 1;
+          const current = stale ? { ...app, trigger_parameters: { ...app.trigger_parameters, git: { ...app.trigger_parameters.git, checkout_sha: 'c'.repeat(40) } } } : app;
+          payload = { items: [current, ...(supersede && lists > 1 ? [{ ...app, id: id(6), number: 3 }] : [])], next_page_token: null };
+        } else if (url.endsWith('/workflow')) payload = { items: [setup, ...(ambiguous ? [setup] : []), { ...validation, status: failed ? 'failed' : 'success' }] };
+        else if (url.endsWith('/config')) payload = config;
+        else if (url.includes('/job')) payload = { items: jobs() };
+        else if (url.endsWith(workflowId)) payload = validation;
+        else payload = app;
+        return new Response(JSON.stringify(payload), { status: 200 });
+      };
+      return verifyLatestPullRequestWorkflow({ plan, pullNumber: 144, headRef, baseRef: 'main', fetchImpl, now: () => time, sleep: async (ms) => { time += ms; } });
+    }
+    expect((await run()).workflowId).toBe(workflowId);
+    await expect(run({ supersede: true })).rejects.toThrow('superseded');
+    await expect(run({ ambiguous: true })).rejects.toThrow('ambiguous');
+    await expect(run({ failed: true })).rejects.toThrow('did not succeed');
+    await expect(run({ stale: true })).rejects.toThrow('did not become available');
   });
 });

@@ -13,6 +13,8 @@ For every endpoint, define and test methods, media types, schema, body and time 
 
 When this baseline has no configured Queue or R2 audit binding, keep contact delivery functional without those bindings. Do not add an audit requirement, skip-security switch, or cloud activation to an endpoint change; document any later audit adoption as a separate release and migration decision.
 
+CircleCI may supply PR test evidence only through the [verified provider contract](../../../docs/quality/CIRCLECI.md). Keep native source-security, built-output scanning, sealing and export checks on every full candidate.
+
 Preserve the exact-candidate, verified-artifact deployment path and its stale-revision, integrity, binding, migration, and smoke-test checks. A deployment restores the original sealed release, verifies its archive and producer identity, creates and verifies provenance/SBOM attestations, serializes the target without cancellation, rechecks branch freshness before and after the selected D1 migration, then admits only the pinned Wrangler structured result before unique-host and stable-origin smoke checks. Do not imply that GitHub branch protection, environment approvals, or provider controls are enabled unless their live configuration has been independently verified.
 
 Keep sealed runtime-configuration admission pure and shared by compilation, packaging, local runtime verification, and deployment. Admit only reviewed non-secret variables and target-specific bindings; reject serialized secrets, unknown variables, and unactivated binding capabilities. Preview compatibility must equal the compiled worker configuration. This validates sealed source and bytes, not provider ownership of a configured resource or live secret presence.

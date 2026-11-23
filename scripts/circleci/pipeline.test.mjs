@@ -49,9 +49,11 @@ test('manifest rejects changed inputs and receipt set rejects missing or extra j
   const assignmentBytes = Buffer.from('{}');
   const digest = (bytes) => createHash('sha256').update(bytes).digest('hex');
   const envelope = { headSha: sha, planDigest: digest(planBytes), snapshotDigest: digest(snapshot), assignmentDigest: digest(assignmentBytes) };
-  const inputs = { envelope, planBytes, snapshot, assignmentBytes, pipelinePlan: plan, currentHead: sha, candidateSha: sha };
+  const inputs = { envelope, planBytes, snapshot, assignmentBytes, pipelinePlan: plan, currentHead: sha, candidateSha: sha, committedSnapshot: snapshot };
   assert.deepEqual(verifyInputEnvelope(inputs), plan);
   assert.throws(() => verifyInputEnvelope({ ...inputs, snapshot: Buffer.from('{}') }));
+  assert.throws(() => verifyInputEnvelope({ ...inputs, committedSnapshot: Buffer.from('{}') }), /differs from committed content/);
+  assert.throws(() => verifyInputEnvelope({ ...inputs, committedSnapshot: undefined }), /differs from committed content/);
   assert.throws(() => verifyInputEnvelope({ ...inputs, currentHead: 'b'.repeat(40) }));
   assert.throws(() => verifyInputEnvelope({ ...inputs, envelope: { ...envelope, extra: true } }));
   assert.throws(() => verifyInputEnvelope({ ...inputs, pipelinePlan: { ...plan, validators: [] } }));
@@ -113,4 +115,13 @@ test('security scanner receives a private temp root without GitHub Actions envir
   assert.equal(parsed.tempRoot, '/tmp/portfolio-private-scans');
   assert.equal(parsed.gitleaksMode, 'git');
   assert.equal(parsed.zizmor, '/tmp/portfolio-tools/zizmor/zizmor');
+});
+
+
+test('validator rechecks exact snapshot and all input evidence after execution', async () => {
+  const { verifyUnchangedInputs } = await import('./run.mjs');
+  const original = Object.fromEntries(['manifest.json', 'plan.json', 'content.json', 'assignments.json'].map((name) => [name, Buffer.from(name)]));
+  verifyUnchangedInputs(original, { ...original }, original['content.json']);
+  for (const name of Object.keys(original)) assert.throws(() => verifyUnchangedInputs(original, { ...original, [name]: Buffer.from('changed') }, original['content.json']), /changed the snapshot/);
+  assert.throws(() => verifyUnchangedInputs(original, original, Buffer.from('changed')), /changed the snapshot/);
 });

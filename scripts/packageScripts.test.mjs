@@ -60,7 +60,7 @@ describe("package and CI deployment automation", () => {
     expect(packageJson.devDependencies.miniflare).toBe("5.20261006.0-alpha");
     expect(packageJson.devDependencies.yaml).toBe("2.9.1");
     expect(packageJson.devDependencies["js-yaml"]).toBeUndefined();
-    expect(packageJson.devDependencies.vitest).toBe("4.1.11");
+    expect(packageJson.devDependencies.vitest).toBe("4.1.12");
     expect(packageJson.devDependencies["@playwright/test"]).toMatch(/^\^1\./);
     expect(packageJson.scripts["test:footer"]).toBe(
       "vitest run src/components/layout/InteractiveBlobFooter.test.tsx src/components/layout/footerStyles.test.ts"

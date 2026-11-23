@@ -1,7 +1,6 @@
 name: CircleCI completion evidence
 
 on:
-  status: {}
   workflow_dispatch:
     inputs:
       workflow_id:
@@ -20,8 +19,7 @@ jobs:
   circleci-completion:
     if: >-
       github.repository == 'nicolasgioanni/Smart-Porfolio' &&
-      ((github.event_name == 'workflow_dispatch' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')) ||
-       (github.event_name == 'status' && github.event.state == 'success' && github.event.context == 'ci/circleci: acceptance'))
+      github.event_name == 'workflow_dispatch' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -35,10 +33,6 @@ jobs:
           node-version: 22.23.3
       - name: Verify CircleCI completion as additive evidence
         env:
-          STATUS_STATE: ${{ github.event.state }}
-          STATUS_CONTEXT: ${{ github.event.context }}
-          STATUS_TARGET_URL: ${{ github.event.target_url }}
-          STATUS_SHA: ${{ github.event.sha }}
           CIRCLECI_WORKFLOW_ID: ${{ inputs.workflow_id }}
           EXPECTED_SHA: ${{ inputs.expected_sha }}
           CIRCLECI_API_TOKEN: ${{ secrets.CIRCLECI_API_TOKEN }}

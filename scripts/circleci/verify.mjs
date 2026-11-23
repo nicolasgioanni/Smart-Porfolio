@@ -12,8 +12,6 @@ const MAX_JOBS = 100;
 const REQUEST_MS = 15_000;
 const DEADLINE_MS = 20 * 60_000;
 const POLL_MS = 10_000;
-const STATUS_URL = /^https:\/\/app\.circleci\.com\/pipelines\/circleci\/KQ3AcKmoBm6ME2ewoJjyBd\/D2FVgecxDxnu3fC6LxpR1h\/[1-9][0-9]{0,15}\/workflows\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\/jobs\/[1-9][0-9]{0,15}$/;
-const STATUS_WORKFLOW_URL = /^https:\/\/app\.circleci\.com\/workflow\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\/job\/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 const fail = (reason) => { throw new Error(`CircleCI verification failed: ${reason}`); };
 const object = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 
@@ -25,16 +23,6 @@ function validRepository(value) {
   } catch { return false; }
 }
 
-export function eventInputs(env) {
-  if (env.GITHUB_EVENT_NAME === 'workflow_dispatch') return { workflowId: env.CIRCLECI_WORKFLOW_ID, expectedSha: env.EXPECTED_SHA };
-  if (env.GITHUB_EVENT_NAME === 'status') {
-    if (env.STATUS_STATE !== 'success' || env.STATUS_CONTEXT !== 'ci/circleci: acceptance' || typeof env.STATUS_TARGET_URL !== 'string' || env.STATUS_TARGET_URL.length > 512) fail('status event is invalid');
-    const match = STATUS_URL.exec(env.STATUS_TARGET_URL) ?? STATUS_WORKFLOW_URL.exec(env.STATUS_TARGET_URL);
-    if (!match) fail('status target URL is invalid');
-    return { workflowId: match[1], expectedSha: env.STATUS_SHA };
-  }
-  fail('unsupported event');
-}
 
 async function request(path, token, fetchImpl, deadline, now) {
   const remaining = deadline - now();
@@ -65,7 +53,7 @@ async function request(path, token, fetchImpl, deadline, now) {
   }
 }
 
-export async function verifyCircleCI({ workflowId, expectedSha, token, fetchImpl = fetch, now = Date.now, sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)) }) {
+export async function verifyCircleCI({ workflowId, expectedSha, token, fetchImpl = fetch, now = Date.now, sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)), expected = null, captureJobs = () => {} }) {
   if (!UUID.test(workflowId ?? '') || !SHA.test(expectedSha ?? '')) fail('workflow ID or expected SHA is invalid');
   if (token !== undefined && (typeof token !== 'string' || (token !== '' && !token.trim()))) fail('CIRCLECI_API_TOKEN is invalid');
   const deadline = now() + DEADLINE_MS;
@@ -104,14 +92,21 @@ export async function verifyCircleCI({ workflowId, expectedSha, token, fetchImpl
     }
   }
   if (!identityPresent && !(hasGit && hasApp)) fail('pipeline checkout identity is missing');
+  if (expected) {
+    if (!hasGit || !hasApp || !['pull_request', 'push'].includes(parameters.circleci.event_type)) fail('pipeline PR trigger identity is invalid');
+    const { git, github_app: app } = parameters;
+    if (git.ref !== `refs/heads/${expected.headRef}` || git.branch !== expected.headRef || app.branch !== expected.headRef || app.ref !== expected.headRef || app.full_ref !== expected.headRef) fail('pipeline branch identity is invalid');
+    const config = await request(`/pipeline/${workflow.pipeline_id}/config`, token, fetchImpl, deadline, now);
+    if (!object(config) || config.setup_config !== expected.setupConfig || config.source !== expected.continuationConfig) fail('pipeline configuration differs from trusted plan');
+  }
   const jobs = []; const seenPages = new Set(); let pageToken = null;
   for (let page = 0; page < MAX_PAGES; page += 1) {
     const query = pageToken === null ? '' : `?page-token=${encodeURIComponent(pageToken)}`;
     const data = await request(`/workflow/${workflowId}/job${query}`, token, fetchImpl, deadline, now);
-    if (!object(data) || !Array.isArray(data.items) || !('next_page_token' in data) || !(data.next_page_token === null || (typeof data.next_page_token === 'string' && data.next_page_token.length > 0 && data.next_page_token.length <= 512))) fail('job page is malformed');
+    if (!object(data) || !Array.isArray(data.items) || !(data.next_page_token === undefined || data.next_page_token === null || (typeof data.next_page_token === 'string' && data.next_page_token.length > 0 && data.next_page_token.length <= 512))) fail('job page is malformed');
     jobs.push(...data.items);
     if (jobs.length > MAX_JOBS) fail('too many jobs');
-    if (data.next_page_token === null) { pageToken = null; break; }
+    if (data.next_page_token == null) { pageToken = null; break; }
     if (seenPages.has(data.next_page_token)) fail('job pagination repeated');
     seenPages.add(data.next_page_token); pageToken = data.next_page_token;
   }
@@ -137,12 +132,97 @@ export async function verifyCircleCI({ workflowId, expectedSha, token, fetchImpl
   }
   visit(byName.get('acceptance').id);
   if (visited.size !== jobs.length) fail('acceptance does not depend on every job');
+  if (expected) {
+    const required = new Set(['prepare', ...expected.validators, 'acceptance']);
+    if (byName.size !== required.size || [...required].some((name) => !byName.has(name))) fail('job set differs from trusted plan');
+    for (const job of jobs) {
+      const wanted = job.name === 'prepare' ? [] : job.name === 'acceptance' ? expected.validators.map((name) => byName.get(name).id) : [byName.get('prepare').id];
+      if (wanted.length !== job.dependencies.length || wanted.some((id) => !job.dependencies.includes(id))) fail('job dependencies differ from trusted plan');
+    }
+  }
+  captureJobs(jobs.map((job) => `${job.name}:${job.id}`).sort().join(','));
   return { workflowId, sha: expectedSha, jobCount: jobs.length, accessMode: token ? 'authenticated-api' : 'public-api' };
+}
+
+// The trusted caller independently verifies the GitHub PR number, base, head and
+// merge-tree equivalence and computes the plan from trusted checkout data.
+export async function verifyPullRequestWorkflow({ workflowId, plan, pullNumber, headRef, baseRef, ...options }) {
+  if (!Number.isSafeInteger(pullNumber) || pullNumber < 1 || !['main', 'develop'].includes(baseRef) || typeof headRef !== 'string' || !headRef || headRef.length > 255 || [...headRef].some((char) => char.charCodeAt(0) <= 32 || char.charCodeAt(0) === 127)) fail('PR identity is invalid');
+  const [{ parseImpactPlan }, { continuationConfig }, { readFile }] = await Promise.all([
+    import('./impact.mjs'), import('./setup.mjs'), import('node:fs/promises'),
+  ]);
+  let trustedPlan;
+  try { trustedPlan = parseImpactPlan(plan); } catch { fail('expected plan is invalid'); }
+  if (trustedPlan.trigger !== 'pull_request' || trustedPlan.forceFull) fail('expected PR plan is invalid');
+  const setupConfig = await readFile(new URL('../../.circleci/config.yml', import.meta.url), 'utf8');
+  return verifyCircleCI({ ...options, workflowId, expectedSha: trustedPlan.headSha, expected: { headRef, validators: trustedPlan.validators, setupConfig, continuationConfig: continuationConfig(trustedPlan.validators, trustedPlan) } });
+}
+
+// Discovery is public and always verifies the newest pipeline, never an older green run.
+export async function verifyLatestPullRequestWorkflow({ plan, pullNumber, headRef, baseRef, fetchImpl = fetch, now = Date.now, sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)) }) {
+  const { parseImpactPlan } = await import('./impact.mjs');
+  let parsed;
+  try { parsed = parseImpactPlan(plan); } catch { fail('expected plan is invalid'); }
+  if (parsed.trigger !== 'pull_request' || parsed.forceFull || !Number.isSafeInteger(pullNumber) || pullNumber < 1 || !['main', 'develop'].includes(baseRef) || typeof headRef !== 'string' || !headRef || headRef.length > 255 || [...headRef].some((char) => char.charCodeAt(0) <= 32 || char.charCodeAt(0) === 127)) fail('PR identity is invalid');
+  const deadline = now() + DEADLINE_MS;
+  async function pages(path, separator) {
+    const items = []; const seen = new Set(); let token = null;
+    for (let page = 0; page < MAX_PAGES; page += 1) {
+      const data = await request(path + (token === null ? '' : `${separator}page-token=${encodeURIComponent(token)}`), undefined, fetchImpl, deadline, now);
+      if (!object(data) || !Array.isArray(data.items) || !(data.next_page_token == null || (typeof data.next_page_token === 'string' && data.next_page_token.length > 0 && data.next_page_token.length <= 512))) fail('discovery page is malformed');
+      items.push(...data.items);
+      if (items.length > 200) fail('discovery contains too many entries');
+      if (data.next_page_token == null) return items;
+      if (seen.has(data.next_page_token)) fail('discovery pagination repeated');
+      seen.add(data.next_page_token); token = data.next_page_token;
+    }
+    fail('too many discovery pages');
+  }
+  async function latest() {
+    const pipelines = await pages(`/project/${PROJECT}/pipeline?branch=${encodeURIComponent(headRef)}`, '&');
+    const numbers = new Set(); const ids = new Set();
+    for (const pipeline of pipelines) {
+      if (!object(pipeline) || pipeline.project_slug !== PROJECT || !UUID.test(pipeline.id ?? '') || !Number.isSafeInteger(pipeline.number) || pipeline.number < 1 || numbers.has(pipeline.number) || ids.has(pipeline.id)) fail('pipeline discovery is malformed');
+      numbers.add(pipeline.number); ids.add(pipeline.id);
+    }
+    return pipelines.sort((a, b) => b.number - a.number)[0];
+  }
+  async function workflows(pipelineId) {
+    const entries = await pages(`/pipeline/${pipelineId}/workflow`, '?');
+    if (entries.some((entry) => !object(entry) || !UUID.test(entry.id ?? '') || entry.pipeline_id !== pipelineId || entry.project_slug !== PROJECT || !['portfolio-setup', 'portfolio-validation'].includes(entry.name))) fail('workflow discovery is malformed');
+    const setups = entries.filter((entry) => entry.name === 'portfolio-setup');
+    const validations = entries.filter((entry) => entry.name === 'portfolio-validation');
+    if (setups.length > 1 || validations.length > 1) fail('workflow execution is ambiguous');
+    return { setup: setups[0], validation: validations[0] };
+  }
+  let selected;
+  for (let polls = 0; polls < 121; polls += 1) {
+    const pipeline = await latest();
+    if (pipeline && pipeline.trigger_parameters?.git?.checkout_sha === parsed.headSha) {
+      if (!Array.isArray(pipeline.errors) || pipeline.errors.length) fail('pipeline contains errors');
+      const found = await workflows(pipeline.id);
+      if (found.setup && !['success', 'running', 'not_run', 'queued'].includes(found.setup.status)) fail('setup workflow did not succeed');
+      if (found.validation && !['success', 'running', 'not_run', 'queued'].includes(found.validation.status)) fail('validation workflow did not succeed');
+      if (found.setup?.status === 'success' && found.validation) { selected = { pipeline, ...found }; break; }
+    }
+    if (polls === 120 || now() + POLL_MS >= deadline) fail('latest pipeline did not become available');
+    await sleep(POLL_MS);
+  }
+  let firstJobs;
+  const result = await verifyPullRequestWorkflow({ workflowId: selected.validation.id, plan: parsed, pullNumber, headRef, baseRef, fetchImpl, now, sleep, captureJobs: (value) => { firstJobs = value; } });
+  let finalJobs;
+  await verifyPullRequestWorkflow({ workflowId: selected.validation.id, plan: parsed, pullNumber, headRef, baseRef, fetchImpl, now, sleep, captureJobs: (value) => { finalJobs = value; } });
+  if (!firstJobs || firstJobs !== finalJobs) fail('job execution was superseded');
+  const newest = await latest();
+  if (!newest || newest.id !== selected.pipeline.id || newest.number !== selected.pipeline.number) fail('pipeline was superseded');
+  const confirmed = await workflows(newest.id);
+  if (confirmed.setup?.id !== selected.setup.id || confirmed.setup.status !== 'success' || confirmed.validation?.id !== selected.validation.id || confirmed.validation.status !== 'success') fail('workflow was superseded');
+  return result;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
-    const result = await verifyCircleCI({ ...eventInputs(process.env), token: process.env.CIRCLECI_API_TOKEN });
+    const result = await verifyCircleCI({ workflowId: process.env.CIRCLECI_WORKFLOW_ID, expectedSha: process.env.EXPECTED_SHA, token: process.env.CIRCLECI_API_TOKEN });
     console.log(`CircleCI ${result.accessMode === 'public-api' ? 'public API verification' : 'authenticated API verification'}: workflow ${result.workflowId} succeeded for ${result.sha}; ${result.jobCount} jobs verified. This is additive evidence, not release authorization.`);
   } catch (error) {
     console.error(error instanceof Error && error.message.startsWith('CircleCI verification failed:') ? error.message : 'CircleCI verification failed');

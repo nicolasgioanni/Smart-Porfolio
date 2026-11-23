@@ -15,9 +15,12 @@ describe("provider-neutral impact policy", () => {
     const result = plan(["src/features/research/components/ResearchCard.tsx", "src/features/projects/projects.css"]);
     expect(result.tier).toBe("targeted");
     expect(result.features).toEqual(["projects", "research"]);
-    expect(result.validators).toEqual(["build-export", "chromium-1", "chromium-2", "quality", "security", "unit", "visual"]);
+    expect(result.validators).toEqual(["build-export", "chromium-1", "chromium-2", "cross-browser", "quality", "security", "unit", "visual"]);
     expect(result.chromiumSpecs).toEqual(expect.arrayContaining(["tests/e2e/projects.spec.ts", "tests/e2e/research.spec.ts", "tests/e2e/research-mobile-video.spec.ts", "tests/e2e/navigation.spec.ts", "tests/e2e/progressiveEnhancement.spec.ts", "tests/e2e/skeleton-alignment.spec.ts", "tests/e2e/skeletons.transition.spec.ts"]));
     expect(plan([...new Set(["src/features/projects/projects.css", "src/features/research/components/ResearchCard.tsx"])])).toEqual(result);
+    expect(plan(["src/features/projects/projects.css"]).validators).toContain("cross-browser");
+    expect(plan(["src/features/research/ResearchCard.tsx"]).validators).toContain("cross-browser");
+    expect(plan(["src/features/experience/ExperienceCard.tsx"]).validators).not.toContain("cross-browser");
   });
   it.each(["src/components/overlay/ModalDialog.tsx", "src/app/page.tsx", "src/lib/content/parse.ts", "src/features/research/content/researchVideos.ts", "src/features/contact/components/ContactForm.tsx", "src/features/projects/components/New.test.tsx", "tests/e2e/new.spec.ts", "package-lock.json", ".circleci/config.yml", "infra/main.tf", "public/data.json", "unrecognized.md"])('fails closed for %s', (path) => {
     const result = plan([path]);

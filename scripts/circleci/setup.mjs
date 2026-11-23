@@ -1,13 +1,13 @@
 import { execFileSync } from 'node:child_process';
 import { createImpactPlan } from './impact.mjs';
-import { stringify } from 'yaml';
 
 const git = (...args) => execFileSync('git', args, { encoding: 'utf8', timeout: 30_000 });
 const installNode = `nvm install 22.23.3 && nvm use 22.23.3 && test "$(node -v)" = v22.23.3 && printf 'export PATH="%s:$PATH"\\n' "$(dirname "$(command -v node)")" >> "$BASH_ENV" && npm ci`;
 export function continuationConfig(validators, plan = null) {
   const encodedPlan = Buffer.from(JSON.stringify(plan)).toString('base64');
   const jobs = validators.map((validator) => ({ validate: { name: validator, validator, requires: ['prepare'] } }));
-  return stringify({ version: 2.1, jobs: {
+  // JSON is a YAML subset and also lets the GitHub gate reproduce these bytes with Node alone.
+  return JSON.stringify({ version: 2.1, jobs: {
     prepare: { machine: { image: 'ubuntu-2404:2026.11.1' }, environment: { CIRCLECI_PLAN: encodedPlan }, steps: [
       'checkout', { restore_cache: { keys: ['portfolio-npm-v1-{{ checksum "package-lock.json" }}'] } }, { run: { name: 'Install dependencies', command: installNode } },
       { save_cache: { key: 'portfolio-npm-v1-{{ checksum "package-lock.json" }}', paths: ['~/.npm'] } },
@@ -29,7 +29,7 @@ export function continuationConfig(validators, plan = null) {
       { run: { name: 'Verify selected validation receipts', command: 'node scripts/circleci/run.mjs accept' } },
       { store_artifacts: { path: '.circleci-workspace/summary.json', destination: 'validation-summary.json' } }
     ] }
-  }, workflows: { 'portfolio-validation': { jobs: ['prepare', ...jobs, { acceptance: { requires: validators } }] } } });
+  }, workflows: { 'portfolio-validation': { jobs: ['prepare', ...jobs, { acceptance: { requires: validators } }] } } }, null, 2);
 }
 export async function continuePipeline(key, configuration, fetcher = fetch) {
   if (typeof key !== 'string' || !key.trim()) throw new Error('CircleCI continuation key is missing.');

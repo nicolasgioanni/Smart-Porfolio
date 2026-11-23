@@ -5,7 +5,7 @@ import YAML from 'yaml';
 const workflow = YAML.parse(readFileSync('.github/workflows/circleci-verification.yml', 'utf8'));
 describe('CircleCI evidence workflow', () => {
   it('uses only a manual trigger and read-only GitHub permissions', () => {
-    expect(Object.keys(workflow.on)).toEqual(['status', 'workflow_dispatch']);
+    expect(Object.keys(workflow.on)).toEqual(['workflow_dispatch']);
     expect(workflow.permissions).toEqual({ contents: 'read' });
     expect(workflow.jobs['circleci-completion'].if).toContain("github.repository == 'nicolasgioanni/Smart-Porfolio'");
   });
@@ -17,7 +17,7 @@ describe('CircleCI evidence workflow', () => {
     expect(steps[1].uses).toBe('actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38');
     expect(steps[1].with['node-version']).toBe('22.23.3');
     expect(steps[2].run).toBe('node scripts/circleci/verify.mjs');
-    expect(steps[2].env).toEqual({ STATUS_STATE: '${{ github.event.state }}', STATUS_CONTEXT: '${{ github.event.context }}', STATUS_TARGET_URL: '${{ github.event.target_url }}', STATUS_SHA: '${{ github.event.sha }}', CIRCLECI_WORKFLOW_ID: '${{ inputs.workflow_id }}', EXPECTED_SHA: '${{ inputs.expected_sha }}', CIRCLECI_API_TOKEN: '${{ secrets.CIRCLECI_API_TOKEN }}' });
+    expect(steps[2].env).toEqual({ CIRCLECI_WORKFLOW_ID: '${{ inputs.workflow_id }}', EXPECTED_SHA: '${{ inputs.expected_sha }}', CIRCLECI_API_TOKEN: '${{ secrets.CIRCLECI_API_TOKEN }}' });
     expect(JSON.stringify(steps.slice(0, 2))).not.toContain('CIRCLECI_API_TOKEN');
   });
 });

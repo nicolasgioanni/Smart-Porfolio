@@ -54,10 +54,13 @@ export function createImpactPlan({ changedPaths, baseSha, headSha, forceFull = f
   if (tier === "docs") reasons.add("Only allowlisted documentation changed; quality and source security checks remain required");
   const specs = new Set(COMMON_SPECS);
   for (const feature of features) for (const spec of FEATURE_SPECS[feature]) specs.add(spec);
+  const targetedValidators = [...TARGETED_VALIDATORS];
+  if (features.has('projects') || features.has('research')) targetedValidators.push('cross-browser');
+  targetedValidators.sort();
   return {
     schemaVersion: 1, policyVersion: 1, tier, baseSha, headSha, changedPaths: paths, trigger, forceFull,
     features: [...features].sort(),
-    validators: tier === "full" ? [...ALL_VALIDATORS] : tier === "docs" ? ["quality", "security"] : [...TARGETED_VALIDATORS],
+    validators: tier === "full" ? [...ALL_VALIDATORS] : tier === "docs" ? ["quality", "security"] : targetedValidators,
     chromiumSpecs: tier === "full" ? ["*"] : tier === "docs" ? [] : [...specs].map((spec) => `tests/e2e/${spec}`).sort(),
     reasons: [...reasons].sort(),
   };

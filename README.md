@@ -295,7 +295,7 @@ Deployment credentials and immutable Cloudflare target variables are documented 
 
 Use `verify:priority` for routine pull-request work after installing Chromium. Use `verify:full` for a release candidate on Ubuntu 24.04; it includes the complete Playwright suite and Linux-only zero-difference skeleton visual comparison. The compatibility `verify` command does not install or launch a browser.
 
-Pull requests generate from checked-in templates without deployment credentials, then run the priority verification path and static build. Deployable branch candidates use one strict remote snapshot and the full verification path. Artifact checks and live smoke tests run as deployment-specific stages.
+Pull requests generate from checked-in templates. Eligible changes run selected tests on CircleCI. GitHub checks the provider evidence, source security, sealed build and export. Other PRs run the full native suite. [CircleCI selection rules](docs/quality/CIRCLECI.md) Deployable branch candidates use one strict remote snapshot and the full verification path. Artifact checks and live smoke tests run as deployment-specific stages.
 
 See [Testing](docs/quality/TESTING.md), [Quality checklist](docs/quality/QUALITY_CHECKLIST.md), and [Performance checklist](docs/quality/PERFORMANCE_CHECKLIST.md).
 
