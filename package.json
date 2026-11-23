@@ -97,7 +97,7 @@
     "exceljs": "4.4.0",
     "globals": "^15.14.0",
     "jsdom": "^25.0.1",
-    "jszip": "3.10.1",
+    "jszip": "3.10.2",
     "miniflare": "5.20261110.1-beta",
     "parse5": "7.3.0",
     "saxes": "6.0.0",
