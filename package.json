@@ -75,10 +75,10 @@
     "route:agent": "node scripts/routeAgentWork.mjs"
   },
   "dependencies": {
-    "csv-parse": "^7.0.2",
+    "csv-parse": "^7.0.3",
     "next": "^16.4.6",
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
     "simple-icons": "^16.28.0"
   },
   "devDependencies": {
@@ -86,9 +86,9 @@
     "@eslint/js": "^9.18.0",
     "@next/eslint-plugin-next": "^16.4.6",
     "@playwright/test": "^1.62.1",
-    "@testing-library/dom": "10.4.1",
+    "@testing-library/dom": "10.4.2",
     "@testing-library/jest-dom": "^6.6.3",
-    "@testing-library/react": "^16.1.0",
+    "@testing-library/react": "^16.3.3",
     "@types/node": "^22.10.7",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
@@ -97,7 +97,7 @@
     "exceljs": "4.4.0",
     "globals": "^15.14.0",
     "jsdom": "^25.0.1",
-    "jszip": "3.10.1",
+    "jszip": "3.10.2",
     "miniflare": "5.20261110.1-beta",
     "parse5": "7.3.0",
     "saxes": "6.0.0",
