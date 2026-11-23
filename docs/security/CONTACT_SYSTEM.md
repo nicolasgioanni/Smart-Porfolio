@@ -301,6 +301,8 @@ Any network failure, timeout, redirect, or non-success provider response becomes
 | Accepted verification or delivery | `200` | none; body is `{"ok":true}` |
 | Honeypot or implausibly fast delivery request | `200` | none; body is `{"ok":true}` without provider delivery |
 
+After method validation, an invalid origin allowlist returns `503`. With a valid allowlist, an unauthorized origin or request host returns `403` before provider configuration is checked; an allowed origin still requires valid endpoint configuration.
+
 Every Function response sets:
 
 - `Cache-Control: no-store, max-age=0`;

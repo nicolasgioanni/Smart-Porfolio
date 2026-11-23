@@ -885,7 +885,7 @@ function validApplicationHostnameLabel(label) {
   const wildcardCount = [...label].filter((character) => character === "*").length;
   if (wildcardCount > 1) return false;
   if (wildcardCount === 0) return hostnameLabelPattern.test(label);
-  const literal = label.replace("*", "");
+  const literal = label.replaceAll("*", "");
   return literal === "" || /^[a-z0-9-]+$/.test(literal);
 }
 

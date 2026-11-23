@@ -22,6 +22,10 @@ export function hasRequiredDeliveryConfiguration(env: ContactEnv): boolean {
   );
 }
 
+export function hasValidContactOrigins(configuredOrigins?: string): boolean {
+  return parseOrigins(configuredOrigins).length > 0;
+}
+
 export function isAllowedOrigin(request: Request, configuredOrigins?: string): boolean {
   const rawOrigin = request.headers.get("Origin");
   if (!rawOrigin || rawOrigin === "null") return false;
