@@ -388,7 +388,7 @@ describe("private preview checker transports", () => {
   it("keeps provider, service-token, and anonymous headers isolated and rejects redirects", async () => {
     const config = await configuration();
     const fetchMock = vi.fn(async (url, options) => {
-      if (String(url).startsWith("https://api.cloudflare.com")) return cloudflare({ ok: true });
+      if (new URL(url).origin === "https://api.cloudflare.com") return cloudflare({ ok: true });
       if (options.headers["CF-Access-Client-Id"]) {
         return new Response("", { status: 302, headers: { location: "https://elsewhere.example.test/" } });
       }

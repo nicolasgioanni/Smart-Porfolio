@@ -364,6 +364,27 @@ describe("Cloudflare contact function security boundary", () => {
     }
   });
 
+  it("rejects identity-only host POSTs before unavailable provider configuration", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const identityHost = "https://deployment.smart-portfolio-bds.pages.dev";
+    for (const origin of [identityHost, "https://nicolasmgioanni.dev"]) {
+      const request = new Request(`${identityHost}/api/contact`, {
+        method: "POST", headers: { Origin: origin, "Content-Type": "application/json" }, body: ""
+      });
+      const response = await invoke(request, { ...env, TURNSTILE_SECRET_KEY: "" });
+      expect(response.status).toBe(403);
+      expect(await response.json()).toEqual({ ok: false, error: "request_rejected" });
+      expect(response.headers.get("Cache-Control")).toContain("no-store");
+    }
+    const invalidAllowlist = await invoke(new Request(`${identityHost}/api/contact`, {
+      method: "POST", headers: { Origin: identityHost }, body: ""
+    }), { ...env, CONTACT_ALLOWED_ORIGINS: "https://valid.example,not an origin", TURNSTILE_SECRET_KEY: "" });
+    expect(invalidAllowlist.status).toBe(503);
+    expect(await invalidAllowlist.json()).toEqual({ ok: false, error: "service_unavailable" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("admits only configured request URL origins regardless of forwarded host headers", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);

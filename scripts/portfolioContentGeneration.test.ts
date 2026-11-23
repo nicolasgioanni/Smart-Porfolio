@@ -870,6 +870,22 @@ describe("XLSX workbook structure and cells", () => {
     }
   });
 
+  it("parses sparse styled worksheets within the parser deadline while retaining trailing-cell validation", async () => {
+    const bytes = await createWorkbookBytes({ mutate: (workbook) => {
+      const profile = getWorksheet(workbook, "profile");
+      for (let row = 100; row <= 4000; row += 1) {
+        profile.getCell(row, 40).font = { bold: true };
+      }
+    } });
+    const sheets = await parsePortfolioWorkbook(bytes);
+    expect(sheets.profile.some((row) => row.key === "full_name" && Boolean(row.value))).toBe(true);
+
+    const invalid = await createWorkbookBytes({ mutate: (workbook) => {
+      getWorksheet(workbook, "profile").getCell(4000, 40).value = "unexpected trailing content";
+    } });
+    await expect(parsePortfolioWorkbook(invalid)).rejects.toThrow(/malformed row structure/);
+  }, 30_000);
+
   it("preserves content from workbooks with ignored presentation rules", async () => {
     const bytes = await createWorkbookBytes({ mutate: (workbook) => {
       getWorksheet(workbook, "profile").addConditionalFormatting({

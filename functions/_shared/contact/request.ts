@@ -1,4 +1,4 @@
-import { isAllowedOrigin } from "./config";
+import { hasValidContactOrigins, isAllowedOrigin } from "./config";
 import { MAX_REQUEST_BYTES, type ContactEnv, type ReadBodyResult } from "./contracts";
 import { awaitWithDeadlines, cancelBodyReader, createDeadline, type Deadline } from "./transport";
 
@@ -88,12 +88,16 @@ export async function readContactApiRequest(
     };
   }
 
-  if (!isConfigurationValid()) {
+  if (!hasValidContactOrigins(env.CONTACT_ALLOWED_ORIGINS)) {
     return { kind: "rejected", response: jsonResponse(503, { ok: false, error: "service_unavailable" }) };
   }
 
   if (!isAllowedOrigin(request, env.CONTACT_ALLOWED_ORIGINS)) {
     return { kind: "rejected", response: jsonResponse(403, { ok: false, error: "request_rejected" }) };
+  }
+
+  if (!isConfigurationValid()) {
+    return { kind: "rejected", response: jsonResponse(503, { ok: false, error: "service_unavailable" }) };
   }
 
   const mediaType = request.headers.get("Content-Type")?.split(";", 1)[0]?.trim().toLowerCase();

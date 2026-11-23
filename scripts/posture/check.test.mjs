@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { chmod, mkdtemp, mkdir, readFile, realpath, rm, stat, symlink } from "node:fs/promises";
+import { chmod, mkdtemp, mkdir, open, realpath, rm, symlink } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { assessClassic, assessRepository, assessRuleset, request, runChecks, writeEvidence } from "./check.mjs";
@@ -79,8 +79,11 @@ describe("bounded posture observations", () => {
       await chmod(root, 0o700);
       const output = path.join(root, "evidence.json");
       await writeEvidence(output, { evidence: ["private"] });
-      expect((await stat(output)).mode & 0o777).toBe(0o600);
-      expect(await readFile(output, "utf8")).toContain("private");
+      const file = await open(output, "r");
+      try {
+        expect((await file.stat()).mode & 0o777).toBe(0o600);
+        expect(await file.readFile("utf8")).toContain("private");
+      } finally { await file.close(); }
       await expect(writeEvidence(output, {})).rejects.toThrow();
       await mkdir(path.join(root, ".git"));
       await expect(writeEvidence(path.join(root, "inside.json"), {})).rejects.toThrow();
