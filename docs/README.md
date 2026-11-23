@@ -65,7 +65,7 @@ This is an npm repository: `package.json`, `package-lock.json`, and `.nvmrc` are
 | [Local development](development/LOCAL_DEVELOPMENT.md) | Supported Node.js version, setup commands, development servers, local content, and Pages Function testing. |
 | [Agent workflow](development/AGENT_WORKFLOW.md) | Portable repository-local guidance, focused skills, durable decisions, and model routing. |
 | [Testing](quality/TESTING.md) | Test layers, focused commands, Playwright navigation, recommendation, and footer coverage, the full quality gate, CI behavior, and test-extension guidance. |
-| [CircleCI validation](quality/CIRCLECI.md) | Additional change-aware test execution, result verification, credential setup, and the separate production release boundary. |
+| [CircleCI validation](quality/CIRCLECI.md) | Additional change-aware test execution, public or authenticated result verification, and the separate production release boundary. |
 | [Engineering standards](development/ENGINEERING_STANDARDS.md) | Concise architecture, component, styling, test, and dependency rules. |
 | [Quality checklist](quality/QUALITY_CHECKLIST.md) | General pre-merge verification checklist. |
 | [Repository reachability audit](quality/UNUSED_CODE_AUDIT.md) | Evidence, retention decisions, and the removal standard for unused-code reviews. |

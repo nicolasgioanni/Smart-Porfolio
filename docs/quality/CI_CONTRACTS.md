@@ -4,7 +4,7 @@ The contracts under `scripts/ci/` are the validation boundary used by `.github/w
 
 ## Workflow composition
 
-An additional [CircleCI pipeline](CIRCLECI.md) selects template-based validation by change impact and can report authenticated completion through `circleci-verification.yml`. It does not replace any native required job, producer receipt, or deployment authorization described below. GitHub Actions retains its complete release gate.
+An additional [CircleCI pipeline](CIRCLECI.md) selects template-based validation by change impact and can verify public or authenticated API completion through `circleci-verification.yml`. It does not replace any native required job, producer receipt, or deployment authorization described below. GitHub Actions retains its complete release gate.
 
 `resolve-candidate` admits only the supported event/ref/workflow combinations before checkout. `prepare-content` creates one plan and, except for obsolete candidates, one snapshot artifact; a full plan also carries browser discovery. Full plans fan out to `quality`, `unit-integration`, two Chromium functional shards, `visual-regression`, `cross-browser`, `build-and-package`, and `export-check`. `build-and-package` emits its ordinary release receipt and a distinct built-output Gitleaks receipt for the same sealed manifest before the release artifact uploads. `security-tools`, `security-scans`, `codeql`, and `infrastructure` fan out from candidate resolution for every plan, while `dependency-review` applies to pull requests.
 

@@ -104,3 +104,13 @@ test('template build always uses local public fixture and excludes host provider
   assert.equal(hostile.NEXT_PUBLIC_TURNSTILE_PREVIEW_SITE_KEY, undefined);
   assert.equal(hostile.TURNSTILE_SECRET_KEY, undefined);
 });
+
+test('security scanner receives a private temp root without GitHub Actions environment', async () => {
+  const { securityScannerArguments } = await import('./run.mjs');
+  const { parseSecurityScansCli } = await import('../security/securityScans.mjs');
+  const args = securityScannerArguments('/tmp/portfolio-tools', '/tmp/portfolio-private-scans');
+  const parsed = parseSecurityScansCli(args.slice(1), {});
+  assert.equal(parsed.tempRoot, '/tmp/portfolio-private-scans');
+  assert.equal(parsed.gitleaksMode, 'git');
+  assert.equal(parsed.zizmor, '/tmp/portfolio-tools/zizmor/zizmor');
+});

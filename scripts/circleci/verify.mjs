@@ -13,6 +13,7 @@ const REQUEST_MS = 15_000;
 const DEADLINE_MS = 20 * 60_000;
 const POLL_MS = 10_000;
 const STATUS_URL = /^https:\/\/app\.circleci\.com\/pipelines\/circleci\/KQ3AcKmoBm6ME2ewoJjyBd\/D2FVgecxDxnu3fC6LxpR1h\/[1-9][0-9]{0,15}\/workflows\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\/jobs\/[1-9][0-9]{0,15}$/;
+const STATUS_WORKFLOW_URL = /^https:\/\/app\.circleci\.com\/workflow\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\/job\/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 const fail = (reason) => { throw new Error(`CircleCI verification failed: ${reason}`); };
 const object = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 
@@ -28,7 +29,7 @@ export function eventInputs(env) {
   if (env.GITHUB_EVENT_NAME === 'workflow_dispatch') return { workflowId: env.CIRCLECI_WORKFLOW_ID, expectedSha: env.EXPECTED_SHA };
   if (env.GITHUB_EVENT_NAME === 'status') {
     if (env.STATUS_STATE !== 'success' || env.STATUS_CONTEXT !== 'ci/circleci: acceptance' || typeof env.STATUS_TARGET_URL !== 'string' || env.STATUS_TARGET_URL.length > 512) fail('status event is invalid');
-    const match = STATUS_URL.exec(env.STATUS_TARGET_URL);
+    const match = STATUS_URL.exec(env.STATUS_TARGET_URL) ?? STATUS_WORKFLOW_URL.exec(env.STATUS_TARGET_URL);
     if (!match) fail('status target URL is invalid');
     return { workflowId: match[1], expectedSha: env.STATUS_SHA };
   }
@@ -41,7 +42,7 @@ async function request(path, token, fetchImpl, deadline, now) {
   let response;
   try {
     response = await fetchImpl(`${API}${path}`, {
-      headers: { 'Circle-Token': token, Accept: 'application/json' },
+      headers: { Accept: 'application/json', ...(token ? { 'Circle-Token': token } : {}) },
       redirect: 'error', signal: AbortSignal.timeout(Math.min(REQUEST_MS, remaining)),
     });
     if (!response.ok || response.redirected) fail('API returned an unsuccessful response');
@@ -66,7 +67,7 @@ async function request(path, token, fetchImpl, deadline, now) {
 
 export async function verifyCircleCI({ workflowId, expectedSha, token, fetchImpl = fetch, now = Date.now, sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)) }) {
   if (!UUID.test(workflowId ?? '') || !SHA.test(expectedSha ?? '')) fail('workflow ID or expected SHA is invalid');
-  if (typeof token !== 'string' || !token.trim()) fail('CIRCLECI_API_TOKEN is required');
+  if (token !== undefined && (typeof token !== 'string' || (token !== '' && !token.trim()))) fail('CIRCLECI_API_TOKEN is invalid');
   const deadline = now() + DEADLINE_MS;
   let workflow;
   for (let polls = 0; polls < 121; polls += 1) {
@@ -78,12 +79,31 @@ export async function verifyCircleCI({ workflowId, expectedSha, token, fetchImpl
     await sleep(POLL_MS);
   }
   const pipeline = await request(`/pipeline/${workflow.pipeline_id}`, token, fetchImpl, deadline, now);
-  if (!object(pipeline) || pipeline.id !== workflow.pipeline_id || pipeline.project_slug !== PROJECT || !object(pipeline.vcs) || pipeline.vcs.revision !== expectedSha || !Array.isArray(pipeline.errors) || pipeline.errors.length !== 0) fail('pipeline identity or errors are invalid');
+  if (!object(pipeline) || pipeline.id !== workflow.pipeline_id || pipeline.project_slug !== PROJECT || !Array.isArray(pipeline.errors) || pipeline.errors.length !== 0) fail('pipeline identity or errors are invalid');
   for (const field of ['pipeline_definition_id', 'definition_id']) {
     if (field in pipeline && pipeline[field] !== DEFINITION) fail('pipeline definition is invalid');
   }
-  const urls = ['target_repository_url', 'origin_repository_url'].filter((field) => field in pipeline.vcs).map((field) => pipeline.vcs[field]);
-  if (!urls.length || urls.some((url) => !validRepository(url))) fail('pipeline repository is invalid');
+  let identityPresent = false;
+  if ('vcs' in pipeline) {
+    identityPresent = true;
+    if (!object(pipeline.vcs) || pipeline.vcs.revision !== expectedSha) fail('pipeline revision is invalid');
+    const urls = ['target_repository_url', 'origin_repository_url'].filter((field) => field in pipeline.vcs).map((field) => pipeline.vcs[field]);
+    if (!urls.length || urls.some((url) => !validRepository(url))) fail('pipeline repository is invalid');
+  }
+  const parameters = pipeline.trigger_parameters;
+  if (parameters !== undefined && !object(parameters)) fail('pipeline trigger parameters are invalid');
+  const hasGit = object(parameters) && 'git' in parameters;
+  const hasApp = object(parameters) && 'github_app' in parameters;
+  if (hasGit || hasApp) {
+    if (!object(parameters.circleci) || parameters.circleci.trigger_type !== 'github_app') fail('pipeline trigger is invalid');
+    if (hasGit && (!object(parameters.git) || parameters.git.checkout_sha !== expectedSha || !validRepository(parameters.git.repo_url))) fail('GitHub App checkout identity is invalid');
+    if (hasApp) {
+      const app = parameters.github_app;
+      if (!object(app) || app.commit_sha !== expectedSha || !validRepository(app.repo_url) || app.repo_full_name !== 'nicolasgioanni/Smart-Porfolio') fail('GitHub App event identity is invalid');
+      if ('pull_request_head_sha' in app && app.pull_request_head_sha !== expectedSha) fail('GitHub App revision is invalid');
+    }
+  }
+  if (!identityPresent && !(hasGit && hasApp)) fail('pipeline checkout identity is missing');
   const jobs = []; const seenPages = new Set(); let pageToken = null;
   for (let page = 0; page < MAX_PAGES; page += 1) {
     const query = pageToken === null ? '' : `?page-token=${encodeURIComponent(pageToken)}`;
@@ -117,13 +137,13 @@ export async function verifyCircleCI({ workflowId, expectedSha, token, fetchImpl
   }
   visit(byName.get('acceptance').id);
   if (visited.size !== jobs.length) fail('acceptance does not depend on every job');
-  return { workflowId, sha: expectedSha, jobCount: jobs.length };
+  return { workflowId, sha: expectedSha, jobCount: jobs.length, accessMode: token ? 'authenticated-api' : 'public-api' };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
     const result = await verifyCircleCI({ ...eventInputs(process.env), token: process.env.CIRCLECI_API_TOKEN });
-    console.log(`CircleCI workflow ${result.workflowId} succeeded for ${result.sha}; ${result.jobCount} jobs verified. This is additive evidence, not release authorization.`);
+    console.log(`CircleCI ${result.accessMode === 'public-api' ? 'public API verification' : 'authenticated API verification'}: workflow ${result.workflowId} succeeded for ${result.sha}; ${result.jobCount} jobs verified. This is additive evidence, not release authorization.`);
   } catch (error) {
     console.error(error instanceof Error && error.message.startsWith('CircleCI verification failed:') ? error.message : 'CircleCI verification failed');
     process.exitCode = 1;

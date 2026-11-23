@@ -1,7 +1,8 @@
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdir, readFile, writeFile, copyFile, readdir } from 'node:fs/promises';
+import { mkdir, readFile, writeFile, copyFile, readdir, mkdtemp, rm } from 'node:fs/promises';
 import path from 'node:path';
+import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { parseImpactPlan } from './impact.mjs';
 import { parseBrowserReport } from '../ci/browserDiscovery.mjs';
@@ -28,6 +29,7 @@ const browserArgs = (validator, plan) => {
   throw new Error('Unknown browser validator.');
 };
 const isBrowser = (name) => ['chromium-1', 'chromium-2', 'visual', 'cross-browser'].includes(name);
+export const securityScannerArguments = (toolRoot, tempRoot) => ['scripts/security/securityScans.mjs', '--gitleaks', path.join(toolRoot, 'gitleaks/gitleaks'), '--gitleaks-mode', 'git', '--target', '.', '--zizmor', path.join(toolRoot, 'zizmor/zizmor'), '--temp-root', tempRoot];
 function browserCommand(validator, plan, mode, output) {
   const { selection, args } = browserArgs(validator, plan);
   run(process.execPath, ['node_modules/playwright/cli.js', 'test', '--config=playwright.ci.config.ts', ...args,
@@ -140,7 +142,12 @@ async function validate() {
       for (const tool of ['actionlint', 'gitleaks', 'zizmor']) install(tool);
       try { run(path.join(toolRoot, 'actionlint/actionlint'), ['-shellcheck', '', '-pyflakes', ''], { stdio: 'ignore' }); }
       catch { throw new Error('GitHub Actions syntax validation failed.'); }
-      run(process.execPath, ['scripts/security/securityScans.mjs', '--gitleaks', path.join(toolRoot, 'gitleaks/gitleaks'), '--gitleaks-mode', 'git', '--target', '.', '--zizmor', path.join(toolRoot, 'zizmor/zizmor')], { env: cleanEnv() });
+      const scannerRoot = await mkdtemp(path.join(os.tmpdir(), 'portfolio-circleci-scans-'));
+      try {
+        run(process.execPath, securityScannerArguments(toolRoot, scannerRoot), { env: cleanEnv() });
+      } finally {
+        await rm(scannerRoot, { recursive: true, force: true });
+      }
       if (plan.tier === 'full') npm('audit:check');
     } else {
       for (const tool of ['terraform', 'opa']) install(tool);

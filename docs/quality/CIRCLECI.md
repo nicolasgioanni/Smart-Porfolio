@@ -47,19 +47,20 @@ The starting trigger covers PR creation/updates, default-branch pushes, and tags
 
 First validate a complete run and its actual resource usage. Then exercise a known feature-only PR and compare the recorded selection with a full run. The initial CI configuration change itself selects full coverage. A smaller PR selection does not authorize a production release.
 
-## Authenticated GitHub Actions verification
+## GitHub Actions completion verification
 
-`.github/workflows/circleci-verification.yml` checks CircleCI completion using its authenticated API. It executes verifier code from the repository's trusted default branch, never from the PR being tested. Inputs are data passed through environment variables, not interpolated shell commands.
+`.github/workflows/circleci-verification.yml` checks CircleCI completion using its fixed HTTPS API. It executes verifier code from the repository's trusted default branch, never from the PR being tested. Inputs are data passed through environment variables, not interpolated shell commands.
 
-The verifier binds the exact CircleCI workflow to its project, pipeline, repository URL, and expected Git commit. It requires the `portfolio-validation` workflow, successful validator jobs, and an `acceptance` job depending on the complete job graph. Missing jobs, skipped or approval jobs, malformed pages, stale revisions, redirects, API failures, and timeouts fail verification. This result reports authenticated completion only; it does not replace release provenance or independently prove every test's implementation.
+The verifier binds the exact CircleCI workflow to its project, pipeline, repository URL, and expected checkout commit. It validates complete GitHub App or legacy VCS metadata and rejects contradictory identities. It requires the `portfolio-validation` workflow, successful validator jobs, and an `acceptance` job depending on the complete job graph. Missing jobs, skipped or approval jobs, malformed pages, stale revisions, redirects, API failures, and timeouts fail verification. This result does not replace release provenance or independently prove every test's implementation.
+
+This public project's workflow, pipeline, and job metadata were readable without an API credential during setup. The default path therefore reports **public API verification** and sends no credential header. An optional `CIRCLECI_API_TOKEN` repository secret enables **authenticated API verification**. An unsuccessful authenticated request fails; it is never retried anonymously.
 
 Activation requires these operator steps after the verifier is available on the trusted default branch:
 
-1. Create a CircleCI API credential authorized to read this project's pipeline, workflow, and job metadata. Prefer a dedicated identity with the narrowest available access. CircleCI API v2 personal tokens may carry broader account permissions, so review the actual token scope before granting it.
-2. Save the credential as the GitHub Actions repository secret `CIRCLECI_API_TOKEN`. Do not place it in source, CircleCI job variables, a PR, or a chat message. Token creation and transfer require the account owner's explicit approval.
-3. Confirm CircleCI's VCS status updates are enabled. A successful `ci/circleci: acceptance` status starts automatic verification. Its target URL must identify this project's exact workflow; a lookalike status alone is not trusted evidence.
-4. Alternatively, run **CircleCI completion evidence** manually on `main` or `develop`, supplying the workflow UUID and the exact expected 40-character commit SHA.
-5. Confirm a real authenticated positive result and rejection of a mismatched SHA before treating the bridge as operational.
+1. Confirm CircleCI's VCS status updates are enabled. A successful `ci/circleci: acceptance` status starts automatic verification. Its target URL must identify a recognized CircleCI workflow/job URL; API identity checks establish the project and commit. A lookalike status alone is not trusted evidence.
+2. Alternatively, run **CircleCI completion evidence** manually on `main` or `develop`, supplying the workflow UUID and the exact expected 40-character commit SHA.
+3. Confirm a real successful result and rejection of a mismatched SHA before treating the bridge as operational.
+4. Only if caller-authenticated access is required, obtain account-owner approval before creating a CircleCI API credential and saving it directly as GitHub secret `CIRCLECI_API_TOKEN`. Review its actual scope: API v2 personal tokens may carry broad account access. Do not put it in source, CircleCI job variables, a PR, or chat.
 
 A GitHub account billing lock also prevents this lightweight workflow from running. CircleCI can still execute its independent checks, but no local fixture or CircleCI success establishes that the GitHub bridge ran. Existing branch protections remain in force.
 

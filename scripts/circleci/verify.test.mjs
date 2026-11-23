@@ -9,6 +9,7 @@ const token = 'secret-token-never-print';
 const workflow = () => ({ id: workflowId, pipeline_id: pipelineId, name: 'portfolio-validation', status: 'success', project_slug: project });
 const pipeline = () => ({ id: pipelineId, project_slug: project, vcs: { revision: sha, origin_repository_url: 'https://github.com/nicolasgioanni/Smart-Porfolio' }, errors: [] });
 const id = (n) => `${String(n).repeat(8)}-${String(n).repeat(4)}-4${String(n).repeat(3)}-8${String(n).repeat(3)}-${String(n).repeat(12)}`;
+const appPipeline = () => ({ id: pipelineId, project_slug: project, errors: [], trigger_parameters: { circleci: { trigger_type: 'github_app', event_type: 'pull_request' }, github_app: { repo_url: 'https://github.com/nicolasgioanni/Smart-Porfolio', repo_full_name: 'nicolasgioanni/Smart-Porfolio', commit_sha: sha, pull_request_head_sha: sha }, git: { repo_url: 'https://github.com/nicolasgioanni/Smart-Porfolio', checkout_sha: sha } } });
 const jobs = () => [
   { id: id(1), name: 'prepare', type: 'build', status: 'success', dependencies: [] },
   { id: id(2), name: 'quality', type: 'build', status: 'success', dependencies: [id(1)] },
@@ -27,7 +28,7 @@ function setup({ w = workflow(), p = pipeline(), pages = [{ items: jobs(), next_
 describe('authenticated CircleCI completion', () => {
   it('binds the successful workflow, pipeline, and job graph', async () => {
     const { fetchImpl, run } = setup();
-    expect(await run()).toEqual({ workflowId, sha, jobCount: 4 });
+    expect(await run()).toEqual({ workflowId, sha, jobCount: 4, accessMode: 'authenticated-api' });
     expect(fetchImpl).toHaveBeenCalledTimes(3);
     for (const [url, options] of fetchImpl.mock.calls) {
       expect(url.startsWith('https://circleci.com/api/v2/')).toBe(true);
@@ -35,12 +36,26 @@ describe('authenticated CircleCI completion', () => {
       expect(options.headers['Circle-Token']).toBe(token);
     }
   });
+  it('accepts the observed GitHub App checkout identity', async () => {
+    expect((await setup({ p: appPipeline() }).run()).sha).toBe(sha);
+    expect((await setup({ p: { ...pipeline(), trigger_parameters: appPipeline().trigger_parameters } }).run()).sha).toBe(sha);
+  });
   it('follows bounded page tokens without trusting URLs', async () => {
     const { run, fetchImpl } = setup({ pages: [{ items: jobs().slice(0, 2), next_page_token: 'x&other=1' }, { items: jobs().slice(2), next_page_token: null }] });
     expect((await run()).jobCount).toBe(4);
     expect(fetchImpl.mock.calls[3][0]).toContain('?page-token=x%26other%3D1');
   });
   it.each([
+    ['missing app checkout', { p: { ...appPipeline(), trigger_parameters: { ...appPipeline().trigger_parameters, git: {} } } }],
+    ['wrong app checkout SHA', { p: { ...appPipeline(), trigger_parameters: { ...appPipeline().trigger_parameters, git: { ...appPipeline().trigger_parameters.git, checkout_sha: 'b'.repeat(40) } } } }],
+    ['partial app event', { p: { ...appPipeline(), trigger_parameters: { ...appPipeline().trigger_parameters, github_app: { commit_sha: sha } } } }],
+    ['app without checkout', { p: { ...appPipeline(), trigger_parameters: { circleci: { trigger_type: 'github_app' }, github_app: appPipeline().trigger_parameters.github_app } } }],
+    ['checkout without app', { p: { ...appPipeline(), trigger_parameters: { circleci: { trigger_type: 'github_app' }, git: appPipeline().trigger_parameters.git } } }],
+    ['wrong app commit SHA', { p: { ...appPipeline(), trigger_parameters: { ...appPipeline().trigger_parameters, github_app: { ...appPipeline().trigger_parameters.github_app, commit_sha: 'b'.repeat(40) } } } }],
+    ['wrong app repository', { p: { ...appPipeline(), trigger_parameters: { ...appPipeline().trigger_parameters, github_app: { ...appPipeline().trigger_parameters.github_app, repo_url: 'https://evil.test/repo' } } } }],
+    ['wrong git repository', { p: { ...appPipeline(), trigger_parameters: { ...appPipeline().trigger_parameters, git: { ...appPipeline().trigger_parameters.git, repo_url: 'https://evil.test/repo' } } } }],
+    ['contradictory representations', { p: { ...pipeline(), trigger_parameters: { ...appPipeline().trigger_parameters, git: { ...appPipeline().trigger_parameters.git, checkout_sha: 'b'.repeat(40) } } } }],
+    ['missing identity', { p: { id: pipelineId, project_slug: project, errors: [] } }],
     ['stale SHA', { p: { ...pipeline(), vcs: { ...pipeline().vcs, revision: 'b'.repeat(40) } } }],
     ['wrong workflow project', { w: { ...workflow(), project_slug: 'other' } }],
     ['wrong pipeline project', { p: { ...pipeline(), project_slug: 'other' } }],
@@ -68,11 +83,28 @@ describe('authenticated CircleCI completion', () => {
     ['unreachable job', { pages: [{ items: jobs().map((job) => job.name === 'acceptance' ? { ...job, dependencies: [id(2)] } : job), next_page_token: null }] }],
     ['dangling edge', { pages: [{ items: jobs().map((job) => job.name === 'prepare' ? { ...job, dependencies: [id(9)] } : job), next_page_token: null }] }],
   ])('rejects %s', async (_name, options) => { await expect(setup(options).run()).rejects.toThrow('CircleCI verification failed'); });
-  it('rejects missing credentials and invalid inputs before requests', async () => {
+  it('supports public API access without sending an authentication header', async () => {
+    for (const optionalToken of ['', undefined]) {
+      const { fetchImpl } = setup();
+      const result = await verifyCircleCI({ workflowId, expectedSha: sha, token: optionalToken, fetchImpl });
+      expect(result.accessMode).toBe('public-api');
+      for (const [url, options] of fetchImpl.mock.calls) {
+        expect(url.startsWith('https://circleci.com/api/v2/')).toBe(true);
+        expect(options.headers).not.toHaveProperty('Circle-Token');
+      }
+    }
+  });
+  it('rejects invalid credentials and inputs before requests', async () => {
     const fetchImpl = vi.fn();
-    await expect(verifyCircleCI({ workflowId, expectedSha: sha, token: '', fetchImpl })).rejects.toThrow('CIRCLECI_API_TOKEN');
+    for (const invalidToken of ['   ', 42, null]) await expect(verifyCircleCI({ workflowId, expectedSha: sha, token: invalidToken, fetchImpl })).rejects.toThrow('CIRCLECI_API_TOKEN');
     await expect(verifyCircleCI({ workflowId: '../../evil', expectedSha: sha, token, fetchImpl })).rejects.toThrow();
     expect(fetchImpl).not.toHaveBeenCalled();
+  });
+  it('does not retry failed authentication without the token', async () => {
+    const fetchImpl = vi.fn(async () => new Response('', { status: 403 }));
+    await expect(verifyCircleCI({ workflowId, expectedSha: sha, token, fetchImpl })).rejects.toThrow();
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(fetchImpl.mock.calls[0][1].headers['Circle-Token']).toBe(token);
   });
   it('rejects HTTP errors, redirects, malformed responses, and redacts transport errors', async () => {
     for (const fetchImpl of [
@@ -91,17 +123,23 @@ describe('authenticated CircleCI completion', () => {
   });
 });
 
+const currentStatusUrl = `https://app.circleci.com/workflow/${workflowId}/job/22222222-2222-4222-8222-222222222222`;
 const statusUrl = `https://app.circleci.com/pipelines/circleci/KQ3AcKmoBm6ME2ewoJjyBd/D2FVgecxDxnu3fC6LxpR1h/123/workflows/${workflowId}/jobs/456`;
 describe('status event inputs', () => {
   const env = { GITHUB_EVENT_NAME: 'status', STATUS_STATE: 'success', STATUS_CONTEXT: 'ci/circleci: acceptance', STATUS_SHA: sha, STATUS_TARGET_URL: statusUrl };
   it('extracts only a strictly shaped CircleCI workflow URL', () => {
     expect(eventInputs(env)).toEqual({ workflowId, expectedSha: sha });
+    expect(eventInputs({ ...env, STATUS_TARGET_URL: currentStatusUrl })).toEqual({ workflowId, expectedSha: sha });
     expect(eventInputs({ GITHUB_EVENT_NAME: 'workflow_dispatch', CIRCLECI_WORKFLOW_ID: workflowId, EXPECTED_SHA: sha })).toEqual({ workflowId, expectedSha: sha });
   });
   it.each([
     statusUrl + '?x=1', statusUrl + '#x', statusUrl.replace('app.circleci.com', 'app.circleci.com.evil.test'),
     statusUrl.replace('https://', 'https://user@'), statusUrl.replace('D2FVgecxDxnu3fC6LxpR1h', 'other'),
     statusUrl.replace('/123/', '/0/'), statusUrl.replace('/jobs/456', ''),
+    currentStatusUrl + '?x=1', currentStatusUrl + '#x',
+    currentStatusUrl.replace('app.circleci.com', 'app.circleci.com.evil.test'),
+    currentStatusUrl.replace('https://', 'https://user@'),
+    currentStatusUrl.replace('/job/', '/jobs/'), currentStatusUrl.replace('22222222-2222-4222-8222-222222222222', 'invalid'),
   ])('rejects untrusted target %s', (url) => { expect(() => eventInputs({ ...env, STATUS_TARGET_URL: url })).toThrow(); });
   it('rejects a mismatched status context or state', () => {
     expect(() => eventInputs({ ...env, STATUS_CONTEXT: 'other' })).toThrow();
