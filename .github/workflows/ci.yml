@@ -79,7 +79,7 @@ jobs:
 
           echo "candidate_sha=$EVENT_SHA" >> "$GITHUB_OUTPUT"
       - name: Check out the admitted event candidate
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ steps.admission.outputs.candidate_sha }}
           fetch-depth: 1
@@ -116,7 +116,7 @@ jobs:
       PREVIEW_ACCESS_ENABLED: ${{ vars.PREVIEW_ACCESS_ENABLED }}
     steps:
       - name: Check out the exact candidate without credentials
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ needs['resolve-candidate'].outputs.candidate_sha }}
           fetch-depth: ${{ github.event_name == 'pull_request' && '0' || '1' }}
@@ -196,7 +196,7 @@ jobs:
       CI_SNAPSHOT_REFERENCE: ${{ needs['prepare-content'].outputs.snapshot_reference }}
     steps:
       - name: Check out the exact candidate without credentials
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ needs['resolve-candidate'].outputs.candidate_sha }}
           fetch-depth: 1
@@ -246,7 +246,7 @@ jobs:
     env: *a1
     steps:
       - name: Check out the exact candidate without credentials
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ needs['resolve-candidate'].outputs.candidate_sha }}
           fetch-depth: 1
@@ -284,7 +284,7 @@ jobs:
     env: *a1
     steps:
       - name: Check out the exact candidate without credentials
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ needs['resolve-candidate'].outputs.candidate_sha }}
           fetch-depth: 1
@@ -342,7 +342,7 @@ jobs:
     env: *a1
     steps:
       - name: Check out the exact candidate without credentials
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ needs['resolve-candidate'].outputs.candidate_sha }}
           fetch-depth: 1
@@ -393,7 +393,7 @@ jobs:
     env: *a1
     steps:
       - name: Check out the exact candidate without credentials
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ needs['resolve-candidate'].outputs.candidate_sha }}
           fetch-depth: 1
@@ -444,7 +444,7 @@ jobs:
     env: *a1
     steps:
       - name: Check out the exact candidate without credentials
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ needs['resolve-candidate'].outputs.candidate_sha }}
           fetch-depth: 1
@@ -525,7 +525,7 @@ jobs:
       CI_RELEASE_REFERENCE: ${{ needs['build-and-package'].outputs.release_reference }}
     steps:
       - name: Check out the exact candidate without credentials
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ needs['resolve-candidate'].outputs.candidate_sha }}
           fetch-depth: 1
@@ -560,7 +560,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Check out the immutable candidate without credentials
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ needs['resolve-candidate'].outputs.candidate_sha }}
           fetch-depth: 1
@@ -608,7 +608,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Check out the complete immutable history without credentials
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ needs['resolve-candidate'].outputs.candidate_sha }}
           fetch-depth: 0
@@ -652,7 +652,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Check out the immutable candidate without credentials
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ needs['resolve-candidate'].outputs.candidate_sha }}
           fetch-depth: 1
@@ -694,7 +694,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Check out the immutable candidate without credentials
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ needs['resolve-candidate'].outputs.candidate_sha }}
           fetch-depth: 1
@@ -725,7 +725,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Check out the immutable candidate without credentials
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ needs['resolve-candidate'].outputs.candidate_sha }}
           fetch-depth: 1
@@ -769,7 +769,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Check out the immutable candidate without credentials
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ needs['resolve-candidate'].outputs.candidate_sha }}
           fetch-depth: 1
@@ -827,7 +827,7 @@ jobs:
       pull-requests: read
     steps:
       - name: Check out the exact candidate without credentials
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ needs['resolve-candidate'].outputs.candidate_sha }}
           fetch-depth: 1
@@ -886,7 +886,7 @@ jobs:
       acceptance: ${{ steps.gate.outputs.acceptance }}
     steps:
       - name: Check out the exact candidate without credentials
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ needs['resolve-candidate'].outputs.candidate_sha }}
           fetch-depth: ${{ github.event_name == 'pull_request' && '0' || '1' }}
@@ -928,7 +928,7 @@ jobs:
       enabled: ${{ steps.check.outputs.enabled }}
     steps:
       - name: Check out the exact candidate without credentials
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ needs['resolve-candidate'].outputs.candidate_sha }}
           fetch-depth: 1
@@ -978,7 +978,7 @@ jobs:
       CI_ACCEPTANCE: ${{ needs.verify.outputs.acceptance }}
     steps:
       - name: Check out the exact candidate without credentials
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ needs['resolve-candidate'].outputs.candidate_sha }}
           fetch-depth: 1
@@ -1024,7 +1024,7 @@ jobs:
       cancel-in-progress: false
     steps:
       - name: Check out develop for its guarded keepalive update
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: develop
           fetch-depth: 0
