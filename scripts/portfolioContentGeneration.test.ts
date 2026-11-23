@@ -271,7 +271,7 @@ describe("workbook dependency boundary", () => {
     const directPackageNames = [...Object.keys(dependencies), ...Object.keys(devDependencies)];
 
     expect(devDependencies.exceljs).toBe("4.4.0");
-    expect(devDependencies.jszip).toBe("3.10.1");
+    expect(devDependencies.jszip).toBe("3.10.2");
     expect(dependencies.exceljs).toBeUndefined();
     expect(packageJson.overrides?.exceljs).toEqual({ uuid: "11.1.1" });
     expect(
