@@ -85,7 +85,7 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
       - name: Set up the pinned Node runtime
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: 22.23.3
       - name: Resolve the candidate before dependencies and protected content
@@ -122,7 +122,7 @@ jobs:
           fetch-depth: ${{ github.event_name == 'pull_request' && '0' || '1' }}
           persist-credentials: false
       - name: Set up the pinned Node runtime
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: 22.23.3
           cache: npm
@@ -202,7 +202,7 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
       - name: Set up the pinned Node runtime
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: 22.23.3
           cache: npm
@@ -252,7 +252,7 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
       - name: Set up the pinned Node runtime
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: 22.23.3
           cache: npm
@@ -290,7 +290,7 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
       - name: Set up the pinned Node runtime
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: 22.23.3
           cache: npm
@@ -348,7 +348,7 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
       - name: Set up the pinned Node runtime
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: 22.23.3
           cache: npm
@@ -399,7 +399,7 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
       - name: Set up the pinned Node runtime
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: 22.23.3
           cache: npm
@@ -450,7 +450,7 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
       - name: Set up the pinned Node runtime
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: 22.23.3
           cache: npm
@@ -531,7 +531,7 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
       - name: Set up the pinned Node runtime
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: 22.23.3
           cache: npm
@@ -566,7 +566,7 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
       - name: Set up Node.js
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: 22.23.3
       - name: Install checksum-verified actionlint
@@ -614,7 +614,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Set up Node.js
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: 22.23.3
       - name: Install checksum-verified credential-free scanners
@@ -658,7 +658,7 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
       - name: Set up Node.js
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: 22.23.3
       - name: Install checksum-verified credential-free scanners
@@ -700,7 +700,7 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
       - name: Set up Node.js
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: 22.23.3
       - name: Audit locked dependencies even when application content is unchanged
@@ -731,7 +731,7 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
       - name: Set up the pinned Node runtime
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: 22.23.3
       - name: Install checksum-verified Terraform and OPA
@@ -775,7 +775,7 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
       - name: Set up the pinned Node runtime
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: 22.23.3
       - name: Initialize CodeQL security-extended analysis
@@ -833,7 +833,7 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
       - name: Set up the pinned Node runtime
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: 22.23.3
       - name: Block newly introduced high-severity dependency vulnerabilities
@@ -892,7 +892,7 @@ jobs:
           fetch-depth: ${{ github.event_name == 'pull_request' && '0' || '1' }}
           persist-credentials: false
       - name: Set up the pinned Node runtime
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: 22.23.3
       - name: Evaluate all required results and exact producer evidence
@@ -934,7 +934,7 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
       - name: Set up the pinned Node runtime
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: 22.23.3
       - name: Verify existing preview environment before selecting it
@@ -984,7 +984,7 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
       - name: Set up the pinned Node runtime
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: 22.23.3
           cache: npm
