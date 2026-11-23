@@ -217,6 +217,8 @@ These tests execute local contracts and injected provider boundaries. They do no
 
 ## CI quality gates
 
+The additional [CircleCI validation pipeline](CIRCLECI.md) has its own versioned impact policy and `npm run test:circleci` contracts. It selects affected PR checks conservatively and defaults unknown changes to full coverage. The native GitHub Actions rules below remain unchanged; CircleCI completion is not production release authorization.
+
 `resolve-candidate` rejects ineligible event and workflow references before checkout, then resolves one immutable candidate. `prepare-content` produces either an obsolete, unchanged, or full plan. Full plans restore the same snapshot in every application job. `security-tools`, `security-scans`, `codeql`, and `infrastructure` are source-only jobs with independent receipts; they run even when application work is skipped. `dependency-review` is source-only and applies to pull requests.
 
 ### Pull requests: complete validation without deployment

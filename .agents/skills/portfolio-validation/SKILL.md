@@ -5,6 +5,8 @@ description: Select and run Smart Portfolio unit, integration, browser, document
 
 # Portfolio validation
 
+For the additional CircleCI pipeline, read [CircleCI validation](../../../docs/quality/CIRCLECI.md). Keep its canonical impact plans, selected browser discovery, receipt acceptance, and authenticated completion tests synchronized. Do not treat an intentionally unselected check as a passing execution or CircleCI completion as native release authorization.
+
 Use this skill when adding or changing tests, validation scripts, browser coverage, CI commands, or a release-quality gate.
 
 For candidate selection, snapshot transfer, browser partitioning or rerun evidence, read [CI input and evidence contracts](../../../docs/quality/CI_CONTRACTS.md). The checked-in workflow resolves one candidate, restores immutable original-producer snapshots, runs every full application unit for pull requests, and requires independent source-security receipts even for no-op plans. Rerun tests must distinguish a retained provider copy from a later physical execution: a new execution needs new exact evidence, and malformed or ambiguous copy history fails closed. Preserve that semantic graph and its failure-path tests; module fixtures alone do not prove that a hosted runner or provider enforces it.

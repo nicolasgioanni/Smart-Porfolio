@@ -43,6 +43,8 @@ Provider-dashboard uploads and deploy hooks bypass the repository quality gate a
 
 ## Trigger and branch behavior
 
+The separate [CircleCI validation integration](../quality/CIRCLECI.md) can authenticate external test completion through a trusted GitHub Actions verifier. It does not bypass this workflow, replace the required `verify` check, or produce accepted deployment provenance. Its API credential is used only by the dedicated verifier, not by untrusted PR code or CircleCI validation jobs.
+
 `resolve-candidate` admits an eligible event and workflow revision before checkout, then records one immutable candidate. `prepare-content` creates the plan and accepted snapshot. A full plan fans out to application validation; the independent source-security jobs fan out directly from resolution. `verify` accepts only the required successful jobs and their original evidence artifacts. `deploy-<target>` is conditional on that acceptance. The schedule-only `develop-schedule-heartbeat` is independent.
 
 | Event | Candidate and content | Application path | Deployment |

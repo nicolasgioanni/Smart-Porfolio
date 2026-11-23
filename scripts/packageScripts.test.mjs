@@ -50,6 +50,7 @@ describe("package and CI deployment automation", () => {
     expect(packageJson.scripts["audit:check"]).toBe("node scripts/checkDependencyAudit.mjs");
     expect(packageJson.scripts["generate:content"]).toBe("node scripts/generateContent.mjs");
     expect(packageJson.scripts.verify).toBe("node scripts/runVerification.mjs verify");
+    expect(packageJson.scripts["test:circleci"]).toBe("vitest run scripts/circleci");
     expect(packageJson.scripts["test:priority"]).toBe(
       "node scripts/runValidationTier.mjs priority"
     );
@@ -141,6 +142,7 @@ describe("package and CI deployment automation", () => {
     expect(priorityTestTargets).toContain("scripts/permanentBranchRuleset.test.mjs");
     expect(priorityTestDirectories).toEqual([
       "scripts/ci",
+      "scripts/circleci",
       "scripts/security",
       "src/components/overlay",
       "src/features/home",
